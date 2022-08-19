@@ -1,12 +1,29 @@
+from .serializers import GameSerializer
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from pickem_api.models import GamesAndScores
 from django.http import HttpResponse
-from django.shortcuts import render, get_list_or_404
-from .models import GamesAndScores
-from django.core import serializers
 
 # Create your views here.
 def index(request):
-    return HttpResponse("Family Pickem API.")
+    return HttpResponse("Family Pickem API")
 
-def getAllGames(request):
-    games = serializers.serialize("json", GamesAndScores.objects.all())
-    return HttpResponse(games,content_type="application/json")
+@api_view(['GET'])
+def getGames(request):
+    """
+    API endpoint that allows listing all games.
+    """
+    games = GamesAndScores.objects.all()
+    serializer = GameSerializer(games, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+def addGame(request):
+    """
+    API endpoint that allows listing all games.
+    """
+    serializer = GameSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+    return Response(serializer.data)
