@@ -3,8 +3,11 @@ from django.db import models
 
 # Create your models here.
 class GamesAndScores(models.Model):
+    id = models.IntegerField(primary_key=True)
     slug = models.SlugField(max_length=250)
-    gameWeek = models.CharField(max_length=250)
+    competition = models.CharField(max_length=250)
+    gameWeek = models.CharField(max_length=2)
+    gameyear = models.CharField(max_length=4)
     startTimestamp = models.DateTimeField()
     gameWinner = models.IntegerField()
     statusType = models.CharField(max_length=250)

@@ -17,13 +17,15 @@ def getGames(request):
     serializer = GameSerializer(games, many=True)
     return Response(serializer.data)
 
-
 @api_view(['POST'])
 def addGame(request):
     """
-    API endpoint that allows listing all games.
+    API endpoint that allows adding a new game score.
     """
     serializer = GameSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
-    return Response(serializer.data)
+        return Response(serializer.data)
+    else:
+        return Response(serializer.errors)
+    
