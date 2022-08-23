@@ -1,9 +1,11 @@
-from django.urls import include, path
+from django.urls import include, path, re_path
 from . import views
 
 urlpatterns = [
-    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    path('games/', views.getGames, name='games'),
-    path('games/add/', views.addGame, name='add_games'),
     path('', views.index, name='index'),
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    re_path(r'^games/(?P<pk>[0-9]+)$', views.game_detail),
+    re_path(r'^games', views.game_list),
+    re_path(r'^weeks/(?P<date>\d{4}-\d{2}-\d{2})$', views.week_detail),
+    re_path(r'^weeks', views.week_list)
 ]
