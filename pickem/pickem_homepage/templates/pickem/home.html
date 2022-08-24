@@ -1,0 +1,69 @@
+{% extends 'pickem/base.html' %}
+{% load bootstrap5 %}
+
+{% block content %}
+<div class="container min-vh-100">
+    <br><br><br><br>
+    <div class="row">
+        <div class="container px-4">
+            <div class="row gx-2">
+                <div class="col-3">
+                    <div class="p-3 border bg-light rounded text-center">
+                        Live Standings
+                        <ul>
+                            <li>Jimbo : 99</li>
+                            <li>Alicia: 98</li>
+                            <li>JT: 2</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border bg-light rounded">
+                        <h2>NFL Scoreboard</h2>
+                        {% if competition == "nfl-preseason"%}
+                        <p>{{ competition }}</p>
+                        {% endif %}
+                        <p></p>
+                        <br>
+                        {% if game_days %}
+                        {% for day in game_days %}
+                        </ul><h6>{{ day }}</h4>
+                        {% if game_list %}
+                        {% for game in game_list %}
+                        {% if game.startTimestamp == day %}
+                        <div class="container px-4">
+                            <div class="row gx-2">
+                                <div class="col">
+                                    <div class="p-3 border bg-light text-left rounded">
+                                        <table>
+                                            <tr>
+                                                <td>{{ game.awayTeamName }}</td>
+                                                <td>{{ game.awayTeamScore }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>{{ game.homeTeamName }}</td>
+                                                <td>{{ game.homeTeamScore }}</td>
+                                            </tr>
+
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <br>
+                        {% endif %}
+                        {% endfor %}
+                        {% else %}
+                        <p>Something is wrong.</p>
+                        {% endif %}
+                        {% endfor %}
+                        {% else %}
+                        <p>No Games Scheduled for this week.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

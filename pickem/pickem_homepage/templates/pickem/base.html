@@ -1,0 +1,63 @@
+{% extends 'pickem/bootstrap.html' %}
+
+{% load bootstrap5 %}
+
+{% load static %}
+
+{% block bootstrap5_content %}
+
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" style="background-color: #2b2c2d;">
+  <!-- Container wrapper -->
+  <div class="container-fluid">
+
+    <div>
+      <img src="{% static 'images/familypickem.png' %}" alt="logo" class="img-thumbnail float-left">
+    </div>
+
+    <!-- Toggle button -->
+    <button class="navbar-toggler" type="button" data-mdb-toggle="collapse" data-mdb-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Collapsible wrapper -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+        <!-- Link -->
+        <li class="nav-item">
+          <a class="nav-link" href="#">Standings</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="#">Current Week</a>
+        </li>
+
+        <li>
+          <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Schedule
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#">Week 1</a></li>
+              <li><a class="dropdown-item" href="#">Week 2</a></li>
+            </ul>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <!-- Container wrapper -->
+  
+</nav>
+<!-- Navbar -->
+
+<div class="container">
+        {% block title %}{% endblock %}
+        {% autoescape off %}{% bootstrap_messages %}{% endautoescape %}
+        {% block content %}(no content){% endblock %}
+</div>    
+
+{% endblock %}

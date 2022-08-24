@@ -1,0 +1,20 @@
+body {
+    background-color: #F2F3F7;
+} 
+
+.img-thumbnail{
+    width: 100px;
+    height: 50px;
+    padding-left: 1rem;
+    background-color: transparent;
+    border: none;
+    object-fit: contain;
+}
+
+nav .navbar-nav li a{
+    color: white !important;
+}
+
+.debug {
+    background-color: cornsilk;
+}

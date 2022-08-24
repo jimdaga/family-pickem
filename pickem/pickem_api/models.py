@@ -23,6 +23,9 @@ class GamesAndScores(models.Model):
     gameAdded = models.DateTimeField(auto_now_add=True)
     gameUpdated = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['startTimestamp']
+
 class GameWeeks(models.Model):
     weekNumber = models.IntegerField()
     competition = models.CharField(max_length=250)
