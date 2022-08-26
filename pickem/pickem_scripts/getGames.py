@@ -115,7 +115,7 @@ def build_payload(payload):
             if statusType == 'notstarted':
                 awayTeamScore = 0
             else: 
-                awayTeamScore = entry['homeScore']['current']
+                awayTeamScore = entry['awayScore']['current']
 
             payload = {
                 "id": gameId,

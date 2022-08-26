@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import GamesAndScores, GameWeeks
+from .models import GamePicks, GamesAndScores, GameWeeks
 
 # Register your models here.
 @admin.register(GamesAndScores)
@@ -10,6 +10,15 @@ class GamesAndScoresAdmin(admin.ModelAdmin):
     search_fields = ('homeTeamName', 'awayTeamName')
     date_hierarchy = 'startTimestamp'
     ordering = ('gameWeek',)
+
+@admin.register(GamePicks)
+class GamesPicksAdmin(admin.ModelAdmin):
+    list_display = ('userEmail', 'slug', 'competition', 'gameWeek', 'gameyear', 
+        'pick_game_id', 'pick', 'pickAdded', 'pickUpdated' )
+    list_filter = ('userEmail', 'slug', 'gameWeek', 'gameyear')
+    search_fields = ('userEmail', 'slug')
+    date_hierarchy = 'pickAdded'
+    ordering = ('pickAdded',)
 
 @admin.register(GameWeeks)
 class GameWeekssAdmin(admin.ModelAdmin):

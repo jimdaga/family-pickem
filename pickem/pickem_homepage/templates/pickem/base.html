@@ -6,6 +6,8 @@
 
 {% block bootstrap5_content %}
 
+{% load socialaccount %}
+
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
 <!-- Navbar -->
@@ -14,11 +16,12 @@
   <div class="container-fluid">
 
     <div>
-      <img src="{% static 'images/familypickem.png' %}" alt="logo" class="img-thumbnail float-left">
+      <img src="{% static 'images/logo.png' %}" alt="logo" class="img-thumbnail float-left">
     </div>
 
     <!-- Toggle button -->
-    <button class="navbar-toggler" type="button" data-mdb-toggle="collapse" data-mdb-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-mdb-toggle="collapse" data-mdb-target="#navbarSupportedContent"
+      aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
       <i class="fas fa-bars"></i>
     </button>
 
@@ -28,36 +31,51 @@
 
         <!-- Link -->
         <li class="nav-item">
-          <a class="nav-link" href="#">Standings</a>
+          <a class="nav-link" href="/">Home</a>
         </li>
 
         <li class="nav-item">
-          <a class="nav-link" href="#">Current Week</a>
+          <a class="nav-link" href="/scores/">Scores</a>
         </li>
-
-        <li>
-          <div class="dropdown">
-            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Schedule
-            </button>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#">Week 1</a></li>
-              <li><a class="dropdown-item" href="#">Week 2</a></li>
-            </ul>
-          </div>
+        <li class="nav-item">
+          <a class="nav-link" href="/scores/">Standings</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/scores/">Rules</a>
         </li>
       </ul>
+
+      {% if user.is_authenticated %}
+      <nav class="navbar navbar-dark">
+        <span class="navbar-text">
+          Welcome, {{ user.username }}! <a href="/logout" class="text-muted"><em>(logout)</em></a>	&nbsp;	&nbsp;
+        </span>
+      </nav>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+          <div class="btn-nav"><a class="btn btn-primary btn-small navbar-btn" href="/picks">Submit Weekly Picks</a></div>
+        </li>
+      </ul>
+      {% else %}
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+          <div class="btn-nav"><a class="btn btn-primary btn-small navbar-btn" href="{% provider_login_url 'google' %}">Login With Google</a></div>
+          <!-- <a href="{% provider_login_url 'google' %}">Login With Google</a> -->
+        </li>
+      </ul>
+    {% endif %}
     </div>
   </div>
+  </div>
   <!-- Container wrapper -->
-  
+
 </nav>
 <!-- Navbar -->
 
 <div class="container">
-        {% block title %}{% endblock %}
-        {% autoescape off %}{% bootstrap_messages %}{% endautoescape %}
-        {% block content %}(no content){% endblock %}
-</div>    
+  {% block title %}{% endblock %}
+  {% autoescape off %}{% bootstrap_messages %}{% endautoescape %}
+  {% block content %}(no content){% endblock %}
+</div>
 
 {% endblock %}

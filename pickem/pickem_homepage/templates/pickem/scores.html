@@ -1,0 +1,191 @@
+{% extends 'pickem/base.html' %}
+{% load bootstrap5 %}
+{% load static %}
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+<div class="container min-vh-100">
+    <br><br><br><br>
+
+    <nav aria-label="Page navigation example">
+        <ul class="pagination justify-content-center">
+          <li class="page-item disabled">
+            <a class="page-link" href="#" tabindex="-1">Previous</a>
+          </li>
+          <li class="page-item"><a class="page-link" href="#">Week 1</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 2</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
+          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
+          <li class="page-item">
+            <a class="page-link" href="#">Next</a>
+          </li>
+        </ul>
+      </nav>
+
+    <div class="row">
+        <div class="container px-4">
+            <div class="row gx-4">
+                <div class="col-2 text-center">
+
+                    <div class="p-3 border bg-light rounded">
+                        <ul style="list-style-type:none">
+                            <b>Live Standings</b>
+                            <li>Jimbo : 99</li>
+                            <li>Alicia: 98</li>
+                            <li>JT: 97</li>
+                            <li>Presley: 96</li>
+                            <li>Andre: 95</li>
+                            <li>Karen: 94</li>
+                            <li>Robbie: 93</li>
+                            <li>Barto: 92</li>
+                            <li>Caileigh: 91</li>
+                            <li>Patty: 90</li>
+                            <li>Mario: 2</li>
+                        </ul>
+                    </div>
+                    <br>
+                    <div>
+                        <a href="https://twitter.com/intent/tweet?button_hashtag=nfl&ref_src=twsrc%5Etfw" class="twitter-hashtag-button" data-show-count="false">Tweet #nfl</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border bg-light rounded">
+                        <h3>
+                            <img src="{% static '/images/nfl.svg' %}" alt="logo" class="img-responsive img-logo">
+                            NFL Scoreboard &#127944; 
+                        </h3>
+                        {% if game_days %}
+                        {% for day in game_days %}
+                        </ul><h5>{{ day }}</h5>
+                        {% if game_list %}
+                        {% for game in game_list %}
+                        {% if game.startTimestamp == day %}
+                        <div class="container px-4">
+                            <div class="row gx-2">
+                                <div class="col">
+                                    {% if game.statusType == 'inprogress' %}
+                                    <div class="p-3 border border-dark bg-light text-left rounded">
+                                    {% else %}
+                                    <div class="p-3 border bg-light text-left rounded">
+                                    {% endif %}
+                                        <table>
+                                            <th class="td-team">{{ game.statusTitle }}</th>
+                                            <th class="td-score">1</th>
+                                            <th class="td-score">2</th>
+                                            <th class="td-score">3</th>
+                                            <th class="td-score">4</th>
+                                            <th class="td-score">T</th>
+                                            <th></th>
+                                            <tr>
+                                                <td>
+                                                    {% get_static_prefix as STATIC_PREFIX %}
+                                                    <img src="{{ STATIC_PREFIX }}images/{{ game.awayTeamSlug }}.svg" alt="logo" class="nfl-logo">
+                                                    {% if game.statusType == 'finished' %}
+                                                        {% if game.gameWinner == game.awayTeamSlug %}
+                                                            <b>{{ game.awayTeamName }}&#9664;</b>
+                                                            <i>(1-0)</i>
+                                                        {% else %}
+                                                            <b class="text-muted">{{ game.awayTeamName }}</b>
+                                                            <i>(1-0)</i>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <b>{{ game.awayTeamName }}</b>
+                                                        <i>(1-0)</i>                         
+                                                    {% endif %}
+                                                </td>
+                                                <td>0</td>
+                                                <td>0</td>
+                                                <td>0</td>
+                                                <td>0</td>
+                                                <td>{{ game.awayTeamScore }}</td>
+                                                <td>
+                                                    {% if picks %}
+                                                    {% for pick in picks %}
+                                                    {% if pick.pick == game.awayTeamSlug %}
+                                                        {% if game.statusType == 'finished' %}
+                                                            {% if game.gameWinner == game.awayTeamSlug %}
+                                                                <span class="badge win text-uppercase">{{ pick.userID }}</span>
+                                                            {% else %}
+                                                                <span class="badge loss text-uppercase">{{ pick.userID }}</span>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                        {% if game.statusType == 'inprogress' %}                                                        
+                                                            <span class="badge text-uppercase">{{ pick.userID }}</span>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                    {% endfor %}
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <img src="{{ STATIC_PREFIX }}images/{{ game.homeTeamSlug }}.svg" alt="logo" class="nfl-logo">
+                                                    {% if game.statusType == 'finished' %}
+                                                        {% if game.gameWinner == game.homeTeamSlug %}
+                                                            <b>{{ game.homeTeamName }}&#9664;</b>
+                                                            <i>(1-0)</i>
+                                                        {% else %}
+                                                            <b class="text-muted">{{ game.homeTeamName }}</b>
+                                                            <i>(1-0)</i>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <b>{{ game.homeTeamName }}</b>
+                                                        <i>(1-0)</i>        
+                                                    {% endif %}
+                                                </td>
+                                                
+                                                <td>0</td>
+                                                <td>0</td>
+                                                <td>0</td>
+                                                <td>0</td>
+                                                <td>{{ game.homeTeamScore }}</td>
+                                                <td>
+                                                    {% if picks %}
+                                                    {% for pick in picks %}
+                                                    {% if pick.pick == game.homeTeamSlug %}
+                                                        {% if game.statusType == 'finished' %}
+                                                            {% if game.gameWinner == game.awayTeamSlug %}
+                                                                <span class="badge win text-uppercase">{{ pick.userID }}</span>
+                                                            {% else %}
+                                                                <span class="badge loss text-uppercase">{{ pick.userID }}</span>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                        {% if game.statusType == 'inprogress' %}                                                        
+                                                            <span class="badge inprogress text-uppercase">{{ pick.userID }}</span>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                    {% endfor %}
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <br>
+                        {% endif %}
+                        {% endfor %}
+                        {% else %}
+                        <p>Something is wrong.</p>
+                        {% endif %}
+                        {% endfor %}
+                        {% else %}
+                        <p>No Games Scheduled for this week.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

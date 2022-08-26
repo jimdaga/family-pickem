@@ -26,6 +26,21 @@ class GamesAndScores(models.Model):
     class Meta:
         ordering = ['startTimestamp']
 
+class GamePicks(models.Model):
+    userEmail = models.EmailField()
+    userID = models.CharField(max_length=250)
+    slug = models.SlugField(max_length=250)
+    competition = models.CharField(max_length=250)
+    gameWeek = models.CharField(max_length=2)
+    gameyear = models.CharField(max_length=4)
+    pick_game_id = models.IntegerField()
+    pick = models.CharField(max_length=250)
+    pickAdded = models.DateTimeField(auto_now_add=True)
+    pickUpdated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['gameWeek']
+
 class GameWeeks(models.Model):
     weekNumber = models.IntegerField()
     competition = models.CharField(max_length=250)
