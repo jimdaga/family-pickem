@@ -1,12 +1,12 @@
 {% extends 'pickem/bootstrap.html' %}
 
-{% load bootstrap5 %}
-
-{% load static %}
+    {% load bootstrap5 %}
+    
+    {% load static %}
 
 {% block bootstrap5_content %}
 
-{% load socialaccount %}
+    {% load socialaccount %}
 
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
@@ -15,8 +15,8 @@
   <!-- Container wrapper -->
   <div class="container-fluid">
 
-    <div>
-      <img src="{% static 'images/logo.png' %}" alt="logo" class="img-thumbnail float-left">
+    <div class="img-thumbnail">
+      <img src="{% static 'images/logo.png' %}" alt="logo" float-left">
     </div>
 
     <!-- Toggle button -->
@@ -48,7 +48,8 @@
       {% if user.is_authenticated %}
       <nav class="navbar navbar-dark">
         <span class="navbar-text">
-          Welcome, {{ user.username }}! <a href="/logout" class="text-muted"><em>(logout)</em></a>	&nbsp;	&nbsp;
+          Welcome, {{ user.username }}!  <a href="/logout" class="text-muted"><em>(logout)</em></a>	&nbsp;	&nbsp;
+          <img class="circular--square" src="{{ user.socialaccount_set.all.0.get_avatar_url }}" /> &nbsp; &nbsp;
         </span>
       </nav>
       <ul class="nav navbar-nav navbar-right">
@@ -60,7 +61,7 @@
       <ul class="nav navbar-nav navbar-right">
         <li>
           <div class="btn-nav"><a class="btn btn-primary btn-small navbar-btn" href="{% provider_login_url 'google' %}">Login With Google</a></div>
-          <!-- <a href="{% provider_login_url 'google' %}">Login With Google</a> -->
+          
         </li>
       </ul>
     {% endif %}

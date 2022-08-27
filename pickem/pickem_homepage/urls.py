@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path, re_path, include
 from django.contrib.auth.views import LogoutView
 from . import views
 
@@ -10,4 +10,6 @@ urlpatterns = [
     path('scores/', views.scores, name='scores'),
     path('accounts/', include('allauth.urls')),
     path('logout', LogoutView.as_view()),
+
+    re_path(r'^scores/year/(?P<year>[0-9]+)/week/(?P<week>[0-9]+)$', views.scores_long, name='scores_long'),
 ]
