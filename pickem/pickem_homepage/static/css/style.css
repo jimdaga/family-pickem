@@ -74,3 +74,9 @@ td {
     table-layout: fixed;
     width: 350px;
 }
+
+.standing td {
+    padding: 1px;
+    align-self: center;
+    width: 50px;
+  }

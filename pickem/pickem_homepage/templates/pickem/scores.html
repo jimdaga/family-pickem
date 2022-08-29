@@ -11,29 +11,13 @@
 <div class="container min-vh-100">
     <br><br><br><br>
 
-    <nav aria-label="Page navigation example">
+    <!-- <nav aria-label="Page navigation example">
         <ul class="pagination justify-content-center">
           <li class="page-item disabled">
             <a class="page-link" href="#" tabindex="-1">Previous</a>
           </li>
-          <li class="page-item"><a class="page-link" href="#">Week 1</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 2</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 3</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 4</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 5</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 6</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 7</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 8</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 9</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 10</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 11</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 12</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 13</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 14</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 15</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 16</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 17</a></li>
-          <li class="page-item"><a class="page-link" href="#">Week 18</a></li>
+
+
           <li class="page-item">
             <a class="page-link" href="#">Next</a>
           </li>
@@ -41,41 +25,38 @@
       </nav>
 
       <pagination class="pagination-sm" total-items="1000" items-per-page="10" max-size="10">
-    </pagination>
+    </pagination> -->
 
     <div class="row">
         <div class="container px-4">
             <div class="row gx-4">
                 <div class="col-2 text-center">
-
+                    <div class="p-3 border bg-dark rounded">
+                            <b class="text-white">Live Standings</b>
+                    </div>
                     <div class="p-3 border bg-light rounded">
-                        <ul style="list-style-type:none">
-                            <b>Live Standings</b>
-                            <li>Jimbo : 99</li>
-                            <li>Alicia: 98</li>
-                            <li>JT: 97</li>
-                            <li>Presley: 96</li>
-                            <li>Andre: 95</li>
-                            <li>Karen: 94</li>
-                            <li>Robbie: 93</li>
-                            <li>Barto: 92</li>
-                            <li>Caileigh: 91</li>
-                            <li>Patty: 90</li>
-                            <li>Mario: 2</li>
-                        </ul>
+                            <table class="standing">
+                            {% for user in user_points %}
+                            <tr>
+                            <td class="text-uppercase"><b>{{ user.userID }}:</b></td>
+                            <td> {{ user.wins }}</td>
+                            </tr>
+                            {% endfor %}
+                            </table>
                     </div>
                     <br>
                     <div>
-                        <a href="https://twitter.com/intent/tweet?button_hashtag=nfl&ref_src=twsrc%5Etfw" class="twitter-hashtag-button" data-show-count="false">Tweet #nfl</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+                        <a class="twitter-timeline" data-width="220" data-height="2000" data-theme="light" href="https://twitter.com/NFL?ref_src=twsrc%5Etfw">Tweets by NFL</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
                     </div>
                 </div>
+                
                 <div class="col">
-                    <div class="p-3 border bg-light rounded">
+                    <div class="p-3 border bg-dark rounded">
                         <table>
                             <tr></tr>
                                 <td><h3><img src="{% static '/images/nfl.svg' %}" alt="logo" class="img-responsive img-logo"></h3></td>
-                                <td>
-                                    <h3>NFL Scoreboard</h3>
+                                <td class="standing">
+                                    <h3 class="text-white">NFL Scoreboard</h3>
                                     {% if competition == 'nfl-preseason' %}
                                         <h5 class="text-muted">Preseason - Week {{ week }} </h5>
                                     {% else %}
@@ -83,12 +64,15 @@
                                     {% endif %}
                                 </td>
                         </table>
+                    </div>
+                    <div class="p-3 border bg-light rounded">
                         {% if game_days %}
                         {% for day in game_days %}
                         </ul><h5>{{ day }}</h5>
                         {% if game_list %}
                         {% for game in game_list %}
                         {% if game.startTimestamp == day %}
+                        
                         <div class="container px-4">
                             <div class="row gx-2">
                                 <div class="col">

@@ -35,6 +35,7 @@ class GamePicks(models.Model):
     gameyear = models.CharField(max_length=4)
     pick_game_id = models.IntegerField()
     pick = models.CharField(max_length=250)
+    pick_correct = models.BooleanField(default=False)
     pickAdded = models.DateTimeField(auto_now_add=True)
     pickUpdated = models.DateTimeField(auto_now=True)
 

@@ -1,11 +1,11 @@
 {% extends 'pickem/base.html' %}
-{% load bootstrap5 %}
 {% load static %}
-{% block content %}
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
 {% load socialaccount %}
 
-<link rel="stylesheet" href="{% static 'css/style.css' %}">
-
+{% block content %}
 <div class="container min-vh-100">
     <br><br><br><br>
 
