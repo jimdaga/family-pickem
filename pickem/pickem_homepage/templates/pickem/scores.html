@@ -162,10 +162,11 @@
                                                             {% else %}
                                                                 <span class="badge loss text-uppercase">{{ pick.userID }}</span>
                                                             {% endif %}
-                                                        {% endif %}
+                                                        
                                                         {% if game.statusType == 'inprogress' %}                                                        
                                                             <span class="badge inprogress text-uppercase">{{ pick.userID }}</span>
                                                         {% endif %}
+                                                    {% endif %}
                                                     {% endif %}
                                                     {% endfor %}
                                                     {% endif %}

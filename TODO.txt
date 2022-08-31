@@ -1,0 +1,9 @@
+- Inprogress Picks now showing
+- Deploy to AWS w/ RDS 
+- Script to update correct picks 
+- Cronjobs to run all background scripts 
+- Update wins/losses logic for teams 
+- Add per quarter scores 
+- homepage 
+- standings page 
+- rules page 

@@ -1,0 +1,140 @@
+{% extends 'pickem/base.html' %}
+
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+{% bootstrap_messages %}
+{% load static %}
+
+{% block title %}
+Forms
+{% endblock %}
+
+
+
+{% block content %}
+<BR><BR><BR><BR>
+
+<div class="row">
+    <div class="container px-4">
+        <div class="row gx-4">
+            <div class="col">
+                <div class="p-3 border bg-dark rounded">
+                    <table>
+                        <tr></tr>
+                            <td><h3><img src="{% static '/images/nfl.svg' %}" alt="logo" class="img-responsive img-logo"></h3></td>
+                            <td class="standing">
+                                <h3 class="text-white">Submit your picks</h3>
+                                {% if competition == 'nfl-preseason' %}
+                                    <h5 class="text-muted">Preseason - Week {{ week }} </h5>
+                                {% else %}
+                                    <h5 class="text-muted">Regular Season - Week {{ week }} </h5>
+                                {% endif %}
+                            </td>
+                    </table>
+            </div>
+            
+            <div class="p-3 border bg-light rounded">
+                <div class="container px-4">
+                    {% if game_list %}
+                        {% for game in game_list %}
+                            {% if game.slug not in pick_slugs %}
+                                <form action="/picks/" method="POST" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <tr>
+                                    <td><b>{{ game.awayTeamName }} @ {{ game.homeTeamName }}<br></b></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="id" value="{{ user.id }}-{{ game.id }}" required id="id_id">
+                                    </td>
+                                </tr>
+                        
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="userEmail" value={{ user.email }} maxlength="254" required id="id_userEmail">
+                                    </td>
+                                </tr>
+                        
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="userID" value="{{ user.username }}" maxlength="250" required id="id_userID">
+                                    </td>
+                                </tr>
+                        
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="slug" value="{{ game.slug }}" maxlength="250" required id="id_slug">
+                                    </td>
+                                </tr>
+                        
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="competition" value="{{ game.competition }}" maxlength="250" required id="id_competition">
+                                    </td>
+                                </tr>
+                        
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="gameWeek" value="{{ game.gameWeek }}" maxlength="2" required id="id_gameWeek">
+                                    </td>
+                                </tr>
+                        
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="gameyear" value="{{ game.gameyear }}" maxlength="4" required id="id_gameyear">
+                                    </td>
+                                </tr>
+                        
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="pick_game_id" value="{{ game.id }}" required id="id_pick_game_id">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}">
+                                        <label for="html">{{ game.awayTeamName }}</label><br>
+                                        <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}">
+                                        <label for="css">{{ game.homeTeamName }}</label><br>
+                                    </td>
+                                </tr>
+                                {% buttons submit='Save' %}{% endbuttons %}    
+                                </form>
+                            {% else %}
+                            <form action="/picks/" method="POST" enctype="multipart/form-data">
+                                <tr>
+                                    <td><b>{{ game.awayTeamName }} @ {{ game.homeTeamName }}<br></b></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                    {% for p in picks %}
+                                        {% if p.pick == game.homeTeamSlug %}
+                                            <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled>
+                                            <label for="html">{{ game.awayTeamName }}</label><br>
+                                            <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled checked>
+                                            <label for="css">{{ game.homeTeamName }}</label><br>
+                                        {% elif p.pick == game.awayTeamSlug %}
+                                            <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled checked>
+                                            <label for="html">{{ game.awayTeamName }}</label><br>
+                                            <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled>
+                                            <label for="css">{{ game.homeTeamName }}</label><br>
+                                        {% endif %}
+                                    {% endfor %}
+                                    </td>
+                                </tr>
+                                <button type="button" class="btn btn-secondary" disabled>Save</button>
+                            </form>
+                            {% endif %}
+                        <BR>
+                        {% endfor %}
+                    {% else %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

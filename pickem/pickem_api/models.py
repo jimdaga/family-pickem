@@ -27,6 +27,7 @@ class GamesAndScores(models.Model):
         ordering = ['startTimestamp']
 
 class GamePicks(models.Model):
+    id = models.CharField(max_length=250,primary_key=True)
     userEmail = models.EmailField()
     userID = models.CharField(max_length=250)
     slug = models.SlugField(max_length=250)
