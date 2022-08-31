@@ -1,4 +1,7 @@
-- Inprogress Picks now showing
+- Already picked picks are not per user (input user info to views?)
+- Put picks already made on right side of screen 
+- Inprogress Pick pills not showing on scores page 
+- Add dates to picks page 
 - Deploy to AWS w/ RDS 
 - Script to update correct picks 
 - Cronjobs to run all background scripts 

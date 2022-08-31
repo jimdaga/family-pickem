@@ -37,12 +37,17 @@ Forms
             <div class="p-3 border bg-light rounded">
                 <div class="container px-4">
                     {% if game_list %}
+                        <h3>Picks</h3>
                         {% for game in game_list %}
                             {% if game.slug not in pick_slugs %}
+                            <div class="p-3 border bg-light rounded">
                                 <form action="/picks/" method="POST" enctype="multipart/form-data">
                                 {% csrf_token %}
                                 <tr>
-                                    <td><b>{{ game.awayTeamName }} @ {{ game.homeTeamName }}<br></b></td>
+                                    <td><b><td>{{ game.startTimestamp|date:"D, M d Y @ P" }}<hr></td></b></td>
+                                </tr>
+                                <tr>
+                                    <td><b>{{ game.awayTeamName }} @ {{ game.homeTeamName }}<br><br></b></td>
                                 </tr>
                                 <tr>
                                     <td>
@@ -99,34 +104,45 @@ Forms
                                         <label for="css">{{ game.homeTeamName }}</label><br>
                                     </td>
                                 </tr>
-                                {% buttons submit='Save' %}{% endbuttons %}    
+                                <br>{% buttons submit='Save' %}{% endbuttons %}   
                                 </form>
-                            {% else %}
-                            <form action="/picks/" method="POST" enctype="multipart/form-data">
-                                <tr>
-                                    <td><b>{{ game.awayTeamName }} @ {{ game.homeTeamName }}<br></b></td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                    {% for p in picks %}
-                                        {% if p.pick == game.homeTeamSlug %}
-                                            <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled>
-                                            <label for="html">{{ game.awayTeamName }}</label><br>
-                                            <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled checked>
-                                            <label for="css">{{ game.homeTeamName }}</label><br>
-                                        {% elif p.pick == game.awayTeamSlug %}
-                                            <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled checked>
-                                            <label for="html">{{ game.awayTeamName }}</label><br>
-                                            <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled>
-                                            <label for="css">{{ game.homeTeamName }}</label><br>
-                                        {% endif %}
-                                    {% endfor %}
-                                    </td>
-                                </tr>
-                                <button type="button" class="btn btn-secondary" disabled>Save</button>
-                            </form>
+                            </div>
+                            <BR>   
                             {% endif %}
-                        <BR>
+                        {% endfor %}
+
+                        <h3>Picks Submitted</h3>
+                        {% for game in game_list %}
+                            {% if game.slug in pick_slugs %}
+                            <div class="p-3 border bg-light rounded">
+                                <form action="/picks/" method="POST" enctype="multipart/form-data">
+                                    <tr>
+                                        <td><b><td>{{ game.startTimestamp|date:"D, M d Y @ P" }}<hr></td></b></td>
+                                    </tr>
+                                    <tr>
+                                        <td><b>{{ game.awayTeamName }} @ {{ game.homeTeamName }}<br><br></b></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                        {% for p in picks %}
+                                            {% if p.pick == game.homeTeamSlug %}
+                                                <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled>
+                                                <label for="html">{{ game.awayTeamName }}</label><br>
+                                                <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled checked>
+                                                <label for="css">{{ game.homeTeamName }}</label><br>
+                                            {% elif p.pick == game.awayTeamSlug %}
+                                                <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled checked>
+                                                <label for="html">{{ game.awayTeamName }}</label><br>
+                                                <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled>
+                                                <label for="css">{{ game.homeTeamName }}</label><br>
+                                            {% endif %}
+                                        {% endfor %}
+                                        </td>
+                                    </tr>
+                                </form>
+                                </div>
+                                <BR>
+                            {% endif %}
                         {% endfor %}
                     {% else %}
                     {% endif %}
