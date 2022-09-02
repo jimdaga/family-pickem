@@ -55,8 +55,9 @@ Scores
                                             </tr>
                                             <tr>
                                                 <td>
-                                                    {% get_static_prefix as STATIC_PREFIX %}
-                                                    <img src="{{ STATIC_PREFIX }}images/{{ game.awayTeamSlug }}.svg" alt="logo" class="nfl-logo">
+                                                    {% with 'images/'|add:game.awayTeamSlug|add:'.svg' as image_static %}
+                                                        <img src="{% static image_static %}" alt="logo" class="nfl-logo">
+                                                    {% endwith %}
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == game.awayTeamSlug %}
                                                             <b>{{ game.awayTeamName }}&#9664;</b>
@@ -96,7 +97,9 @@ Scores
                                             </tr>
                                             <tr>
                                                 <td>
-                                                    <img src="{{ STATIC_PREFIX }}images/{{ game.homeTeamSlug }}.svg" alt="logo" class="nfl-logo">
+                                                    {% with 'images/'|add:game.homeTeamSlug|add:'.svg' as image_static %}
+                                                        <img src="{% static image_static %}" alt="logo" class="nfl-logo">
+                                                    {% endwith %}
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == game.homeTeamSlug %}
                                                             <b>{{ game.homeTeamName }}&#9664;</b>
