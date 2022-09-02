@@ -23,7 +23,7 @@ def check_game_id(id):
     """
     Check if game ID has already been added.
     """
-    url = "http://localhost:8000/api/games/{}".format(id)
+    url = "http://pickem-dev.us-east-1.elasticbeanstalk.com/api/games/{}".format(id)
 
     headers = {
         "Content-Type": "application/json",
@@ -40,7 +40,7 @@ def get_game_week(game_date):
     """
     Check week number for a date
     """
-    url = "http://localhost:8000/api/weeks/{}".format(game_date)
+    url = "http://pickem-dev.us-east-1.elasticbeanstalk.com/api/weeks/{}".format(game_date)
 
     headers = {
         "Content-Type": "application/json",
@@ -60,11 +60,11 @@ def add_games(payload, id):
     }
 
     if check_game_id(id): 
-        url = "http://localhost:8000/api/games/{}".format(id)
+        url = "http://pickem-dev.us-east-1.elasticbeanstalk.com/api/games/{}".format(id)
         x = requests.put(url, data = payload, headers = headers)
         verb = "Updated"
     else:
-        url = "http://localhost:8000/api/games/"
+        url = "http://pickem-dev.us-east-1.elasticbeanstalk.com/api/games/"
         x = requests.post(url, data = payload, headers = headers)
         verb = "Added"
     

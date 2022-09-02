@@ -1,5 +1,7 @@
 #!/bin/bash
 
+URL=$1
+
 for game_date in `cat weeks.csv`; do
 	competition=$(echo $game_date | awk -F, '{print $1}')
 	weekNumber=$(echo $game_date | awk -F, '{print $2}' | gsed 's/"//g')
@@ -13,6 +15,6 @@ for game_date in `cat weeks.csv`; do
 	# Render the template, substituting the variable values and save the result into $data
 	printf -v data "$template" "$weekNumber" "$competition" "$gameDate"
 
-  	curl -X POST --data "$data" http://localhost:8000/api/weeks
+  	curl -X POST --data "$data" http://$URL/api/weeks
 	echo
 done 

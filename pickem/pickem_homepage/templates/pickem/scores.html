@@ -38,7 +38,7 @@ Scores
                         {% if game_list %}
                             {% for game in game_list %}
                                 {% if game.startTimestamp == day %}
-                                    {% if game.statusType == 'inprogress' %}
+                                    {% if game.statusType != 'inprogress' %}
                                         <div class="p-3 border bg-light text-left rounded border-dark">
                                     {% else %}
                                         <div class="p-3 border bg-light text-left rounded">
