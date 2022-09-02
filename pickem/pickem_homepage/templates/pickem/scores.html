@@ -16,6 +16,39 @@ Scores
 <br><br><br><br>
 <div class="container">
     <div class="row gx-4 ">
+        <div class="col-md-3">
+            <div class="border p-3 bg-dark rounded">
+                <b class="text-white">Live Standings</b>
+            </div>
+            <div class="border p-3 bg-light rounded text-center">
+                <table class="standing">
+                    <tbody>
+                        {% for player in user_points %}
+                        <tr>
+                            <td class="text-uppercase"><b>{{ player.userID }}:</b></td>
+                            <td> {{ player.wins }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% for player in players_names %}
+                            {% if player not in users_w_points %}
+                                    <tr>
+                                        <td class="text-uppercase"><b>{{ player }}:</b></td>
+                                        <td>0</td>
+                                    </tr>
+                            {% endif %}                        
+                        {% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+            <br>
+            <div class="d-none d-sm-table-cell">
+            <a class="twitter-timeline" data-width="300" data-height="2000" data-theme="light"
+                href="https://twitter.com/NFL?ref_src=twsrc%5Etfw">Tweets by NFL</a>
+            <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+            </div>
+        </div>
+        
         <div class="col-md-9">
             <div class="p-3 border bg-dark rounded">
                 <table>
@@ -151,38 +184,7 @@ Scores
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="border p-3 bg-dark rounded">
-                <b class="text-white">Live Standings</b>
-            </div>
-            <div class="border p-3 bg-light rounded text-center">
-                <table class="standing">
-                    <tbody>
-                        {% for player in user_points %}
-                        <tr>
-                            <td class="text-uppercase"><b>{{ player.userID }}:</b></td>
-                            <td> {{ player.wins }}</td>
-                        </tr>
-                        {% endfor %}
-                        {% for player in players_names %}
-                            {% if player not in users_w_points %}
-                                    <tr>
-                                        <td class="text-uppercase"><b>{{ player }}:</b></td>
-                                        <td>0</td>
-                                    </tr>
-                            {% endif %}                        
-                        {% endfor %}
 
-                    </tbody>
-                </table>
-            </div>
-            <br>
-            <div class="d-none d-sm-table-cell">
-            <a class="twitter-timeline" data-width="300" data-height="2000" data-theme="light"
-                href="https://twitter.com/NFL?ref_src=twsrc%5Etfw">Tweets by NFL</a>
-            <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}
