@@ -1,5 +1,6 @@
 from django.http import HttpResponse
 from django.template import loader
+from django.contrib.auth.models import User
 from pickem_api.models import GamePicks
 from pickem_api.models import GamesAndScores, GameWeeks
 from .forms import GamePicksForm
@@ -28,9 +29,14 @@ def scores(request):
     competition = game_list.values_list('competition', flat=True).distinct()[0]
     
     points = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition, pick_correct=True)
-    user_points = points.values('userID').order_by('-userID').annotate(wins=Count('userID'))
+    user_points = points.values('userID').order_by('-userID').annotate(wins=Count('userID')).order_by('-wins')
+    users_w_points = user_points.values_list('userID', flat=True).distinct()
     picks = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition)
+    players = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition)
+    players_names = players.values_list('userID', flat=True).distinct()
+
     # TODO: Give zero points to users that didn't win yet
+    print(players)
 
     template = loader.get_template('pickem/scores.html')
 
@@ -41,6 +47,8 @@ def scores(request):
         'picks': picks,
         'week': game_week,
         'user_points': user_points,
+        'users_w_points': users_w_points,
+        'players_names': players_names,
         'game_weeks': range(1,19)
     }
     return HttpResponse(template.render(context, request))
@@ -53,6 +61,9 @@ def scores_long(request, year, week):
 
     points = GamePicks.objects.filter(gameWeek=week, competition=competition, pick_correct=True)
     user_points = points.values('userID').order_by('-userID').annotate(wins=Count('userID'))
+    users_w_points = user_points.values_list('userID', flat=True).distinct()
+    players = GamePicks.objects.filter(gameWeek=week, competition=competition)
+    players_names = players.values_list('userID', flat=True).distinct()
 
     template = loader.get_template('pickem/scores.html')
 
@@ -63,6 +74,8 @@ def scores_long(request, year, week):
         'picks': picks,
         'week': week,
         'user_points': user_points,
+        'users_w_points': users_w_points,
+        'players_names': players_names,
         'game_weeks': range(1,19)
     }
     return HttpResponse(template.render(context, request))
@@ -82,8 +95,10 @@ def submit_game_picks(request):
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
     competition = game_list.values_list('competition', flat=True).distinct()[0]
 
-    picks = GamePicks.objects.filter(gameyear=game_year, gameWeek=game_week, competition=game_competition)
+    picks = GamePicks.objects.filter(gameyear=game_year, gameWeek=game_week, competition=game_competition, userEmail=request.user.email)
+
     pick_slugs = picks.values_list('slug', flat=True).distinct()
+    pick_ids = picks.values_list('id', flat=True).distinct()
 
     context = {
         'game_list': game_list,
@@ -91,7 +106,8 @@ def submit_game_picks(request):
         'competition': competition,
         'week': game_week,
         'picks': picks,
-        'pick_slugs': pick_slugs
+        'pick_slugs': pick_slugs,
+        'pick_ids': pick_ids
         
     }
 
@@ -104,43 +120,3 @@ def submit_game_picks(request):
         form = GamePicksForm()
 
     return render(request, 'pickem/picks.html', context)
-
-
-
-
-# def submit_game_picks_old(request):
-#     if request.method == 'POST':
-#        form = GamePicksForm(request.POST)
-#        if form.is_valid():
-#            form.save()
-#            return HttpResponse("Saved Game Picks.") 
-#     else:
-#        form = GamePicksForm()
-    
-
-
-#     today = date.today()
-#     today_date = today.strftime("%Y-%m-%d")
-#     game_year = today.strftime("%Y") 
-#     game_week = GameWeeks.objects.get(date=today_date).weekNumber
-#     game_competition = GameWeeks.objects.get(date=today_date).competition
-#     game_list = GamesAndScores.objects.filter(gameyear=game_year, gameWeek=game_week, competition=game_competition)
-
-#     # for game in game_list:
-
-#     #     initial_dict = {
-#     #         "userEmail" : request.user.email,
-#     #         "userID" : request.user.username,
-#     #         "competition": game_competition,
-#     #         "gameWeek": game_week,
-#     #         "gameyear": game_year,
-#     #         'slug': game.slug,
-#     #         'pick_game_id': game.id,
-#     #         "pick_correct": False,
-#     #         'pick': "{}".format(CHOICES_LABEL)
-#     #     }
-        
-#     #     form = GamePicksForm(request.POST or None, initial = initial_dict)
-#     #     context['form']= form
-
-#     return render(request, 'pickem/picks.html', context)

@@ -1,7 +1,6 @@
-- Already picked picks are not per user (input user info to views?)
-- Put picks already made on right side of screen 
 - Inprogress Pick pills not showing on scores page 
-- Add dates to picks page 
+- Add (5/12) type counter to picks made/not made 
+- Hide "picks" or "picks made" if == 0 
 - Deploy to AWS w/ RDS 
 - Script to update correct picks 
 - Cronjobs to run all background scripts 

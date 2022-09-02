@@ -4,91 +4,55 @@
 {% bootstrap_javascript %}
 {% bootstrap_messages %}
 {% load static %}
+
+{% block title %}
+Scores
+{% endblock %}
+
 {% block content %}
 
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
-<div class="container min-vh-100">
-    <br><br><br><br>
-
-    <!-- <nav aria-label="Page navigation example">
-        <ul class="pagination justify-content-center">
-          <li class="page-item disabled">
-            <a class="page-link" href="#" tabindex="-1">Previous</a>
-          </li>
-
-
-          <li class="page-item">
-            <a class="page-link" href="#">Next</a>
-          </li>
-        </ul>
-      </nav>
-
-      <pagination class="pagination-sm" total-items="1000" items-per-page="10" max-size="10">
-    </pagination> -->
-
-    <div class="row">
-        <div class="container px-4">
-            <div class="row gx-4">
-                <div class="col-2 text-center">
-                    <div class="p-3 border bg-dark rounded">
-                            <b class="text-white">Live Standings</b>
-                    </div>
-                    <div class="p-3 border bg-light rounded">
-                            <table class="standing">
-                            {% for user in user_points %}
-                            <tr>
-                            <td class="text-uppercase"><b>{{ user.userID }}:</b></td>
-                            <td> {{ user.wins }}</td>
-                            </tr>
-                            {% endfor %}
-                            </table>
-                    </div>
-                    <br>
-                    <div>
-                        <a class="twitter-timeline" data-width="220" data-height="2000" data-theme="light" href="https://twitter.com/NFL?ref_src=twsrc%5Etfw">Tweets by NFL</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-                    </div>
-                </div>
-                
-                <div class="col">
-                    <div class="p-3 border bg-dark rounded">
-                        <table>
-                            <tr></tr>
-                                <td><h3><img src="{% static '/images/nfl.svg' %}" alt="logo" class="img-responsive img-logo"></h3></td>
-                                <td class="standing">
-                                    <h3 class="text-white">NFL Scoreboard</h3>
-                                    {% if competition == 'nfl-preseason' %}
-                                        <h5 class="text-muted">Preseason - Week {{ week }} </h5>
-                                    {% else %}
-                                        <h5 class="text-muted">Regular Season - Week {{ week }} </h5>
-                                    {% endif %}
-                                </td>
-                        </table>
-                    </div>
-                    <div class="p-3 border bg-light rounded">
-                        {% if game_days %}
-                        {% for day in game_days %}
-                        </ul><h5>{{ day }}</h5>
+<br><br><br><br>
+<div class="container">
+    <div class="row gx-4 ">
+        <div class="col-md-9">
+            <div class="p-3 border bg-dark rounded">
+                <table>
+                    <tr></tr>
+                        <td><h3><img src="{% static '/images/nfl.svg' %}" alt="logo" class="img-responsive img-logo"></h3></td>
+                        <td class="standing">
+                            <h3 class="text-white">NFL Scoreboard</h3>
+                            {% if competition == 'nfl-preseason' %}
+                                <h5 class="text-muted">Preseason - Week {{ week }} </h5>
+                            {% else %}
+                                <h5 class="text-muted">Regular Season - Week {{ week }} </h5>
+                            {% endif %}
+                        </td>
+                </table>
+            </div>
+            <div class="p-3 border bg-light rounded">
+                {% if game_days %}
+                    {% for day in game_days %}
+                        </ul><h5>{{ day|date:"D, M d Y @ P" }}</h5>
                         {% if game_list %}
-                        {% for game in game_list %}
-                        {% if game.startTimestamp == day %}
-                        
-                        <div class="container px-4">
-                            <div class="row gx-2">
-                                <div class="col">
+                            {% for game in game_list %}
+                                {% if game.startTimestamp == day %}
                                     {% if game.statusType == 'inprogress' %}
-                                    <div class="p-3 border border-dark bg-light text-left rounded">
+                                        <div class="p-3 border bg-light text-left rounded border-dark">
                                     {% else %}
-                                    <div class="p-3 border bg-light text-left rounded">
+                                        <div class="p-3 border bg-light text-left rounded">
                                     {% endif %}
-                                        <table>
-                                            <th class="td-team">{{ game.statusTitle }}</th>
-                                            <th class="td-score">1</th>
-                                            <th class="td-score">2</th>
-                                            <th class="td-score">3</th>
-                                            <th class="td-score">4</th>
-                                            <th class="td-score">T</th>
-                                            <th></th>
+                                    <table>
+                                        <tbody>
+                                            <tr>
+                                                <th class="td-team">{{ game.statusTitle }}</th>
+                                                <th class="td-score d-none d-sm-table-cell">1</th>
+                                                <th class="td-score d-none d-sm-table-cell">2</th>
+                                                <th class="td-score d-none d-sm-table-cell">3</th>
+                                                <th class="td-score d-none d-sm-table-cell">4</th>
+                                                <th class="td-score">T</th>
+                                            </tr>
                                             <tr>
                                                 <td>
                                                     {% get_static_prefix as STATIC_PREFIX %}
@@ -106,10 +70,10 @@
                                                         <i>(1-0)</i>                         
                                                     {% endif %}
                                                 </td>
-                                                <td>0</td>
-                                                <td>0</td>
-                                                <td>0</td>
-                                                <td>0</td>
+                                                <td class="d-none d-sm-table-cell">0</td>
+                                                <td class="d-none d-sm-table-cell">0</td>
+                                                <td class="d-none d-sm-table-cell">0</td>
+                                                <td class="d-none d-sm-table-cell">0</td>
                                                 <td>{{ game.awayTeamScore }}</td>
                                                 <td>
                                                     {% if picks %}
@@ -147,10 +111,10 @@
                                                     {% endif %}
                                                 </td>
                                                 
-                                                <td>0</td>
-                                                <td>0</td>
-                                                <td>0</td>
-                                                <td>0</td>
+                                                <td class="d-none d-sm-table-cell">0</td>
+                                                <td class="d-none d-sm-table-cell">0</td>
+                                                <td class="d-none d-sm-table-cell">0</td>
+                                                <td class="d-none d-sm-table-cell">0</td>
                                                 <td>{{ game.homeTeamScore }}</td>
                                                 <td>
                                                     {% if picks %}
@@ -172,23 +136,48 @@
                                                     {% endif %}
                                                 </td>
                                             </tr>
-                                        </table>
+                                        </tbody>
+                                    </table>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <br>
+                                    <br>
+                                {% endif %}
+                            {% endfor %}
                         {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="border p-3 bg-dark rounded">
+                <b class="text-white">Live Standings</b>
+            </div>
+            <div class="border p-3 bg-light rounded text-center">
+                <table class="standing">
+                    <tbody>
+                        {% for player in user_points %}
+                        <tr>
+                            <td class="text-uppercase"><b>{{ player.userID }}:</b></td>
+                            <td> {{ player.wins }}</td>
+                        </tr>
                         {% endfor %}
-                        {% else %}
-                        <p>Something is wrong.</p>
-                        {% endif %}
+                        {% for player in players_names %}
+                            {% if player not in users_w_points %}
+                                    <tr>
+                                        <td class="text-uppercase"><b>{{ player }}:</b></td>
+                                        <td>0</td>
+                                    </tr>
+                            {% endif %}                        
                         {% endfor %}
-                        {% else %}
-                        <p>No Games Scheduled for this week.</p>
-                        {% endif %}
-                    </div>
-                </div>
+
+                    </tbody>
+                </table>
+            </div>
+            <br>
+            <div class="d-none d-sm-table-cell">
+            <a class="twitter-timeline" data-width="300" data-height="2000" data-theme="light"
+                href="https://twitter.com/NFL?ref_src=twsrc%5Etfw">Tweets by NFL</a>
+            <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
             </div>
         </div>
     </div>

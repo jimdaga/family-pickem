@@ -21,13 +21,13 @@ img {
 
   
 .img-logo {
-    width: 100px;
-    height: 100px;
+    width: 125px;
+    height: 125px;
 }
 
 .nfl-logo {
-    width: 32px;
-    height: 32px;
+    width: 60px;
+    height: 60px;
 }
 
 .img-thumbnail {
@@ -63,9 +63,13 @@ nav .navbar-nav-blue li a {
 }
 
 td {
-    padding: 15px;
+    padding: 10px;
 }
 
+tr.spaceUnder>td {
+    padding-bottom: 1em;
+  }
+  
 .td-score {
     text-align: center;
 }
