@@ -40,7 +40,7 @@ img {
 }
 
 nav .navbar-nav li a {
-    color: white !important;
+    color: white;
 }
 
 .dark-text{
@@ -48,7 +48,7 @@ nav .navbar-nav li a {
 }
   
 nav .navbar-nav-blue li a {
-    color: rgb(104, 11, 11) !important;
+    color: rgb(104, 11, 11);
 }
 
 .debug {
@@ -96,3 +96,5 @@ tr.spaceUnder>td {
   .custom-toggler.navbar-toggler {
     border-color: rgb(255, 255, 255);
   } 
+
+.navbar-nav > li > .dropdown-menu a{   color: #555555;  }
