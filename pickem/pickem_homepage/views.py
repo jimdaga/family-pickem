@@ -16,6 +16,12 @@ from django.forms import formset_factory
 def index(request):
     return render(request, 'pickem/home.html')
 
+def standings(request):
+    return render(request, 'pickem/standings.html')
+
+def rules(request):
+    return render(request, 'pickem/rules.html')
+
 def scores(request):
 
     today = date.today()

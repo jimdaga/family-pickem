@@ -1,9 +1,5 @@
 {% extends 'pickem/base.html' %}
 
-{% load bootstrap5 %}
-{% bootstrap_css %}
-{% bootstrap_javascript %}
-{% bootstrap_messages %}
 {% load static %}
 {% load pickem_homepage_extras %}
 
@@ -43,7 +39,7 @@ Picks
                         {% if game.slug not in pick_slugs %}
                             {% with user.id|addstr:"-"|addstr:game.id as template %}
                                 {% if template not in pick_ids %}
-                                    {% if game.statusType != 'notstarted' %}
+                                    {% if game.statusType == 'notstarted' %}
                                         <div class="p-3 border bg-light rounded">
                                             <form action="/picks/" method="POST" enctype="multipart/form-data">
                                                 <tr>
@@ -130,7 +126,8 @@ Picks
                                                     <label for="css">{{ game.homeTeamName }}</label><br>
                                                 </td>
                                             </tr>
-                                            <br>{% buttons submit='Save' %}{% endbuttons %}   
+                                            <br>
+                                                <button type="submit" class="btn btn-primary" >Save</button>
                                             </form>
                                         </div>
                                         <BR>   
