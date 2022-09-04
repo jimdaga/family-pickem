@@ -68,7 +68,7 @@ Scores
                         {% if game_list %}
                             {% for game in game_list %}
                                 {% if game.startTimestamp == day %}
-                                    {% if game.statusType != 'inprogress' %}
+                                    {% if game.statusType == 'inprogress' %}
                                         <div class="p-3 border bg-light text-left rounded border-dark">
                                     {% else %}
                                         <div class="p-3 border bg-light text-left rounded">
@@ -77,11 +77,13 @@ Scores
                                         <tbody>
                                             <tr>
                                                 <th class="td-team">{{ game.statusTitle }}</th>
+                                                {% if game.statusType != 'notstarted' %}
                                                 <th class="td-score d-none d-sm-table-cell">1</th>
                                                 <th class="td-score d-none d-sm-table-cell">2</th>
                                                 <th class="td-score d-none d-sm-table-cell">3</th>
                                                 <th class="td-score d-none d-sm-table-cell">4</th>
                                                 <th class="td-score">T</th>
+                                                {% endif %}
                                             </tr>
                                             <tr>
                                                 <td>
@@ -101,29 +103,31 @@ Scores
                                                         <i>(1-0)</i>                         
                                                     {% endif %}
                                                 </td>
-                                                <td class="d-none d-sm-table-cell">0</td>
-                                                <td class="d-none d-sm-table-cell">0</td>
-                                                <td class="d-none d-sm-table-cell">0</td>
-                                                <td class="d-none d-sm-table-cell">0</td>
-                                                <td>{{ game.awayTeamScore }}</td>
-                                                <td>
-                                                    {% if picks %}
-                                                    {% for pick in picks %}
-                                                    {% if pick.pick == game.awayTeamSlug %}
-                                                        {% if game.statusType == 'finished' %}
-                                                            {% if game.gameWinner == game.awayTeamSlug %}
-                                                                <span class="badge win text-uppercase">{{ pick.userID }}</span>
-                                                            {% else %}
-                                                                <span class="badge loss text-uppercase">{{ pick.userID }}</span>
+                                                {% if game.statusType != 'notstarted' %}
+                                                    <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod1 }}</td>
+                                                    <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod2 }}</td>
+                                                    <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod3 }}</td>
+                                                    <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod4 }}</td>
+                                                    <td>{{ game.awayTeamScore }}</td>
+                                                    <td>
+                                                        {% if picks %}
+                                                        {% for pick in picks %}
+                                                        {% if pick.pick == game.awayTeamSlug %}
+                                                            {% if game.statusType == 'finished' %}
+                                                                {% if game.gameWinner == game.awayTeamSlug %}
+                                                                    <span class="badge win text-uppercase">{{ pick.userID }}</span>
+                                                                {% else %}
+                                                                    <span class="badge loss text-uppercase">{{ pick.userID }}</span>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                            {% if game.statusType == 'inprogress' %}                                                                                                         
+                                                                <span class="badge inprogress text-uppercase">{{ pick.userID }}</span>
                                                             {% endif %}
                                                         {% endif %}
-                                                        {% if game.statusType == 'inprogress' %}                                                        
-                                                            <span class="badge text-uppercase">{{ pick.userID }}</span>
+                                                        {% endfor %}
                                                         {% endif %}
-                                                    {% endif %}
-                                                    {% endfor %}
-                                                    {% endif %}
-                                                </td>
+                                                    </td>
+                                                {% endif %}
                                             </tr>
                                             <tr>
                                                 <td>
@@ -144,30 +148,31 @@ Scores
                                                     {% endif %}
                                                 </td>
                                                 
-                                                <td class="d-none d-sm-table-cell">0</td>
-                                                <td class="d-none d-sm-table-cell">0</td>
-                                                <td class="d-none d-sm-table-cell">0</td>
-                                                <td class="d-none d-sm-table-cell">0</td>
-                                                <td>{{ game.homeTeamScore }}</td>
-                                                <td>
-                                                    {% if picks %}
-                                                    {% for pick in picks %}
-                                                    {% if pick.pick == game.homeTeamSlug %}
-                                                        {% if game.statusType == 'finished' %}
-                                                            {% if game.gameWinner == game.homeTeamSlug %}
-                                                                <span class="badge win text-uppercase">{{ pick.userID }}</span>
-                                                            {% else %}
-                                                                <span class="badge loss text-uppercase">{{ pick.userID }}</span>
+                                                {% if game.statusType != 'notstarted' %}
+                                                    <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod1 }}</td>
+                                                    <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod2 }}</td>
+                                                    <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod3 }}</td>
+                                                    <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod4 }}</td>
+                                                    <td>{{ game.homeTeamScore }}</td>
+                                                    <td>
+                                                        {% if picks %}
+                                                        {% for pick in picks %}
+                                                        {% if pick.pick == game.homeTeamSlug %}
+                                                            {% if game.statusType == 'finished' %}
+                                                                {% if game.gameWinner == game.homeTeamSlug %}
+                                                                    <span class="badge win text-uppercase">{{ pick.userID }}</span>
+                                                                {% else %}
+                                                                    <span class="badge loss text-uppercase">{{ pick.userID }}</span>
+                                                                {% endif %}
                                                             {% endif %}
-                                                        
-                                                        {% if game.statusType == 'inprogress' %}                                                        
-                                                            <span class="badge inprogress text-uppercase">{{ pick.userID }}</span>
+                                                            {% if game.statusType == 'inprogress' %}                                                                                                         
+                                                                <span class="badge inprogress text-uppercase">{{ pick.userID }}</span>
+                                                            {% endif %}
                                                         {% endif %}
-                                                    {% endif %}
-                                                    {% endif %}
-                                                    {% endfor %}
-                                                    {% endif %}
-                                                </td>
+                                                        {% endfor %}
+                                                        {% endif %}
+                                                    </td>
+                                                {% endif %}
                                             </tr>
                                         </tbody>
                                     </table>

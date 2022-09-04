@@ -23,7 +23,7 @@ def check_game_id(id):
     """
     Check if game ID has already been added.
     """
-    url = "http://pickem-dev.us-east-1.elasticbeanstalk.com/api/games/{}".format(id)
+    url = "http://localhost:8000/api/games/{}".format(id)
 
     headers = {
         "Content-Type": "application/json",
@@ -40,7 +40,7 @@ def get_game_week(game_date):
     """
     Check week number for a date
     """
-    url = "http://pickem-dev.us-east-1.elasticbeanstalk.com/api/weeks/{}".format(game_date)
+    url = "http://localhost:8000/api/weeks/{}".format(game_date)
 
     headers = {
         "Content-Type": "application/json",
@@ -60,11 +60,11 @@ def add_games(payload, id):
     }
 
     if check_game_id(id): 
-        url = "http://pickem-dev.us-east-1.elasticbeanstalk.com/api/games/{}".format(id)
+        url = "http://localhost:8000/api/games/{}".format(id)
         x = requests.put(url, data = payload, headers = headers)
         verb = "Updated"
     else:
-        url = "http://pickem-dev.us-east-1.elasticbeanstalk.com/api/games/"
+        url = "http://localhost:8000/api/games/"
         x = requests.post(url, data = payload, headers = headers)
         verb = "Added"
     
@@ -107,16 +107,31 @@ def build_payload(payload):
             homeTeamName = entry['homeTeam']['name']
             if statusType == 'notstarted':
                 homeTeamScore = 0
+                homeTeamPeriod1 = 0
+                homeTeamPeriod2 = 0
+                homeTeamPeriod3 = 0
+                homeTeamPeriod4 = 0
             else: 
                 homeTeamScore = entry['homeScore']['current']
+                homeTeamPeriod1 = entry['homeScore']['period1']
+                homeTeamPeriod2 = entry['homeScore']['period2']
+                homeTeamPeriod3 = entry['homeScore']['period3']
+                homeTeamPeriod4 = entry['homeScore']['period4']
             awayTeamId = entry['awayTeam']['id']
             awayTeamSlug = entry['awayTeam']['slug']
             awayTeamName = entry['awayTeam']['name']
             if statusType == 'notstarted':
                 awayTeamScore = 0
+                awayTeamPeriod1 = 0
+                awayTeamPeriod2 = 0
+                awayTeamPeriod3 = 0
+                awayTeamPeriod4 = 0
             else: 
                 awayTeamScore = entry['awayScore']['current']
-
+                awayTeamPeriod1 = entry['homeScore']['period1']
+                awayTeamPeriod2 = entry['homeScore']['period2']
+                awayTeamPeriod3 = entry['homeScore']['period3']
+                awayTeamPeriod4 = entry['homeScore']['period4']
             payload = {
                 "id": gameId,
                 "slug": slug,
@@ -131,10 +146,19 @@ def build_payload(payload):
                 "homeTeamSlug": homeTeamSlug,
                 "homeTeamName": homeTeamName,
                 "homeTeamScore": homeTeamScore,
+                "homeTeamPeriod1": homeTeamPeriod1,
+                "homeTeamPeriod2": homeTeamPeriod2,
+                "homeTeamPeriod3": homeTeamPeriod3,
+                "homeTeamPeriod4": homeTeamPeriod4,
                 "awayTeamId": awayTeamId,
                 "awayTeamSlug": awayTeamSlug,
                 "awayTeamName": awayTeamName,
                 "awayTeamScore": awayTeamScore,
+                "awayTeamPeriod1": awayTeamPeriod1,
+                "awayTeamPeriod2": awayTeamPeriod2,
+                "awayTeamPeriod3": awayTeamPeriod3,
+                "awayTeamPeriod4": awayTeamPeriod4
+
             }
             json_string = json.dumps(payload, default=str)
             add_games(json_string, gameId)

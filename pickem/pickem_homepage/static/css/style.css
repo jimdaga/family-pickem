@@ -1,5 +1,6 @@
 body {
     background-color: #F2F3F7;
+    /* background-color: rgb(32, 32, 32); */
 }
 
 .center {
@@ -34,6 +35,12 @@ img {
     width: 100px;
     height: 50px;
     padding-left: 1rem;
+    background-color: transparent;
+    border: none;
+    object-fit: contain;
+}
+
+.rules-thumbnail {
     background-color: transparent;
     border: none;
     object-fit: contain;

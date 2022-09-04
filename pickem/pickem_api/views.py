@@ -104,3 +104,18 @@ def week_detail(request, date):
     if request.method == 'GET': 
         game_week_serializer = GameWeeksSerializer(game)
         return Response(game_week_serializer.data)
+
+@api_view(['GET'])
+def games_unscored(request):
+    """
+    GET unscored games
+    find unscored games 
+    """
+    try: 
+        game = GamesAndScores.objects.filter(gameScored=False, statusType='finished')
+    except GamesAndScores.DoesNotExist: 
+        return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
+ 
+    if request.method == 'GET': 
+        games_unscored_serializer = GameSerializer(game, many=True)
+        return Response(games_unscored_serializer.data)

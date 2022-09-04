@@ -25,7 +25,7 @@ SECRET_KEY = '=0n@nr8j+^ohv5=7x-g$o+hap3rt_3m(34jyo_sfl#qcz#ouo+'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['pickem-dev.us-east-1.elasticbeanstalk.com', 'localhost']
+ALLOWED_HOSTS = ['pickem-dev.us-east-1.elasticbeanstalk.com', 'family-pickem.com', 'localhost']
 
 
 # Application definition

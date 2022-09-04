@@ -16,12 +16,21 @@ class GamesAndScores(models.Model):
     homeTeamSlug = models.CharField(max_length=250)
     homeTeamName = models.CharField(max_length=250)
     homeTeamScore = models.IntegerField()
+    homeTeamPeriod1 = models.IntegerField(default=0)
+    homeTeamPeriod2 = models.IntegerField(default=0)
+    homeTeamPeriod3 = models.IntegerField(default=0)
+    homeTeamPeriod4 = models.IntegerField(default=0)
     awayTeamId = models.IntegerField()
     awayTeamSlug = models.CharField(max_length=250)
     awayTeamName = models.CharField(max_length=250)
     awayTeamScore = models.IntegerField()
+    awayTeamPeriod1 = models.IntegerField(default=0)
+    awayTeamPeriod2 = models.IntegerField(default=0)
+    awayTeamPeriod3 = models.IntegerField(default=0)
+    awayTeamPeriod4 = models.IntegerField(default=0)
     gameAdded = models.DateTimeField(auto_now_add=True)
     gameUpdated = models.DateTimeField(auto_now=True)
+    gameScored = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['startTimestamp']

@@ -6,9 +6,75 @@
 <div class="container min-vh-100">
     <br><br><br><br>
 
-    <h1>Family Football Pick League</h1>
-    <p>Rules are a work in progress</p>
-    <p>Shhh.. don't tell Patty</p>
-
+    <div class="row">
+        <div class="container px-4">
+            <div class="row gx-4">
+                    <div class="p-3 border bg-dark rounded">
+                        <h3 class="text-white text-center">Family Football Pick League Rules</h3>
+                    </div>                    
+                <div class="p-3 border bg-light rounded">
+                    <div class="container px-4">
+                        <div class="text-center">        
+                            <img src="{% static 'images/patty-rules.jpeg' %}" class="rounded" style="width:250px;height:300px;" alt="patty">
+                            <p>Patty Donovan, enforcing the rules since 2019</p>
+                        </div>
+                        <div class="accordion" id="accordionExample">
+                            <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingOne">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                1. Points (Wins/Losses/Ties)
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+                                <div class="accordion-body">
+                                <ul>
+                                    <li>1.A - Wins are awareded 1 point</li>
+                                    <li>1.B - Losses do not get any points</li>
+                                    <li>1.C - No points awareded for ties</li>
+                                    <li>1.D - 2 points awareded for each week won</li>
+                                </ul>
+                                </div>
+                            </div>
+                            </div>
+                    
+                            <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingTwo">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">
+                                2. Advanced Rules
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse show" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+                                <div class="accordion-body">
+                                <ul>
+                                    <li>2.A - Tiebreaker determined by whoever has the closes to the total score (No Price is Right Rules)</li> 
+                                    <li>2.B - If a tie breaker total score has the potential to end up in a tie, particpants that are in the running will choose most total combined yards of both teams of the monday night game as well.</li>
+                                    <li>2.C - Games are locked automatically the second the given game starts</li>
+                                    </li>
+                                </ul>
+                                </div>
+                            </div>
+                            </div>
+                            <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingThree">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="true" aria-controls="collapseThree">
+                                3. Bonus Rules 
+                                </button>
+                            </h2>
+                            <div id="collapseThree" class="accordion-collapse collapse show" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+                                <div class="accordion-body">
+                                <ul>
+                                    <li>3.A - If a person picks a "Perfect Week", Every participant must pay the winnder $10/each</li>
+                                    <li>3.B - $40 Per Person entry fee. Champion is determined by most total points.</li>
+                                    <li>3.C - In the event of a tie at the end of the season for a champion, that participant that are tied will continue into the playoffs.</li>
+                                </ul>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

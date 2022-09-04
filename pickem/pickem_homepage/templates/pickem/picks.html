@@ -39,7 +39,7 @@ Picks
                         {% if game.slug not in pick_slugs %}
                             {% with user.id|addstr:"-"|addstr:game.id as template %}
                                 {% if template not in pick_ids %}
-                                    {% if game.statusType == 'notstarted' %}
+                                    {% if game.statusType != 'notstarted' %}
                                         <div class="p-3 border bg-light rounded">
                                             <form action="/picks/" method="POST" enctype="multipart/form-data">
                                                 <tr>

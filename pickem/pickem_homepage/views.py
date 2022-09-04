@@ -31,8 +31,9 @@ def scores(request):
     game_competition = GameWeeks.objects.get(date=today_date).competition
 
     game_list = GamesAndScores.objects.filter(gameyear=game_year, gameWeek=game_week, competition=game_competition)
+    # game_list = GamesAndScores.objects.filter(gameyear=game_year, gameWeek='3', competition='nfl-preseason')
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
-    competition = game_list.values_list('competition', flat=True).distinct()[0]
+    competition = game_list.values_list('competition', flat=True).distinct()
     
     points = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition, pick_correct=True)
     user_points = points.values('userID').order_by('-userID').annotate(wins=Count('userID')).order_by('-wins')
@@ -99,7 +100,7 @@ def submit_game_picks(request):
 
     game_list = GamesAndScores.objects.filter(gameyear=game_year, gameWeek=game_week, competition=game_competition)
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
-    competition = game_list.values_list('competition', flat=True).distinct()[0]
+    competition = game_list.values_list('competition', flat=True).distinct()
 
     picks = GamePicks.objects.filter(gameyear=game_year, gameWeek=game_week, competition=game_competition, userEmail=request.user.email)
 
