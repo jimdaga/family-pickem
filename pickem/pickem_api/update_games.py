@@ -1,9 +1,9 @@
-#!/usr/bin/env python3
 """
 Get NFL Games 
 Jim D'Agostino
 Aug 2022
 """
+#!/usr/bin/env python3
 
 import requests
 import sys
@@ -181,13 +181,8 @@ def get_games(api_key, game_date):
     json_response = json.loads(response.text)
     build_payload(json_response)
 
-
-def main():
-    print()
-    print("#############################################")
-    print("Get NFL Games                                ")
-    print("#############################################")
-    print()
+def update_games():
+    print("Scheduled Job: Update NFL Games")
     try:
         os.environ["X_RAPIDAPI_KEY"]
     except KeyError:
@@ -203,4 +198,4 @@ def main():
         get_games(api_key, game_date)
 
 if __name__ == '__main__':
-    main()
+    update_games()

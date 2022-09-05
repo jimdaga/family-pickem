@@ -27,3 +27,4 @@ sqlparse==0.4.2
 urllib3==1.26.11
 boto3==1.24.65
 django-storages==1.13.1
+apscheduler==3.9.1

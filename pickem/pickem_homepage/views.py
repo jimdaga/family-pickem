@@ -60,16 +60,23 @@ def scores(request):
     }
     return HttpResponse(template.render(context, request))
 
-def scores_long(request, year, week):
-    game_list = GamesAndScores.objects.filter(gameyear=year, gameWeek=week, competition='nfl')
-    game_days = game_list.values_list('startTimestamp', flat=True).distinct()
-    competition = 'nfl'
-    picks = GamePicks.objects.filter(gameWeek=week, competition='nfl')
+def scores_long(request, competition, year, week):
+    if competition == '0':
+        competition_name='nfl-preseason'
+    else:
+        competition_name='nfl'
 
-    points = GamePicks.objects.filter(gameWeek=week, competition=competition, pick_correct=True)
+    print("comp: %s" % competition_name)
+
+    game_list = GamesAndScores.objects.filter(competition=competition_name, gameyear=year, gameWeek=week)
+    game_days = game_list.values_list('startTimestamp', flat=True).distinct()
+    competition = competition_name
+    picks = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
+
+    points = GamePicks.objects.filter(gameWeek=week, competition=competition_name, pick_correct=True)
     user_points = points.values('userID').order_by('-userID').annotate(wins=Count('userID'))
     users_w_points = user_points.values_list('userID', flat=True).distinct()
-    players = GamePicks.objects.filter(gameWeek=week, competition=competition)
+    players = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
     players_names = players.values_list('userID', flat=True).distinct()
 
     template = loader.get_template('pickem/scores.html')
@@ -77,7 +84,7 @@ def scores_long(request, year, week):
     context = {
         'game_list': game_list,
         'game_days': game_days,
-        'competition': competition,
+        'competition': competition_name,
         'picks': picks,
         'week': week,
         'user_points': user_points,

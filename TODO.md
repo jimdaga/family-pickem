@@ -6,12 +6,13 @@ Pickem
 - [ ] Hide "picks" or "picks made" if == 0 
 - [ ] Add tie breaker 
 - [ ] Script to update correct picks (http://localhost:8000/api/unscored)
-- [ ] Cronjobs to run all background scripts 
+- [ x ] Cronjobs to run all background scripts 
 - [ ] Update wins/losses logic for teams 
 - [ ] Add per quarter scores 
 - [ ] homepage 
 - [ ] standings page 
 - [ ] remove hardcoded password for createsu
+- [ ] move to django_apscheduler (https://medium.com/@mrgrantanderson/replacing-cron-and-running-background-tasks-in-django-using-apscheduler-and-django-apscheduler-d562646c062e)
 
 - [ x ] fix navbar dropdowns (bootstrap javascript issue?)
 - [ x ] fix navbar hiding things
