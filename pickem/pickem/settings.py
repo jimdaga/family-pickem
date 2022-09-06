@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import requests
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,10 +24,17 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '=0n@nr8j+^ohv5=7x-g$o+hap3rt_3m(34jyo_sfl#qcz#ouo+'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if 'RDS_DB_NAME' in os.environ:
+    DEBUG = False
+else:
+    DEBUG = True
 
 ALLOWED_HOSTS = ['pickem-dev.us-east-1.elasticbeanstalk.com', 'family-pickem.com', 'localhost']
-
+try:
+    EC2_IP = requests.get('http://169.254.169.254/latest/meta-data/local-ipv4').text
+    ALLOWED_HOSTS.append(EC2_IP)
+except requests.exceptions.RequestException:
+    pass
 
 # Application definition
 
