@@ -26,15 +26,17 @@ SECRET_KEY = '=0n@nr8j+^ohv5=7x-g$o+hap3rt_3m(34jyo_sfl#qcz#ouo+'
 # SECURITY WARNING: don't run with debug turned on in production!
 if 'RDS_DB_NAME' in os.environ:
     DEBUG = False
+    SECURE_SSL_REDIRECT = True
 else:
     DEBUG = True
 
 ALLOWED_HOSTS = ['pickem-dev.us-east-1.elasticbeanstalk.com', 'family-pickem.com', 'localhost']
-try:
-    EC2_IP = requests.get('http://169.254.169.254/latest/meta-data/local-ipv4').text
-    ALLOWED_HOSTS.append(EC2_IP)
-except requests.exceptions.RequestException:
-    pass
+if 'RDS_DB_NAME' in os.environ:
+    try:
+        EC2_IP = requests.get('http://169.254.169.254/latest/meta-data/local-ipv4').text
+        ALLOWED_HOSTS.append(EC2_IP)
+    except requests.exceptions.RequestException:
+        pass
 
 # Application definition
 

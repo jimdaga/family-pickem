@@ -2,6 +2,13 @@ from time import timezone
 from django.db import models
 
 # Create your models here.
+class Teams(models.Model):
+    id = models.IntegerField(primary_key=True)
+    teamNameSlug = models.CharField(max_length=250)
+    teamNameName = models.CharField(max_length=250)
+    teamWins =  models.IntegerField(default=0)
+    teamLosses =  models.IntegerField(default=0)
+
 class GamesAndScores(models.Model):
     id = models.IntegerField(primary_key=True)
     slug = models.SlugField(max_length=250)
