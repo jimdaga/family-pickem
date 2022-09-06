@@ -1,7 +1,7 @@
-from .serializers import GameSerializer, GameWeeksSerializer
+from .serializers import GameSerializer, GameWeeksSerializer, GamePicksSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from pickem_api.models import GamesAndScores, GameWeeks
+from pickem_api.models import GamesAndScores, GameWeeks, GamePicks
 from django.http import HttpResponse
 from django.http.response import JsonResponse
 from rest_framework.parsers import JSONParser 
@@ -119,3 +119,18 @@ def games_unscored(request):
     if request.method == 'GET': 
         games_unscored_serializer = GameSerializer(game, many=True)
         return Response(games_unscored_serializer.data)
+
+@api_view(['GET'])
+def game_picks(request, pick_game_id):
+    """
+    GET user picks
+    Find user picks mathing game ID
+    """
+    try: 
+        picks = GamePicks.objects.filter(pick_game_id=pick_game_id)
+    except GamesAndScores.DoesNotExist: 
+        return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
+ 
+    if request.method == 'GET': 
+        picks_serializer = GamePicksSerializer(picks, many=True)
+        return Response(picks_serializer.data)
