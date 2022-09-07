@@ -12,6 +12,7 @@ import json
 import re
 import datetime
 from datetime import date
+import time 
 import argparse
 
 parser = argparse.ArgumentParser(description='Populate/Update NFL Games.')
@@ -23,7 +24,7 @@ def check_game_id(id):
     """
     Check if game ID has already been added.
     """
-    url = "http://localhost:8000/api/games/{}".format(id)
+    url = "https://family-pickem.com/api/games/{}".format(id)
 
     headers = {
         "Content-Type": "application/json",
@@ -40,7 +41,7 @@ def get_game_week(game_date):
     """
     Check week number for a date
     """
-    url = "http://localhost:8000/api/weeks/{}".format(game_date)
+    url = "https://family-pickem.com/api/weeks/{}".format(game_date)
 
     headers = {
         "Content-Type": "application/json",
@@ -60,11 +61,11 @@ def add_games(payload, id):
     }
 
     if check_game_id(id): 
-        url = "http://localhost:8000/api/games/{}".format(id)
+        url = "https://family-pickem.com/api/games/{}".format(id)
         x = requests.put(url, data = payload, headers = headers)
         verb = "Updated"
     else:
-        url = "http://localhost:8000/api/games/"
+        url = "https://family-pickem.com/api/games/"
         x = requests.post(url, data = payload, headers = headers)
         verb = "Added"
     
@@ -91,6 +92,11 @@ def build_payload(payload):
             competition = entry['competition']['slug']
             startTimestamp = datetime.datetime.fromtimestamp(entry['startTimestamp'])
             startDate = datetime.date.fromtimestamp(entry['startTimestamp'])
+            weekday = time.strftime('%a', time.localtime(entry['startTimestamp']))
+            if weekday  == 'Mon':
+                tieBreakerGame = True
+            else:
+                tieBreakerGame = False
             gameWeek = get_game_week(startDate)
             gameYear = "2022"
             if "winner" in entry:
@@ -128,10 +134,10 @@ def build_payload(payload):
                 awayTeamPeriod4 = 0
             else: 
                 awayTeamScore = entry['awayScore']['current']
-                awayTeamPeriod1 = entry['homeScore']['period1']
-                awayTeamPeriod2 = entry['homeScore']['period2']
-                awayTeamPeriod3 = entry['homeScore']['period3']
-                awayTeamPeriod4 = entry['homeScore']['period4']
+                awayTeamPeriod1 = entry['awayScore']['period1']
+                awayTeamPeriod2 = entry['awayScore']['period2']
+                awayTeamPeriod3 = entry['awayScore']['period3']
+                awayTeamPeriod4 = entry['awayScore']['period4']
             payload = {
                 "id": gameId,
                 "slug": slug,
@@ -139,6 +145,7 @@ def build_payload(payload):
                 "gameWeek": gameWeek,
                 "gameyear": gameYear,
                 "startTimestamp": startTimestamp,
+                "tieBreakerGame": tieBreakerGame,
                 "gameWinner": gameWinner,
                 "statusType": statusType,
                 "statusTitle": statusTitle,
@@ -177,9 +184,13 @@ def get_games(api_key, game_date):
         "X-RapidAPI-Host": "viperscore.p.rapidapi.com"
     }
     
-    response = requests.request("GET", url, headers=headers, params=querystring)
-    json_response = json.loads(response.text)
-    build_payload(json_response)
+    try:
+        response = requests.request("GET", url, headers=headers, params=querystring)
+        json_response = json.loads(response.text)
+        build_payload(json_response)
+    except requests.exceptions.RequestException:
+        print(response.text)
+
 
 def update_games():
     print("Scheduled Job: Update NFL Games")

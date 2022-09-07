@@ -45,9 +45,23 @@
                                                 <tr>
                                                     <td>
                                                         <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled>
-                                                        <label for="html" class="text-muted">{{ game.awayTeamName }}</label><br>
+                                                        <label for="html" class="text-muted">
+                                                            {{ game.awayTeamName }}
+                                                            {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endfor %} 
+                                                        </label><br>
                                                         <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled>
-                                                        <label for="css" class="text-muted">{{ game.homeTeamName }}</label><br>
+                                                        <label for="css" class="text-muted">
+                                                            {{ game.homeTeamName }}
+                                                            {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endfor %} 
+                                                        </label><br>
                                                     </td>
                                                 </tr>
                                                 <BR>
@@ -115,11 +129,39 @@
                                             <tr>
                                                 <td>
                                                     <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}">
-                                                    <label for="html">{{ game.awayTeamName }}</label><br>
+                                                    <label for="html">
+                                                        {{ game.awayTeamName }}
+                                                        {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endfor %} 
+                                                       
+                                                    </label><br>
                                                     <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}">
-                                                    <label for="css">{{ game.homeTeamName }}</label><br>
+                                                    <label for="css">
+                                                        {{ game.homeTeamName }}
+                                                        {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endfor %} 
+                                                    </label><br>
                                                 </td>
                                             </tr>
+                                            
+                                            {% if game.tieBreakerGame == True %}
+                                            <tr>
+                                                <td>
+                                                    <br>
+                                                    <label for="quantity"><b>Tie Breaker:</b><br>How many total points will be scored in {{ game.awayTeamName }} @ {{ game.homeTeamName }}?</label>
+                                                    <br>
+                                                    <input type="number" id="tieBreakerScore" name="tieBreakerScore" required>
+                                                    <br>
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+
                                             <br>
                                                 <button type="submit" class="btn btn-primary" >Save</button>
                                             </form>
@@ -149,19 +191,47 @@
                                         {% for p in picks %}
                                             {% if p.pick == game.homeTeamSlug %}
                                                 <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled>
-                                                <label for="html">{{ game.awayTeamName }}</label><br>
+                                                <label for="html">
+                                                    {{ game.awayTeamName }}
+                                                    {% for team in wins_losses %}
+                                                    {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                    {% endif %}
+                                                {% endfor %} 
+                                                </label><br>
                                                 <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled checked>
-                                                <label for="css">{{ game.homeTeamName }}</label><br>
+                                                <label for="css">
+                                                    {{ game.homeTeamName }}
+                                                    {% for team in wins_losses %}
+                                                    {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                    {% endif %}
+                                                {% endfor %} 
+                                                </label><br>
                                             {% elif p.pick == game.awayTeamSlug %}
                                                 <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled checked>
-                                                <label for="html">{{ game.awayTeamName }}</label><br>
+                                                <label for="html">
+                                                    {{ game.awayTeamName }}
+                                                    {% for team in wins_losses %}
+                                                    {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                    {% endif %}
+                                                {% endfor %} 
+                                                </label><br>
                                                 <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled>
-                                                <label for="css">{{ game.homeTeamName }}</label><br>
+                                                <label for="css">
+                                                    {{ game.homeTeamName }}
+                                                    {% for team in wins_losses %}
+                                                    {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                    {% endif %}
+                                                {% endfor %} 
+                                                </label><br>
                                             {% endif %}
                                         {% endfor %}
                                         
                                         </td>
-                                    </tr>
+                                    </tr>                                 
                                 </form>
                                 </div>
                                 <BR>
@@ -169,7 +239,6 @@
                                     {% endwith %}
                                 {% endif %}
                                 {% endfor %}
-                    {% else %}
                     {% endif %}
                 </div>
             </div>

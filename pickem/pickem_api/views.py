@@ -146,4 +146,23 @@ def get_teams(request):
         
         teams_serializer = TeamsSerializer(teams, many=True)
         return Response(teams_serializer.data)
+
+    elif request.method == 'POST':
+        teams_data = JSONParser().parse(request)
+        teams_serializer = TeamsSerializer(data=teams_data)
+        if teams_serializer.is_valid():
+            teams_serializer.save()
+            return JsonResponse(teams_serializer.data, status=status.HTTP_201_CREATED) 
+        return JsonResponse(teams_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def get_active_games_bool(request):
+    """
+    GET active games (bool)
+    Figure out if there are any active games
+    """
+    if request.method == 'GET':
+        teams = Teams.objects.all()
         
+        teams_serializer = TeamsSerializer(teams, many=True)
+        return Response(teams_serializer.data)

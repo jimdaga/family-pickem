@@ -1,4 +1,5 @@
 from time import timezone
+from xmlrpc.client import Boolean
 from django.db import models
 
 # Create your models here.
@@ -35,6 +36,7 @@ class GamesAndScores(models.Model):
     awayTeamPeriod2 = models.IntegerField(default=0)
     awayTeamPeriod3 = models.IntegerField(default=0)
     awayTeamPeriod4 = models.IntegerField(default=0)
+    tieBreakerGame = models.BooleanField(default=False)
     gameAdded = models.DateTimeField(auto_now_add=True)
     gameUpdated = models.DateTimeField(auto_now=True)
     gameScored = models.BooleanField(default=False)
@@ -51,7 +53,8 @@ class GamePicks(models.Model):
     gameWeek = models.CharField(max_length=2)
     gameyear = models.CharField(max_length=4)
     pick_game_id = models.IntegerField()
-    pick = models.CharField(max_length=250)
+    pick = models.CharField(max_length=250) 
+    tieBreakerScore = models.IntegerField(blank=True, null=True)
     pick_correct = models.BooleanField(default=False)
     pickAdded = models.DateTimeField(auto_now_add=True)
     pickUpdated = models.DateTimeField(auto_now=True)

@@ -2,7 +2,7 @@ from django.http import HttpResponse
 from django.template import loader
 from django.contrib.auth.models import User
 from pickem_api.models import GamePicks
-from pickem_api.models import GamesAndScores, GameWeeks
+from pickem_api.models import GamesAndScores, GameWeeks, Teams
 from .forms import GamePicksForm
 
 from django.shortcuts import render
@@ -41,6 +41,7 @@ def scores(request):
     picks = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition)
     players = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition)
     players_names = players.values_list('userID', flat=True).distinct()
+    wins_losses = Teams.objects.all()
 
     # TODO: Give zero points to users that didn't win yet
     print(players)
@@ -51,6 +52,7 @@ def scores(request):
         'game_list': game_list,
         'game_days': game_days,
         'competition': competition,
+        'wins_losses': wins_losses,
         'picks': picks,
         'week': game_week,
         'user_points': user_points,
@@ -78,6 +80,7 @@ def scores_long(request, competition, year, week):
     users_w_points = user_points.values_list('userID', flat=True).distinct()
     players = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
     players_names = players.values_list('userID', flat=True).distinct()
+    wins_losses = Teams.objects.all()
 
     template = loader.get_template('pickem/scores.html')
 
@@ -85,6 +88,7 @@ def scores_long(request, competition, year, week):
         'game_list': game_list,
         'game_days': game_days,
         'competition': competition_name,
+        'wins_losses': wins_losses,
         'picks': picks,
         'week': week,
         'user_points': user_points,
@@ -114,10 +118,13 @@ def submit_game_picks(request):
     pick_slugs = picks.values_list('slug', flat=True).distinct()
     pick_ids = picks.values_list('id', flat=True).distinct()
 
+    wins_losses = Teams.objects.all()
+
     context = {
         'game_list': game_list,
         'game_days': game_days,
         'competition': competition,
+        'wins_losses': wins_losses,
         'week': game_week,
         'picks': picks,
         'pick_slugs': pick_slugs,

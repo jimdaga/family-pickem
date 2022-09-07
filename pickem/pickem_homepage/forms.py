@@ -15,5 +15,6 @@ class GamePicksForm(forms.ModelForm):
             'gameyear',
             'pick_game_id',
             'pick',
-            'pick_correct'
+            'pick_correct',
+            'tieBreakerScore'
         )

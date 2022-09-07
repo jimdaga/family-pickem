@@ -89,14 +89,26 @@
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == game.awayTeamSlug %}
                                                             <b>{{ game.awayTeamName }}&#9664;</b>
-                                                            <i>(1-0)</i>
+                                                            {% for team in wins_losses %}
+                                                                {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                                    <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                {% endif %}
+                                                            {% endfor %} 
                                                         {% else %}
                                                             <b class="text-muted">{{ game.awayTeamName }}</b>
-                                                            <i>(1-0)</i>
+                                                            {% for team in wins_losses %}
+                                                                {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                                    <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                {% endif %}
+                                                            {% endfor %} 
                                                         {% endif %}
                                                     {% else %}
                                                         <b>{{ game.awayTeamName }}</b>
-                                                        <i>(1-0)</i>                         
+                                                        {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endfor %}                    
                                                     {% endif %}
                                                 </td>
                                                 {% if game.statusType != 'notstarted' %}
@@ -104,7 +116,7 @@
                                                     <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod2 }}</td>
                                                     <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod3 }}</td>
                                                     <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod4 }}</td>
-                                                    <td>{{ game.awayTeamScore }}</td>
+                                                    <td class="font-weight-bold">{{ game.awayTeamScore }}</td>
                                                     <td>
                                                         {% if picks %}
                                                         {% for pick in picks %}
@@ -133,14 +145,21 @@
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == game.homeTeamSlug %}
                                                             <b>{{ game.homeTeamName }}&#9664;</b>
-                                                            <i>(1-0)</i>
+                                                            {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endfor %} 
                                                         {% else %}
                                                             <b class="text-muted">{{ game.homeTeamName }}</b>
-                                                            <i>(1-0)</i>
                                                         {% endif %}
                                                     {% else %}
                                                         <b>{{ game.homeTeamName }}</b>
-                                                        <i>(1-0)</i>        
+                                                        {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endfor %} 
                                                     {% endif %}
                                                 </td>
                                                 
@@ -149,7 +168,7 @@
                                                     <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod2 }}</td>
                                                     <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod3 }}</td>
                                                     <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod4 }}</td>
-                                                    <td>{{ game.homeTeamScore }}</td>
+                                                    <td class="font-weight-bold">{{ game.homeTeamScore }}</td>
                                                     <td>
                                                         {% if picks %}
                                                         {% for pick in picks %}
