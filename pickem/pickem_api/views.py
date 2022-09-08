@@ -1,16 +1,21 @@
+from functools import partial
 from .serializers import GameSerializer, GameWeeksSerializer, GamePicksSerializer, TeamsSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams
+from django.db.models import Q  
 from django.http import HttpResponse
 from django.http.response import JsonResponse
 from rest_framework.parsers import JSONParser 
 from rest_framework import status
+from datetime import date
+from datetime import datetime
 
 # Create your views here.
 def index(request):
     # return HttpResponse(")
     return JsonResponse({'message': 'Family Pickem API'})
+
 
 @api_view(['GET', 'POST', 'DELETE'])
 def game_list(request):
@@ -40,6 +45,7 @@ def game_list(request):
         count = GamesAndScores.objects.all().delete()
         return JsonResponse({'message': '{} All games were deleted successfully!'.format(count[0])}, status=status.HTTP_204_NO_CONTENT)
 
+
 @api_view(['GET', 'PUT', 'DELETE'])
 def game_detail(request, pk):
     """
@@ -67,6 +73,7 @@ def game_detail(request, pk):
         game.delete() 
         return JsonResponse({'message': 'Game was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
 
+
 @api_view(['GET', 'POST', 'DELETE'])
 def week_list(request):
     """
@@ -90,6 +97,7 @@ def week_list(request):
         count = GameWeeks.objects.all().delete()
         return JsonResponse({'message': '{} All game week data was deleted successfully!'.format(count[0])}, status=status.HTTP_204_NO_CONTENT)
 
+
 @api_view(['GET', 'PUT', 'DELETE'])
 def week_detail(request, date):
     """
@@ -104,6 +112,7 @@ def week_detail(request, date):
     if request.method == 'GET': 
         game_week_serializer = GameWeeksSerializer(game)
         return Response(game_week_serializer.data)
+
 
 @api_view(['GET'])
 def games_unscored(request):
@@ -120,20 +129,57 @@ def games_unscored(request):
         games_unscored_serializer = GameSerializer(game, many=True)
         return Response(games_unscored_serializer.data)
 
-@api_view(['GET'])
+
+@api_view(['GET', 'POST'])
 def game_picks(request, pick_game_id):
     """
     GET user picks
     Find user picks mathing game ID
     """
-    try: 
-        picks = GamePicks.objects.filter(pick_game_id=pick_game_id)
-    except GamePicks.DoesNotExist: 
-        return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
- 
-    if request.method == 'GET': 
-        picks_serializer = GamePicksSerializer(picks, many=True)
+    if request.method == 'GET':
+        try: 
+            picks = GamePicks.objects.filter(pick_game_id=pick_game_id)
+        except GamePicks.DoesNotExist: 
+            return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
+    
+        if request.method == 'GET': 
+            picks_serializer = GamePicksSerializer(picks, many=True)
+            return Response(picks_serializer.data)
+    
+    elif request.method == 'POST':
+        pick_data = JSONParser().parse(request)
+        picks_serializer = GamePicksSerializer(data=pick_data)
+        if picks_serializer.is_valid():
+            picks_serializer.save()
+            return JsonResponse(picks_serializer.data, status=status.HTTP_201_CREATED) 
+        return JsonResponse(picks_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PATCH'])
+def user_picks(request, pick_id):
+    """
+    GET user picks
+    Find user picks mathing game ID
+    """
+    if request.method == 'GET':
+        try: 
+            picks = GamePicks.objects.get(id=pick_id)
+        except GamePicks.DoesNotExist: 
+            return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
+        
+        picks_serializer = GamePicksSerializer(picks)
         return Response(picks_serializer.data)
+
+    elif request.method == 'PATCH':
+        request_data = JSONParser().parse(request)
+        pick = GamePicks.objects.get(id=pick_id)
+        # picks_serializer = GamePicksSerializer(pick, data=request_data, partial=True)
+        picks_serializer = GamePicksSerializer(pick, data={'pick_correct': 'true'}, partial=True)
+        if picks_serializer.is_valid():
+            picks_serializer.save()
+            return JsonResponse(picks_serializer.data, status=status.HTTP_201_CREATED) 
+        return JsonResponse(picks_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET', 'POST'])
 def get_teams(request):
@@ -156,13 +202,21 @@ def get_teams(request):
         return JsonResponse(teams_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
-def get_active_games_bool(request):
+def get_active_games(request):
     """
     GET active games (bool)
     Figure out if there are any active games
     """
     if request.method == 'GET':
-        teams = Teams.objects.all()
-        
-        teams_serializer = TeamsSerializer(teams, many=True)
-        return Response(teams_serializer.data)
+        try:
+            today = datetime.today()
+            active_games = GamesAndScores.objects.filter(Q(startTimestamp__year=today.year, 
+                                                        startTimestamp__month=today.month, 
+                                                        startTimestamp__day=today.day, 
+                                                        startTimestamp__hour=today.hour) |
+                                                        Q(statusType='inprogress'))
+        except GamesAndScores.DoesNotExist: 
+            return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
+    
+        games_serializer = GameSerializer(active_games, many=True)
+        return Response(games_serializer.data)

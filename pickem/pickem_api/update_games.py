@@ -15,16 +15,18 @@ from datetime import date
 import time 
 import argparse
 
+import logging
+logger = logging.getLogger('django')
+
 parser = argparse.ArgumentParser(description='Populate/Update NFL Games.')
 parser.add_argument("--gamedate", help="Specify the date to update.")
 args, leftovers = parser.parse_known_args()
-    
 
 def check_game_id(id):
     """
     Check if game ID has already been added.
     """
-    url = "https://family-pickem.com/api/games/{}".format(id)
+    url = "http://localhost:8000/api/games/{}".format(id)
 
     headers = {
         "Content-Type": "application/json",
@@ -36,12 +38,29 @@ def check_game_id(id):
     else:
         return False
 
+def get_active_games():
+    """
+    Check for active games
+    """
+    url = "http://localhost:8000/api/activegames/"
+
+    headers = {
+        "Content-Type": "application/json",
+    }
+
+    response = requests.request("GET", url, headers=headers)
+    json_response = json.loads(response.text)
+    if len(json_response) > 0:
+        return True
+    else:
+        return False
+
 
 def get_game_week(game_date):
     """
     Check week number for a date
     """
-    url = "https://family-pickem.com/api/weeks/{}".format(game_date)
+    url = "http://localhost:8000/api/weeks/{}".format(game_date)
 
     headers = {
         "Content-Type": "application/json",
@@ -61,21 +80,20 @@ def add_games(payload, id):
     }
 
     if check_game_id(id): 
-        url = "https://family-pickem.com/api/games/{}".format(id)
+        url = "http://localhost:8000/api/games/{}".format(id)
         x = requests.put(url, data = payload, headers = headers)
         verb = "Updated"
     else:
-        url = "https://family-pickem.com/api/games/"
+        url = "http://localhost:8000/api/games/"
         x = requests.post(url, data = payload, headers = headers)
         verb = "Added"
     
     if  x.status_code == 200 or x.status_code == 201:
-        print("- Game sucesfully %s" % verb)
-        print(payload)
+        logger.info("- Game sucesfully %s" % verb)
+        logger.info(payload)
     else:
-        print('- Issue adding game, please review')
-        print(payload)
-    print('\n')
+        logger.error('- Issue adding game, please review')
+        logger.error(payload)
 
 
 def build_payload(payload):
@@ -189,15 +207,15 @@ def get_games(api_key, game_date):
         json_response = json.loads(response.text)
         build_payload(json_response)
     except requests.exceptions.RequestException:
-        print(response.text)
+        logger.error(response.text)
 
 
 def update_games():
-    print("Scheduled Job: Update NFL Games")
+    logger.info("Scheduled Job: Update NFL Games")
     try:
         os.environ["X_RAPIDAPI_KEY"]
     except KeyError:
-        print("You must set an environment variable \"X_RAPIDAPI_KEY\" with the value of your API Key")
+        logger.error("You must set an environment variable \"X_RAPIDAPI_KEY\" with the value of your API Key")
         sys.exit(1)
     api_key = os.getenv('X_RAPIDAPI_KEY')
 
@@ -206,7 +224,12 @@ def update_games():
     else:
         today = date.today()
         game_date = today.strftime("%Y-%m-%d")
-        get_games(api_key, game_date)
+        if get_active_games():
+            logger.info('Updating active games')
+            get_games(api_key, game_date)
+        else:
+            logger.info("There are no active games right now")
+        
 
 if __name__ == '__main__':
     update_games()

@@ -17,6 +17,9 @@ class GamePicksSerializer(serializers.ModelSerializer):
     class Meta:
         model = GamePicks
         fields = '__all__'
+        extra_kwargs = {
+            'name': {'validators': []},
+        }
 
 class TeamsSerializer(serializers.ModelSerializer):
     class Meta:

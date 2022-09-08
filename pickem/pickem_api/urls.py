@@ -10,5 +10,7 @@ urlpatterns = [
     re_path(r'^weeks', views.week_list),
     re_path(r'^unscored', views.games_unscored),
     re_path(r'^picks/(?P<pick_game_id>[0-9]+)$', views.game_picks),
+    re_path(r'^userpicks/(?P<pick_id>[0-9]-[0-9]+)$', views.user_picks),
     re_path(r'^teams/', views.get_teams),
+    re_path(r'^activegames/', views.get_active_games)
 ]
