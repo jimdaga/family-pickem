@@ -7,14 +7,8 @@ Aug 2022
 
 import requests
 import sys
-import os
 import json
-import re
-import datetime
-from datetime import date
-
 import logging
-import sys
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -24,12 +18,6 @@ stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setLevel(logging.DEBUG)
 stdout_handler.setFormatter(formatter)
 
-file_handler = logging.FileHandler('logs.log')
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(formatter)
-
-
-logger.addHandler(file_handler)
 logger.addHandler(stdout_handler)
 
 def get_matching_picks(game_id):
@@ -61,10 +49,12 @@ def post_win(pick_id):
     else:
         logger.error("Issues updating Game ID {}, status code: {}".format(pick_id, x.status_code))
 
+
 def update_wins(payload):
     """
     
     """
+    logger.info("Cheking all games for a win")
     for entry in payload:
         entry_pick = get_matching_picks(entry['id'])
         game_winner = entry['gameWinner']
@@ -87,8 +77,9 @@ def get_unscored_games():
 
 def update_picks():
     logger.info("Scheduled Job: Update Unscored Picks")
-    get_unscored_games()
-
-if __name__ == '__main__':
     games = get_unscored_games()
     update_wins(games)
+
+
+if __name__ == '__main__':
+    update_picks()

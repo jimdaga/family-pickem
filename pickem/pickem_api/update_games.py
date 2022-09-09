@@ -14,9 +14,19 @@ import datetime
 from datetime import date
 import time 
 import argparse
+import pytz
 
 import logging
-logger = logging.getLogger('django')
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.DEBUG)
+stdout_handler.setFormatter(formatter)
+
+logger.addHandler(stdout_handler)
 
 parser = argparse.ArgumentParser(description='Populate/Update NFL Games.')
 parser.add_argument("--gamedate", help="Specify the date to update.")
@@ -53,7 +63,7 @@ def get_active_games():
     if len(json_response) > 0:
         return True
     else:
-        return False
+        return True
 
 
 def get_game_week(game_date):
@@ -137,10 +147,23 @@ def build_payload(payload):
                 homeTeamPeriod4 = 0
             else: 
                 homeTeamScore = entry['homeScore']['current']
-                homeTeamPeriod1 = entry['homeScore']['period1']
-                homeTeamPeriod2 = entry['homeScore']['period2']
-                homeTeamPeriod3 = entry['homeScore']['period3']
-                homeTeamPeriod4 = entry['homeScore']['period4']
+                try:
+                    homeTeamPeriod1 = entry['homeScore']['period1']
+                except KeyError:
+                    homeTeamPeriod1 = None
+                try:
+                    homeTeamPeriod2 = entry['homeScore']['period2']
+                except KeyError:
+                    homeTeamPeriod2 = None
+                try:
+                    homeTeamPeriod3 = entry['homeScore']['period3']
+                except KeyError:
+                    homeTeamPeriod3 = None
+                try:
+                    homeTeamPeriod4 = entry['homeScore']['period4']
+                except KeyError:
+                    homeTeamPeriod4 = None
+             
             awayTeamId = entry['awayTeam']['id']
             awayTeamSlug = entry['awayTeam']['slug']
             awayTeamName = entry['awayTeam']['name']
@@ -152,10 +175,22 @@ def build_payload(payload):
                 awayTeamPeriod4 = 0
             else: 
                 awayTeamScore = entry['awayScore']['current']
-                awayTeamPeriod1 = entry['awayScore']['period1']
-                awayTeamPeriod2 = entry['awayScore']['period2']
-                awayTeamPeriod3 = entry['awayScore']['period3']
-                awayTeamPeriod4 = entry['awayScore']['period4']
+                try:
+                    awayTeamPeriod1 = entry['awayScore']['period1']
+                except KeyError:
+                    awayTeamPeriod1 = None
+                try:
+                    awayTeamPeriod2 = entry['awayScore']['period2']
+                except KeyError:
+                    awayTeamPeriod2 = None
+                try:
+                    awayTeamPeriod3 = entry['awayScore']['period3']
+                except KeyError:
+                    awayTeamPeriod3 = None
+                try:
+                    awayTeamPeriod4 = entry['awayScore']['period4']
+                except KeyError:
+                    awayTeamPeriod4 = None
             payload = {
                 "id": gameId,
                 "slug": slug,

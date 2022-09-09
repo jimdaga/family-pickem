@@ -10,11 +10,11 @@
 <div class="container">
     <div class="row gx-4 ">
         <div class="col-md-3">
-            <div class="border p-3 bg-dark rounded">
+            <div class="border p-3 bg-dark rounded text-center">
                 <b class="text-white">Live Standings</b>
             </div>
             <div class="border p-3 bg-light rounded text-center">
-                <table class="standing">
+                <table class="standing" width="80%">
                     <tbody>
                         {% for player in user_points %}
                         <tr>
@@ -112,11 +112,28 @@
                                                     {% endif %}
                                                 </td>
                                                 {% if game.statusType != 'notstarted' %}
+                                                    {% if game.awayTeamPeriod1 != None %}
                                                     <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod1 }}</td>
+                                                    {% else %}
+                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
+                                                    {% endif %}
+                                                    {% if game.awayTeamPeriod2 != None %}
                                                     <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod2 }}</td>
+                                                    {% else %}
+                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
+                                                    {% endif %}
+                                                    {% if game.awayTeamPeriod3 != None %}
                                                     <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod3 }}</td>
+                                                    {% else %}
+                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
+                                                    {% endif %}
+                                                    {% if game.awayTeamPeriod4 != None %}
                                                     <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod4 }}</td>
-                                                    <td class="font-weight-bold">{{ game.awayTeamScore }}</td>
+                                                    {% else %}
+                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
+                                                    {% endif %}
+                                                    <td><b>{{ game.awayTeamScore }}</b></td>
+                                                    <td>&nbsp;&nbsp;&nbsp;</td>
                                                     <td>
                                                         {% if picks %}
                                                         {% for pick in picks %}
@@ -164,11 +181,28 @@
                                                 </td>
                                                 
                                                 {% if game.statusType != 'notstarted' %}
+                                                    {% if game.homeTeamPeriod1 != None %}
                                                     <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod1 }}</td>
+                                                    {% else %}
+                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
+                                                    {% endif %}
+                                                    {% if game.homeTeamPeriod2 != None %}
                                                     <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod2 }}</td>
+                                                    {% else %}
+                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
+                                                    {% endif %}
+                                                    {% if game.homeTeamPeriod3 != None %}
                                                     <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod3 }}</td>
+                                                    {% else %}
+                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
+                                                    {% endif %}
+                                                    {% if game.homeTeamPeriod4 != None %}
                                                     <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod4 }}</td>
-                                                    <td class="font-weight-bold">{{ game.homeTeamScore }}</td>
+                                                    {% else %}
+                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
+                                                    {% endif %}
+                                                    <td><b>{{ game.homeTeamScore }}</b></td>
+                                                    <td>&nbsp;&nbsp;&nbsp;</td>
                                                     <td>
                                                         {% if picks %}
                                                         {% for pick in picks %}

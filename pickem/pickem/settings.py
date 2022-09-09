@@ -22,11 +22,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '=0n@nr8j+^ohv5=7x-g$o+hap3rt_3m(34jyo_sfl#qcz#ouo+'
+X_RAPIDAPI_KEY = 'a204a03302msh0ac572a7232996bp15fab0jsnfcba822202f5'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 if 'RDS_DB_NAME' in os.environ:
     DEBUG = False
-    SECURE_SSL_REDIRECT = True
 else:
     DEBUG = True
 
@@ -37,41 +37,6 @@ if 'RDS_DB_NAME' in os.environ:
         ALLOWED_HOSTS.append(EC2_IP)
     except requests.exceptions.RequestException:
         pass
-
-if 'RDS_DB_NAME' in os.environ:
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'handlers': {
-            'file': {
-                'level': 'DEBUG',
-                'class': 'logging.FileHandler',
-                'filename': '/var/log/app-logs/django.log',
-            },
-        },
-        'loggers': {
-            'django': {
-                'handlers': ['file'],
-                'level': 'DEBUG',
-                'propagate': True,
-            },
-            'pickem': {
-                'handlers': ['file'],
-                'level': 'DEBUG',
-                'propagate': True,
-            },
-            'pickem_api': {
-                'handlers': ['file'],
-                'level': 'DEBUG',
-                'propagate': True,
-            },
-            'pickem_homepage': {
-                'handlers': ['file'],
-                'level': 'DEBUG',
-                'propagate': True,
-            },
-        },
-    }
 
 # Application definition
 
