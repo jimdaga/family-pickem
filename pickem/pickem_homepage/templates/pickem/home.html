@@ -5,13 +5,26 @@
 {% block content %}
 <div class="container min-vh-100">
     <br><br><br><br>
-
-    <h1>Family Football Pick League</h1>
-    {% if user.is_authenticated %}
-      <p>Welcome, You are logged in as {{ user.username }}</p>
-    {% else %}
-      <a href="{% provider_login_url 'google' %}">Login With Google</a>
-    {% endif %}
-
+  
+    <div class="px-4 pt-5 my-5 text-center border-bottom">
+      <h1 class="display-4 fw-bold">Family Football Pick League</h1>
+      <div class="col-lg-6 mx-auto">
+        <p class="lead mb-4">Welcome to the 2022/23 FFPL year!</p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
+          <a href="/scores/" class="btn btn-primary btn-lg px-4 me-sm-3" role="button">Current Week Scores</a>
+          {% if user.is_authenticated %}
+          <a href="/picks" class="btn btn-outline-secondary btn-lg px-4" role="button">Submit Weekly Picks</a>
+          {% else %}
+          <a  href="{% provider_login_url 'google' %}" class="btn btn-outline-secondary btn-lg px-4" role="button">Login With Google</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="overflow-hidden" style="max-height: 30vh;">
+        <div class="container px-5">
+          <!-- <img src="bootstrap-docs.png" class="img-fluid border rounded-3 shadow-lg mb-4" alt="Example image" width="700" height="500" loading="lazy"> -->
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
