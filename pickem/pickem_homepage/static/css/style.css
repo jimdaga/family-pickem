@@ -3,6 +3,17 @@ body {
     /* background-color: rgb(32, 32, 32); */
 }
 
+body {
+    font-family: "Heebo", sans-serif;
+  }
+  .material-symbols-outlined {
+  font-variation-settings:
+  'FILL' 0,
+  'wght' 400,
+  'GRAD' 0,
+  'opsz' 48
+  }
+  
 .center {
     margin-left: auto;
     margin-right: auto;
@@ -105,3 +116,56 @@ tr.spaceUnder>td {
   } 
 
 .navbar-nav > li > .dropdown-menu a{   color: #555555;  }
+
+@import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700');
+
+.styled-table {
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 0.9em;
+    font-family: sans-serif;
+    min-width: 400px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.styled-table thead tr {
+    background-color: #000000;
+    color: #ffffff;
+    text-align: left;
+}
+
+.styled-table th,
+.styled-table td {
+    padding: 12px 15px;
+}
+
+.styled-table tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+
+.styled-table tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+.styled-table tbody tr:last-of-type {
+    border-bottom: 2px solid #000000;
+}
+
+.styled-table tbody tr.active-row {
+    font-weight: bold;
+    color: #4d4d4d;
+}
+
+.center {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #div {
+    display: flex;
+    justify-content: center;
+  }
+  
+  #table {
+    align-self: center;
+  }

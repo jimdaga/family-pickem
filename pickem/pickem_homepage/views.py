@@ -1,8 +1,9 @@
 from django.http import HttpResponse
 from django.template import loader
 from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from pickem_api.models import GamePicks
-from pickem_api.models import GamesAndScores, GameWeeks, Teams
+from pickem_api.models import GamesAndScores, GameWeeks, Teams, userPoints
 from .forms import GamePicksForm
 
 from django.shortcuts import render
@@ -98,9 +99,25 @@ def scores_long(request, competition, year, week):
     }
     return HttpResponse(template.render(context, request))
 
-def Standings(request):
-    points = GamePicks.objects.values('userID').order_by('userID').annotate(wins=Count('userID'))
-    print(points)
+def standings(request):
+    today = date.today()
+    game_year = today.strftime("%Y") 
+
+    
+    User = get_user_model()
+    players = User.objects.all()
+
+    player_points = userPoints.objects.filter(gameyear=game_year)
+
+    template = loader.get_template('pickem/standings.html')
+
+    context = {
+        'players': players,
+        'player_points': player_points
+    }
+    return HttpResponse(template.render(context, request))
+
+    
 
 def submit_game_picks(request):
     today = date.today()

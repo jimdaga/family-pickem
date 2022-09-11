@@ -2,10 +2,9 @@
 Pickem
 
 ### Work to do 
-- [ ] Add "active games" api
+- [ ] Fix "active games" api
 - [ ] Script to update correct picks (http://localhost:8000/api/unscored)
 
-- [ ] move to django_apscheduler (https://medium.com/@mrgrantanderson/replacing-cron-and-running-background-tasks-in-django-using-apscheduler-and-django-apscheduler-d562646c062e)
 - [ ] standings page 
 - [ ] Add (5/12) type counter to picks made/not made 
 - [ ] Hide "picks" or "picks made" if == 0 
@@ -13,6 +12,10 @@ Pickem
 - [ ] remove hardcoded password for createsu
 - [ ] Add audit database 
 - [ ] Show submitted "tie breaker" on picks page 
+- [ ] Give users way to change username (remove dependency on username in points)
+- [ ] Update `GameScored` in pick update 
+- [ ] Automate teams win/losses 
+- [ ] Home team not getting scores (1-4) after game ends
 
 - [x] Add tie breaker 
 - [x] Add per quarter scores 

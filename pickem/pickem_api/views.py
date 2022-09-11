@@ -1,8 +1,8 @@
 from functools import partial
-from .serializers import GameSerializer, GameWeeksSerializer, GamePicksSerializer, TeamsSerializer
+from .serializers import GameSerializer, GameWeeksSerializer, GamePicksSerializer, TeamsSerializer, UserPointsSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams
+from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userPoints
 from django.db.models import Q  
 from django.http import HttpResponse
 from django.http.response import JsonResponse
@@ -220,3 +220,37 @@ def get_active_games(request):
     
         games_serializer = GameSerializer(active_games, many=True)
         return Response(games_serializer.data)
+
+
+@api_view(['GET', 'POST', 'PATCH'])
+def user_points(request, user_id, game_year ):
+    """
+    GET user season points
+    Find user points for a given year
+    """
+    print(user_id, game_year)
+    if request.method == 'GET':
+        try: 
+            user_points = userPoints.objects.get(id=user_id, gameyear=game_year)
+        except userPoints.DoesNotExist: 
+            return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
+        
+        user_point_serializer = UserPointsSerializer(user_points)
+        return Response(user_point_serializer.data)
+
+    elif request.method == 'POST':
+        request_data = JSONParser().parse(request)
+        user_point_serializer = UserPointsSerializer(data=request_data)
+        if user_point_serializer.is_valid():
+            user_point_serializer.save()
+            return JsonResponse(user_point_serializer.data, status=status.HTTP_201_CREATED) 
+        return JsonResponse(user_point_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'PATCH':
+        request_data = JSONParser().parse(request)
+        user_points = userPoints.objects.get(id=user_id, gameyear=game_year)
+        user_point_serializer = UserPointsSerializer(user_points, data=request_data, partial=True)
+        if user_point_serializer.is_valid():
+            user_point_serializer.save()
+            return JsonResponse(user_point_serializer.data, status=status.HTTP_201_CREATED) 
+        return JsonResponse(user_point_serializer.errors, status=status.HTTP_400_BAD_REQUEST)

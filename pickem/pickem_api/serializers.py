@@ -1,7 +1,7 @@
 from dataclasses import fields
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
-from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams
+from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userPoints
 
 class GameSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,4 +24,9 @@ class GamePicksSerializer(serializers.ModelSerializer):
 class TeamsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teams
+        fields = '__all__'
+
+class UserPointsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = userPoints
         fields = '__all__'

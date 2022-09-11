@@ -14,7 +14,6 @@ import datetime
 from datetime import date
 import time 
 import argparse
-import pytz
 
 import logging
 
@@ -52,18 +51,27 @@ def get_active_games():
     """
     Check for active games
     """
-    url = "http://localhost:8000/api/activegames/"
+    url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+
+    querystring = {"dates":"20220908-20220912","limit":"200"}
 
     headers = {
         "Content-Type": "application/json",
     }
-
-    response = requests.request("GET", url, headers=headers)
-    json_response = json.loads(response.text)
-    if len(json_response) > 0:
-        return True
-    else:
-        return True
+    
+    try:
+        response = requests.request("GET", url, headers=headers, params=querystring)
+        json_response = json.loads(response.text)
+        for event in json_response["events"]:
+            for competition in event["competitions"]:
+                status=competition['status']['type']['name']
+                status_list = ['STATUS_HALFTIME', 'STATUS_END_PERIOD', 'STATUS_IN_PROGRESS']
+                if status in status_list:
+                    return True
+                else:
+                    return False
+    except requests.exceptions.RequestException:
+        print(response.text)
 
 
 def get_game_week(game_date):
