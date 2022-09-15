@@ -49,7 +49,11 @@
                                                             {{ game.awayTeamName }}
                                                             {% for team in wins_losses %}
                                                             {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                             {% endif %}
                                                         {% endfor %} 
                                                         </label><br>
@@ -58,7 +62,11 @@
                                                             {{ game.homeTeamName }}
                                                             {% for team in wins_losses %}
                                                             {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                             {% endif %}
                                                         {% endfor %} 
                                                         </label><br>
@@ -96,7 +104,13 @@
                                                     <input type="hidden" name="userID" value="{{ user.username }}" maxlength="250" required id="id_userID">
                                                 </td>
                                             </tr>
-                                    
+
+                                            <tr>
+                                                <td>
+                                                    <input type="hidden" name="uid" value="{{ user.id }}" maxlength="250" required id="id_uid">
+                                                </td>
+                                            </tr>
+
                                             <tr>
                                                 <td>
                                                     <input type="hidden" name="slug" value="{{ game.slug }}" maxlength="250" required id="id_slug">
@@ -132,8 +146,12 @@
                                                     <label for="html">
                                                         {{ game.awayTeamName }}
                                                         {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                                    {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                             {% endif %}
                                                         {% endfor %} 
                                                        
@@ -142,8 +160,12 @@
                                                     <label for="css">
                                                         {{ game.homeTeamName }}
                                                         {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                                    {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                             {% endif %}
                                                         {% endfor %} 
                                                     </label><br>
@@ -195,7 +217,11 @@
                                                     {{ game.awayTeamName }}
                                                     {% for team in wins_losses %}
                                                     {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                     {% endif %}
                                                 {% endfor %} 
                                                 </label><br>
@@ -204,7 +230,11 @@
                                                     {{ game.homeTeamName }}
                                                     {% for team in wins_losses %}
                                                     {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                     {% endif %}
                                                 {% endfor %} 
                                                 </label><br>
@@ -214,7 +244,11 @@
                                                     {{ game.awayTeamName }}
                                                     {% for team in wins_losses %}
                                                     {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                     {% endif %}
                                                 {% endfor %} 
                                                 </label><br>
@@ -223,7 +257,11 @@
                                                     {{ game.homeTeamName }}
                                                     {% for team in wins_losses %}
                                                     {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                     {% endif %}
                                                 {% endfor %} 
                                                 </label><br>

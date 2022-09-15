@@ -45,9 +45,27 @@ def post_win(pick_id):
     x = requests.patch(url, payload, headers = headers)
 
     if  x.status_code == 200 or x.status_code == 201:
-        logger.info("Game ID {} sucesfully maked as a win!".format(pick_id))
+        logger.info(" - Game ID {} sucesfully maked as a win!".format(pick_id))
     else:
-        logger.error("Issues updating Game ID {}, status code: {}".format(pick_id, x.status_code))
+        logger.error(" - Issues updating Game ID {}, status code: {}".format(pick_id, x.status_code))
+
+def update_game_as_scored(game_id, game_slug):
+    """
+    Send POST to update game as scored
+    """
+    headers = {
+        "Content-Type": "application/json",
+    }
+
+    payload='{"gameScored": "true"}'
+
+    url = "http://localhost:8000/api/games/{}".format(game_id)
+    x = requests.patch(url, payload, headers = headers)
+
+    if  x.status_code == 200 or x.status_code == 201:
+        logger.info("Game slug {} sucesfully updated game as scored".format(game_slug))
+    else:
+        logger.error("Issues updating Game {}, status code: {}".format(game_id, x.status_code))
 
 
 def update_wins(payload):
@@ -58,10 +76,13 @@ def update_wins(payload):
     for entry in payload:
         entry_pick = get_matching_picks(entry['id'])
         game_winner = entry['gameWinner']
+        
         for user_pick in entry_pick:
             if user_pick['pick'] == game_winner:
                 logger.info("User {} made a correct pick by picking {} in the game {} (game id: {})".format(user_pick['userID'], user_pick['pick'], user_pick['slug'], user_pick['id']))
                 post_win(user_pick['id'])
+        
+        update_game_as_scored(entry['id'], entry['slug'])
 
 
 def get_unscored_games():

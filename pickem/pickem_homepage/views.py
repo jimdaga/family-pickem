@@ -77,7 +77,7 @@ def scores_long(request, competition, year, week):
     picks = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
 
     points = GamePicks.objects.filter(gameWeek=week, competition=competition_name, pick_correct=True)
-    user_points = points.values('userID').order_by('-userID').annotate(wins=Count('userID'))
+    user_points = points.values('userID').order_by('-userID').annotate(wins=Count('userID')).order_by('-wins')
     users_w_points = user_points.values_list('userID', flat=True).distinct()
     players = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
     players_names = players.values_list('userID', flat=True).distinct()
@@ -107,7 +107,7 @@ def standings(request):
     User = get_user_model()
     players = User.objects.all()
 
-    player_points = userPoints.objects.filter(gameyear=game_year)
+    player_points     = userPoints.objects.filter(gameyear=game_year).order_by('-total_points')
 
     template = loader.get_template('pickem/standings.html')
 

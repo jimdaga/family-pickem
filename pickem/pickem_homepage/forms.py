@@ -9,6 +9,7 @@ class GamePicksForm(forms.ModelForm):
             'id',
             'userEmail',
             'userID',
+            'uid',
             'slug',
             'competition',
             'gameWeek',

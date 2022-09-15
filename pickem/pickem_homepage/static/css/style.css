@@ -131,7 +131,7 @@ tr.spaceUnder>td {
 .styled-table thead tr {
     background-color: #000000;
     color: #ffffff;
-    text-align: left;
+    text-align: center;
 }
 
 .styled-table th,

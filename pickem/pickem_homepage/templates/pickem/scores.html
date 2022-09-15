@@ -35,7 +35,7 @@
                 </table>
             </div>
             <br>
-            <div class="d-none d-sm-table-cell">
+            <div class="d-none d-xl-block">
             <a class="twitter-timeline" data-width="300" data-height="2000" data-theme="light"
                 href="https://twitter.com/NFL?ref_src=twsrc%5Etfw">Tweets by NFL</a>
             <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
@@ -91,14 +91,22 @@
                                                             <b>{{ game.awayTeamName }}&#9664;</b>
                                                             {% for team in wins_losses %}
                                                                 {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                    <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                                 {% endif %}
                                                             {% endfor %} 
                                                         {% else %}
                                                             <b class="text-muted">{{ game.awayTeamName }}</b>
                                                             {% for team in wins_losses %}
                                                                 {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                    <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                                 {% endif %}
                                                             {% endfor %} 
                                                         {% endif %}
@@ -106,7 +114,11 @@
                                                         <b>{{ game.awayTeamName }}</b>
                                                         {% for team in wins_losses %}
                                                             {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                             {% endif %}
                                                         {% endfor %}                    
                                                     {% endif %}
@@ -140,13 +152,28 @@
                                                         {% if pick.pick == game.awayTeamSlug %}
                                                             {% if game.statusType == 'finished' %}
                                                                 {% if game.gameWinner == game.awayTeamSlug %}
-                                                                    <span class="badge win text-uppercase">{{ pick.userID }}</span>
+                                                                    <span class="badge win text-uppercase">
+                                                                        {{ pick.userID }} 
+                                                                        {% if pick.tieBreakerScore != None %}
+                                                                        ({{ pick.tieBreakerScore }})
+                                                                        {% endif %}
+                                                                    </span>
                                                                 {% else %}
-                                                                    <span class="badge loss text-uppercase">{{ pick.userID }}</span>
+                                                                    <span class="badge loss text-uppercase">
+                                                                        {{ pick.userID }} 
+                                                                        {% if pick.tieBreakerScore != None %}
+                                                                        ({{ pick.tieBreakerScore }})
+                                                                        {% endif %}
+                                                                    </span>
                                                                 {% endif %}
                                                             {% endif %}
                                                             {% if game.statusType == 'inprogress' %}                                                                                                         
-                                                                <span class="badge inprogress text-uppercase">{{ pick.userID }}</span>
+                                                                <span class="badge inprogress text-uppercase">
+                                                                    {{ pick.userID }}
+                                                                    {% if pick.tieBreakerScore != None %}
+                                                                    ({{ pick.tieBreakerScore }})
+                                                                    {% endif %}
+                                                                </span>
                                                             {% endif %}
                                                         {% endif %}
                                                         {% endfor %}
@@ -164,17 +191,34 @@
                                                             <b>{{ game.homeTeamName }}&#9664;</b>
                                                             {% for team in wins_losses %}
                                                             {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                             {% endif %}
                                                         {% endfor %} 
                                                         {% else %}
                                                             <b class="text-muted">{{ game.homeTeamName }}</b>
+                                                            {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                                    {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
+                                                            {% endif %}
+                                                        {% endfor %} 
                                                         {% endif %}
                                                     {% else %}
                                                         <b>{{ game.homeTeamName }}</b>
                                                         {% for team in wins_losses %}
                                                             {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% if team.teamTies > 0 %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                                    {% else %}
+                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                                    {% endif %}
                                                             {% endif %}
                                                         {% endfor %} 
                                                     {% endif %}
@@ -209,13 +253,28 @@
                                                         {% if pick.pick == game.homeTeamSlug %}
                                                             {% if game.statusType == 'finished' %}
                                                                 {% if game.gameWinner == game.homeTeamSlug %}
-                                                                    <span class="badge win text-uppercase">{{ pick.userID }}</span>
+                                                                    <span class="badge win text-uppercase">
+                                                                        {{ pick.userID }} 
+                                                                        {% if pick.tieBreakerScore != None %}
+                                                                        ({{ pick.tieBreakerScore }})
+                                                                        {% endif %}
+                                                                    </span>
                                                                 {% else %}
-                                                                    <span class="badge loss text-uppercase">{{ pick.userID }}</span>
+                                                                    <span class="badge loss text-uppercase">
+                                                                        {{ pick.userID }} 
+                                                                        {% if pick.tieBreakerScore != None %}
+                                                                        ({{ pick.tieBreakerScore }})
+                                                                        {% endif %}
+                                                                    </span>
                                                                 {% endif %}
                                                             {% endif %}
                                                             {% if game.statusType == 'inprogress' %}                                                                                                         
-                                                                <span class="badge inprogress text-uppercase">{{ pick.userID }}</span>
+                                                                <span class="badge inprogress text-uppercase">
+                                                                    {{ pick.userID }} 
+                                                                    {% if pick.tieBreakerScore != None %}
+                                                                    ({{ pick.tieBreakerScore }})
+                                                                    {% endif %}
+                                                                </span>
                                                             {% endif %}
                                                         {% endif %}
                                                         {% endfor %}
