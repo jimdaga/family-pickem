@@ -155,14 +155,16 @@
                                                                     <span class="badge win text-uppercase">
                                                                         {{ pick.userID }} 
                                                                         {% if pick.tieBreakerScore != None %}
-                                                                        ({{ pick.tieBreakerScore }})
+                                                                        (p: {{ pick.tieBreakerScore }})
+                                                                        (y: {{ pick.tieBreakerYards }})
                                                                         {% endif %}
                                                                     </span>
                                                                 {% else %}
                                                                     <span class="badge loss text-uppercase">
                                                                         {{ pick.userID }} 
                                                                         {% if pick.tieBreakerScore != None %}
-                                                                        ({{ pick.tieBreakerScore }})
+                                                                        (p: {{ pick.tieBreakerScore }})
+                                                                        (y: {{ pick.tieBreakerYards }})
                                                                         {% endif %}
                                                                     </span>
                                                                 {% endif %}
@@ -171,7 +173,8 @@
                                                                 <span class="badge inprogress text-uppercase">
                                                                     {{ pick.userID }}
                                                                     {% if pick.tieBreakerScore != None %}
-                                                                    ({{ pick.tieBreakerScore }})
+                                                                    (p: {{ pick.tieBreakerScore }})
+                                                                    (y: {{ pick.tieBreakerYards }})
                                                                     {% endif %}
                                                                 </span>
                                                             {% endif %}
@@ -256,14 +259,16 @@
                                                                     <span class="badge win text-uppercase">
                                                                         {{ pick.userID }} 
                                                                         {% if pick.tieBreakerScore != None %}
-                                                                        ({{ pick.tieBreakerScore }})
+                                                                        (p: {{ pick.tieBreakerScore }})
+                                                                        (y: {{ pick.tieBreakerYards }})
                                                                         {% endif %}
                                                                     </span>
                                                                 {% else %}
                                                                     <span class="badge loss text-uppercase">
                                                                         {{ pick.userID }} 
                                                                         {% if pick.tieBreakerScore != None %}
-                                                                        ({{ pick.tieBreakerScore }})
+                                                                        (p: {{ pick.tieBreakerScore }})
+                                                                        (y: {{ pick.tieBreakerYards }})
                                                                         {% endif %}
                                                                     </span>
                                                                 {% endif %}
@@ -272,7 +277,8 @@
                                                                 <span class="badge inprogress text-uppercase">
                                                                     {{ pick.userID }} 
                                                                     {% if pick.tieBreakerScore != None %}
-                                                                    ({{ pick.tieBreakerScore }})
+                                                                    (p: {{ pick.tieBreakerScore }})
+                                                                    (y: {{ pick.tieBreakerYards }})
                                                                     {% endif %}
                                                                 </span>
                                                             {% endif %}

@@ -176,11 +176,17 @@
                                             <tr>
                                                 <td>
                                                     <br>
-                                                    <label for="quantity"><b>Tie Breaker:</b><br>How many total points will be scored in {{ game.awayTeamName }} @ {{ game.homeTeamName }}?</label>
+                                                    <label for="quantity"><b>Tie Breaker 1:</b><br>How many total points will be scored in {{ game.awayTeamName }} @ {{ game.homeTeamName }}?</label>
                                                     <br>
                                                     <input type="number" id="tieBreakerScore" name="tieBreakerScore" required>
                                                     <br>
                                                 </td>
+                                                <br>
+                                                    <label for="quantity"><b>Tie Breaker 2:</b><br>How many total yards will there be in {{ game.awayTeamName }} @ {{ game.homeTeamName }}?</label>
+                                                    <br>
+                                                    <input type="number" id="tieBreakerYards" name="tieBreakerYards" required>
+                                                <br>
+                                                </td>                                                
                                             </tr>
                                             {% endif %}
 

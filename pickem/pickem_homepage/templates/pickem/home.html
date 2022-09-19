@@ -4,11 +4,12 @@
 
 {% block content %}
 <div class="container min-vh-100">
-    <br><br><br><br>
     <div class="px-4 pt-5 my-5 text-center border-bottom">
-      <h1 class="display-4 fw-bold">Family Football Pick League</h1>
+      <div class="image"><img src="{% static '/images/homepage.png' %}" class="img-fluid" alt="Responsive image">
+      </div>
+      <BR>
       <div class="col-lg-6 mx-auto">
-        <p class="lead mb-4">Welcome to the 2022/23 FFPL year!</p>
+        <!-- <p class="lead mb-4">Welcome to the 2022/23 FFPL year!</p> -->
         <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
           <a href="/scores/" class="btn btn-primary btn-lg px-4 me-sm-3" role="button">Current Week Scores</a>
           {% if user.is_authenticated %}

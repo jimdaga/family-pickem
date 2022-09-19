@@ -14,7 +14,7 @@ class GamesAndScoresAdmin(admin.ModelAdmin):
 @admin.register(GamePicks)
 class GamesPicksAdmin(admin.ModelAdmin):
     list_display = ('userEmail', 'uid', 'slug', 'competition', 'gameWeek', 'gameyear', 
-        'pick_game_id', 'pick', 'pick_correct', 'pickAdded', 'pickUpdated' )
+        'pick_game_id', 'pick', 'pick_correct', 'tieBreakerScore', 'tieBreakerYards', 'pickAdded', 'pickUpdated' )
     list_filter = ('userEmail', 'gameWeek', 'gameyear')
     search_fields = ('userEmail',)
     date_hierarchy = 'pickAdded'
