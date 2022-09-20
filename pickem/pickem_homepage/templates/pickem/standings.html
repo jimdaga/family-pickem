@@ -1,6 +1,7 @@
 {% extends 'pickem/base.html' %}
 {% load static %}
 {% load socialaccount %}
+{% load pickem_homepage_extras %}
 
 {% block content %}
 
@@ -41,7 +42,9 @@
                     <tbody>
                         {% for player in player_points %}
                         <tr>
-                            <td class="text-uppercase"><b>{{ player.userID }}</b></td>
+                            {% with player.id|lookupname as username %}
+                            <td class="text-uppercase"><b>{{ username }}</b></td>
+                            {% endwith %}
                             
                             {% if player.week_1_points != None %}
                                 <td>

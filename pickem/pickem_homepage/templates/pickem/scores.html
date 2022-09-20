@@ -1,6 +1,7 @@
 {% extends 'pickem/base.html' %}
 
 {% load static %}
+{% load pickem_homepage_extras %}
 
 {% block content %}
 
@@ -11,6 +12,19 @@
     <div class="row gx-4 ">
         <div class="col-md-3">
             <div class="border p-3 bg-dark rounded text-center">
+                <b class="text-white"> &#127942; &nbsp; Week Winner &nbsp; &#127942;</b>
+            </div>
+            <div class="border p-3 bg-light rounded text-center">
+                <table class="standing" width="100%">
+                    <tbody>
+                        <tr>
+                            <td><b>Mario</b></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <BR>
+            <div class="border p-3 bg-dark rounded text-center">
                 <b class="text-white">Live Standings</b>
             </div>
             <div class="border p-3 bg-light rounded text-center">
@@ -18,14 +32,18 @@
                     <tbody>
                         {% for player in user_points %}
                         <tr>
-                            <td class="text-uppercase"><b>{{ player.userID }}:</b></td>
+                            {% with player.uid|lookupname as username %}
+                            <td class="text-uppercase"><b>{{ username }}:</b></td>
+                            {% endwith %}
                             <td> {{ player.wins }}</td>
                         </tr>
                         {% endfor %}
                         {% for player in players_names %}
                             {% if player not in users_w_points %}
                                     <tr>
-                                        <td class="text-uppercase"><b>{{ player }}:</b></td>
+                                        {% with player.uid|lookupname as username %}
+                                        <td class="text-uppercase"><b>{{ username }}:</b></td>
+                                        {% endwith %}
                                         <td>0</td>
                                     </tr>
                             {% endif %}                        
@@ -153,28 +171,34 @@
                                                             {% if game.statusType == 'finished' %}
                                                                 {% if game.gameWinner == game.awayTeamSlug %}
                                                                     <span class="badge win text-uppercase">
-                                                                        {{ pick.userID }} 
+                                                                        {% with pick.uid|lookupname as username %}
+                                                                        {{ username }}
+                                                                        {% endwith %}
                                                                         {% if pick.tieBreakerScore != None %}
-                                                                        (p: {{ pick.tieBreakerScore }})
-                                                                        (y: {{ pick.tieBreakerYards }})
+                                                                        (p: {{ pick.tieBreakerScore }},
+                                                                         y: {{ pick.tieBreakerYards }})
                                                                         {% endif %}
                                                                     </span>
                                                                 {% else %}
                                                                     <span class="badge loss text-uppercase">
-                                                                        {{ pick.userID }} 
+                                                                        {% with pick.uid|lookupname as username %}
+                                                                        {{ username }}
+                                                                        {% endwith %}
                                                                         {% if pick.tieBreakerScore != None %}
-                                                                        (p: {{ pick.tieBreakerScore }})
-                                                                        (y: {{ pick.tieBreakerYards }})
+                                                                        (p: {{ pick.tieBreakerScore }},
+                                                                         y: {{ pick.tieBreakerYards }})
                                                                         {% endif %}
                                                                     </span>
                                                                 {% endif %}
                                                             {% endif %}
                                                             {% if game.statusType == 'inprogress' %}                                                                                                         
                                                                 <span class="badge inprogress text-uppercase">
-                                                                    {{ pick.userID }}
+                                                                    {% with pick.uid|lookupname as username %}
+                                                                        {{ username }}
+                                                                        {% endwith %}
                                                                     {% if pick.tieBreakerScore != None %}
-                                                                    (p: {{ pick.tieBreakerScore }})
-                                                                    (y: {{ pick.tieBreakerYards }})
+                                                                    (p: {{ pick.tieBreakerScore }},
+                                                                     y: {{ pick.tieBreakerYards }})
                                                                     {% endif %}
                                                                 </span>
                                                             {% endif %}
@@ -257,28 +281,34 @@
                                                             {% if game.statusType == 'finished' %}
                                                                 {% if game.gameWinner == game.homeTeamSlug %}
                                                                     <span class="badge win text-uppercase">
-                                                                        {{ pick.userID }} 
+                                                                        {% with pick.uid|lookupname as username %}
+                                                                        {{ username }}
+                                                                        {% endwith %}
                                                                         {% if pick.tieBreakerScore != None %}
-                                                                        (p: {{ pick.tieBreakerScore }})
-                                                                        (y: {{ pick.tieBreakerYards }})
+                                                                        (p: {{ pick.tieBreakerScore }},
+                                                                         y: {{ pick.tieBreakerYards }})
                                                                         {% endif %}
                                                                     </span>
                                                                 {% else %}
                                                                     <span class="badge loss text-uppercase">
-                                                                        {{ pick.userID }} 
+                                                                        {% with pick.uid|lookupname as username %}
+                                                                        {{ username }}
+                                                                        {% endwith %}
                                                                         {% if pick.tieBreakerScore != None %}
-                                                                        (p: {{ pick.tieBreakerScore }})
-                                                                        (y: {{ pick.tieBreakerYards }})
+                                                                        (p: {{ pick.tieBreakerScore }},
+                                                                         y: {{ pick.tieBreakerYards }})
                                                                         {% endif %}
                                                                     </span>
                                                                 {% endif %}
                                                             {% endif %}
                                                             {% if game.statusType == 'inprogress' %}                                                                                                         
                                                                 <span class="badge inprogress text-uppercase">
-                                                                    {{ pick.userID }} 
+                                                                    {% with pick.uid|lookupname as username %}
+                                                                        {{ username }}
+                                                                        {% endwith %}
                                                                     {% if pick.tieBreakerScore != None %}
-                                                                    (p: {{ pick.tieBreakerScore }})
-                                                                    (y: {{ pick.tieBreakerYards }})
+                                                                    (p: {{ pick.tieBreakerScore }},
+                                                                     y: {{ pick.tieBreakerYards }})
                                                                     {% endif %}
                                                                 </span>
                                                             {% endif %}

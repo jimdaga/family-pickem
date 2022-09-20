@@ -4,9 +4,8 @@ Pickem
 ### Work to do 
 - [~] homepage 
 - [~] standings page 
+- [~] Refactor score updates to use ESPN api
 - [ ] Add "winner" to each week's page 
-- [ ] Refactor score updates to use ESPN api
-- [ ] Recollect all the game data (for each week, update)
 - [ ] Standings page to include "most weeks won" metrics 
 - [ ] Add phone numbers to users 
 - [ ] Send text when picks not made 
@@ -32,3 +31,4 @@ Pickem
 - [x] Inprogress Pick pills not showing on scores page 
 - [x] rules page 
 - [x] Show submitted "tie breaker" on picks page 
+- [x] Recollect all the game data (for each week, update)

@@ -37,11 +37,11 @@ def scores(request):
     competition = game_list.values_list('competition', flat=True).distinct()
     
     points = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition, pick_correct=True)
-    user_points = points.values('userID').order_by('-userID').annotate(wins=Count('userID')).order_by('-wins')
-    users_w_points = user_points.values_list('userID', flat=True).distinct()
+    user_points = points.values('uid').order_by('-uid').annotate(wins=Count('uid')).order_by('-wins')
+    users_w_points = user_points.values_list('uid', flat=True).distinct()
     picks = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition)
     players = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition)
-    players_names = players.values_list('userID', flat=True).distinct()
+    players_names = players.values_list('uid', flat=True).distinct()
     wins_losses = Teams.objects.all()
 
     # TODO: Give zero points to users that didn't win yet
@@ -77,10 +77,10 @@ def scores_long(request, competition, year, week):
     picks = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
 
     points = GamePicks.objects.filter(gameWeek=week, competition=competition_name, pick_correct=True)
-    user_points = points.values('userID').order_by('-userID').annotate(wins=Count('userID')).order_by('-wins')
-    users_w_points = user_points.values_list('userID', flat=True).distinct()
+    user_points = points.values('uid').order_by('-uid').annotate(wins=Count('uid')).order_by('-wins')
+    users_w_points = user_points.values_list('uid', flat=True).distinct()
     players = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
-    players_names = players.values_list('userID', flat=True).distinct()
+    players_names = players.values_list('uid', flat=True).distinct()
     wins_losses = Teams.objects.all()
 
     template = loader.get_template('pickem/scores.html')
