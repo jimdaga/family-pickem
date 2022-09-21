@@ -84,6 +84,14 @@ nav .navbar-nav-blue li a {
     background-color: rgb(13, 64, 215);
 }
 
+.bg-nfl-blue {
+  background-color: #013369;
+}
+
+.bg-background {
+  background-color: #F2F3F7;
+}
+
 td {
     padding: 10px;
 }

@@ -32,7 +32,7 @@ def scores(request):
     game_competition = GameWeeks.objects.get(date=today_date).competition
 
     game_list = GamesAndScores.objects.filter(gameyear=game_year, gameWeek=game_week, competition=game_competition)
-    # game_list = GamesAndScores.objects.filter(gameyear=game_year, gameWeek='3', competition='nfl-preseason')
+
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
     competition = game_list.values_list('competition', flat=True).distinct()
     
@@ -43,6 +43,9 @@ def scores(request):
     players = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition)
     players_names = players.values_list('uid', flat=True).distinct()
     wins_losses = Teams.objects.all()
+
+    winner_object = "week_{}_winner".format(game_week)
+    week_winner = userPoints.objects.filter(**{winner_object: True}).distinct() 
 
     # TODO: Give zero points to users that didn't win yet
     print(players)
@@ -59,6 +62,7 @@ def scores(request):
         'user_points': user_points,
         'users_w_points': users_w_points,
         'players_names': players_names,
+        'week_winner': week_winner,
         'game_weeks': range(1,19)
     }
     return HttpResponse(template.render(context, request))
@@ -83,6 +87,9 @@ def scores_long(request, competition, year, week):
     players_names = players.values_list('uid', flat=True).distinct()
     wins_losses = Teams.objects.all()
 
+    winner_object = "week_{}_winner".format(week)
+    week_winner = userPoints.objects.filter(**{winner_object: True}).distinct() 
+
     template = loader.get_template('pickem/scores.html')
 
     context = {
@@ -95,6 +102,7 @@ def scores_long(request, competition, year, week):
         'user_points': user_points,
         'users_w_points': users_w_points,
         'players_names': players_names,
+        'week_winner': week_winner,
         'game_weeks': range(1,19)
     }
     return HttpResponse(template.render(context, request))
