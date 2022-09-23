@@ -48,7 +48,7 @@
                         {% for player in players_names %}
                             {% if player not in users_w_points %}
                                     <tr>
-                                        {% with player.uid|lookupname as username %}
+                                        {% with player|lookupname as username %}
                                         <td class="text-uppercase"><b>{{ username }}:</b></td>
                                         {% endwith %}
                                         <td>0</td>
