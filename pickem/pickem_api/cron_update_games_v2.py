@@ -144,6 +144,8 @@ def build_payload(week):
                     game_status_type = "notstarted"
                 elif competition['status']['type']['name'] == "STATUS_IN_PROGRESS":
                     game_status_type = "inprogress"
+                elif competition['status']['type']['name'] == "STATUS_END_PERIOD":
+                    game_status_type = "inprogress"  
                 elif competition['status']['type']['name'] == "STATUS_HALFTIME":
                     game_status_type = "inprogress"
                 elif competition['status']['type']['name'] == "STATUS_FINAL":

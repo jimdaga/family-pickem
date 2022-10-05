@@ -4,8 +4,7 @@ Pickem
 ### Work to do 
 - [~] homepage 
 - [~] standings page 
-- [~] Refactor score updates to use ESPN api
-- [ ] Add "winner" to each week's page 
+- [ ] Users without picks doesn't show when everyone has picked 
 - [ ] Standings page to include "most weeks won" metrics 
 - [ ] Add phone numbers to users 
 - [ ] Send text when picks not made 
@@ -14,8 +13,10 @@ Pickem
 - [ ] remove hardcoded password for createsu
 - [ ] Add audit database 
 - [ ] Give users way to change username (remove dependency on username in points)
-- [ ] Link to ESPN team logos (https://a.espncdn.com/i/teamlogos/nfl/500/ne.png)
 
+- [x] Refactor score updates to use ESPN api
+- [x] Link to ESPN team logos (https://a.espncdn.com/i/teamlogos/nfl/500/ne.png)
+- [x] Add "winner" to each week's page 
 - [x] Home team not getting scores (1-4) after game ends
 - [x] Automate teams win/losses 
 - [x] Update `GameScored` in pick update 

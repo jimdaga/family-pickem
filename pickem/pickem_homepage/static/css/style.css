@@ -38,8 +38,8 @@ img {
 }
 
 .nfl-logo {
-    width: 60px;
-    height: 60px;
+    width: 30px;
+    height: 30px;
 }
 
 .img-thumbnail {
@@ -78,10 +78,14 @@ nav .navbar-nav-blue li a {
 }
 
 .loss {
-    background-color: rgb(196, 18, 18);
+    background-color: rgb(140, 137, 137);
 }
 .inprogress {
     background-color: rgb(13, 64, 215);
+}
+
+.bg-pick-info {
+  background-color: rgb(140, 137, 137);
 }
 
 .bg-nfl-blue {

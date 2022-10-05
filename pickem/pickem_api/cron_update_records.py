@@ -46,8 +46,10 @@ def update_team_record(team_id):
         team_id = team_details['id']
         team_slug = team_details['slug']
         team_display_name = team_details['displayName']
+        logo = team_details['logos'][0]['href']
 
     except requests.exceptions.RequestException:
+        print("Issue getting team details")
         print(response.text)
 
     # Get win/loss record info
@@ -75,6 +77,7 @@ def update_team_record(team_id):
         "id": team_id,
         "teamNameSlug": team_slug,
         "teamNameName": team_display_name,
+        "teamLogo": logo,
         "teamWins": team_wins,
         "teamLosses": team_losses,
         "teamTies": team_ties,

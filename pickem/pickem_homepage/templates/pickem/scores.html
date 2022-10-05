@@ -123,9 +123,10 @@
                                             {% endif %}
                                             <tr>
                                                 <td>
-                                                    {% with 'images/'|add:game.awayTeamSlug|add:'.svg' as image_static %}
-                                                        <img src="{% static image_static %}" alt="logo" class="nfl-logo">
+                                                    {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
                                                     {% endwith %}
+
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == game.awayTeamSlug %}
                                                             <b>{{ game.awayTeamName }}&#9664;</b>
@@ -232,9 +233,10 @@
                                             </tr>
                                             <tr>
                                                 <td>
-                                                    {% with 'images/'|add:game.homeTeamSlug|add:'.svg' as image_static %}
-                                                        <img src="{% static image_static %}" alt="logo" class="nfl-logo">
+                                                    {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                        <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
                                                     {% endwith %}
+
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == game.homeTeamSlug %}
                                                             <b>{{ game.homeTeamName }}&#9664;</b>
@@ -343,6 +345,33 @@
                                         </tbody>
                                     </table>
                                     </div>
+
+                                    {% if game.statusType == 'notstarted' %}
+                                    {% if current_week == True %}
+                                    <div class="p-2 border bg-secondary rounded-bottom">
+                                    <table>
+                                        <tbody>
+                                            <th class="text-white">&nbsp;&nbsp;Users without picks:</th> 
+                                            <tr>
+                                                <td>
+                                                {% for player in players_ids %}                                                    
+                                                        {% with player|addstr:"-"|addstr:game.id as gameid %}
+                                                            {% with gameid|lookuppick as count %}
+                                                                {% if count == 0 %}
+                                                                    {% with player|lookupname as username %}
+                                                                        <span class="badge inprogress text-uppercase">{{ username }}</span>
+                                                                    {% endwith %}
+                                                                {% endif %}
+                                                            {% endwith %}
+                                                        {% endwith %}
+                                                {% endfor %}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    </div>
+                                    {% endif %}
+                                    {% endif %}
                                     <br>
                                 {% endif %}
                             {% endfor %}

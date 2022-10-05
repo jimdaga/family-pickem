@@ -7,6 +7,7 @@ class Teams(models.Model):
     id = models.IntegerField(primary_key=True)
     teamNameSlug = models.CharField(max_length=250)
     teamNameName = models.CharField(max_length=250)
+    teamLogo = models.CharField(max_length=250, blank=True, null=True)
     teamWins =  models.IntegerField(default=0)
     teamLosses =  models.IntegerField(default=0)
     teamTies = models.IntegerField(default=0)
