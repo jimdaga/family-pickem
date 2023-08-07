@@ -128,7 +128,8 @@ def build_payload(week):
         json_response = json.loads(response.text)    
 
         game_competition = "nfl"
-        game_year = "2022"
+        game_year = "2024"
+        game_season = "2324"
         game_week = json_response['week']['number']
 
         for event in json_response["events"]:
@@ -235,6 +236,7 @@ def build_payload(week):
                 "competition": game_competition,
                 "gameWeek": game_week,
                 "gameyear": game_year,
+                "gameseason": game_season,
                 "startTimestamp": game_start_timestamp,
                 "gameWinner": game_winner,
                 "statusType": game_status_type,

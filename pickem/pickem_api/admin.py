@@ -4,12 +4,12 @@ from .models import GamePicks, GamesAndScores, GameWeeks, Teams, userPoints
 # Register your models here.
 @admin.register(GamesAndScores)
 class GamesAndScoresAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'competition', 'gameWeek', 'startTimestamp', 'statusTitle', 
+    list_display = ('slug', 'competition', 'gameseason', 'gameWeek', 'gameyear', 'startTimestamp', 'statusTitle', 
         'homeTeamName', 'homeTeamScore', 'awayTeamName', 'awayTeamScore', 'gameWinner' )
-    list_filter = ('startTimestamp', 'gameWeek',)
+    list_filter = ('startTimestamp', 'gameseason', 'gameWeek',)
     search_fields = ('homeTeamName', 'awayTeamName')
     date_hierarchy = 'startTimestamp'
-    ordering = ('gameWeek',)
+    ordering = ('gameWeek', 'startTimestamp' )
 
 @admin.register(GamePicks)
 class GamesPicksAdmin(admin.ModelAdmin):
@@ -33,8 +33,8 @@ class UserPointsAdmin(admin.ModelAdmin):
 
 @admin.register(GameWeeks)
 class GameWeekssAdmin(admin.ModelAdmin):
-    list_display = ('weekNumber', 'competition', 'date')
-    list_filter = ('weekNumber', 'date',)
+    list_display = ('weekNumber', 'competition', 'date', 'season')
+    list_filter = ('weekNumber', 'date', 'season')
     ordering = ('competition', 'weekNumber', 'date')
 
 @admin.register(Teams) 

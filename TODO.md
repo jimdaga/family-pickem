@@ -4,6 +4,10 @@ Pickem
 ### Work to do 
 - [~] homepage 
 - [~] standings page 
+- [~] Update scores page to be aware of year/season 
+- [ ] Add 'season' logic to picks
+- [ ] Update prod instance with weeks/games for 2023/24
+- [ ] Setup `eb deploy` using github actions 
 - [ ] Users without picks doesn't show when everyone has picked 
 - [ ] Standings page to include "most weeks won" metrics 
 - [ ] Add phone numbers to users 

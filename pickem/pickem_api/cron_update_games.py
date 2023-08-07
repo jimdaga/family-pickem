@@ -134,7 +134,7 @@ def build_payload(payload):
             else:
                 tieBreakerGame = False
             gameWeek = get_game_week(startDate)
-            gameYear = "2022"
+            gameYear = "2023"
             if "winner" in entry:
                 if entry['winner'] == 1:
                     gameWinner = entry['homeTeam']['slug']

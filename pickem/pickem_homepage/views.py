@@ -28,10 +28,18 @@ def scores(request):
     today = date.today()
     today_date = today.strftime("%Y-%m-%d")
     game_year = today.strftime("%Y") 
-    game_week = GameWeeks.objects.get(date=today_date).weekNumber
-    game_competition = GameWeeks.objects.get(date=today_date).competition
 
-    game_list = GamesAndScores.objects.filter(gameyear=game_year, gameWeek=game_week, competition=game_competition)
+    try:
+        game_week = GameWeeks.objects.get(date=today_date).weekNumber
+    except GameWeeks.DoesNotExist:
+        game_week = '1'
+
+    try:
+        game_competition = GameWeeks.objects.get(date=today_date).competition
+    except GameWeeks.DoesNotExist:
+        game_competition = 'nfl'
+    
+    game_list = GamesAndScores.objects.filter(gameWeek=game_week, competition=game_competition)
 
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
     competition = game_list.values_list('competition', flat=True).distinct()
@@ -114,12 +122,11 @@ def scores_long(request, competition, year, week):
 def standings(request):
     today = date.today()
     game_year = today.strftime("%Y") 
-
     
     User = get_user_model()
     players = User.objects.all()
 
-    player_points     = userPoints.objects.filter(gameyear=game_year).order_by('-total_points')
+    player_points = userPoints.objects.filter().order_by('-total_points')
 
     template = loader.get_template('pickem/standings.html')
 
@@ -138,11 +145,11 @@ def submit_game_picks(request):
     game_week = GameWeeks.objects.get(date=today_date).weekNumber
     game_competition = GameWeeks.objects.get(date=today_date).competition
 
-    game_list = GamesAndScores.objects.filter(gameyear=game_year, gameWeek=game_week, competition=game_competition)
+    game_list = GamesAndScores.objects.filter(gameWeek=game_week, competition=game_competition)
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
     competition = game_list.values_list('competition', flat=True).distinct()
 
-    picks = GamePicks.objects.filter(gameyear=game_year, gameWeek=game_week, competition=game_competition, userEmail=request.user.email)
+    picks = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition, userEmail=request.user.email)
 
     pick_slugs = picks.values_list('slug', flat=True).distinct()
     pick_ids = picks.values_list('id', flat=True).distinct()

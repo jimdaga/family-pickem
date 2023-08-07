@@ -142,7 +142,7 @@
                                             </tr>
                                             <tr>
                                                 <td>
-                                                    <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}">
+                                                    <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" required>
                                                     <label for="html">
                                                         {{ game.awayTeamName }}
                                                         {% for team in wins_losses %}

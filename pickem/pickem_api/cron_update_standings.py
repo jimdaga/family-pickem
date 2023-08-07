@@ -141,7 +141,8 @@ def update_correct_picks(game_year, game_week, uid):
 def update_games():
     print("Updating standings with weeks correct picks value")
     today = date.today()
-    game_year = today.strftime("%Y")
+    # game_year = today.strftime("%Y")
+    game_year = "2022"
     game_date = today.strftime("%Y-%m-%d")
     game_week = get_game_week(game_date)
 
