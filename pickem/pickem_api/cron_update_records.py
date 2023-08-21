@@ -2,6 +2,20 @@
 
 import requests
 import json
+import datetime
+from datetime import date
+
+def get_season():
+    # I'll probably hate myself in the future for hardcoding this :) 
+    today = date.today()
+    today_datestamp = date(today.year, today.month, today.day)
+
+    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
+        return '2223'
+    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
+        return '2324'
+    elif today_datestamp > date(2024, 4, 1):
+        return '2425'
 
 def get_team_ids():
     
@@ -33,21 +47,22 @@ def update_team_record(team_id):
         "Content-Type": "application/json",
     }
 
-    team_url = "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2022/teams/{}".format(team_id)
-    record_url = "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2022/types/2/teams/{}/record".format(team_id)
-
+    year = datetime.date.today().year
+    team_url = "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{}/teams/{}".format(year, team_id)
+    print(team_url)
+    record_url = "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{}/types/2/teams/{}/record".format(year, team_id)
 
     # Get team name info 
     try:
         response = requests.request("GET", team_url, headers=headers)
         json_response = json.loads(response.text)
-
         team_details = json_response
         team_id = team_details['id']
+
         team_slug = team_details['slug']
         team_display_name = team_details['displayName']
         logo = team_details['logos'][0]['href']
-
+        
     except requests.exceptions.RequestException:
         print("Issue getting team details")
         print(response.text)
@@ -57,14 +72,20 @@ def update_team_record(team_id):
         response = requests.request("GET", record_url, headers=headers)
         json_response = json.loads(response.text)
 
-        stats = json_response["items"][0]['stats']
-        for stat in stats:
-            if stat['name'] == 'wins':
-                team_wins = stat['displayValue']
-            elif stat['name'] == 'losses':
-                team_losses = stat['displayValue']
-            elif stat['name'] == 'ties':
-                team_ties = stat['displayValue']
+        try:
+            stats = json_response["items"][0]['stats']
+            for stat in stats:            
+                if stat['name'] == 'wins':
+                    team_wins = stat['displayValue']
+                elif stat['name'] == 'losses':
+                    team_losses = stat['displayValue']
+                elif stat['name'] == 'ties':
+                    team_ties = stat['displayValue']
+
+        except IndexError:
+            team_wins = 0
+            team_losses = 0
+            team_ties = 0
 
     except requests.exceptions.RequestException:
         print(response.text)
@@ -73,8 +94,11 @@ def update_team_record(team_id):
 
     url = "http://localhost:8000/api/teams/id/{}".format(team_id)
 
+    gameseason = get_season()
+
     payload = {
         "id": team_id,
+        "gameseason": gameseason,
         "teamNameSlug": team_slug,
         "teamNameName": team_display_name,
         "teamLogo": logo,

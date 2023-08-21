@@ -20,6 +20,18 @@ stdout_handler.setFormatter(formatter)
 
 logger.addHandler(stdout_handler)
 
+def get_season():
+    # I'll probably hate myself in the future for hardcoding this :) 
+    today = date.today()
+    today_datestamp = date(today.year, today.month, today.day)
+
+    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
+        return '2223'
+    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
+        return '2324'
+    elif today_datestamp > date(2024, 4, 1):
+        return '2425'
+
 def get_matching_picks(game_id):
     """
     
@@ -40,8 +52,10 @@ def post_win(pick_id):
     }
 
     payload='{"pick_correct": "true"}'
+    
+    gameseason = get_season()
 
-    url = "http://localhost:8000/api/userpicks/{}".format(pick_id)
+    url = "http://localhost:8000/api/userpicks/{}/{}".format(gameseason, pick_id)
     x = requests.patch(url, payload, headers = headers)
 
     if  x.status_code == 200 or x.status_code == 201:

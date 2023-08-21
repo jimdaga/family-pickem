@@ -13,6 +13,18 @@ from datetime import date
 from datetime import datetime
 from django.db.models import Count
 
+def get_season():
+    # I'll probably hate myself in the future for hardcoding this :) 
+    today = date.today()
+    today_datestamp = date(today.year, today.month, today.day)
+
+    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
+        return '2223'
+    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
+        return '2324'
+    elif today_datestamp > date(2024, 4, 1):
+        return '2425'
+
 # Create your views here.
 def index(request):
     # return HttpResponse(")
@@ -24,8 +36,11 @@ def game_list(request):
     """
     GET list of games, POST a new game, DELETE all games
     """
+    
     if request.method == 'GET':
-        games = GamesAndScores.objects.all()
+        gameseason = get_season()
+
+        games = GamesAndScores.objects.filter(gameseason=gameseason)
         
         slug = request.query_params.get('slug', None)
         if slug is not None:
@@ -33,6 +48,7 @@ def game_list(request):
         
         games_serializer = GameSerializer(games, many=True)
         return Response(games_serializer.data)
+
 
     elif request.method == 'POST':
         games_data = JSONParser().parse(request)
@@ -90,8 +106,15 @@ def week_list(request):
     """
     GET list of game weeks, POST a new date, DELETE all games
     """
+    gameseason = get_season()
+
     if request.method == 'GET':
-        game_week = GameWeeks.objects.all()
+
+        try:
+            game_week = GameWeeks.objects.get(date=today_date).weekNumber
+        except:
+            game_week = '1'
+
         game_week_serializer = GameWeeksSerializer(game_week, many=True)
         return Response(game_week_serializer.data)
 
@@ -119,7 +142,7 @@ def week_detail(request, date):
         game = GameWeeks.objects.get(date=date)
     except GameWeeks.DoesNotExist: 
         return JsonResponse({'message': 'This Game Date does not exist'}, status=status.HTTP_404_NOT_FOUND) 
- 
+
     if request.method == 'GET': 
         game_week_serializer = GameWeeksSerializer(game)
         return Response(game_week_serializer.data)
@@ -131,8 +154,10 @@ def games_unscored(request):
     GET unscored games
     find unscored games 
     """
+    gameseason = get_season()
+
     try: 
-        game = GamesAndScores.objects.filter(gameScored=False, statusType='finished')
+        game = GamesAndScores.objects.filter(gameseason=gameseason, gameScored=False, statusType='finished')
     except GamesAndScores.DoesNotExist: 
         return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
  
@@ -142,14 +167,14 @@ def games_unscored(request):
 
 
 @api_view(['GET', 'POST'])
-def game_picks_week_all(request, game_year, game_week):
+def game_picks_week_all(request, game_season, game_week):
     """
     GET user picks
     Find user picks mathing game ID
     """
     if request.method == 'GET':
         try: 
-            picks = GamePicks.objects.filter(gameyear=game_year, gameWeek=game_week)
+            picks = GamePicks.objects.filter(gameseason=game_season, gameWeek=game_week)
         except GamePicks.DoesNotExist: 
             return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
     
@@ -266,6 +291,8 @@ def get_active_games(request):
     GET active games (bool)
     Figure out if there are any active games
     """
+    gameseason = get_season()
+
     if request.method == 'GET':
         try:
             today = datetime.today()
@@ -273,7 +300,7 @@ def get_active_games(request):
                                                         startTimestamp__month=today.month, 
                                                         startTimestamp__day=today.day, 
                                                         startTimestamp__hour=today.hour) |
-                                                        Q(statusType='inprogress'))
+                                                        Q(statusType='inprogress', gameseason=gameseason))
         except GamesAndScores.DoesNotExist: 
             return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
     
@@ -288,8 +315,10 @@ def user_points_all(request):
     Find user points for a given year
     """
     if request.method == 'GET':
+        gameseason = get_season()
+        
         try: 
-            user_points = userPoints.objects.all()
+            user_points = userPoints.objects.filter(gameseason=gameseason)
         except userPoints.DoesNotExist: 
             return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
         
@@ -306,14 +335,14 @@ def user_points_all(request):
 
 
 @api_view(['GET', 'PATCH'])
-def user_points(request, game_year, id):
+def user_points(request, game_season, id):
     """
     GET user season points
     Find user points for a given year
     """
     if request.method == 'GET':
         try: 
-            user_points = userPoints.objects.get(id=id, gameyear=game_year)
+            user_points = userPoints.objects.get(id=id, gameseason=game_season)
         except userPoints.DoesNotExist: 
             return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 
         
@@ -322,7 +351,7 @@ def user_points(request, game_year, id):
 
     elif request.method == 'PATCH':
         request_data = JSONParser().parse(request)
-        user_points = userPoints.objects.get(id=id, gameyear=game_year)
+        user_points = userPoints.objects.get(id=id, gameseason=game_season)
         user_point_serializer = UserPointsSerializer(user_points, data=request_data, partial=True)
         if user_point_serializer.is_valid():
             user_point_serializer.save()
@@ -331,14 +360,14 @@ def user_points(request, game_year, id):
 
 
 @api_view(['GET'])
-def correct_user_picks(request, game_year, game_week, uid):
+def correct_user_picks(request, game_season, game_week, uid):
     """
     GET user season points
     Find user points for a given year
     """
     if request.method == 'GET':
         try: 
-            picks = GamePicks.objects.filter(gameyear=game_year, gameWeek=game_week, uid=uid, pick_correct=True)
+            picks = GamePicks.objects.filter(gameseason=game_season, gameWeek=game_week, uid=uid, pick_correct=True)
 
         except GamePicks.DoesNotExist: 
             return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND) 

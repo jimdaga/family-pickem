@@ -5,7 +5,9 @@ Pickem
 - [~] homepage 
 - [~] standings page 
 - [~] Update scores page to be aware of year/season 
-- [ ] Add 'season' logic to picks
+- [~] Mark the TieBreaker games in db 
+- [~] Add 'season' logic to picks
+- [ ] Fix records to use current season
 - [ ] Update prod instance with weeks/games for 2023/24
 - [ ] Setup `eb deploy` using github actions 
 - [ ] Users without picks doesn't show when everyone has picked 

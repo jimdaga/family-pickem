@@ -75,16 +75,18 @@ def get_game_week(game_date):
     """
     Check week number for a date
     """
-    url = "http://localhost:8000/api/weeks/{}".format(game_date)
+    try:
+        url = "http://localhost:8000/api/weeks/{}".format(game_date)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
+        headers = {
+            "Content-Type": "application/json",
+        }
 
-    response = requests.request("GET", url, headers=headers)
-    json_response = json.loads(response.text)
-    return json_response['weekNumber']
-
+        response = requests.request("GET", url, headers=headers)
+        json_response = json.loads(response.text)
+        return json_response['weekNumber']
+    except:
+        return "1"
 
 def post_entry(game_year, game_week, uid):
     """

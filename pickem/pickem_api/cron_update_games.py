@@ -31,6 +31,18 @@ parser = argparse.ArgumentParser(description='Populate/Update NFL Games.')
 parser.add_argument("--gamedate", help="Specify the date to update.")
 args, leftovers = parser.parse_known_args()
 
+def get_season():
+    # I'll probably hate myself in the future for hardcoding this :) 
+    today = date.today()
+    today_datestamp = date(today.year, today.month, today.day)
+
+    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
+        return '2223'
+    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
+        return '2324'
+    elif today_datestamp > date(2024, 4, 1):
+        return '2425'
+
 def check_game_id(id):
     """
     Check if game ID has already been added.

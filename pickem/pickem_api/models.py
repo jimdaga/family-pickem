@@ -7,13 +7,13 @@ from django.db import models
 
 class Teams(models.Model):
     id = models.IntegerField(primary_key=True)
+    gameseason = models.IntegerField(blank=True, null=True)
     teamNameSlug = models.CharField(max_length=250)
     teamNameName = models.CharField(max_length=250)
     teamLogo = models.CharField(max_length=250, blank=True, null=True)
     teamWins = models.IntegerField(default=0)
     teamLosses = models.IntegerField(default=0)
     teamTies = models.IntegerField(default=0)
-
 
 class GamesAndScores(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -62,6 +62,7 @@ class GamePicks(models.Model):
     competition = models.CharField(max_length=250, blank=True)
     gameWeek = models.CharField(max_length=2, blank=True)
     gameyear = models.CharField(max_length=4, blank=True)
+    gameseason = models.IntegerField(blank=True, null=True)
     pick_game_id = models.IntegerField(blank=True)
     pick = models.CharField(max_length=250, blank=True)
     tieBreakerScore = models.IntegerField(blank=True, null=True)
@@ -79,6 +80,7 @@ class userPoints(models.Model):
     userEmail = models.EmailField(blank=True)
     userID = models.CharField(max_length=250, blank=True)
     gameyear = models.CharField(max_length=4, blank=True)
+    gameseason = models.IntegerField(blank=True, null=True)
     week_1_points = models.IntegerField(blank=True, null=True)
     week_1_bonus = models.IntegerField(blank=True, null=True)
     week_1_winner = models.BooleanField(default=False, blank=True)

@@ -12,6 +12,7 @@ class GamePicksForm(forms.ModelForm):
             'uid',
             'slug',
             'competition',
+            'gameseason',
             'gameWeek',
             'gameyear',
             'pick_game_id',

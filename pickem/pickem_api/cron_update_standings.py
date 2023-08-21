@@ -46,15 +46,18 @@ def get_game_week(game_date):
     """
     Check week number for a date
     """
-    url = "http://localhost:8000/api/weeks/{}".format(game_date)
+    try:
+        url = "http://localhost:8000/api/weeks/{}".format(game_date)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
+        headers = {
+            "Content-Type": "application/json",
+        }
 
-    response = requests.request("GET", url, headers=headers)
-    json_response = json.loads(response.text)
-    return json_response['weekNumber']
+        response = requests.request("GET", url, headers=headers)
+        json_response = json.loads(response.text)
+        return json_response['weekNumber']
+    except:
+        return "1"
 
 
 def patch_picks(game_year, game_week, uid, points_total):
@@ -142,7 +145,7 @@ def update_games():
     print("Updating standings with weeks correct picks value")
     today = date.today()
     # game_year = today.strftime("%Y")
-    game_year = "2022"
+    game_year = "2023"
     game_date = today.strftime("%Y-%m-%d")
     game_week = get_game_week(game_date)
 

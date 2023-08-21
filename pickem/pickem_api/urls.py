@@ -14,8 +14,8 @@ urlpatterns = [
     re_path(r'^weeks', views.week_list),
     
     # PICKS 
-    re_path(r'^userpicks/(?P<game_year>[0-9]+)/(?P<game_week>[0-9]+)/(?P<uid>[0-9]+)$', views.correct_user_picks),
-    re_path(r'^userpickids/(?P<game_year>[0-9]+)/(?P<game_week>[0-9]+)$', views.game_picks_week_all),
+    re_path(r'^userpicks/(?P<game_season>[0-9]+)/(?P<game_week>[0-9]+)/(?P<uid>[0-9]+)$', views.correct_user_picks),
+    re_path(r'^userpickids/(?P<game_season>[0-9]+)/(?P<game_week>[0-9]+)$', views.game_picks_week_all),
     re_path(r'^picks/(?P<pick_game_id>[0-9]+)$', views.game_picks),
     re_path(r'^userpicks/(?P<pick_id>[0-9]+-[0-9]+)$', views.user_picks),
     
@@ -30,7 +30,7 @@ urlpatterns = [
     re_path(r'^unscored', views.games_unscored),
 
     # USER POINT DETAIL
-    re_path(r'^userpoints/(?P<game_year>[0-9]+)/(?P<id>[0-9]+)$', views.user_points),
+    re_path(r'^userpoints/(?P<game_season>[0-9]+)/(?P<id>[0-9]+)$', views.user_points),
     re_path(r'^userpoints/add', views.user_points_all),
     re_path(r'^userpoints/', views.user_points_all)
 ]

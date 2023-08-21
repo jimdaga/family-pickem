@@ -9,6 +9,19 @@ parser = argparse.ArgumentParser(description='Populate/Update NFL Games.')
 parser.add_argument("--gameweek", help="Specify the week to update.")
 args, leftovers = parser.parse_known_args()
 
+
+def get_season():
+    # I'll probably hate myself in the future for hardcoding this :) 
+    today = date.today()
+    today_datestamp = date(today.year, today.month, today.day)
+
+    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
+        return '2223'
+    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
+        return '2324'
+    elif today_datestamp > date(2024, 4, 1):
+        return '2425'
+        
 def check_game_id(id):
     """
     Check if game ID has already been added.
@@ -57,15 +70,18 @@ def get_game_week(game_date):
     """
     Check week number for a date
     """
-    url = "http://localhost:8000/api/weeks/{}".format(game_date)
+    try:
+        url = "http://localhost:8000/api/weeks/{}".format(game_date)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
+        headers = {
+            "Content-Type": "application/json",
+        }
 
-    response = requests.request("GET", url, headers=headers)
-    json_response = json.loads(response.text)
-    return json_response['weekNumber']
+        response = requests.request("GET", url, headers=headers)
+        json_response = json.loads(response.text)
+        return json_response['weekNumber']
+    except:
+        return "1"
 
 
 def get_team_slug(team_id):
@@ -129,7 +145,7 @@ def build_payload(week):
 
         game_competition = "nfl"
         game_year = "2024"
-        game_season = "2324"
+        game_season = get_season()
         game_week = json_response['week']['number']
 
         for event in json_response["events"]:

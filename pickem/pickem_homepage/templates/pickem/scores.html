@@ -31,6 +31,7 @@
             {% endif %}
             {% endfor %}
 
+            {% if points_total  %}
             <div class="border p-3 bg-dark rounded-top text-center">
                 <b class="text-white">Live Standings</b>
             </div>
@@ -60,6 +61,8 @@
                 </table>
             </div>
             <br>
+            {% endif %}
+
             <div class="d-none d-xl-block">
             <a class="twitter-timeline" data-width="300" data-height="2000" data-theme="light"
                 href="https://twitter.com/NFL?ref_src=twsrc%5Etfw">Tweets by NFL</a>
@@ -73,7 +76,7 @@
                     <tr></tr>
                         <td><h3><img src="{% static '/images/nfl.svg' %}" alt="logo" class="img-responsive img-logo"></h3></td>
                         <td class="standing">
-                            <h3 class="text-white">NFL Scoreboard</h3>
+                            <h3 class="text-white">NFL Scoreboard </h3>
                             {% if competition == 'nfl-preseason' %}
                                 <h5 class="text-muted">Preseason - Week {{ week }} </h5>
                             {% else %}
