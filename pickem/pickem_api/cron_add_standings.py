@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from datetime import date
 
+
 def unique_list(list):
     """
     Input a list, and return a unique list.
@@ -14,19 +15,21 @@ def unique_list(list):
     for x in list:
         if x not in unique_list:
             unique_list.append(x)
-    
+
     return unique_list
+
 
 def get_pick_user_ids(game_year, game_week):
     """
     Get a list of all ID's that have made picks
     """
-    url = "http://localhost:8000/api/userpickids/{}/{}".format(game_year, game_week)
+    url = "http://localhost:8000/api/userpickids/{}/{}".format(
+        game_year, game_week)
 
     headers = {
         "Content-Type": "application/json",
     }
-    
+
     id_list = []
 
     try:
@@ -34,9 +37,9 @@ def get_pick_user_ids(game_year, game_week):
         json_response = json.loads(response.text)
 
         for pick in json_response:
-            if pick ['uid']!= None:
+            if pick['uid'] != None:
                 id_list.append(pick['uid'])
-        
+
         return unique_list(id_list)
 
     except requests.exceptions.RequestException:
@@ -47,12 +50,13 @@ def get_user_info(game_year, game_week, uid):
     """
     Get user email/userid
     """
-    url = "http://localhost:8000/api/userpicks/{}/{}/{}".format(game_year, game_week, uid)
+    url = "http://localhost:8000/api/userpicks/{}/{}/{}".format(
+        game_year, game_week, uid)
 
     headers = {
         "Content-Type": "application/json",
     }
-    
+
     email_list = []
     userid_list = []
 
@@ -61,10 +65,10 @@ def get_user_info(game_year, game_week, uid):
         json_response = json.loads(response.text)
 
         for pick in json_response:
-            if pick ['uid']!= None:
+            if pick['uid'] != None:
                 email_list.append(pick['userEmail'])
                 userid_list.append(pick['userID'])
-        
+
         return unique_list(email_list), unique_list(userid_list)
 
     except requests.exceptions.RequestException:
@@ -88,6 +92,7 @@ def get_game_week(game_date):
     except:
         return "1"
 
+
 def post_entry(game_year, game_week, uid):
     """
     Create a user record 
@@ -99,7 +104,7 @@ def post_entry(game_year, game_week, uid):
     }
 
     user_email, user_id = get_user_info(game_year, game_week, uid)
-    
+
     user_email_str = None
     for x in unique_list(user_email):
         user_email_str = x
@@ -116,9 +121,9 @@ def post_entry(game_year, game_week, uid):
 
     payload_string = json.dumps(payload, default=str)
     print(payload)
-    x = requests.post(url, payload_string, headers = headers)
+    x = requests.post(url, payload_string, headers=headers)
 
-    if  x.status_code == 200 or x.status_code == 201:
+    if x.status_code == 200 or x.status_code == 201:
         print(" - User ID {}'s record sucesfully added".format(uid))
     else:
         print(" - Issues adding entry for User ID {}, status code: {}".format(uid, x.status_code))
@@ -138,7 +143,7 @@ def add_user_record(game_year, game_week, uid):
     json_response = json.loads(response.text)
 
     if len(json_response) > 1:
-        print("- User record already exists")    
+        print("- User record already exists")
     else:
         post_entry(game_year, game_week, uid)
 
@@ -153,6 +158,7 @@ def update_games():
     pick_list = get_pick_user_ids(game_year, game_week)
     for pick_id in pick_list:
         add_user_record(game_year, game_week, pick_id)
+
 
 if __name__ == '__main__':
     update_games()

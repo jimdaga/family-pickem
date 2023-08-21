@@ -1,6 +1,7 @@
 from django import forms
 from pickem_api.models import GamePicks
 
+
 class GamePicksForm(forms.ModelForm):
 
     class Meta:

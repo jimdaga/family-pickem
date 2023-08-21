@@ -15,6 +15,7 @@ class Teams(models.Model):
     teamLosses = models.IntegerField(default=0)
     teamTies = models.IntegerField(default=0)
 
+
 class GamesAndScores(models.Model):
     id = models.IntegerField(primary_key=True)
     slug = models.SlugField(max_length=250)
