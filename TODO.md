@@ -4,9 +4,9 @@ Pickem
 ## TO TRACKER
 
 ### In Progress
-- [~] homepage 
-- [~] standings page 
-- [~] Mark the TieBreaker games in db 
+- [ ] homepage 
+- [ ] standings page 
+- [ ] Mark the TieBreaker games in db 
 
 ### To Do
 - [ ] Setup `eb deploy` using github actions 
