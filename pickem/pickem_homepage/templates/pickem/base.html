@@ -23,6 +23,20 @@
   <link rel="shortcut icon" type="image/png" href="{% static 'images/windowlogo.png' %}"/>
 </head>
 
+<style>
+  /* Custom CSS for centering navbar-brand */
+  @media (max-width: 767px) {
+    .navbar-nav-center {
+      text-align: center;
+    }
+
+    .navbar-nav-center .navbar-brand {
+      display: block;
+      margin: 0 auto;
+    }
+  }
+</style>
+
 <body>
 {% block bootstrap5_content %}
 {% load socialaccount %}
@@ -38,30 +52,42 @@
   <!-- Container wrapper -->
   <div class="container-fluid">
 
-    <!-- Toggle button -->
-    <button class="navbar-toggler custom-toggler" type="button" data-bs-toggle ="collapse" data-bs-target ="#collapsibleNavbar">
-      <span class="navbar-toggler-icon"></span>
-    </button>
+    <ul class="navbar-nav navbar-nav-center me-auto mb-2 mb-lg-0">
+      
+      <li class="nav-item">
+        <a class="navbar-brand logo-nav hidden-xs" href="/">
+          <img src="{% static 'images/logo.png' %}" alt="logo">
+        </a>
+      </li>
+
+      <!-- Toggle button -->
+      <button class="navbar-toggler custom-toggler" type="button" data-bs-toggle ="collapse" data-bs-target ="#collapsibleNavbar">
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
     <!-- Collapsible wrapper -->
     <div class="collapse navbar-collapse" id="collapsibleNavbar">
       
-      <span class=""></span>
-        <a class="navbar-brand logo-nav" href="/"><img src="{% static 'images/logo.png' %}" alt="logo" centered"></a>
-      </span>
+
       <a class="nav-link me-auto" href="/"></a>
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
         
 
         <li class="nav-item">
-          <a class="nav-link me-auto" href="/">Home</a>
+          <a class="nav-link me-auto" href="/">
+          &nbsp; &nbsp;
+          <img src="{% static 'images/home.png' %}">
+          &nbsp; &nbsp;
+          </a>
         </li>
 
         <!-- Link -->
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Scores
+            &nbsp; &nbsp;
+            <img src="{% static 'images/scores.png' %}" alt="logo" centered">
+            &nbsp; &nbsp;
           </a>
           <div class="dropdown-menu" aria-labelledby="navbarDropdown">
             <a class="dropdown-item" href="/scores">Current Week</a>
@@ -88,11 +114,19 @@
         </li>
 
         <li class="nav-item">
-          <a class="nav-link" href="/standings/">Standings</a>
+          <a class="nav-link" href="/standings/">
+            &nbsp; &nbsp;
+            <img src="{% static 'images/leaderboard.png' %}" alt="logo" centered">
+            &nbsp; &nbsp;
+          </a>
         </li>
 
         <li class="nav-item">
-          <a class="nav-link" href="/rules/">Rules</a>
+          <a class="nav-link" href="/rules/">
+            &nbsp; &nbsp;
+            <img src="{% static 'images/rules.png' %}" alt="logo" centered">
+            &nbsp; &nbsp;
+          </a>
         </li>
 
       </ul>
@@ -136,6 +170,10 @@
   <!-- Container wrapper -->
 
 </nav>
+<div class="d-block d-lg-none">
+  <br><br>
+</div>
+
 <!-- Navbar -->
 
 <div class="container">

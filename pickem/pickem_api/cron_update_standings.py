@@ -5,7 +5,18 @@ import json
 from datetime import datetime
 from datetime import date
 
+def get_season():
+    # I'll probably hate myself in the future for hardcoding this :)
+    today = date.today()
+    today_datestamp = date(today.year, today.month, today.day)
 
+    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
+        return '2223'
+    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
+        return '2324'
+    elif today_datestamp > date(2024, 4, 1):
+        return '2425'
+    
 def unique_list(list):
     """
     Input a list, and return a unique list.
@@ -19,12 +30,12 @@ def unique_list(list):
     return unique_list
 
 
-def get_pick_user_ids(game_year, game_week):
+def get_pick_user_ids(game_season, game_week):
     """
     Get a list of all ID's that have made picks
     """
     url = "http://localhost:8000/api/userpickids/{}/{}".format(
-        game_year, game_week)
+        game_season, game_week)
 
     headers = {
         "Content-Type": "application/json",
@@ -64,11 +75,11 @@ def get_game_week(game_date):
         return "1"
 
 
-def patch_picks(game_year, game_week, uid, points_total):
+def patch_picks(game_season, game_week, uid, points_total):
     """
     Update users record with correct picks 
     """
-    url = "http://localhost:8000/api/userpoints/{}/{}".format(game_year, uid)
+    url = "http://localhost:8000/api/userpoints/{}/{}".format(game_season, uid)
 
     headers = {
         "Content-Type": "application/json",
@@ -90,14 +101,14 @@ def patch_picks(game_year, game_week, uid, points_total):
         print(" - Issues updating record for User ID {}, status code: {}".format(uid, x.status_code))
 
 
-def patch_total_points(game_year, uid):
+def patch_total_points(game_season, uid):
     """
     Update users total points record
     """
     get_url = "http://localhost:8000/api/userpoints/{}/{}".format(
-        game_year, uid)
+        game_season, uid)
     patch_url = "http://localhost:8000/api/userpoints/{}/{}".format(
-        game_year, uid)
+        game_season, uid)
 
     headers = {
         "Content-Type": "application/json",
@@ -126,12 +137,12 @@ def patch_total_points(game_year, uid):
         print(" - Issues updating record for User ID {}, status code: {}".format(uid, x.status_code))
 
 
-def update_correct_picks(game_year, game_week, uid):
+def update_correct_picks(game_season, game_week, uid):
     """
     Count how many correct picks the user made, and update their record
     """
     picks_url = "http://localhost:8000/api/userpicks/{}/{}/{}".format(
-        game_year, game_week, uid)
+        game_season, game_week, uid)
 
     headers = {
         "Content-Type": "application/json",
@@ -144,21 +155,20 @@ def update_correct_picks(game_year, game_week, uid):
     for pick in json_response:
         points_total += 1
 
-    patch_picks(game_year, game_week, uid, points_total)
+    patch_picks(game_season, game_week, uid, points_total)
 
 
 def update_games():
     print("Updating standings with weeks correct picks value")
     today = date.today()
-    # game_year = today.strftime("%Y")
-    game_year = "2023"
+    game_season = get_season()
     game_date = today.strftime("%Y-%m-%d")
     game_week = get_game_week(game_date)
 
-    pick_list = get_pick_user_ids(game_year, game_week)
+    pick_list = get_pick_user_ids(game_season, game_week)
     for pick_id in pick_list:
-        update_correct_picks(game_year, game_week, pick_id)
-        patch_total_points(game_year, pick_id)
+        update_correct_picks(game_season, game_week, pick_id)
+        patch_total_points(game_season, pick_id)
 
 
 if __name__ == '__main__':

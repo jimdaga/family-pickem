@@ -56,11 +56,15 @@ def scores(request):
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
     competition = game_list.values_list('competition', flat=True).distinct()
     
+    picks = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
+
     points = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition, pick_correct=True)
     points_total = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition, pick_correct=True).count
     user_points = points.values('uid').order_by('-uid').annotate(wins=Count('uid')).order_by('-wins')
     users_w_points = user_points.values_list('uid', flat=True).distinct()
-    picks = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
+    
+    
+    
     players = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
     players_names = players.values_list('uid', flat=True).distinct()
     players_ids = User.objects.values_list('id', flat=True).distinct().exclude(username='admin')
@@ -98,9 +102,11 @@ def scores_long(request, competition, gameseason, week):
         competition_name='nfl'
 
     game_list = GamesAndScores.objects.filter(competition=competition_name, gameseason=gameseason, gameWeek=week)
+    
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
     competition = competition_name
-    picks = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
+    
+    picks = GamePicks.objects.filter(gameseason=gameseason, gameWeek=week, competition=competition_name)
 
     points = GamePicks.objects.filter(gameseason=gameseason, gameWeek=week, competition=competition_name, pick_correct=True)
     points_total = GamePicks.objects.filter(gameseason=gameseason, gameWeek=week, competition=competition_name, pick_correct=True).count
@@ -168,11 +174,11 @@ def submit_game_picks(request):
 
     gameseason = get_season()
 
-    game_list = GamesAndScores.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
+    game_list = GamesAndScores.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition).distinct()
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
     competition = game_list.values_list('competition', flat=True).distinct()
 
-    picks = GamePicks.objects.filter(gameWeek=game_week, competition=game_competition, userEmail=request.user.email)
+    picks = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition, userEmail=request.user.email)
 
     pick_slugs = picks.values_list('slug', flat=True).distinct()
     pick_ids = picks.values_list('id', flat=True).distinct()

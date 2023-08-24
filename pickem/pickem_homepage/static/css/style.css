@@ -1,6 +1,7 @@
 body {
     background-color: #F2F3F7;
-    /* background-color: rgb(32, 32, 32); */
+    
+    /* background-color: rgb(24, 25, 26); */
 }
 
 body {
@@ -19,6 +20,11 @@ body {
     margin-right: auto;
 }
 
+.dark-text{
+  color:rgb(0, 0, 0);
+}
+
+/* Image */
 .circular--square { 
     border-radius: 50%; 
     height: 40px;
@@ -26,6 +32,13 @@ body {
     /* border-radius: 20%; */
     /* background-color: rgb(255, 255, 255);  */
 }
+
+.circular--square-sm {
+  border-radius: 50%; 
+  height: 40px;
+  width: 40px;
+}
+
 
 img {
     border-radius: 3%;
@@ -57,17 +70,50 @@ img {
     object-fit: contain;
 }
 
-nav .navbar-nav li a {
-    color: white;
+/* nav-link */
+.nav-link {
+  position: relative;
 }
 
-.dark-text{
-    color:rgb(0, 0, 0);
+.nav-link::after {
+  content: '';
+  opacity: 0;
+  transition: all 0.2s;
+  height: 2px;
+  width: 100%;
+  background-color: rgb(13, 64, 215);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.nav-link:hover::after {
+  opacity: 1;
+}
+
+/* navbar */
+.navbar-custom {
+  background-color: rgb(37, 37, 38);
+}
+
+nav .navbar-nav li a {
+    color: white;
 }
   
 nav .navbar-nav-blue li a {
     color: rgb(104, 11, 11);
 }
+
+.custom-toggler .navbar-toggler-icon {
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(255,255,255, 0.5)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 8h24M4 16h24M4 24h24'/%3E%3C/svg%3E");
+}
+
+.custom-toggler.navbar-toggler {
+  border-color: rgb(255, 255, 255);
+} 
+
+.navbar-nav > li > .dropdown-menu a{   color: #555555;  }
+
 
 .debug {
     background-color: cornsilk;
@@ -82,6 +128,16 @@ nav .navbar-nav-blue li a {
 }
 .inprogress {
     background-color: rgb(13, 64, 215);
+}
+
+.pick-header {
+  font-size: 0.9em;
+}
+
+.pick {
+  background-color: rgb(176, 183, 188);
+  font-size: 1;
+  color: #000000;
 }
 
 .bg-pick-info {
@@ -118,16 +174,6 @@ tr.spaceUnder>td {
     align-self: center;
     width: 50px;
   }
-
-  .custom-toggler .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(255,255,255, 0.5)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 8h24M4 16h24M4 24h24'/%3E%3C/svg%3E");
-  }
-  
-  .custom-toggler.navbar-toggler {
-    border-color: rgb(255, 255, 255);
-  } 
-
-.navbar-nav > li > .dropdown-menu a{   color: #555555;  }
 
 @import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700');
 

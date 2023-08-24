@@ -228,58 +228,57 @@
                                                 <label for="html">
                                                     {{ game.awayTeamName }}
                                                     {% for team in wins_losses %}
-                                                    {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                        {% if team.teamNameSlug == game.awayTeamSlug %}
                                                             {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                    {% endif %}
-                                                {% endfor %} 
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                            {% else %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %} 
                                                 </label><br>
                                                 <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled checked>
                                                 <label for="css">
                                                     {{ game.homeTeamName }}
                                                     {% for team in wins_losses %}
-                                                    {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                        {% if team.teamNameSlug == game.homeTeamSlug %}
                                                             {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                    {% endif %}
-                                                {% endfor %} 
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                            {% else %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %} 
                                                 </label><br>
                                             {% elif p.pick == game.awayTeamSlug %}
                                                 <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled checked>
                                                 <label for="html">
                                                     {{ game.awayTeamName }}
                                                     {% for team in wins_losses %}
-                                                    {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                        {% if team.teamNameSlug == game.awayTeamSlug %}
                                                             {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                    {% endif %}
-                                                {% endfor %} 
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                            {% else %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %} 
                                                 </label><br>
                                                 <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled>
                                                 <label for="css">
                                                     {{ game.homeTeamName }}
                                                     {% for team in wins_losses %}
-                                                    {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                        {% if team.teamNameSlug == game.homeTeamSlug %}
                                                             {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                    {% endif %}
-                                                {% endfor %} 
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
+                                                            {% else %}
+                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %} 
                                                 </label><br>
                                             {% endif %}
                                         {% endfor %}
-                                        
                                         </td>
                                     </tr>                                 
                                 </form>

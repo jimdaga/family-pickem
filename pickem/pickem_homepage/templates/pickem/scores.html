@@ -11,6 +11,7 @@
 <div class="container">
     <div class="row gx-4 ">
         <div class="col-md-3">
+            {% if user.is_authenticated %}
             {% for player in week_winner %} 
             {% if player.id != None %}
             <div class="border p-3 bg-dark rounded-top text-center">
@@ -41,7 +42,12 @@
                         {% for player in user_points %}
                         <tr>
                             {% with player.uid|lookupname as username %}
-                            <td class="text-uppercase"><b>{{ username }}:</b></td>
+                            {% with player.uid|lookupavatar as avatar %}
+                            <td><img class="circular--square-sm" src="{{ avatar }}"></td>
+                            <td class="text-uppercase">
+                                <b>{{ username }}:</b>
+                            </td>
+                            {% endwith %}
                             {% endwith %}
                             <td> {{ player.wins }}</td>
                         </tr>
@@ -50,7 +56,12 @@
                             {% if player not in users_w_points %}
                                     <tr>
                                         {% with player|lookupname as username %}
-                                        <td class="text-uppercase"><b>{{ username }}:</b></td>
+                                        {% with player|lookupavatar as avatar %}
+                                        <td><img class="circular--square-sm" src="{{ avatar }}"></td>
+                                        <td class="text-uppercase">
+                                            <b>{{ username }}:</b>
+                                        </td>
+                                        {% endwith %}
                                         {% endwith %}
                                         <td>0</td>
                                     </tr>
@@ -62,7 +73,8 @@
             </div>
             <br>
             {% endif %}
-
+            {% endif %}
+            
             <div class="d-none d-xl-block">
             <a class="twitter-timeline" data-width="300" data-height="2000" data-theme="light"
                 href="https://twitter.com/NFL?ref_src=twsrc%5Etfw">Tweets by NFL</a>
@@ -347,6 +359,50 @@
                                             </tr>
                                         </tbody>
                                     </table>
+
+                                    {% if picks %}
+                                        {% for pick in picks %}
+                                            {% if pick.userEmail == user.email %}
+                                                {% if pick.pick == game.homeTeamSlug %}
+                                                <div class="dropdown-divider"></div>
+                                                <table>
+                                                    <tbody>
+                                                        <th class="text-black pick-header">&nbsp;&nbsp;Your pick:</th>
+                                                            <tr>
+                                                                <td>
+                                                                    <span class="badge pick">
+                                                                        {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                                        <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                                        {% endwith %}
+                                                                        {{ game.homeTeamName }}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                    </tbody>
+                                                </table>
+                                                {% endif %}
+                                                {% if pick.pick == game.awayTeamSlug %}
+                                                <div class="dropdown-divider"></div>
+                                                <table>
+                                                    <tbody>
+                                                        <th class="text-black pick-header">&nbsp;&nbsp;Your pick:</th>
+                                                            <tr>
+                                                                <td>
+                                                                    <span class="badge pick">
+                                                                        {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                                        <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                                        {% endwith %}
+                                                                        {{ game.awayTeamName }}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                    </tbody>
+                                                </table>
+                                                {% endif %} 
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+
                                     </div>
 
                                     {% if game.statusType == 'notstarted' %}
@@ -371,8 +427,8 @@
                                                 </td>
                                             </tr>
                                         </tbody>
-                                    </table>
-                                    </div>
+                                    </table>                                
+                                </div>
                                     {% endif %}
                                     {% endif %}
                                     <br>

@@ -1,14 +1,14 @@
 # Project Name
 Pickem
 
-### Work to do 
+## TO TRACKER
+
+### In Progress
 - [~] homepage 
 - [~] standings page 
-- [~] Update scores page to be aware of year/season 
 - [~] Mark the TieBreaker games in db 
-- [~] Add 'season' logic to picks
-- [ ] Fix records to use current season
-- [ ] Update prod instance with weeks/games for 2023/24
+
+### To Do
 - [ ] Setup `eb deploy` using github actions 
 - [ ] Users without picks doesn't show when everyone has picked 
 - [ ] Standings page to include "most weeks won" metrics 
@@ -20,6 +20,11 @@ Pickem
 - [ ] Add audit database 
 - [ ] Give users way to change username (remove dependency on username in points)
 
+### Done 
+- [x] Update prod instance with weeks/games for 2023/24
+- [x] Fix records to use current season
+- [x] Add 'season' logic to picks
+- [x] Update scores page to be aware of year/season 
 - [x] Refactor score updates to use ESPN api
 - [x] Link to ESPN team logos (https://a.espncdn.com/i/teamlogos/nfl/500/ne.png)
 - [x] Add "winner" to each week's page 
