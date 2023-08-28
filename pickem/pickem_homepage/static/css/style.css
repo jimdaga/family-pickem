@@ -87,6 +87,18 @@ img {
   left: 0;
 }
 
+.navbar-link > .active > { 
+  content: '';
+  opacity: 0;
+  transition: all 0.2s;
+  height: 2px;
+  width: 100%;
+  background-color: rgb(13, 64, 215);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
 .nav-link:hover::after {
   opacity: 1;
 }
@@ -120,7 +132,7 @@ nav .navbar-nav-blue li a {
 }
 
 .win {
-    background-color: rgb(25, 149, 69);
+    background-color: rgb(20, 135, 85);
 }
 
 .loss {

@@ -319,7 +319,7 @@
                                                         {% if pick.pick == game.homeTeamSlug %}
                                                             {% if game.statusType == 'finished' %}
                                                                 {% if game.gameWinner == game.homeTeamSlug %}
-                                                                    <span class="badge win text-uppercase">
+                                                                    <span class="badge win btn-sm text-uppercase">
                                                                         {% with pick.uid|lookupname as username %}
                                                                         {{ username }}
                                                                         {% endwith %}
@@ -329,7 +329,7 @@
                                                                         {% endif %}
                                                                     </span>
                                                                 {% else %}
-                                                                    <span class="badge loss text-uppercase">
+                                                                    <span class="badge loss btn-sm text-uppercase">
                                                                         {% with pick.uid|lookupname as username %}
                                                                         {{ username }}
                                                                         {% endwith %}
@@ -341,7 +341,7 @@
                                                                 {% endif %}
                                                             {% endif %}
                                                             {% if game.statusType == 'inprogress' %}                                                                                                         
-                                                                <span class="badge inprogress text-uppercase">
+                                                                <span class="badge inprogress btn-sm text-uppercase">
                                                                     {% with pick.uid|lookupname as username %}
                                                                         {{ username }}
                                                                         {% endwith %}
@@ -363,36 +363,72 @@
                                     {% if picks %}
                                         {% for pick in picks %}
                                             {% if pick.userEmail == user.email %}
+
                                                 {% if pick.pick == game.homeTeamSlug %}
                                                 <div class="dropdown-divider"></div>
                                                 <table>
                                                     <tbody>
+                                                        {% comment %} <th class="text-black pick-header">&nbsp;&nbsp;Your pick:<a href="/">(edit)</a></th> {% endcomment %}
                                                         <th class="text-black pick-header">&nbsp;&nbsp;Your pick:</th>
                                                             <tr>
                                                                 <td>
-                                                                    <span class="badge pick">
-                                                                        {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                                                        <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                                    {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                                        {% if game.statusType == 'finished' %}
+                                                                            {% if game.gameWinner == game.homeTeamSlug %}
+                                                                                <span class="badge btn-success">
+                                                                                    <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                                            {% else %}
+                                                                                <span class="badge btn btn-dark">
+                                                                                    <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">     
+                                                                            {% endif %}
+                                                                        {% else %}
+                                                                            <span class="badge btn-secondary">
+                                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                                            {% endif %}
                                                                         {% endwith %}
                                                                         {{ game.homeTeamName }}
+                                                                        
+                                                                        {% if pick.tieBreakerScore != None %}
+                                                                        (points: {{ pick.tieBreakerScore }},
+                                                                         yards: {{ pick.tieBreakerYards }})
+                                                                        {% endif %}
+
                                                                     </span>
                                                                 </td>
                                                             </tr>
                                                     </tbody>
                                                 </table>
                                                 {% endif %}
+
                                                 {% if pick.pick == game.awayTeamSlug %}
                                                 <div class="dropdown-divider"></div>
                                                 <table>
                                                     <tbody>
+                                                        {% comment %} <th class="text-black pick-header">&nbsp;&nbsp;Your pick:<a href="/">(edit)</a></th> {% endcomment %}
                                                         <th class="text-black pick-header">&nbsp;&nbsp;Your pick:</th>
                                                             <tr>
                                                                 <td>
-                                                                    <span class="badge pick">
-                                                                        {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                                                        <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                                    {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                                        {% if game.statusType == 'finished' %}
+                                                                            {% if game.gameWinner == game.awayTeamSlug %}
+                                                                                <span class="badge btn-success">
+                                                                                    <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                                            {% else %}
+                                                                                <span class="badge btn btn-danger">
+                                                                                    <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">     
+                                                                            {% endif %}
+                                                                        {% else %}
+                                                                            <span class="badge btn-secondary">
+                                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                                            {% endif %}
                                                                         {% endwith %}
                                                                         {{ game.awayTeamName }}
+
+                                                                        {% if pick.tieBreakerScore != None %}
+                                                                        (points: {{ pick.tieBreakerScore }},
+                                                                         yards: {{ pick.tieBreakerYards }})
+                                                                         {% endif %}
+                                                                         
                                                                     </span>
                                                                 </td>
                                                             </tr>
@@ -402,7 +438,6 @@
                                             {% endif %}
                                         {% endfor %}
                                     {% endif %}
-
                                     </div>
 
                                     {% if game.statusType == 'notstarted' %}
