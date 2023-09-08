@@ -9,6 +9,7 @@ import requests
 import sys
 import json
 import logging
+from datetime import date
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -55,7 +56,7 @@ def post_win(pick_id):
     
     gameseason = get_season()
 
-    url = "http://localhost:8000/api/userpicks/{}/{}".format(gameseason, pick_id)
+    url = "http://localhost:8000/api/userpicks/{}".format(pick_id)
     x = requests.patch(url, payload, headers = headers)
 
     if  x.status_code == 200 or x.status_code == 201:

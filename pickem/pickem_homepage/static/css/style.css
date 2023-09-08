@@ -70,6 +70,48 @@ img {
     object-fit: contain;
 }
 
+/* player-info wrapper */
+
+.player-info-wrapper {
+  width: 100%;
+  padding: 0px;
+  margin-bottom: 0px;
+}
+
+.player-row {
+  display: block; /* Change display to block */
+  width: 100%;
+  border: 0px;
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1px;
+  background-color: #ffffff;
+}
+
+.player-profile-img {
+  width: 40px; /* Adjust as needed */
+  height: 40px; /* Adjust as needed */
+  border-radius: 50%;
+}
+
+nav .player-username {
+  text-align: left;
+  font-size: 6px  !important;
+}
+
+nav .player-score {
+  font-size: 6px  !important;
+}
+
+.circular--square-sm {
+  /* Your existing circular image styles here */
+}
+
+.text-uppercase {
+  /* Your existing text styles here */
+}
+
 /* nav-link */
 .nav-link {
   position: relative;

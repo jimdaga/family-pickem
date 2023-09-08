@@ -37,3 +37,7 @@ def lookuplogo(slug):
 def lookuppick(id):
     pick = GamePicks.objects.filter(id=id).distinct()
     return pick.count
+
+@register.filter(name='times') 
+def times(number):
+    return range(1, number+1)

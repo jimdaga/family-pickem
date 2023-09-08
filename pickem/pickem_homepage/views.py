@@ -3,12 +3,13 @@ from django.template import loader
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from pickem_api.models import GamePicks
-from pickem_api.models import GamesAndScores, GameWeeks, Teams, userPoints
+from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints
 from .forms import GamePicksForm
 
 from django.shortcuts import render
 from django.db.models import Sum
 from django.db.models import Count
+from django.db.models.functions import Coalesce
 
 from datetime import date
 
@@ -60,7 +61,9 @@ def scores(request):
 
     points = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition, pick_correct=True)
     points_total = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition, pick_correct=True).count
-    user_points = points.values('uid').order_by('-uid').annotate(wins=Count('uid')).order_by('-wins')
+    # user_points = points.values('uid').order_by('-uid').annotate(wins=Count('uid')).order_by('-wins')
+    user_points = points.values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
+
     users_w_points = user_points.values_list('uid', flat=True).distinct()
     
     
@@ -71,7 +74,7 @@ def scores(request):
     wins_losses = Teams.objects.filter(gameseason=gameseason)
 
     winner_object = "week_{}_winner".format(game_week)
-    week_winner = userPoints.objects.filter(**{winner_object: True},gameseason=gameseason).distinct() 
+    week_winner = userSeasonPoints.objects.filter(**{winner_object: True},gameseason=gameseason).distinct() 
 
     # TODO: Give zero points to users that didn't win yet
 
@@ -110,7 +113,8 @@ def scores_long(request, competition, gameseason, week):
 
     points = GamePicks.objects.filter(gameseason=gameseason, gameWeek=week, competition=competition_name, pick_correct=True)
     points_total = GamePicks.objects.filter(gameseason=gameseason, gameWeek=week, competition=competition_name, pick_correct=True).count
-    user_points = points.values('uid').order_by('-uid').annotate(wins=Count('uid')).order_by('-wins')
+    # user_points = points.values('uid').order_by('-uid').annotate(wins=Count('uid')).order_by('-wins')
+    user_points = points.values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
     users_w_points = user_points.values_list('uid', flat=True).distinct()
     players = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
     players_names = players.values_list('uid', flat=True).distinct()
@@ -118,7 +122,7 @@ def scores_long(request, competition, gameseason, week):
     wins_losses = Teams.objects.filter(gameseason=gameseason)
 
     winner_object = "week_{}_winner".format(week)
-    week_winner = userPoints.objects.filter(**{winner_object: True},gameseason=gameseason).distinct() 
+    week_winner = userSeasonPoints.objects.filter(**{winner_object: True},gameseason=gameseason).distinct() 
 
     template = loader.get_template('pickem/scores.html')
 
@@ -146,7 +150,7 @@ def standings(request):
     User = get_user_model()
     players = User.objects.all()
 
-    player_points = userPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
+    player_points = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
 
     template = loader.get_template('pickem/standings.html')
 

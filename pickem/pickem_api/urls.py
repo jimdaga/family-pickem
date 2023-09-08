@@ -9,6 +9,9 @@ urlpatterns = [
     re_path(r'^games/(?P<pk>[0-9]+)$', views.game_detail),
     re_path(r'^games', views.game_list),
 
+    # USER DETAILS
+    re_path(r'^userinfo/(?P<pk>[0-9]+)$', views.user_info),
+
     # WEEKS
     re_path(r'^weeks/(?P<date>\d{4}-\d{2}-\d{2})$', views.week_detail),
     re_path(r'^weeks', views.week_list),
@@ -32,8 +35,8 @@ urlpatterns = [
     re_path(r'^unscored', views.games_unscored),
 
     # USER POINT DETAIL
-    re_path(
-        r'^userpoints/(?P<game_season>[0-9]+)/(?P<id>[0-9]+)$', views.user_points),
+    re_path(r'^userpointsdel/(?P<game_season>[0-9]+)/(?P<id>[0-9]+)$', views.delete_user_record),
+    re_path(r'^userpoints/(?P<game_season>[0-9]+)/(?P<id>[0-9]+)$', views.user_points),
     re_path(r'^userpoints/add', views.user_points_all),
-    re_path(r'^userpoints/', views.user_points_all)
+    re_path(r'^userpoints/', views.user_points_all),
 ]

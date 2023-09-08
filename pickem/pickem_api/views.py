@@ -1,9 +1,10 @@
 from functools import partial
 from itertools import count
-from .serializers import GameSerializer, GameWeeksSerializer, GamePicksSerializer, TeamsSerializer, UserPointsSerializer
+from .serializers import GameSerializer, GameWeeksSerializer, GamePicksSerializer, TeamsSerializer, UserSeasonPointsSerializer, UserSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userPoints
+from django.contrib.auth.models import User
+from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userSeasonPoints
 from django.db.models import Q
 from django.http import HttpResponse
 from django.http.response import JsonResponse
@@ -101,6 +102,22 @@ def game_detail(request, pk):
         game.delete()
         return JsonResponse({'message': 'Game was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
 
+
+@api_view(['GET'])
+def user_info(request, pk):
+    """
+    GET user details from id
+    """
+
+    if request.method == 'GET':
+        try:
+            user_details = User.objects.get(pk=pk)
+        except:
+            return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND)
+
+        user_serializer = UserSerializer(user_details)
+        return Response(user_serializer.data)
+    
 
 @api_view(['GET', 'POST', 'DELETE'])
 def week_list(request):
@@ -325,23 +342,34 @@ def user_points_all(request):
         gameseason = get_season()
 
         try:
-            user_points = userPoints.objects.filter(gameseason=gameseason)
-        except userPoints.DoesNotExist:
+            user_points = userSeasonPoints.objects.filter(gameseason=gameseason)
+        except userSeasonPoints.DoesNotExist:
             return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND)
 
-        user_point_serializer = UserPointsSerializer(user_points, many=True)
+        user_point_serializer = UserSeasonPointsSerializer(user_points, many=True)
         return Response(user_point_serializer.data)
 
     elif request.method == 'POST':
         request_data = JSONParser().parse(request)
-        user_point_serializer = UserPointsSerializer(data=request_data)
+        user_point_serializer = UserSeasonPointsSerializer(data=request_data)
         if user_point_serializer.is_valid():
             user_point_serializer.save()
             return JsonResponse(user_point_serializer.data, status=status.HTTP_201_CREATED)
         return JsonResponse(user_point_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'PATCH'])
+@api_view(['DELETE'])
+def delete_user_record(request, game_season, id):
+    """
+    GET user season points
+    Find user points for a given year
+    """
+    if request.method == 'DELETE':
+        cleanup = userSeasonPoints.objects.get(userID=id, gameseason=game_season).delete()
+        return JsonResponse({'message': 'Deleted record for user id {}'.format(cleanup[0])}, status=status.HTTP_204_NO_CONTENT)
+    
+
+@api_view(['GET', 'POST', 'PATCH'])
 def user_points(request, game_season, id):
     """
     GET user season points
@@ -349,17 +377,31 @@ def user_points(request, game_season, id):
     """
     if request.method == 'GET':
         try:
-            user_points = userPoints.objects.get(id=id, gameseason=game_season)
-        except userPoints.DoesNotExist:
+            user_points = userSeasonPoints.objects.get(userID=id, gameseason=game_season)
+        except userSeasonPoints.DoesNotExist:
             return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND)
 
-        user_point_serializer = UserPointsSerializer(user_points)
+        user_point_serializer = UserSeasonPointsSerializer(user_points)
         return Response(user_point_serializer.data)
+
+    elif request.method == 'POST':
+        request_data = JSONParser().parse(request)
+        
+        user_point_serializer = UserSeasonPointsSerializer(data=request_data, partial=True)
+        if user_point_serializer.is_valid():
+            user_point_serializer.save()
+            return JsonResponse(user_point_serializer.data, status=status.HTTP_201_CREATED)
+        return JsonResponse(user_point_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
     elif request.method == 'PATCH':
         request_data = JSONParser().parse(request)
-        user_points = userPoints.objects.get(id=id, gameseason=game_season)
-        user_point_serializer = UserPointsSerializer(
+        try:
+            user_points = userSeasonPoints.objects.get(userID=id, gameseason=game_season)
+        except userSeasonPoints.DoesNotExist:
+            return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND)
+        
+        user_point_serializer = UserSeasonPointsSerializer(
             user_points, data=request_data, partial=True)
         if user_point_serializer.is_valid():
             user_point_serializer.save()

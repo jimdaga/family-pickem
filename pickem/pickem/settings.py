@@ -25,7 +25,7 @@ X_RAPIDAPI_KEY = 'a204a03302msh0ac572a7232996bp15fab0jsnfcba822202f5'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 if 'RDS_DB_NAME' in os.environ:
-    DEBUG = False
+    DEBUG = True
 else:
     DEBUG = True
 

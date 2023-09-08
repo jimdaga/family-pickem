@@ -29,6 +29,23 @@ def unique_list(list):
 
     return unique_list
 
+def get_user_email(uid):
+    """
+    Get user email 
+    """
+    url = "http://localhost:8000/api/userinfo/{}".format(uid)
+
+    headers = {
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.request("GET", url, headers=headers)
+        json_response = json.loads(response.text)
+    except requests.exceptions.RequestException:
+        print(response.text)
+    
+    return json_response['email']
 
 def get_pick_user_ids(game_season, game_week):
     """
@@ -88,7 +105,7 @@ def patch_picks(game_season, game_week, uid, points_total):
     week_points = "week_{}_points".format(game_week)
 
     payload = {
-        "id": uid,
+        "userID": uid,
         week_points: points_total,
     }
 
@@ -97,6 +114,26 @@ def patch_picks(game_season, game_week, uid, points_total):
 
     if x.status_code == 200 or x.status_code == 201:
         print(" - User ID {}'s points sucesfully updated".format(uid))
+    elif x.status_code == 404:
+        # Add entry for new user
+        print(" - No Records found for user with ID {}, adding an entry now".format(uid))
+        today = date.today()
+
+        user_email = get_user_email(uid)
+
+        payload_new = {
+            "userID": uid,
+            "gameseason": game_season,
+            "gameyear": today.year,
+            "userEmail": user_email,
+            "total_points": "0",
+        }
+
+        payload_new_string = json.dumps(payload_new, default=str)
+        try:
+            requests.post(url, payload_new_string, headers=headers)
+        except:
+            print(" - Issues adding new entry for User ID {}, status code: {}".format(uid, x.status_code))
     else:
         print(" - Issues updating record for User ID {}, status code: {}".format(uid, x.status_code))
 
@@ -169,6 +206,7 @@ def update_games():
     for pick_id in pick_list:
         update_correct_picks(game_season, game_week, pick_id)
         patch_total_points(game_season, pick_id)
+        print()
 
 
 if __name__ == '__main__':

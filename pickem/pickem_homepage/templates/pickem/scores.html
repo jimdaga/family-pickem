@@ -8,33 +8,37 @@
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
 <br><br><br><br>
+{% comment %} {% if user.is_authenticated %} {% endcomment %}
+
 <div class="container">
     <div class="row gx-4 ">
+
+         {% comment %} Sidebar with user points and week winner  {% endcomment %}
+        {% if points_total  %}
         <div class="col-md-3">
-            {% if user.is_authenticated %}
             {% for player in week_winner %} 
-            {% if player.id != None %}
-            <div class="border p-3 bg-dark rounded-top text-center">
-                <b class="text-white"> &#127942; &nbsp; Week Winner &nbsp; &#127942;</b>
-            </div>
-            <div class="border p-3 bg-light rounded-bottom text-center">
-                <table class="standing" width="100%">
-                    <tbody>
-                        <tr>
-                            {% with player.id|lookupname as username %}
-                                <td class="text-uppercase"><b>{{ username }}</b></td>
-                            {% endwith %}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <BR>
-            {% endif %}
+                {% if player.id != None %}
+
+                <div class="border p-3 bg-dark rounded-top text-center">
+                    <b class="text-white"> &#127942; &nbsp; Week Winner &nbsp; &#127942;</b>
+                </div>
+                <div class="border p-3 bg-light rounded-bottom text-center">
+                    <table class="standing" width="100%">
+                        <tbody>
+                            <tr>
+                                {% with player.id|lookupname as username %}
+                                    <td class="text-uppercase"><b>{{ username }}</b></td>
+                                {% endwith %}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <BR>
+                {% endif %}
             {% endfor %}
 
-            {% if points_total  %}
             <div class="border p-3 bg-dark rounded-top text-center">
-                <b class="text-white">Live Standings</b>
+                <b class="text-white">Week Points</b>
             </div>
             <div class="border p-3 bg-light rounded-bottom text-center">
                 <table class="standing" width="80%">
@@ -52,6 +56,7 @@
                             <td> {{ player.wins }}</td>
                         </tr>
                         {% endfor %}
+
                         {% for player in players_names %}
                             {% if player not in users_w_points %}
                                     <tr>
@@ -67,22 +72,18 @@
                                     </tr>
                             {% endif %}                        
                         {% endfor %}
-
                     </tbody>
                 </table>
             </div>
             <br>
-            {% endif %}
-            {% endif %}
-            
-            <div class="d-none d-xl-block">
-            <a class="twitter-timeline" data-width="300" data-height="2000" data-theme="light"
-                href="https://twitter.com/NFL?ref_src=twsrc%5Etfw">Tweets by NFL</a>
-            <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-            </div>
         </div>
+        {% endif %}
         
+        {% if points_total  %}
         <div class="col-md-9">
+        {% else %}
+        <div class="col">
+        {% endif %}
             <div class="p-3 border bg-dark rounded-top">
                 <table>
                     <tr></tr>
