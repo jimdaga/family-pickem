@@ -41,39 +41,61 @@
                 <b class="text-white">Week Points</b>
             </div>
             <div class="border p-3 bg-light rounded-bottom text-center">
-                <table class="standing" width="80%">
-                    <tbody>
-                        {% for player in user_points %}
-                        <tr>
-                            {% with player.uid|lookupname as username %}
-                            {% with player.uid|lookupavatar as avatar %}
-                            <td><img class="circular--square-sm" src="{{ avatar }}"></td>
-                            <td class="text-uppercase">
-                                <b>{{ username }}:</b>
-                            </td>
-                            {% endwith %}
-                            {% endwith %}
-                            <td> {{ player.wins }}</td>
-                        </tr>
-                        {% endfor %}
+                {% for player in user_points %}
+                <div class="player-info-wrapper">        
+                    <span class="player-row">
+                        {% with player.uid|lookupname as username %}
+                        {% with player.uid|lookupavatar as avatar %}
+                        <div class="container-fluid">
+                            <div class="row">
+                                <div class="col-auto pr-2">
+                                    <img class="player-profile-img" src="{{ avatar }}">
+                                </div>
+                                <div class="col">
+                                    <h8 class="player-username text-uppercase d-flex justify-content-start">{{ username }}</h8>
+                                </div>
 
-                        {% for player in players_names %}
-                            {% if player not in users_w_points %}
-                                    <tr>
-                                        {% with player|lookupname as username %}
-                                        {% with player|lookupavatar as avatar %}
-                                        <td><img class="circular--square-sm" src="{{ avatar }}"></td>
-                                        <td class="text-uppercase">
-                                            <b>{{ username }}:</b>
-                                        </td>
-                                        {% endwith %}
-                                        {% endwith %}
-                                        <td>0</td>
-                                    </tr>
-                            {% endif %}                        
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                <div class="col text-right">
+                                    <h8 class="player-score d-flex justify-content-end">
+                                        {{ player.wins }}
+                                    </h8>
+                                </div>                            
+                            </div>
+                        </div>
+                        {% endwith %}
+                        {% endwith %}
+                    </span>
+                </div>
+                {% endfor %}
+
+                {% for player in players_names %}
+                {% if player not in users_w_points %}
+                <div class="player-info-wrapper">        
+                    <span class="player-row">
+                        {% with player|lookupname as username %}
+                        {% with player|lookupavatar as avatar %}
+                        <div class="container-fluid">
+                            <div class="row align-items-center">
+                                <div class="col-auto pr-2">
+                                    <img class="player-profile-img" src="{{ avatar }}">
+                                </div>
+                                <div class="col">
+                                    <h8 class="player-username text-uppercase d-flex justify-content-start">{{ username }}</h8>
+                                </div>
+
+                                <div class="col text-right">
+                                    <h8 class="player-score d-flex justify-content-end">
+                                        0
+                                    </h8>
+                                </div>                            
+                            </div>
+                        </div>
+                        {% endwith %}
+                        {% endwith %}
+                    </span>
+                </div>
+                {% endif %}                        
+                {% endfor %} 
             </div>
             <br>
         </div>
@@ -379,7 +401,7 @@
                                                                                 <span class="badge btn-success">
                                                                                     <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
                                                                             {% else %}
-                                                                                <span class="badge btn btn-dark">
+                                                                                <span class="badge btn btn-danger">
                                                                                     <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">     
                                                                             {% endif %}
                                                                         {% else %}
