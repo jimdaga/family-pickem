@@ -18,21 +18,27 @@
         <div class="col-md-3">
             {% for player in week_winner %} 
                 {% if player.id != None %}
-
                 <div class="border p-3 bg-dark rounded-top text-center">
-                    <b class="text-white"> &#127942; &nbsp; Week Winner &nbsp; &#127942;</b>
+                    <b class="text-white">Week Winner</b>
                 </div>
+
                 <div class="border p-3 bg-light rounded-bottom text-center">
-                    <table class="standing" width="100%">
-                        <tbody>
-                            <tr>
-                                {% with player.id|lookupname as username %}
-                                    <td class="text-uppercase"><b>{{ username }}</b></td>
-                                {% endwith %}
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="player-winner-wrapper">        
+                        <span class="player-row">
+                            {% with player.userID|lookupname as username %}
+                            {% with player.userID|lookupavatar as avatar %}
+                                <div class="col-auto pr-2">
+                                    <img class="player-profile-xl-img" src="{{ avatar }}">
+                                </div>
+                                <div class="col">
+                                    <h8 class="player-username text-uppercase d-flex justify-content-center">{{ username }}</h8>
+                                </div>
+                            {% endwith %}
+                            {% endwith %}
+                        </span>
+                    </div>
                 </div>
+                    
                 <BR>
                 {% endif %}
             {% endfor %}
@@ -82,7 +88,7 @@
                                 <div class="col">
                                     <h8 class="player-username text-uppercase d-flex justify-content-start">{{ username }}</h8>
                                 </div>
-
+                
                                 <div class="col text-right">
                                     <h8 class="player-score d-flex justify-content-end">
                                         0
@@ -95,7 +101,7 @@
                     </span>
                 </div>
                 {% endif %}                        
-                {% endfor %} 
+                {% endfor %}
             </div>
             <br>
         </div>
@@ -123,14 +129,16 @@
             <div class="p-3 border bg-light rounded-bottom">
                 {% if game_days %}
                     {% for day in game_days %}
-                        </ul><h5>{{ day|date:"D, M d Y @ P" }}</h5>
+                        <h5>{{ day|date:"D, M d Y @ P" }}</h5>
                         {% if game_list %}
                             {% for game in game_list %}
                                 {% if game.startTimestamp == day %}
+                                <div class="p-2 border bg-light text-left player-row">
+
                                     {% if game.statusType == 'inprogress' %}
-                                    <div class="p-2 border bg-nfl-blue rounded-top border-dark">
+                                    <div class="p-2 border bg-nfl-blue border-dark rounded-top status-row inner-div">
                                     {% else %}
-                                    <div class="p-2 border bg-secondary rounded-top">
+                                    <div class="p-2 border bg-nfl-grey rounded-top status-row inner-div">
                                     {% endif %}
                                         <table>
                                             <tbody>
@@ -140,11 +148,8 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    {% if game.statusType == 'inprogress' %}
-                                        <div class="p-2 border bg-light text-left rounded-bottom border-dark">
-                                    {% else %}
-                                        <div class="p-2 border bg-light text-left rounded-bottom">
-                                    {% endif %}
+
+                                    <br><br>
                                     <table>
                                         <tbody>
                                             {% if game.statusType != 'notstarted' %}
@@ -465,7 +470,7 @@
 
                                     {% if game.statusType == 'notstarted' %}
                                     {% if current_week == True %}
-                                    <div class="p-2 border bg-secondary rounded-bottom">
+                                    <div class="p-2 border bg-nfl-grey rounded-bottom">
                                     <table>
                                         <tbody>
                                             <th class="text-white">&nbsp;&nbsp;Users without picks:</th> 

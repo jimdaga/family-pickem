@@ -76,11 +76,19 @@ img {
   width: 100%;
   padding: 0px;
   margin-bottom: 0px;
-  text-align: left;
+  text-align: left; /* Add this line to set the text alignment */
+}
+
+.player-winner-wrapper {
+  width: 100%;
+  padding: 0px;
+  margin-bottom: 0px;
+  text-align: center; /* Add this line to set the text alignment */
 }
 
 .player-row {
-  display: block; /* Change display to block */
+  position: relative; /* Add relative positioning to the parent div */
+  display: block;
   width: 100%;
   border: 0px;
   border-radius: 10px;
@@ -90,20 +98,45 @@ img {
   background-color: #ffffff;
 }
 
+.status-row {
+  position: relative; /* Add relative positioning to the parent div */
+  display: block;
+  width: 100%;
+  border: 0px;
+  padding: 10px;
+  margin-bottom: 1px;
+}
+
+.player-profile-xl-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 80%;
+}
+
 .player-profile-img {
-  width: 40px; /* Adjust as needed */
-  height: 40px; /* Adjust as needed */
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
 }
 
 nav .player-username {
   text-align: left;
-  font-size: 6px  !important;
+  font-size: 6px !important;
 }
 
 nav .player-score {
-  font-size: 6px  !important;
+  font-size: 6px !important;
 }
+
+.inner-div {
+  width: 100%;
+  position: absolute; /* Add absolute positioning to the inner div */
+  top: 0; /* Position it at the top of the parent div */
+  left: 0; /* Align it to the left */
+  margin: 0; /* Remove margin */
+  padding: 0; /* Remove padding */
+}
+
 
 .circular--square-sm {
   /* Your existing circular image styles here */
@@ -201,6 +234,10 @@ nav .navbar-nav-blue li a {
 
 .bg-nfl-blue {
   background-color: #013369;
+}
+
+.bg-nfl-grey {
+  background-color: rgb(92, 89, 89);
 }
 
 .bg-background {

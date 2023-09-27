@@ -67,14 +67,22 @@
                                     <span class="player-row">
                                         <div class="container-fluid">
                                             <div class="row align-items-center">
-                                                <div class="col">
+                                                <div class="col text-right">
                                                     <h8 class="player-username text-uppercase d-flex justify-content-start">
                                                         Week {{ i }}
                                                     </h8>
                                                 </div>
 
                                                 <div class="col text-right">
-                                                    <h8 class="player-score d-flex justify-content-end">-</h8>
+                                                    <h8 class="player-score d-flex text-uppercase justify-content-end">
+                                                        {% with i|lookweekwinner as winnername %}
+                                                            {% for x in winnername %}
+                                                                {% with x.userID|lookupname as username %}
+                                                                    {{ username }}
+                                                                {% endwith %}
+                                                            {% endfor %}
+                                                        {% endwith %}
+                                                    </h8>
                                                 </div>                            
                                             </div>
                                         </div>
