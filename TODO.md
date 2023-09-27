@@ -16,7 +16,6 @@ Pickem
 - [ ] Send text when picks not made 
 - [ ] Add (5/12) type counter to picks made/not made 
 - [ ] Hide "picks" or "picks made" if == 0 
-- [ ] remove hardcoded password for createsu
 - [ ] Add audit database 
 - [ ] Give users way to change username (remove dependency on username in points)
 
