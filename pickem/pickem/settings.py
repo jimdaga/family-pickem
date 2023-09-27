@@ -21,7 +21,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '=0n@nr8j+^ohv5=7x-g$o+hap3rt_3m(34jyo_sfl#qcz#ouo+'
-X_RAPIDAPI_KEY = 'a204a03302msh0ac572a7232996bp15fab0jsnfcba822202f5'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 if 'RDS_DB_NAME' in os.environ:
