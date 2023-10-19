@@ -21,7 +21,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '=0n@nr8j+^ohv5=7x-g$o+hap3rt_3m(34jyo_sfl#qcz#ouo+'
-X_RAPIDAPI_KEY = 'a204a03302msh0ac572a7232996bp15fab0jsnfcba822202f5'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 if 'RDS_DB_NAME' in os.environ:
@@ -29,7 +28,7 @@ if 'RDS_DB_NAME' in os.environ:
 else:
     DEBUG = True
 
-ALLOWED_HOSTS = ['pickem-dev.us-east-1.elasticbeanstalk.com', 'family-pickem.com', 'localhost']
+ALLOWED_HOSTS = ['pickem-dev.us-east-1.elasticbeanstalk.com', 'family-pickem.com', 'dev.family-pickem.com', 'localhost']
 if 'RDS_DB_NAME' in os.environ:
     try:
         EC2_IP = requests.get('http://169.254.169.254/latest/meta-data/local-ipv4').text
@@ -93,6 +92,9 @@ WSGI_APPLICATION = 'pickem.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
+## To get ENV from eb ssh: 
+# export $(/opt/elasticbeanstalk/bin/get-config --output YAML environment | sed -r 's/: /=/' | xargs)
+
 if 'RDS_DB_NAME' in os.environ:
     DATABASES = {
         'default': {
@@ -110,7 +112,7 @@ else:
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
             'NAME': 'pickem',
             'USER': 'postgres',
-            'HOST': 'localhost',
+            'HOST': 'postgresql',
             'PORT': '5432',
         }
     }

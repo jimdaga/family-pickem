@@ -8,3 +8,11 @@ This is a personal project that I created for a family football "picks" league.
 
 
 The code in this repo is decent, but not perfect. Please know if this was for work I would be a lot cleaner. 
+
+
+## Docker
+
+### Build Docker Image
+```
+docker compose build --no-cache
+```

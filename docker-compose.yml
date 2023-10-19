@@ -1,0 +1,43 @@
+version: "3.8" 
+
+services:
+  postgresql:
+    image: docker.io/bitnami/postgresql:14
+    ports:
+      - '5432:5432'
+    volumes:
+      - 'postgresql_data:/bitnami/postgresql'
+    expose:
+      - 5432/tcp
+    networks:
+      - django
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+    restart: unless-stopped
+
+  django:
+    container_name: familypickem_django
+    image: docker-django-v0.0
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    # platform: "linux/amd64"
+    # env_file:
+    #   - .env.app
+    expose:
+      - 8000/tcp
+    ports:
+      - "8000:8000"
+    networks:
+      - django
+    depends_on:
+      - postgresql
+    restart: unless-stopped
+
+volumes:
+  postgresql_data:
+    driver: local
+
+networks:
+  django:
+    name: django
