@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "family-pickem.fullname" . }}-test-connection"
+  labels:
+    {{- include "family-pickem.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "family-pickem.fullname" . }}:{{ .Values.service.port }}']
+  restartPolicy: Never
