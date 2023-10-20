@@ -1,8 +1,13 @@
-name: Publish Docker image
+name: Publish Artifacts
+
+# on:
+#   release:
+#     types: [published]
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
 
 jobs:
   publish_docker:
@@ -50,6 +55,8 @@ jobs:
 
       - name: Install Helm
         uses: azure/setup-helm@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.5.0
