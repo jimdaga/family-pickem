@@ -55,7 +55,11 @@ jobs:
 
       - name: Update Helm Tags
         run: |
-          sed -i "s/0.0.0/${{ steps.meta.outputs.tags }}/g" ./charts/family-pickem/Chart.yaml
+          echo "${TAG}"
+          sed -i "s/0.0.0/${TAG}/g" ./charts/family-pickem/Chart.yaml
+          cat ./charts/family-pickem/Chart.yaml
+        env:
+          TAG: ${{ steps.meta.outputs.tags }}
 
       - name: Install Helm
         uses: azure/setup-helm@v3

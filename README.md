@@ -1,7 +1,5 @@
 # family-pickem
 
-![Alt text](https://family-pickem.s3.amazonaws.com/images/logo.png?AWSAccessKeyId%253DAKIAW6UJ2SVR2MQNDENA%2526Signature%253DrQv%252FGW2D%252B4boDVpRFRsQJGLKKW0%253D%2526Expires%253D1697774227)
-
 If you have found this, welcome :) 
 
 ## About
