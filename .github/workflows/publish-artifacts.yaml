@@ -1,13 +1,13 @@
 name: Publish Artifacts
 
-# on:
-#   release:
-#     types: [published]
-
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
+
+# on:
+#   push:
+#     branches:
+#       - main
 
 jobs:
   publish_docker:
@@ -52,6 +52,10 @@ jobs:
         run: |
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Update Helm Tags
+        run: |
+          sed -i "s/0.0.0/${{ steps.meta.outputs.tags }}/g" ./charts/family-pickem/Chart.yaml
 
       - name: Install Helm
         uses: azure/setup-helm@v3
