@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   family-pickem:
   - apiVersion: v2
+    appVersion: 0.0.5
+    created: "2023-10-20T03:26:34.156618561Z"
+    description: A Helm chart for Kubernetes
+    digest: 5fd419da01351ab3389059052e5b3e19bef260c02665ee25167e75a68cd0b34f
+    name: family-pickem
+    type: application
+    urls:
+    - https://github.com/jimdaga/family-pickem/releases/download/family-pickem-0.0.5/family-pickem-0.0.5.tgz
+    version: 0.0.5
+  - apiVersion: v2
     appVersion: 0.0.4
     created: "2023-10-20T03:15:03.798713685Z"
     description: A Helm chart for Kubernetes
@@ -21,4 +31,4 @@ entries:
     urls:
     - https://github.com/jimdaga/family-pickem/releases/download/family-pickem-0.0.3/family-pickem-0.0.3.tgz
     version: 0.0.3
-generated: "2023-10-20T03:15:03.798720785Z"
+generated: "2023-10-20T03:26:34.156635063Z"
