@@ -53,17 +53,17 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      - name: Extract metadata (tags) for Docker
-        id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+      - name: Set output
+        id: vars
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
 
       - name: Update Helm Tags
-        run: |
-          echo "${TAG}"
-          sed -i "s/0.0.0/${TAG}/g" ./charts/family-pickem/Chart.yaml
-          cat ./charts/family-pickem/Chart.yaml
         env:
-          TAG: ${{ steps.meta.outputs.tags }}
+          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+        run: |
+          echo "${RELEASE_VERSION}"
+          sed -i "s/0.0.0/${RELEASE_VERSION}/g" ./charts/family-pickem/Chart.yaml
+          cat ./charts/family-pickem/Chart.yaml
 
       - name: Install Helm
         uses: azure/setup-helm@v3
