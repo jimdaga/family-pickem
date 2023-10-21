@@ -61,6 +61,16 @@ app:
     # DJANGO_DEBUG: "False"
     # SECRET_KEY: "" # You must set this 
 
+postgresql:
+  enabled: true
+  global:
+    postgresql:
+      auth:
+        # postgresPassword: ""
+        # username: ""
+        # password: ""
+        database: "pickem"
+
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
