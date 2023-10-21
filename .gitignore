@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # custom 
-secret_key
+.env.app

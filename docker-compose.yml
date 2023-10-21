@@ -18,12 +18,13 @@ services:
   django:
     container_name: familypickem_django
     image: docker-django-v0.0
+    # image: familypickem/pickem-django:0.0.5
     build:
       context: .
       dockerfile: docker/app/Dockerfile
     # platform: "linux/amd64"
-    # env_file:
-    #   - .env.app
+    env_file:
+      - .env.app
     expose:
       - 8000/tcp
     ports:
