@@ -1,0 +1,42 @@
+# https://github.com/kubernetes/ingress-nginx/tree/master/charts/ingress-nginx
+# helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+# helm repo update
+# kubectl create ns nginx-ingress
+# helm upgrade --install -f values.yaml nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace 
+
+controller:
+  kind: DaemonSet
+  replicaCount: 2
+  minAvailable: 1
+  config:
+    server-tokens: "false"
+  admissionWebhooks:
+    enabled: false
+  service:
+    type: NodePort
+      #type: LoadBalancer
+    externalTrafficPolicy: Local # This is needed to log client IPs
+
+  metrics:
+    enabled: true
+
+  extraArgs:
+    ingress-class: nginx
+
+  ingressClassResource:
+    name: "nginx"
+    enabled: true
+    default: true
+    controllerValue: "k8s.io/ingress-nginx"
+
+defaultBackend:
+  enabled: true
+
+rbac:
+  create: true
+
+podSecurityPolicy:
+  enabled: false
+
+serviceAccount:
+  create: true
