@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   family-pickem:
   - apiVersion: v2
+    appVersion: 0.0.6
+    created: "2023-10-21T02:16:08.292022438Z"
+    description: A Helm chart to install the family pickem django app
+    digest: fc3615ae779968d2aa028dcd92f9d518f630dd861d94711ab88c4050734516d6
+    name: family-pickem
+    type: application
+    urls:
+    - https://github.com/jimdaga/family-pickem/releases/download/family-pickem-0.0.6/family-pickem-0.0.6.tgz
+    version: 0.0.6
+  - apiVersion: v2
     appVersion: 0.0.5
     created: "2023-10-20T03:26:34.156618561Z"
     description: A Helm chart for Kubernetes
@@ -31,4 +41,4 @@ entries:
     urls:
     - https://github.com/jimdaga/family-pickem/releases/download/family-pickem-0.0.3/family-pickem-0.0.3.tgz
     version: 0.0.3
-generated: "2023-10-20T03:26:34.156635063Z"
+generated: "2023-10-21T02:16:08.292036339Z"
