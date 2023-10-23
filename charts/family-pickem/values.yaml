@@ -60,6 +60,11 @@ app:
   env: {} 
     # DJANGO_DEBUG: "False"
     # SECRET_KEY: "" # You must set this 
+    # DATABASE_HOST: ""
+    # DATABASE_USER: ""
+    # DATABASE_NAME: ""
+    # DATABASE_PASS: ""
+    # DATABASE_PORT: ""
 
 postgresql:
   enabled: true
