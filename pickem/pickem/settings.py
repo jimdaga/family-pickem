@@ -33,6 +33,9 @@ ALLOWED_HOSTS = ['localhost']
 if 'DJANGO_ALLOWED_HOSTS' in os.environ:
     ALLOWED_HOSTS.append(os.environ["DJANGO_ALLOWED_HOSTS"])
 
+if 'THIS_POD_IP' in os.environ:
+    ALLOWED_HOSTS.append(os.environ["THIS_POD_IP"])
+
 if 'RDS_DB_NAME' in os.environ:
     try:
         EC2_IP = requests.get('http://169.254.169.254/latest/meta-data/local-ipv4').text
