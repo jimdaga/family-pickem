@@ -36,6 +36,11 @@ spec:
           envFrom:
           - secretRef:
               name: {{ include "family-pickem.fullname" . }}-envvars
+          env:
+          - name: THIS_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
           ports:
             - name: http
               containerPort: 8000

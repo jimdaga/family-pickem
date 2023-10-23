@@ -60,6 +60,7 @@ app:
   env: {} 
     # DJANGO_DEBUG: "False"
     # SECRET_KEY: "" # You must set this 
+    # DJANGO_ALLOWED_HOSTS: "example.com"
     # DATABASE_HOST: ""
     # DATABASE_USER: ""
     # DATABASE_NAME: ""
