@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 import requests
-import env
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  
@@ -29,8 +28,10 @@ if 'DJANGO_DEBUG' in os.environ:
 else:
     DEBUG = False
 
-#ALLOWED_HOSTS = ['pickem-dev.us-east-1.elasticbeanstalk.com', 'family-pickem.com', 'dev.family-pickem.com', 'localhost']
-ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=['*'], cast=str)
+ALLOWED_HOSTS = ['localhost']
+
+if 'DJANGO_ALLOWED_HOSTS' in os.environ:
+    ALLOWED_HOSTS.append(os.environ["DJANGO_ALLOWED_HOSTS"])
 
 if 'RDS_DB_NAME' in os.environ:
     try:
