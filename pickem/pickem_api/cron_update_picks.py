@@ -90,14 +90,18 @@ def update_wins(payload):
     logger.info("Cheking all games for a win")
     for entry in payload:
         entry_pick = get_matching_picks(entry['id'])
+
         game_winner = entry['gameWinner']
-        
-        for user_pick in entry_pick:
-            if user_pick['pick'] == game_winner:
-                logger.info("User {} made a correct pick by picking {} in the game {} (game id: {})".format(user_pick['userID'], user_pick['pick'], user_pick['slug'], user_pick['id']))
-                post_win(user_pick['id'])
-        
-        update_game_as_scored(entry['id'], entry['slug'])
+
+        if game_winner:        
+            for user_pick in entry_pick:
+                if user_pick['pick'] == game_winner:
+                    logger.info("User {} made a correct pick by picking {} in the game {} (game id: {})".format(user_pick['userID'], user_pick['pick'], user_pick['slug'], user_pick['id']))
+                    post_win(user_pick['id'])
+            
+            update_game_as_scored(entry['id'], entry['slug'])
+        else: 
+            logger.warning("Game {} finished, but missing an winner. Please try again later.".format(entry['slug']))
 
 
 def get_unscored_games():
