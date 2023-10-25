@@ -44,7 +44,7 @@ jobs:
           context: .
           file: ./docker/app/Dockerfile
           push: true
-          tags: ${{needs.get_tag.outputs.tag}}
+          tags: "familypickem/pickem-django:${{needs.get_tag.outputs.tag}}"
 
   publish_helm:
     permissions:
