@@ -28,6 +28,7 @@ if 'DJANGO_DEBUG' in os.environ:
 else:
     DEBUG = False
 
+# Allowed Host(s)
 ALLOWED_HOSTS = ['localhost']
 
 if 'DJANGO_ALLOWED_HOSTS' in os.environ:
@@ -43,8 +44,14 @@ if 'RDS_DB_NAME' in os.environ:
     except requests.exceptions.RequestException:
         pass
 
-# Application definition
+# CSRF Origins 
+CSRF_TRUSTED_ORIGINS = ['https://*.localhost']
 
+if 'CSRF_TRUSTED_ORIGINS' in os.environ:
+    CSRF_TRUSTED_ORIGINS.append(os.environ["CSRF_TRUSTED_ORIGINS"])
+
+
+# Application definition
 INSTALLED_APPS = [
     'pickem_homepage.apps.PickemHomepageConfig',
     'pickem_api.apps.PickemApiConfig',
