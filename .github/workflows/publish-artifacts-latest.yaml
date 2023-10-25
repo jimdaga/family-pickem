@@ -13,11 +13,11 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
-        
+
       - name: "Get tag version"
         id: "tag"
         run: |
-          RELEASE_VERSION=$(git describe --tags `git rev-list --tags --max-count=1` | awk 'BEGIN{FS=OFS="."} {$3+=1} 1')
+          RELEASE_VERSION=$(git describe --tags `git rev-list --tags --max-count=1` | awk 'BEGIN{FS=OFS="."} {$3+=1} 1' | sed 's/family-pickem-//')
           echo "tag=${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"    
 
   publish_docker:
@@ -47,6 +47,7 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
+    needs: get_tag
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,8 +61,7 @@ jobs:
 
       - name: Update Helm Tags
         run: |
-          RELEASE_VERSION=$(git describe --tags `git rev-list --tags --max-count=1` | awk 'BEGIN{FS=OFS="."} {$3+=1} 1')
-          sed -i "s/0.0.0/${RELEASE_VERSION}-latest/g" ./charts/family-pickem/Chart.yaml
+          sed -i "s/0.0.0/${{needs.get_tag.outputs.tag}}-latest/g" ./charts/family-pickem/Chart.yaml
           cat ./charts/family-pickem/Chart.yaml
 
       - name: Install Helm
