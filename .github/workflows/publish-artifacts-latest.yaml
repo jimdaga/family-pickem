@@ -38,7 +38,7 @@ jobs:
           context: .
           file: ./docker/app/Dockerfile
           push: true
-          tags: [${{needs.get_tag.outputs.tag}}]
+          tags: ${{needs.get_tag.outputs.tag}}
 
   publish_helm:
     permissions:
