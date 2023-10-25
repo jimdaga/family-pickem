@@ -7,6 +7,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Populate/Update NFL Games.')
 parser.add_argument("--gameweek", help="Specify the week to update.")
+parser.add_argument("--url", help="Specify the API url.")
 args, leftovers = parser.parse_known_args()
 
 
@@ -26,7 +27,7 @@ def check_game_id(id):
     """
     Check if game ID has already been added.
     """
-    url = "http://localhost:8000/api/games/{}".format(id)
+    url = "http://{}/api/games/{}".format(args.url, id)
 
     headers = {
         "Content-Type": "application/json",
@@ -71,7 +72,7 @@ def get_game_week(game_date):
     Check week number for a date
     """
     try:
-        url = "http://localhost:8000/api/weeks/{}".format(game_date)
+        url = "http://{}/api/weeks/{}".format(args.url, game_date)
 
         headers = {
             "Content-Type": "application/json",
@@ -88,7 +89,7 @@ def get_team_slug(team_id):
     """
     
     """
-    url = "http://localhost:8000/api/teams/id/{}".format(team_id)
+    url = "http://{}/api/teams/id/{}".format(team_id)
 
     headers = {
         "Content-Type": "application/json",
@@ -111,11 +112,11 @@ def add_games(payload, id):
     }
 
     if check_game_id(id): 
-        url = "http://localhost:8000/api/games/{}".format(id)
+        url = "http://{}/api/games/{}".format(args.url, id)
         x = requests.put(url, data = payload, headers = headers)
         verb = "Updated"
     else:
-        url = "http://localhost:8000/api/games/"
+        url = "http://{}/api/games/".format(args.url)
         x = requests.post(url, data = payload, headers = headers)
         verb = "Added"
     

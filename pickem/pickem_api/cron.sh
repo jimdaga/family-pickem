@@ -7,7 +7,7 @@ echo "# Running: /code/pickem_api/cron_update_games_v2.py"
 echo "#"
 echo "################################################################"
 echo
-python /code/pickem_api/cron_update_games_v2.py 
+python /code/pickem_api/cron_update_games_v2.py $1
 
 # update picks
 echo
