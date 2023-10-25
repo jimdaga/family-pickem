@@ -89,7 +89,7 @@ def get_team_slug(team_id):
     """
     
     """
-    url = "http://{}/api/teams/id/{}".format(team_id)
+    url = "http://{}/api/teams/id/{}".format(args.url, team_id)
 
     headers = {
         "Content-Type": "application/json",
