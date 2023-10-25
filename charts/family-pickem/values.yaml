@@ -77,6 +77,14 @@ postgresql:
         # password: ""
         database: "pickem"
 
+cron:
+  schedule: "* * * * *"
+  command: "/code/pickem_api/cron.sh"
+  suspend: false
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+
 healthchecks:
   enabled: true 
 
