@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "family-pickem.fullname" . }}-update-data
+  labels:
+    {{- include "family-pickem.labels" . | nindent 4 }}
+spec:
+  schedule: "{{ .Values.cron.schedule }}"
+  suspend: {{ .Values.cron.suspend }}
+  successfulJobsHistoryLimit: {{ .Values.cron.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.cron.failedJobsHistoryLimit }}
+  concurrencyPolicy: {{ .Values.cron.concurrencyPolicy }}
+  startingDeadlineSeconds: 86400 # Allow for 1 day of missed starts, before being counted as a single miss (max 100 misses)
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ include "family-pickem.serviceAccountName" . }}
+          containers:
+            - name: {{ .Values.fullnameOverride }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: IfNotPresent
+              command: [ "/bin/bash", "-c" ]
+              args:
+                - |
+                  {{ .Values.cron.command }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}                  
+          restartPolicy: OnFailure
