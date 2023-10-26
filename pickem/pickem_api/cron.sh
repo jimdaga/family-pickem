@@ -7,7 +7,7 @@ echo "# Running: /code/pickem_api/cron_update_games_v2.py"
 echo "#"
 echo "################################################################"
 echo
-python /code/pickem_api/cron_update_games_v2.py $1
+python /code/pickem_api/cron_update_games_v2.py --url $1
 
 # update picks
 echo
@@ -17,7 +17,7 @@ echo "# Running: /code/pickem_api/cron_update_picks.py"
 echo "#"
 echo "################################################################"
 echo
-python /code/pickem_api/cron_update_picks.py 
+# python /code/pickem_api/cron_update_picks.py 
 
 # update team standings 
 echo
@@ -28,7 +28,7 @@ echo "# Running: /code/pickem_api/cron_update_records.py"
 echo "#"
 echo "################################################################"
 echo
-python /code/pickem_api/cron_update_records.py 
+# python /code/pickem_api/cron_update_records.py 
 
 # Update overall standings 
 echo
@@ -39,6 +39,6 @@ echo "# Running: /code/pickem_api/cron_update_standings.py"
 echo "#"
 echo "################################################################"
 echo
-python /code/pickem_api/cron_update_standings.py 
+# python /code/pickem_api/cron_update_standings.py 
 echo
 exit 0
