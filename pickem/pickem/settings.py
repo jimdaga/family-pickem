@@ -22,6 +22,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ["SECRET_KEY"]
 
+# https://stackoverflow.com/questions/54784981/django-allauth-google-oauth-redirect-uri-mismatch-error
+ACCOUNT_DEFAULT_HTTP_PROTOCOL='https'
+
 # SECURITY WARNING: don't run with debug turned on in production!
 if 'DJANGO_DEBUG' in os.environ:
     DEBUG = os.environ["DJANGO_DEBUG"]
