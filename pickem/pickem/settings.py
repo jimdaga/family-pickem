@@ -35,7 +35,11 @@ else:
 ALLOWED_HOSTS = ['localhost']
 
 if 'DJANGO_ALLOWED_HOSTS' in os.environ:
-    ALLOWED_HOSTS.append(os.environ["DJANGO_ALLOWED_HOSTS"])
+    django_allowed_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS')
+    hosts_list = django_allowed_hosts.split(',')
+
+    for host in hosts_list:
+        ALLOWED_HOSTS.append(host)
 
 if 'THIS_POD_IP' in os.environ:
     ALLOWED_HOSTS.append(os.environ["THIS_POD_IP"])
