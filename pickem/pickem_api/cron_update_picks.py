@@ -10,10 +10,15 @@ import sys
 import json
 import logging
 from datetime import date
+import argparse
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+
+parser = argparse.ArgumentParser(description='Update User Picks')
+parser.add_argument("--url", help="Specify the API url.")
+args, leftovers = parser.parse_known_args()
 
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setLevel(logging.DEBUG)
@@ -37,7 +42,7 @@ def get_matching_picks(game_id):
     """
     
     """
-    url = "http://localhost:8000/api/picks/{}".format(game_id)
+    url = "http://{}/api/picks/{}".format(args.url, game_id)
     
     response = requests.request("GET", url)
     json_response = json.loads(response.text)
@@ -56,7 +61,7 @@ def post_win(pick_id):
     
     gameseason = get_season()
 
-    url = "http://localhost:8000/api/userpicks/{}".format(pick_id)
+    url = "http://{}/api/userpicks/{}".format(args.url, pick_id)
     x = requests.patch(url, payload, headers = headers)
 
     if  x.status_code == 200 or x.status_code == 201:
@@ -74,7 +79,7 @@ def update_game_as_scored(game_id, game_slug):
 
     payload='{"gameScored": "true"}'
 
-    url = "http://localhost:8000/api/games/{}".format(game_id)
+    url = "http://{}/api/games/{}".format(args.url, game_id)
     x = requests.patch(url, payload, headers = headers)
 
     if  x.status_code == 200 or x.status_code == 201:
@@ -108,7 +113,7 @@ def get_unscored_games():
     """
     Get all the unscored games that are completed
     """
-    url = "http://localhost:8000/api/unscored"
+    url = "http://{}/api/unscored".format(args.url)
     
     response = requests.request("GET", url)
     json_response = json.loads(response.text)

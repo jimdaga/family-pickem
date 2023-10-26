@@ -17,7 +17,7 @@ echo "# Running: /code/pickem_api/cron_update_picks.py"
 echo "#"
 echo "################################################################"
 echo
-# python /code/pickem_api/cron_update_picks.py 
+python /code/pickem_api/cron_update_picks.py --url $1
 
 # update team standings 
 echo
