@@ -4,6 +4,11 @@ import requests
 import json
 from datetime import datetime
 from datetime import date
+import argparse
+
+parser = argparse.ArgumentParser(description='Update Pickem User Records')
+parser.add_argument("--url", help="Specify the API url.")
+args, leftovers = parser.parse_known_args()
 
 def get_season():
     # I'll probably hate myself in the future for hardcoding this :)
@@ -33,7 +38,7 @@ def get_user_email(uid):
     """
     Get user email 
     """
-    url = "http://localhost:8000/api/userinfo/{}".format(uid)
+    url = "http://{}/api/userinfo/{}".format(args.url, uid)
 
     headers = {
         "Content-Type": "application/json",
@@ -51,8 +56,8 @@ def get_pick_user_ids(game_season, game_week):
     """
     Get a list of all ID's that have made picks
     """
-    url = "http://localhost:8000/api/userpickids/{}/{}".format(
-        game_season, game_week)
+    url = "http://{}/api/userpickids/{}/{}".format(
+        args.url, game_season, game_week)
 
     headers = {
         "Content-Type": "application/json",
@@ -79,7 +84,7 @@ def get_game_week(game_date):
     Check week number for a date
     """
     try:
-        url = "http://localhost:8000/api/weeks/{}".format(game_date)
+        url = "http://{}/api/weeks/{}".format(args.url, game_date)
 
         headers = {
             "Content-Type": "application/json",
@@ -96,7 +101,7 @@ def patch_picks(game_season, game_week, uid, points_total):
     """
     Update users record with correct picks 
     """
-    url = "http://localhost:8000/api/userpoints/{}/{}".format(game_season, uid)
+    url = "http://{}/api/userpoints/{}/{}".format(args.url, game_season, uid)
 
     headers = {
         "Content-Type": "application/json",
@@ -142,10 +147,10 @@ def patch_total_points(game_season, uid):
     """
     Update users total points record
     """
-    get_url = "http://localhost:8000/api/userpoints/{}/{}".format(
-        game_season, uid)
-    patch_url = "http://localhost:8000/api/userpoints/{}/{}".format(
-        game_season, uid)
+    get_url = "http://{}/api/userpoints/{}/{}".format(
+        args.url, game_season, uid)
+    patch_url = "http://{}/api/userpoints/{}/{}".format(
+        args.url, game_season, uid)
 
     headers = {
         "Content-Type": "application/json",
@@ -178,8 +183,8 @@ def update_correct_picks(game_season, game_week, uid):
     """
     Count how many correct picks the user made, and update their record
     """
-    picks_url = "http://localhost:8000/api/userpicks/{}/{}/{}".format(
-        game_season, game_week, uid)
+    picks_url = "http://{}/api/userpicks/{}/{}/{}".format(
+        args.url, game_season, game_week, uid)
 
     headers = {
         "Content-Type": "application/json",

@@ -4,7 +4,11 @@ import requests
 import json
 import datetime
 from datetime import date
+import argparse
 
+parser = argparse.ArgumentParser(description='Update Team Records')
+parser.add_argument("--url", help="Specify the API url.")
+args, leftovers = parser.parse_known_args()
 
 def get_season():
     # I'll probably hate myself in the future for hardcoding this :)
@@ -97,7 +101,7 @@ def update_team_record(team_id):
     print("{} (Slug: {} - ID: {}) {}-{}-{}".format(team_display_name,
           team_slug, team_id, team_wins, team_losses, team_ties))
 
-    url = "http://localhost:8000/api/teams/id/{}".format(team_id)
+    url = "http://{}/api/teams/id/{}".format(args.url, team_id)
 
     gameseason = get_season()
 
