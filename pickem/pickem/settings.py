@@ -26,10 +26,7 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 ACCOUNT_DEFAULT_HTTP_PROTOCOL='https'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-if 'DJANGO_DEBUG' in os.environ:
-    DEBUG = os.environ["DJANGO_DEBUG"]
-else:
-    DEBUG = False
+DEBUG = os.getenv('DEBUG', False) == 'True'
 
 # Allowed Host(s)
 ALLOWED_HOSTS = ['localhost']
