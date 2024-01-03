@@ -207,11 +207,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
-STATICFILES_DIRS = [os.path.join(BASE_DIR,'pickem_api/static/'),]
+# STATICFILES_DIRS = [os.path.join(BASE_DIR,'pickem_api/static/'),]
 
-# PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-# STATIC_URL = '/static/'
-# STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
 
 
 REST_FRAMEWORK = {
