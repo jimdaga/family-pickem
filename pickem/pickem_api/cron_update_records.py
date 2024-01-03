@@ -39,13 +39,13 @@ def get_team_ids():
         for leauge in leagues_data:
             for team in leauge['teams']:
                 print('Updating Team Data for {}'.format(team['team']['slug']))
-                update_team_record(team['team']['id'], team['team']['slug'])
+                update_team_record(team['team']['id'], team['team']['slug'], team['team']['displayName'])
 
     except requests.exceptions.RequestException:
         print(response.text)
 
 
-def update_team_record(team_id, team_slug):
+def update_team_record(team_id, team_slug, team_display_name):
     """
     Get all the game data from ESPN APIs
     """
@@ -53,7 +53,9 @@ def update_team_record(team_id, team_slug):
         "Content-Type": "application/json",
     }
 
-    year = datetime.date.today().year
+    #year = datetime.date.today().year
+    year = "2023" # Annoying stuff about the API, I'll fix this next year. 
+
     team_url = "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{}/teams/{}".format(
         year, team_id)
     print(team_url)
@@ -68,7 +70,7 @@ def update_team_record(team_id, team_slug):
         team_id = team_details['id']
 
         #team_slug = team_details['slug']
-        team_display_name = team_details['displayName']
+        #team_display_name = team_details['displayName']
         logo = team_details['logos'][0]['href']
 
     except requests.exceptions.RequestException:
