@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: family-pickem
+  annotations:
+    github.com/project-slug: jimdaga/family-pickem
+spec:
+  type: other
+  lifecycle: unknown
+  owner: guests
