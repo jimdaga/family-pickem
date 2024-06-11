@@ -4,7 +4,10 @@ metadata:
   name: family-pickem
   annotations:
     github.com/project-slug: jimdaga/family-pickem
+  links:
+    - title: Website
+      url: https://family-pickem.com
 spec:
-  type: other
-  lifecycle: unknown
+  type: library
+  lifecycle: production
   owner: guests
