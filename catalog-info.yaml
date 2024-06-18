@@ -9,6 +9,8 @@ metadata:
   tags:
     - django
     - python
+    - bash
+    - golang
   links:
     - title: Website
       url: https://family-pickem.com
