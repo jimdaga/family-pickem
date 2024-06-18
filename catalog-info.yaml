@@ -1,13 +1,18 @@
+# https://backstage.io/docs/features/software-catalog/descriptor-format/#common-to-all-kinds-the-envelope
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: family-pickem
+  description: NFL pickem site 
   annotations:
-    github.com/project-slug: jimdaga/family-pickem
+    github.com/project-slug: github/jimdaga/family-pickem
+  tags:
+    - django
+    - python
   links:
     - title: Website
       url: https://family-pickem.com
 spec:
-  type: library
+  type: website
   lifecycle: production
-  owner: guests
+  owner: cloudops
