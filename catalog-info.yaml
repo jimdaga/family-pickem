@@ -17,4 +17,4 @@ metadata:
 spec:
   type: website
   lifecycle: production
-  owner: cloudops
+  owner: blackduck
