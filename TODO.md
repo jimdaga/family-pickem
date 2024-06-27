@@ -43,3 +43,4 @@ Pickem
 - [x] rules page 
 - [x] Show submitted "tie breaker" on picks page 
 - [x] Recollect all the game data (for each week, update)
+- [ ] test
