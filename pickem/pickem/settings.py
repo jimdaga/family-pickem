@@ -71,8 +71,8 @@ INSTALLED_APPS = [
     'storages',
     'allauth.account',
     'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',
-    'dbbackup'
+    'allauth.socialaccount.providers.google'
+    # 'dbbackup'
 ]
 
 MIDDLEWARE = [

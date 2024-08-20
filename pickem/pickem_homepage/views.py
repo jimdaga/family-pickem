@@ -28,7 +28,15 @@ def get_season():
         return '2425'
 
 def index(request):
-    return render(request, 'pickem/home.html')
+
+    season_winner = userSeasonPoints.objects.filter(year_winner=True).distinct() 
+    template = loader.get_template('pickem/home.html')
+
+    context = {
+        'season_winner': season_winner
+    }
+    return HttpResponse(template.render(context, request))
+
 
 def standings(request):
     return render(request, 'pickem/standings.html')

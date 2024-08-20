@@ -10,6 +10,36 @@
       <BR>
       <div class="col-lg-6 mx-auto">
         <!-- <p class="lead mb-4">Welcome to the 2022/23 FFPL year!</p> -->
+
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
+
+          
+            <div class="border p-3 bg-dark rounded-top text-center">
+                <b class="text-white">Seson Winner</b>
+            </div>
+  
+            <div class="border p-3 bg-light rounded-bottom text-center">
+                <div class="player-winner-wrapper">        
+                    <span class="player-row">
+                        {% with player.userID|lookupname as username %}
+                        {% with player.userID|lookupavatar as avatar %}
+                            <div class="col-auto pr-2">
+                                <img class="player-profile-xl-img" src="{{ avatar }}">
+                            </div>
+                            <div class="col">
+                                <h8 class="player-username text-uppercase d-flex justify-content-center">{{ username }}</h8>
+                            </div>
+                        {% endwith %}
+                        {% endwith %}
+                    </span>
+                </div>
+            </div>
+                      
+                  <BR>
+          
+
+        </div>
+
         <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
           <a href="/scores/" class="btn btn-primary btn-lg px-4 me-sm-3" role="button">Current Week Scores</a>
           {% if user.is_authenticated %}
