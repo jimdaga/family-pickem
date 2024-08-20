@@ -54,7 +54,7 @@ def update_team_record(team_id, team_slug, team_display_name):
     }
 
     #year = datetime.date.today().year
-    year = "2023" # Annoying stuff about the API, I'll fix this next year. 
+    year = "2024" # Annoying stuff about the API, I'll fix this next year. 
 
     team_url = "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{}/teams/{}".format(
         year, team_id)
