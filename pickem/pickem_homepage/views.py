@@ -70,9 +70,11 @@ def scores(request):
     points = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition, pick_correct=True)
     points_total = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition, pick_correct=True).count
     
-    user_points = points.filter(gameseason=gameseason).values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
+    user_points = points.values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
+    # user_points = points.filter(gameseason=gameseason).values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
 
-    users_w_points = user_points.filter(gameseason=gameseason).values_list('uid', flat=True).distinct()
+    users_w_points = user_points.values_list('uid', flat=True).distinct()
+    #users_w_points = user_points.filter(gameseason=gameseason).values_list('uid', flat=True).distinct()
     
     
     
