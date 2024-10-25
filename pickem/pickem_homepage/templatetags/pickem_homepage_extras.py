@@ -1,6 +1,6 @@
 from django import template
 from django.contrib.auth.models import User
-from pickem_api.models import Teams, GamePicks, userSeasonPoints
+from pickem_api.models import Teams, GamePicks, userSeasonPoints, userStats
 from django.shortcuts import render
 from allauth.socialaccount.models import SocialAccount
 from datetime import date
@@ -43,7 +43,12 @@ def lookupavatar(user_id):
 
 @register.filter
 def lookuplogo(slug):
-    logo = Teams.objects.get(teamNameSlug=slug)
+    if slug != None:
+        logo = Teams.objects.get(teamNameSlug=slug)
+    else:
+        logo = {
+            'teamLogo': None
+        }
     return logo
 
 @register.filter
@@ -61,3 +66,40 @@ def lookweekwinner(weekno):
     winner_object = "week_{}_winner".format(weekno)
     week_winner = userSeasonPoints.objects.filter(**{winner_object: True},gameseason=gameseason).distinct() 
     return week_winner
+
+@register.filter
+def lookupStats(user_id):
+    stats = userStats.objects.filter(userID=user_id).first()
+
+    weeksWonSeason = stats.weeksWonSeason if stats else '0'
+    weeksWonTotal = stats.weeksWonTotal if stats else '0'
+    pickPercentSeason = stats.pickPercentSeason if stats else '0'
+    pickPercentTotal = stats.pickPercentTotal if stats else '0'
+    correctPickTotalSeason = stats.correctPickTotalSeason if stats else '0'
+    correctPickTotalTotal = stats.correctPickTotalTotal if stats else '0'
+    totalPicksSeason = stats.totalPicksSeason if stats else '0'
+    totalPicksTotal = stats.totalPicksTotal if stats else '0'
+    mostPickedSeason = stats.mostPickedSeason if stats else None
+    mostPickedTotal = stats.mostPickedTotal if stats else None
+    leastPickedSeason = stats.leastPickedSeason if stats else None
+    leastPickedTotal = stats.leastPickedTotal if stats else None
+    seasonsWon = stats.seasonsWon if stats else None
+
+
+    data = {
+        'weeksWonSeason': weeksWonSeason,
+        'weeksWonTotal': weeksWonTotal,
+        'pickPercentSeason': pickPercentSeason,
+        'pickPercentTotal': pickPercentTotal,
+        'correctPickTotalSeason': correctPickTotalSeason,
+        'correctPickTotalTotal': correctPickTotalTotal,
+        'totalPicksSeason': totalPicksSeason,
+        'totalPicksTotal': totalPicksTotal,
+        'mostPickedSeason': mostPickedSeason,
+        'mostPickedTotal': mostPickedTotal,
+        'leastPickedSeason': leastPickedSeason,
+        'leastPickedTotal': leastPickedTotal,
+        'seasonsWon': seasonsWon,
+    }
+
+    return data

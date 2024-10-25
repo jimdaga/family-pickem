@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import GamePicks, GamesAndScores, GameWeeks, Teams, userPoints, userSeasonPoints
+from .models import GamePicks, GamesAndScores, GameWeeks, Teams, userPoints, userSeasonPoints, userStats
 
 # Register your models here.
 @admin.register(GamesAndScores)
@@ -53,3 +53,9 @@ class GameWeekssAdmin(admin.ModelAdmin):
 @admin.register(Teams) 
 class TeamsAdmin(admin.ModelAdmin):
     list_display = ('teamNameSlug', 'teamNameName', 'teamWins', 'teamLosses', 'teamTies')
+
+@admin.register(userStats)
+class userStatsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'userEmail', 'userID', 'weeksWonSeason', 'weeksWonTotal', 'weeksWonSeason', 'weeksWonTotal', 'weeksWonSeason', 'pickPercentTotal', 'correctPickTotalSeason', 'correctPickTotalTotal', 'totalPicksSeason', 'mostPickedSeason', 'totalPicksTotal', 'mostPickedTotal', 'leastPickedSeason', 'leastPickedTotal', 'seasonsWon')
+    list_filter = ('userEmail', 'userID')
+    search_fields = ('userEmail', 'userID')

@@ -26,7 +26,8 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 ACCOUNT_DEFAULT_HTTP_PROTOCOL='https'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', False) == 'True'
+# DEBUG = os.getenv('DEBUG', False) == 'True'
+DEBUG='True'
 
 # Allowed Host(s)
 ALLOWED_HOSTS = ['localhost']

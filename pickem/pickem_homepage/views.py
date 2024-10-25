@@ -3,7 +3,7 @@ from django.template import loader
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from pickem_api.models import GamePicks
-from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints
+from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats
 from .forms import GamePicksForm
 
 from django.shortcuts import render
@@ -170,7 +170,24 @@ def standings(request):
     }
     return HttpResponse(template.render(context, request))
 
+
+def stats(request):
+    today = date.today()
+    gameseason = get_season()
     
+    User = get_user_model()
+
+    # Get list of players and their rankings
+    players = User.objects.all()
+    player_points = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
+
+    template = loader.get_template('pickem/stats.html')
+
+    context = {
+        'players': players,
+        'player_points': player_points,
+    }
+    return HttpResponse(template.render(context, request))
 
 def submit_game_picks(request):
     today = date.today()

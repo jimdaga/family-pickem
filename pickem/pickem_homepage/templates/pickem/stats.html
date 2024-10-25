@@ -1,0 +1,158 @@
+{% extends 'pickem/base.html' %}
+{% load static %}
+{% load socialaccount %}
+{% load pickem_homepage_extras %}
+
+{% block content %}
+<BR><BR><BR><BR>
+
+    <div class="container min-vh-100">
+        <link rel="stylesheet" href="{% static 'css/style.css' %}">
+        <div class="container" style="width: 100%; padding: 0px;">
+            <div class="col">
+                <div class="table-responsive border p-3 bg-light rounded text-center">
+                    <h3>Player Pick Statistics</h3>
+                    <hr>
+                    
+
+                    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+                    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+                    <div class="container py-3">
+                        <div class="row">
+                            {% for player in player_points %}
+                            {% with player.userID|lookupavatar as avatar %}
+                            {% with player.userID|lookupname as username %}
+                            {% with player.userID|lookupStats as stats %}
+                            <div class="col-lg-4 col-md-6 mb-4">
+                                <div class="card">
+                                    <div class="card-header bg-dark text-white d-flex align-items-center">
+                                        <img class="player-profile-img mr-3" src="{{ avatar }}">
+                                        <h5 class="mb-0 text-uppercase">&nbsp;&nbsp;&nbsp;{{ username }}</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <table class="table table-borderless">
+                                            <tbody>
+                                                <tr>
+                                                    <td class="d-flex align-items-center justify-content-center">
+                                                        <span class="d-block">Current Position</span>
+                                                    </td>
+                                                    <td class="d-flex align-items-center justify-content-center">
+                                                        <span class="position-number display-4 d-block">{{ forloop.counter }}</span>
+                                                </tr>
+                                                <tr>
+                                                    <tr>
+                                                        <td colspan="2"><hr></td>
+                                                    </tr>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                        <h4><strong>Current Season Stats</strong></h4>
+                                        <table class="table table-borderless">
+                                            <tbody>
+                                                <tr>
+                                                    <td>Percent Correct Picks</td>
+                                                    <td>{{ stats.pickPercentSeason }}%</td>
+                                                </tr>
+                                                </tr>
+                                                <tr>
+                                                    <td>Total Correct Picks</td>
+                                                    <td>{{ stats.correctPickTotalSeason }}</td>
+                                                </tr>
+                                                </tr>
+                                                <tr>
+                                                    <td>Weeks Won</td>
+                                                    <td>{{ stats.weeksWonSeason }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Most Picked Team</td>
+                                                    <td>
+                                                        {% if stats.mostPickedSeason %}
+                                                            {% with stats.mostPickedSeason|lookuplogo as logo_url %}
+                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                            {% endwith %}
+                                                        {% else %}
+                                                            <i>unknown</i>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                </tr>
+                                                <tr>
+                                                    <td>Least Picked Team</td>
+                                                    <td>
+                                                        {% if stats.leastPickedSeason %}
+                                                            {% with stats.leastPickedSeason|lookuplogo as logo_url %}
+                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                            {% endwith %}
+                                                        {% else %}
+                                                            <i>unknown</i>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                        <hr>
+                                        <h4><strong>Lifetime Stats</strong></h4>
+                                        <table class="table table-borderless">
+                                            <tbody>
+                                                <tr>
+                                                    <td>Percent Correct Picks</td>
+                                                    <td>{{ stats.pickPercentTotal }}%</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Total Correct Picks</td>
+                                                    <td>{{ stats.correctPickTotalTotal }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Weeks Won</td>
+                                                    <td>{{ stats.weeksWonTotal }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Most Picked Team</td>
+                                                    <td>
+                                                        {% if stats.mostPickedTotal %}
+                                                            {% with stats.mostPickedTotal|lookuplogo as logo_url %}
+                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                            {% endwith %}
+                                                        {% else %}
+                                                            <i>unknown</i>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Least Picked Team</td>
+                                                    <td>
+                                                        {% if stats.leastPickedTotal %}
+                                                            {% with stats.leastPickedTotal|lookuplogo as logo_url %}
+                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
+                                                            {% endwith %}
+                                                        {% else %}
+                                                            <i>unknown</i>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Seasons Won</td>
+                                                    {% if stats.seasonsWon != None %}
+                                                            <td>🥇{{ stats.seasonsWon }}</td>
+                                                    {% else %}
+                                                            <td>0</td>
+                                                    {% endif %}
+                                                </tr>
+                                            </tbody>
+                                        </table>
+
+                                    </div>
+                                </div>
+                            </div>
+                            {% endwith %}
+                            {% endwith %}
+                            {% endwith %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

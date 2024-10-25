@@ -1,4 +1,5 @@
 from time import timezone
+import uuid
 from xmlrpc.client import Boolean
 from django.db import models
 
@@ -258,6 +259,31 @@ class GameWeeks(models.Model):
     competition = models.CharField(max_length=250)
     date = models.DateField()
     season = models.IntegerField(blank=True, null=True)
+
+class userStats(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    userEmail = models.EmailField(blank=True)
+    userID = models.CharField(max_length=250, blank=True)
+    # Number of Weeks Won (Season / All Time)
+    weeksWonSeason = models.IntegerField(max_length=250, blank=True, null=True)
+    weeksWonTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    # Correct Pick Percentage (Season / All Time)
+    pickPercentSeason = models.IntegerField(max_length=250, blank=True, null=True)
+    pickPercentTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    # Total Number of Correct Picks (Season / All Time)
+    correctPickTotalSeason = models.IntegerField(max_length=250, blank=True, null=True)
+    correctPickTotalTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    # Total Number of Picks (Season / All Time)
+    totalPicksSeason = models.IntegerField(max_length=250, blank=True, null=True)
+    totalPicksTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    # Most Picked Team (Season / All Time)
+    mostPickedSeason = models.CharField(max_length=250, blank=True, null=True)
+    mostPickedTotal = models.CharField(max_length=250, blank=True, null=True)
+    # Least Picked Team (Season / All Time)
+    leastPickedSeason = models.CharField(max_length=250, blank=True, null=True)
+    leastPickedTotal = models.CharField(max_length=250, blank=True, null=True)
+    # Number of seasons won (All Time)
+    seasonsWon = models.IntegerField(max_length=250, blank=True, null=True)
 
 
 def __str__(self):
