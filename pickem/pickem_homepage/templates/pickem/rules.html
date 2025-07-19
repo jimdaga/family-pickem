@@ -3,78 +3,250 @@
 {% load socialaccount %}
 
 {% block content %}
-<div class="container min-vh-100">
-    <br><br><br><br>
 
-    <div class="row">
-        <div class="container px-4">
-            <div class="row gx-4">
-                    <div class="p-3 border bg-dark rounded">
-                        <h3 class="text-white text-center">Family Football Pick League Rules</h3>
-                    </div>                    
-                <div class="p-3 border bg-light rounded">
-                    <div class="container px-4">
-                        <div class="text-center">        
-                            <img src="{% static 'images/patty-rules.jpeg' %}" class="rounded" style="width:250px;height:300px;" alt="patty">
-                            <p>Patty Donovan, enforcing the rules since 2019</p>
-                        </div>
-                        <div class="accordion" id="accordionExample">
-                            <div class="accordion-item">
-                            <h2 class="accordion-header" id="headingOne">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                                1. Points (Wins/Losses/Ties)
-                                </button>
-                            </h2>
-                            <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
-                                <div class="accordion-body">
-                                <ul>
-                                    <li>1.A - Wins are awarded 1 point</li>
-                                    <li>1.B - Losses do not get any points</li>
-                                    <li>1.C - No points awarded for ties</li>
-                                    <li>1.D - 2 points awarded for each week won</li>
-                                </ul>
-                                </div>
-                            </div>
-                            </div>
+    <br><br><br><br>
+    <div class="container rules-main-container">
+        <div class="col">
+            <!-- Page Header -->
+            <div class="page-header text-center mb-4">
+                <h2 class="display-4 fw-bold mb-2">
+                    <i class="fas fa-gavel me-3"></i>League Rules
+                </h2>
+                <p class="lead text-muted">Official guidelines and regulations for fair play</p>
+                <hr class="border-primary border-2 opacity-25 w-50 mx-auto">
+            </div>
+
+            <!-- Rules Content -->
+            <div class="section-container">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-book me-2"></i>Official League Regulations
+                    </h3>
+                    <p class="section-subtitle">Please review all rules carefully to ensure fair competition</p>
+                </div>
+
+                <div class="rules-accordion" id="rulesAccordion">
                     
-                            <div class="accordion-item">
-                            <h2 class="accordion-header" id="headingTwo">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">
-                                2. Advanced Rules
-                                </button>
-                            </h2>
-                            <div id="collapseTwo" class="accordion-collapse collapse show" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
-                                <div class="accordion-body">
-                                <ul>
-                                    <li>2.A - Tiebreaker determined by whoever has the closest to the total score (No Price is Right Rules)</li> 
-                                    <li>2.B - If a tie breaker total score has the potential to end up in a tie, participants that are in the running will choose most total combined yards of both teams of the Monday night game as well.</li>
-                                    <li>2.C - Games are locked automatically the second the given game starts</li>
-                                    </li>
-                                </ul>
+                    <!-- Rule 1: Scoring System -->
+                    <div class="rule-card">
+                        <div class="rule-header" id="headingScoring">
+                            <button class="rule-toggle" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseScoring" 
+                                    aria-expanded="true" 
+                                    aria-controls="collapseScoring">
+                                <div class="rule-icon-container">
+                                    <i class="fas fa-calculator rule-icon"></i>
+                                </div>
+                                <div class="rule-title-container">
+                                    <h5 class="rule-title">Scoring System</h5>
+                                    <p class="rule-subtitle">Points, wins, losses, and weekly bonuses</p>
+                                </div>
+                                <div class="rule-arrow">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </button>
+                        </div>
+                        <div id="collapseScoring" 
+                             class="collapse show" 
+                             aria-labelledby="headingScoring" 
+                             data-bs-parent="#rulesAccordion">
+                            <div class="rule-body">
+                                <div class="rule-items">
+                                    <div class="rule-item">
+                                        <div class="rule-number">1.A</div>
+                                        <div class="rule-content">
+                                            <span class="rule-text">Wins are awarded <strong>1 point</strong></span>
+                                            <div class="rule-visual">
+                                                <i class="fas fa-plus-circle text-success"></i>
+                                                <span class="badge bg-success">+1 Point</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="rule-item">
+                                        <div class="rule-number">1.B</div>
+                                        <div class="rule-content">
+                                            <span class="rule-text">Losses receive <strong>no points</strong></span>
+                                            <div class="rule-visual">
+                                                <i class="fas fa-minus-circle text-danger"></i>
+                                                <span class="badge bg-secondary">0 Points</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="rule-item">
+                                        <div class="rule-number">1.C</div>
+                                        <div class="rule-content">
+                                            <span class="rule-text">Ties receive <strong>no points</strong></span>
+                                            <div class="rule-visual">
+                                                <i class="fas fa-equals text-warning"></i>
+                                                <span class="badge bg-warning text-dark">0 Points</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="rule-item highlight-rule">
+                                        <div class="rule-number">1.D</div>
+                                        <div class="rule-content">
+                                            <span class="rule-text">Weekly winners receive <strong>2 bonus points</strong></span>
+                                            <div class="rule-visual">
+                                                <i class="fas fa-trophy text-warning"></i>
+                                                <span class="badge bg-warning text-dark">+2 Bonus</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            </div>
-                            <div class="accordion-item">
-                            <h2 class="accordion-header" id="headingThree">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="true" aria-controls="collapseThree">
-                                3. Bonus Rules 
-                                </button>
-                            </h2>
-                            <div id="collapseThree" class="accordion-collapse collapse show" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
-                                <div class="accordion-body">
-                                <ul>
-                                    <li>3.A - If a person picks a "Perfect Week", Every participant must pay the winner $10/each</li>
-                                    <li>3.B - $40 Per Person entry fee. Champion is determined by most total points.</li>
-                                    <li>3.C - In the event of a tie at the end of the season for a champion, those participants who are tied will continue into the playoffs.</li>
-                                </ul>
+                        </div>
+                    </div>
+
+                    <!-- Rule 2: Advanced Rules -->
+                    <div class="rule-card">
+                        <div class="rule-header" id="headingAdvanced">
+                            <button class="rule-toggle collapsed" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseAdvanced" 
+                                    aria-expanded="false" 
+                                    aria-controls="collapseAdvanced">
+                                <div class="rule-icon-container">
+                                    <i class="fas fa-cogs rule-icon"></i>
+                                </div>
+                                <div class="rule-title-container">
+                                    <h5 class="rule-title">Advanced Rules</h5>
+                                    <p class="rule-subtitle">Tiebreakers, game locks, and special circumstances</p>
+                                </div>
+                                <div class="rule-arrow">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </button>
+                        </div>
+                        <div id="collapseAdvanced" 
+                             class="collapse" 
+                             aria-labelledby="headingAdvanced" 
+                             data-bs-parent="#rulesAccordion">
+                            <div class="rule-body">
+                                <div class="rule-items">
+                                    <div class="rule-item">
+                                        <div class="rule-number">2.A</div>
+                                        <div class="rule-content">
+                                            <span class="rule-text">Tiebreakers determined by <strong>closest total score</strong> (No Price is Right rules)</span>
+                                            <div class="rule-visual">
+                                                <i class="fas fa-bullseye text-primary"></i>
+                                                <span class="badge bg-primary">Closest Wins</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="rule-item">
+                                        <div class="rule-number">2.B</div>
+                                        <div class="rule-content">
+                                            <span class="rule-text">Secondary tiebreaker uses <strong>combined yards</strong> from Monday Night Football</span>
+                                            <div class="rule-visual">
+                                                <i class="fas fa-football-ball text-info"></i>
+                                                <span class="badge bg-info">MNF Yards</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="rule-item important-rule">
+                                        <div class="rule-number">2.C</div>
+                                        <div class="rule-content">
+                                            <span class="rule-text">Games <strong>lock automatically</strong> when they start</span>
+                                            <div class="rule-visual">
+                                                <i class="fas fa-lock text-danger"></i>
+                                                <span class="badge bg-danger">Auto-Lock</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Rule 3: Bonus Rules -->
+                    <div class="rule-card">
+                        <div class="rule-header" id="headingBonus">
+                            <button class="rule-toggle collapsed" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseBonus" 
+                                    aria-expanded="false" 
+                                    aria-controls="collapseBonus">
+                                <div class="rule-icon-container">
+                                    <i class="fas fa-star rule-icon"></i>
+                                </div>
+                                <div class="rule-title-container">
+                                    <h5 class="rule-title">Bonus Rules & Prizes</h5>
+                                    <p class="rule-subtitle">Special rewards, entry fees, and championship rules</p>
+                                </div>
+                                <div class="rule-arrow">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </button>
+                        </div>
+                        <div id="collapseBonus" 
+                             class="collapse" 
+                             aria-labelledby="headingBonus" 
+                             data-bs-parent="#rulesAccordion">
+                            <div class="rule-body">
+                                <div class="rule-items">
+                                    <div class="rule-item special-rule">
+                                        <div class="rule-number">3.A</div>
+                                        <div class="rule-content">
+                                            <span class="rule-text">Perfect Week bonus: <strong>$10 from each participant</strong></span>
+                                            <div class="rule-visual">
+                                                <i class="fas fa-gem text-success"></i>
+                                                <span class="badge bg-success">Perfect Week</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="rule-item money-rule">
+                                        <div class="rule-number">3.B</div>
+                                        <div class="rule-content">
+                                            <span class="rule-text"><strong>$40 entry fee</strong> per person. Champion determined by most total points</span>
+                                            <div class="rule-visual">
+                                                <i class="fas fa-dollar-sign text-success"></i>
+                                                <span class="badge bg-success">$40 Entry</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="rule-item playoff-rule">
+                                        <div class="rule-number">3.C</div>
+                                        <div class="rule-content">
+                                            <span class="rule-text">Tied champions continue into the <strong>playoffs</strong></span>
+                                            <div class="rule-visual">
+                                                <i class="fas fa-trophy text-warning"></i>
+                                                <span class="badge bg-warning text-dark">Playoffs</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Rules Footer -->
+                <div class="rules-footer mt-4">
+                    <div class="footer-content text-center">
+                        <div class="footer-icon">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        <h6 class="footer-title">Remember: Good Sportsmanship Above All</h6>
+                        <p class="footer-text text-muted">
+                            These rules ensure fair play and fun for everyone. Questions? Contact the commissioner.
+                        </p>
+                        <div class="footer-badges">
+                            <span class="badge bg-primary me-2">
+                                <i class="fas fa-users me-1"></i>Family Friendly
+                            </span>
+                            <span class="badge bg-success me-2">
+                                <i class="fas fa-balance-scale me-1"></i>Fair Play
+                            </span>
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-trophy me-1"></i>Competitive
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+
 {% endblock %}

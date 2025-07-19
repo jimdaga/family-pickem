@@ -28,12 +28,91 @@ def get_season():
         return '2425'
 
 def index(request):
-
-    season_winner = userSeasonPoints.objects.filter(year_winner=True).distinct() 
+    today = date.today()
+    today_date = today.strftime("%Y-%m-%d")
+    gameseason = get_season()
+    
+    # Get current week information
+    try:
+        current_week_obj = GameWeeks.objects.get(date=today_date)
+        current_week = current_week_obj.weekNumber
+        current_competition = current_week_obj.competition
+    except GameWeeks.DoesNotExist:
+        current_week = '1'
+        current_competition = 'nfl'
+    
+    # Get season winner
+    season_winner = userSeasonPoints.objects.filter(year_winner=True, gameseason=gameseason).first()
+    
+    # Get top 5 leaderboard
+    top_players = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')[:5]
+    
+    # Get current week winner
+    winner_object = f"week_{current_week}_winner"
+    try:
+        current_week_winner = userSeasonPoints.objects.filter(**{winner_object: True}, gameseason=gameseason).first()
+    except:
+        current_week_winner = None
+    
+    # Get current week games
+    current_games = GamesAndScores.objects.filter(
+        gameseason=gameseason, 
+        gameWeek=current_week, 
+        competition=current_competition
+    ).count()
+    
+    # Get total players count
+    total_players = User.objects.exclude(username='admin').count()
+    
+    # Get league statistics
+    total_picks = GamePicks.objects.filter(gameseason=gameseason).count()
+    total_correct_picks = GamePicks.objects.filter(gameseason=gameseason, pick_correct=True).count()
+    
+    # Calculate league accuracy
+    league_accuracy = 0
+    if total_picks > 0:
+        league_accuracy = round((total_correct_picks / total_picks) * 100, 1)
+    
+    # Get recent week winners (last 3 weeks)
+    recent_winners = []
+    for week_num in range(max(1, int(current_week) - 2), int(current_week) + 1):
+        winner_field = f"week_{week_num}_winner"
+        try:
+            winner = userSeasonPoints.objects.filter(**{winner_field: True}, gameseason=gameseason).first()
+            if winner:
+                recent_winners.append({
+                    'week': week_num,
+                    'winner': winner
+                })
+        except:
+            pass
+    
+    # Check if user has submitted picks for current week
+    user_has_picks = False
+    if request.user.is_authenticated:
+        user_has_picks = GamePicks.objects.filter(
+            gameseason=gameseason,
+            gameWeek=current_week,
+            competition=current_competition,
+            userEmail=request.user.email
+        ).exists()
+    
     template = loader.get_template('pickem/home.html')
 
     context = {
-        'season_winner': season_winner
+        'season_winner': season_winner,
+        'current_week': current_week,
+        'current_competition': current_competition,
+        'top_players': top_players,
+        'current_week_winner': current_week_winner,
+        'current_games': current_games,
+        'total_players': total_players,
+        'total_picks': total_picks,
+        'total_correct_picks': total_correct_picks,
+        'league_accuracy': league_accuracy,
+        'recent_winners': recent_winners,
+        'user_has_picks': user_has_picks,
+        'gameseason': gameseason
     }
     return HttpResponse(template.render(context, request))
 
@@ -238,3 +317,17 @@ def submit_game_picks(request):
         form = GamePicksForm()
 
     return render(request, 'pickem/picks.html', context)
+
+def rules(request):
+    template = loader.get_template('pickem/rules.html')
+    context = {}
+    return HttpResponse(template.render(context, request))
+
+def home_view(request):
+    context = {
+        'banner_message': 'Week 15 picks are due by Sunday at 1 PM EST!',
+        'banner_type': 'warning',
+        'banner_icon': 'fas fa-clock',
+        'banner_dismissible': True
+    }
+    return render(request, 'pickem/home.html', context)

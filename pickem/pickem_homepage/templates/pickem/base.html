@@ -1,197 +1,295 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LJ2FN8G22Z"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-LJ2FN8G22Z"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-LJ2FN8G22Z');
+    </script>
 
-    gtag('config', 'G-LJ2FN8G22Z');
-  </script>
-
-	<title>Family Pickem</title>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet" >
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" ></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.min.js" integrity="sha384-Atwg2Pkwv9vp0ygtn1JAojH0nYbwNJLPhwyoVbhoPwBhjQPR5VtM2+xf0Uwh9KtT" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Heebo">
-
-  {% load static %}
-  <link rel="shortcut icon" type="image/png" href="{% static 'images/windowlogo.png' %}"/>
+    <title>{% block title %}Family Pickem{% endblock %}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Family Pickem - Your ultimate NFL pick 'em league experience">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Heebo:300,400,500,600,700&display=swap">
+    
+    {% load static %}
+    <link rel="shortcut icon" type="image/png" href="{% static 'images/windowlogo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 
-<style>
-  /* Custom CSS for centering navbar-brand */
-  @media (max-width: 767px) {
-    .navbar-nav-center {
-      text-align: center;
-    }
-
-    .navbar-nav-center .navbar-brand {
-      display: block;
-      margin: 0 auto;
-    }
-  }
-</style>
-
 <body>
-{% block bootstrap5_content %}
-{% load socialaccount %}
+    {% load socialaccount %}
+    
+    <!-- Main Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top" role="navigation" aria-label="Main navigation">
+        <div class="container">
+            <!-- Brand Logo -->
+            <a class="navbar-brand d-flex align-items-center" href="/" aria-label="Family Pickem Home">
+                <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="navbar-logo">
+            </a>
 
-<link rel="stylesheet" href="{% static 'css/style.css' %}">
+            <!-- Mobile Toggle Button -->
+            <button class="navbar-toggler" type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#navbarContent" 
+                    aria-controls="navbarContent" 
+                    aria-expanded="false" 
+                    aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg bg-dark fixed-top">
+                         <!-- Collapsible Content -->
+             <div class="collapse navbar-collapse" id="navbarContent">
+                 <!-- Left spacer for centering -->
+                 <div class="navbar-nav me-auto"></div>
+                 
+                 <!-- Centered Main Navigation Links -->
+                 <ul class="navbar-nav navbar-nav-center">
+                     <li class="nav-item">
+                         <a class="nav-link" href="/" aria-label="Home">
+                             &nbsp; &nbsp;
+                             <img src="{% static 'images/home.png' %}" alt="Home">
+                             &nbsp; &nbsp;
+                         </a>
+                     </li>
 
-  <div class="container">
+                     <!-- Scores Dropdown -->
+                     <li class="nav-item dropdown">
+                         <a class="nav-link dropdown-toggle" href="#" role="button" 
+                            data-bs-toggle="dropdown" aria-expanded="false" aria-label="Scores menu">
+                             &nbsp; &nbsp;
+                             <img src="{% static 'images/scores.png' %}" alt="Scores">
+                             &nbsp; &nbsp;
+                         </a>
+                         <ul class="dropdown-menu">
+                             <li><a class="dropdown-item" href="/scores">Current Week</a></li>
+                             <li><hr class="dropdown-divider"></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/1">Week 1</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/2">Week 2</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/3">Week 3</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/4">Week 4</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/5">Week 5</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/6">Week 6</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/7">Week 7</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/8">Week 8</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/9">Week 9</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/10">Week 10</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/11">Week 11</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/12">Week 12</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/13">Week 13</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/14">Week 14</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/15">Week 15</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/16">Week 16</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/17">Week 17</a></li>
+                             <li><a class="dropdown-item" href="/scores/competition/1/season/2425/week/18">Week 18</a></li>
+                         </ul>
+                     </li>
 
+                     <li class="nav-item">
+                         <a class="nav-link" href="/standings/" aria-label="Standings">
+                             &nbsp; &nbsp;
+                             <img src="{% static 'images/leaderboard.png' %}" alt="Standings">
+                             &nbsp; &nbsp;
+                         </a>
+                     </li>
 
-  <!-- Container wrapper -->
-  <div class="container-fluid">
+                     <li class="nav-item">
+                         <a class="nav-link" href="/stats/" aria-label="Statistics">
+                             &nbsp; &nbsp;
+                             <img src="{% static 'images/graph.png' %}" alt="Statistics">
+                             &nbsp; &nbsp;
+                         </a>
+                     </li>
 
-    <ul class="navbar-nav navbar-nav-center me-auto mb-2 mb-lg-0">
-      
-      <li class="nav-item">
-        <a class="navbar-brand logo-nav hidden-xs" href="/">
-          <img src="{% static 'images/logo.png' %}" alt="logo">
-        </a>
-      </li>
+                     <li class="nav-item">
+                         <a class="nav-link" href="/rules/" aria-label="Rules">
+                             &nbsp; &nbsp;
+                             <img src="{% static 'images/rules.png' %}" alt="Rules">
+                             &nbsp; &nbsp;
+                         </a>
+                     </li>
+                 </ul>
 
-      <!-- Toggle button -->
-      <button class="navbar-toggler custom-toggler" type="button" data-bs-toggle ="collapse" data-bs-target ="#collapsibleNavbar">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+                 <!-- Right Side Navigation -->
+                 <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <!-- Submit Picks Button -->
+                        <li class="nav-item me-3">
+                            <a class="btn btn-primary btn-sm navbar-btn" href="/picks" role="button">
+                                <i class="fas fa-edit me-1"></i>Submit Weekly Picks
+                            </a>
+                        </li>
 
-    <!-- Collapsible wrapper -->
-    <div class="collapse navbar-collapse" id="collapsibleNavbar">
-      
+                        <!-- User Profile Dropdown -->
+                        <li class="nav-item dropdown">
+                            <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" 
+                                    type="button" 
+                                    data-bs-toggle="dropdown" 
+                                    aria-expanded="false"
+                                    aria-label="User menu">
+                                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}" 
+                                     alt="Profile picture" 
+                                     class="user-avatar me-2">
+                                <span class="d-none d-md-inline">
+                                    {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
+                                </span>
+                            </button>
+                            
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <h6 class="dropdown-header">
+                                        {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} 
+                                        {{ user.socialaccount_set.all.0.extra_data.family_name }}
+                                    </h6>
+                                </li>
+                                <li><h6 class="dropdown-header text-muted">{{ user.email }}</h6></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/logout">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <!-- Login Button -->
+                        <li class="nav-item">
+                            <a class="btn btn-primary btn-sm navbar-btn" 
+                               href="{% provider_login_url 'google' %}" 
+                               role="button">
+                                <i class="fab fa-google me-1"></i>Login With Google
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-      <a class="nav-link me-auto" href="/"></a>
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+         <!-- Mobile Spacing -->
+     <div class="d-block d-lg-none navbar-mobile-spacer"></div>
 
+     <!-- Banner Section (Optional) -->
+     {% block banner %}
+     {% if banner_message or banner_type %}
+     <div class="site-banner {% if banner_type %}banner-{{ banner_type }}{% else %}banner-info{% endif %}">
+         <div class="container">
+             <div class="banner-content">
+                 {% if banner_icon %}
+                 <div class="banner-icon">
+                     <i class="{{ banner_icon }}"></i>
+                 </div>
+                 {% endif %}
+                 <div class="banner-text">
+                     {{ banner_message|safe }}
+                 </div>
+                 {% if banner_dismissible %}
+                 <button type="button" class="banner-close" aria-label="Close banner">
+                     <i class="fas fa-times"></i>
+                 </button>
+                 {% endif %}
+             </div>
+         </div>
+     </div>
+     {% endif %}
+     {% endblock %}
+
+     <!-- Main Content -->
+     <main class="main-content" role="main">
+        <div class="container">
+            {% block content %}
+                <div class="text-center py-5">
+                    <p class="text-muted">No content available</p>
+                </div>
+            {% endblock %}
+        </div>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="navbar navbar-expand-sm bg-dark navbar-dark fixed-bottom justify-content-center">
+    </nav>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.min.js" 
+            integrity="sha384-Atwg2Pkwv9vp0ygtn1JAojH0nYbwNJLPhwyoVbhoPwBhjQPR5VtM2+xf0Uwh9KtT" 
+            crossorigin="anonymous"></script>
+    
+    <!-- Banner Functionality -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if banner was dismissed this session
+        const banner = document.querySelector('.site-banner');
+        if (banner) {
+            // Create a simple banner key based on the page
+            const bannerKey = 'banner_dismissed_' + window.location.pathname;
+            
+            console.log('Banner found:', banner);
+            console.log('Banner key:', bannerKey);
+            console.log('Storage value:', sessionStorage.getItem(bannerKey));
+            
+            // Hide banner if previously dismissed this session
+            if (sessionStorage.getItem(bannerKey) === 'true') {
+                console.log('Banner hidden due to storage');
+                banner.style.display = 'none';
+            } else {
+                console.log('Banner should be visible');
+            }
+            
+            // Handle banner dismissal
+            const bannerCloseBtn = banner.querySelector('.banner-close');
+            if (bannerCloseBtn) {
+                bannerCloseBtn.addEventListener('click', function() {
+                    // Save dismissal state
+                    sessionStorage.setItem(bannerKey, 'true');
+                    console.log('Banner dismissed and stored');
+                    
+                    // Animate out
+                    banner.style.animation = 'bannerSlideUp 0.3s ease-out forwards';
+                    
+                    setTimeout(() => {
+                        banner.style.display = 'none';
+                    }, 300);
+                });
+            }
+        }
         
-
-        <li class="nav-item">
-          <a class="nav-link me-auto" href="/">
-          &nbsp; &nbsp;
-          <img src="{% static 'images/home.png' %}">
-          &nbsp; &nbsp;
-          </a>
-        </li>
-
-        <!-- Link -->
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            &nbsp; &nbsp;
-            <img src="{% static 'images/scores.png' %}" alt="logo" centered">
-            &nbsp; &nbsp;
-          </a>
-          <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <a class="dropdown-item" href="/scores">Current Week</a>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/1">Week 1</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/2">Week 2</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/3">Week 3</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/4">Week 4</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/5">Week 5</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/6">Week 6</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/7">Week 7</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/8">Week 8</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/9">Week 9</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/10">Week 10</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/11">Week 11</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/12">Week 12</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/13">Week 13</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/14">Week 14</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/15">Week 15</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/16">Week 16</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/17">Week 17</a>
-            <a class="dropdown-item" href="/scores/competition/1/season/2425/week/18">Week 18</a>
-          </div>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" href="/standings/">
-            &nbsp; &nbsp;
-            <img src="{% static 'images/leaderboard.png' %}" alt="logo" centered">
-            &nbsp; &nbsp;
-          </a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" href="/stats/">
-            &nbsp; &nbsp;
-            <img src="{% static 'images/graph.png' %}" alt="logo" centered">
-            &nbsp; &nbsp;
-          </a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" href="/rules/">
-            &nbsp; &nbsp;
-            <img src="{% static 'images/rules.png' %}" alt="logo" centered">
-            &nbsp; &nbsp;
-          </a>
-        </li>
-
-      </ul>
-
-      {% if user.is_authenticated %}
-
-      <ul class="nav navbar-nav navbar-right">
-        <li>
-          <div class="btn-nav"><a class="btn btn-primary btn-small navbar-btn" href="/picks">Submit Weekly Picks</a></div>
-        </li>
-      </ul>
-
-      <ul class="nav navbar-nav navbar-right">
-        <li class="nav-item dropdown">
-          <button class="btn btn-default dropdown-toggle" type="button" id="menu1" data-bs-toggle="dropdown">
-            <img class="circular--square" src="{{ user.socialaccount_set.all.0.get_avatar_url }}" />
-              <span class="caret"></span>
-          </button>
-          
-          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-            <h6 class="dropdown-header">{{ user.socialaccount_set.all.0.extra_data.given_name }} {{ user.socialaccount_set.all.0.extra_data.family_name }}</h6>
-            <h6 class="dropdown-header">{{ user.email }}</h6>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="/logout"><em>Logout</em></a>
-          </div>
-        </li>
-      </ul>
-
-      {% else %}
-      <ul class="nav navbar-nav navbar-right">
-        <li>
-          <div class="btn-nav"><a class="btn btn-primary btn-small navbar-btn" href="{% provider_login_url 'google' %}">Login With Google</a></div>
-          
-        </li>
-      </ul>
-    {% endif %}
-    </div>
-  </div>
-  </div>
-</div>
-  <!-- Container wrapper -->
-
-</nav>
-<div class="d-block d-lg-none">
-  <br><br>
-</div>
-
-<!-- Navbar -->
-
-<div class="container">
-  {% block title %}{% endblock %}
-  {% block content %}(no content){% endblock %}
-</div>
-
-{% endblock %}
-
-<nav class="navbar navbar-expand-xsm bg-dark navbar-dark fixed-bottom justify-content-center">
-</nav>
+        // Add function to show banner again (for testing/admin)
+        window.showBanner = function() {
+            const banner = document.querySelector('.site-banner');
+            if (banner) {
+                const bannerKey = 'banner_dismissed_' + window.location.pathname;
+                sessionStorage.removeItem(bannerKey);
+                banner.style.display = 'block';
+                banner.style.animation = 'bannerSlideDown 0.3s ease-out';
+                console.log('Banner manually shown');
+            }
+        };
+    });
+    
+    // CSS animation for closing
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes bannerSlideUp {
+            from {
+                top: 56px;
+                opacity: 1;
+            }
+            to {
+                top: -100px;
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    </script>
 </body>
 </html>

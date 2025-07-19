@@ -1,508 +1,535 @@
 {% extends 'pickem/base.html' %}
-
 {% load static %}
 {% load pickem_homepage_extras %}
 
 {% block content %}
 
-<link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <div class="container scores-main-container">
+        <!-- Page Header -->
+        <div class="page-header text-center mb-4">
+            <h2 class="display-4 fw-bold mb-2">
+                <i class="fas fa-chart-line me-3"></i>Live Scores
+            </h2>
+            <div class="header-info">
+                {% if competition == 'nfl-preseason' %}
+                    <p class="lead text-muted">Preseason - Week {{ week }}</p>
+                {% else %}
+                    <p class="lead text-muted">Regular Season - Week {{ week }}</p>
+                {% endif %}
+            </div>
+            <hr class="border-primary border-2 opacity-25 w-50 mx-auto">
+        </div>
 
-<br><br><br><br>
-{% comment %} {% if user.is_authenticated %} {% endcomment %}
+        <div class="section-container mb-4">
+            <div class="filter-controls d-flex flex-wrap gap-2 justify-content-center">
+                <button class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all">
+                    <i class="fas fa-list me-1"></i>All Games
+                </button>
+                <button class="btn btn-outline-success btn-sm filter-btn" data-filter="live">
+                    <i class="fas fa-circle me-1 pulse-icon"></i>Live
+                </button>
+                <button class="btn btn-outline-danger btn-sm filter-btn" data-filter="final">
+                    <i class="fas fa-flag-checkered me-1"></i>Final
+                </button>
+                <button class="btn btn-outline-info btn-sm filter-btn" data-filter="upcoming">
+                    <i class="fas fa-clock me-1"></i>Upcoming
+                </button>
+                <button class="btn btn-outline-warning btn-sm filter-btn" data-filter="primetime">
+                    <i class="fas fa-star me-1"></i>Prime Time
+                </button>
+                <button class="btn btn-outline-dark btn-sm filter-btn" data-filter="rivalry">
+                    <i class="fas fa-fire me-1"></i>Rivalries
+                </button>
+                <button class="btn btn-outline-secondary btn-sm filter-btn" data-filter="outdoor">
+                    <i class="fas fa-cloud-sun me-1"></i>Outdoor
+                </button>
+                <button class="btn btn-outline-purple btn-sm filter-btn" data-filter="betting">
+                    <i class="fas fa-chart-line me-1"></i>Betting Lines
+                </button>
+            </div>
+        </div>
 
-<div class="container">
-    <div class="row gx-4 ">
-
-         {% comment %} Sidebar with user points and week winner  {% endcomment %}
-        {% if points_total  %}
-        <div class="col-md-3">
-            {% for player in week_winner %} 
+        <div class="row">
+            <!-- Sidebar with Week Stats -->
+            {% if points_total %}
+            <div class="col-lg-4 mb-4">
+                <!-- Week Winner Card -->
+                {% for player in week_winner %}
                 {% if player.id != None %}
-                <div class="border p-3 bg-dark rounded-top text-center">
-                    <b class="text-white">Week Winner</b>
-                </div>
-
-                <div class="border p-3 bg-light rounded-bottom text-center">
-                    <div class="player-winner-wrapper">        
-                        <span class="player-row">
-                            {% with player.userID|lookupname as username %}
-                            {% with player.userID|lookupavatar as avatar %}
-                                <div class="col-auto pr-2">
-                                    <img class="player-profile-xl-img" src="{{ avatar }}">
+                <div class="section-container mb-4">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <i class="fas fa-trophy me-2"></i>Week Winner
+                        </h3>
+                    </div>
+                    <div class="winner-showcase">
+                        {% with player.userID|lookupname as username %}
+                        {% with player.userID|lookupavatar as avatar %}
+                        <div class="winner-profile">
+                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                 alt="Profile picture for {{ username }}" 
+                                 class="winner-avatar">
+                            <div class="winner-details">
+                                <h4 class="winner-name">{{ username|default:"Unknown Player" }}</h4>
+                                <div class="winner-badge">
+                                    <i class="fas fa-crown me-1"></i>Champion
                                 </div>
-                                <div class="col">
-                                    <h8 class="player-username text-uppercase d-flex justify-content-center">{{ username }}</h8>
-                                </div>
-                            {% endwith %}
-                            {% endwith %}
-                        </span>
+                            </div>
+                        </div>
+                        {% endwith %}
+                        {% endwith %}
                     </div>
                 </div>
-                    
-                <BR>
                 {% endif %}
-            {% endfor %}
-
-            <div class="border p-3 bg-dark rounded-top text-center">
-                <b class="text-white">Week Points</b>
-            </div>
-            <div class="border p-3 bg-light rounded-bottom text-center">
-                {% for player in user_points %}
-                <div class="player-info-wrapper">        
-                    <span class="player-row">
-                        {% with player.uid|lookupname as username %}
-                        {% with player.uid|lookupavatar as avatar %}
-                        <div class="container-fluid">
-                            <div class="row">
-                                <div class="col-auto pr-2">
-                                    <img class="player-profile-img" src="{{ avatar }}">
-                                </div>
-                                <div class="col">
-                                    <h8 class="player-username text-uppercase d-flex justify-content-start">{{ username }}</h8>
-                                </div>
-
-                                <div class="col text-right">
-                                    <h8 class="player-score d-flex justify-content-end">
-                                        {{ player.wins }}
-                                    </h8>
-                                </div>                            
-                            </div>
-                        </div>
-                        {% endwith %}
-                        {% endwith %}
-                    </span>
-                </div>
                 {% endfor %}
 
-                {% for player in players_names %}
-                {% if player not in users_w_points %}
-                <div class="player-info-wrapper">        
-                    <span class="player-row">
-                        {% with player|lookupname as username %}
-                        {% with player|lookupavatar as avatar %}
-                        <div class="container-fluid">
-                            <div class="row align-items-center">
-                                <div class="col-auto pr-2">
-                                    <img class="player-profile-img" src="{{ avatar }}">
+                <!-- Week Points Leaderboard -->
+                <div class="section-container">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <i class="fas fa-list-ol me-2"></i>Week Points
+                        </h3>
+                    </div>
+                    <div class="points-leaderboard">
+                        {% for player in user_points %}
+                        <div class="player-points-card">
+                            {% with player.uid|lookupname as username %}
+                            {% with player.uid|lookupavatar as avatar %}
+                            <div class="player-info">
+                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                     alt="Profile picture for {{ username }}" 
+                                     class="player-mini-avatar">
+                                <div class="player-details">
+                                    <div class="player-name">{{ username|default:"Unknown Player" }}</div>
                                 </div>
-                                <div class="col">
-                                    <h8 class="player-username text-uppercase d-flex justify-content-start">{{ username }}</h8>
-                                </div>
-                
-                                <div class="col text-right">
-                                    <h8 class="player-score d-flex justify-content-end">
-                                        0
-                                    </h8>
-                                </div>                            
                             </div>
+                            <div class="player-score">
+                                <span class="score-value">{{ player.wins }}</span>
+                                <span class="score-label">pts</span>
+                            </div>
+                            {% endwith %}
+                            {% endwith %}
                         </div>
-                        {% endwith %}
-                        {% endwith %}
-                    </span>
-                </div>
-                {% endif %}                        
-                {% endfor %}
-            </div>
-            <br>
-        </div>
-        {% endif %}
-        
-        {% if points_total  %}
-        <div class="col-md-9">
-        {% else %}
-        <div class="col">
-        {% endif %}
-            <div class="p-3 border bg-dark rounded-top">
-                <table>
-                    <tr></tr>
-                        <td><h3><img src="{% static '/images/nfl.svg' %}" alt="logo" class="img-responsive img-logo"></h3></td>
-                        <td class="standing">
-                            <h3 class="text-white">NFL Scoreboard </h3>
-                            {% if competition == 'nfl-preseason' %}
-                                <h5 class="text-muted">Preseason - Week {{ week }} </h5>
-                            {% else %}
-                                <h5 class="text-muted">Regular Season - Week {{ week }} </h5>
-                            {% endif %}
-                        </td>
-                </table>
-            </div>
-            <div class="p-3 border bg-light rounded-bottom">
-                {% if game_days %}
-                    {% for day in game_days %}
-                        <h5>{{ day|date:"D, M d Y @ P" }}</h5>
-                        {% if game_list %}
-                            {% for game in game_list %}
-                                {% if game.startTimestamp == day %}
-                                <div class="p-2 border bg-light text-left player-row">
+                        {% endfor %}
 
-                                    {% if game.statusType == 'inprogress' %}
-                                    <div class="p-2 border bg-nfl-blue border-dark rounded-top status-row inner-div">
-                                    {% else %}
-                                    <div class="p-2 border bg-nfl-grey rounded-top status-row inner-div">
-                                    {% endif %}
-                                        <table>
-                                            <tbody>
-                                                <tr>
-                                                    <th class="text-white">&nbsp;&nbsp;{{ game.statusTitle }}</th>
-                                                </tr>                
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <br><br>
-                                    <table>
-                                        <tbody>
-                                            {% if game.statusType != 'notstarted' %}
-                                            <tr>
-                                                <th class="td-team">&nbsp;</th>
-                                                {% if game.statusType != 'notstarted' %}
-                                                <th class="td-score d-none d-sm-table-cell">1</th>
-                                                <th class="td-score d-none d-sm-table-cell">2</th>
-                                                <th class="td-score d-none d-sm-table-cell">3</th>
-                                                <th class="td-score d-none d-sm-table-cell">4</th>
-                                                <th class="td-score">T</th>
-                                                {% endif %}
-                                            </tr>
-                                            {% endif %}
-                                            <tr>
-                                                <td>
-                                                    {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
-                                                    {% endwith %}
-
-                                                    {% if game.statusType == 'finished' %}
-                                                        {% if game.gameWinner == game.awayTeamSlug %}
-                                                            <b>{{ game.awayTeamName }}&#9664;</b>
-                                                            {% for team in wins_losses %}
-                                                                {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            {% endfor %} 
-                                                        {% else %}
-                                                            <b class="text-muted">{{ game.awayTeamName }}</b>
-                                                            {% for team in wins_losses %}
-                                                                {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            {% endfor %} 
-                                                        {% endif %}
-                                                    {% else %}
-                                                        <b>{{ game.awayTeamName }}</b>
-                                                        {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                            {% endif %}
-                                                        {% endfor %}                    
-                                                    {% endif %}
-                                                </td>
-                                                {% if game.statusType != 'notstarted' %}
-                                                    {% if game.awayTeamPeriod1 != None %}
-                                                    <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod1 }}</td>
-                                                    {% else %}
-                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
-                                                    {% endif %}
-                                                    {% if game.awayTeamPeriod2 != None %}
-                                                    <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod2 }}</td>
-                                                    {% else %}
-                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
-                                                    {% endif %}
-                                                    {% if game.awayTeamPeriod3 != None %}
-                                                    <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod3 }}</td>
-                                                    {% else %}
-                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
-                                                    {% endif %}
-                                                    {% if game.awayTeamPeriod4 != None %}
-                                                    <td class="d-none d-sm-table-cell">{{ game.awayTeamPeriod4 }}</td>
-                                                    {% else %}
-                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
-                                                    {% endif %}
-                                                    <td><b>{{ game.awayTeamScore }}</b></td>
-                                                    <td>&nbsp;&nbsp;&nbsp;</td>
-                                                    <td>
-                                                        {% if picks %}
-                                                        {% for pick in picks %}
-                                                        {% if pick.pick == game.awayTeamSlug %}
-                                                            {% if game.statusType == 'finished' %}
-                                                                {% if game.gameWinner == game.awayTeamSlug %}
-                                                                    <span class="badge win text-uppercase">
-                                                                        {% with pick.uid|lookupname as username %}
-                                                                        {{ username }}
-                                                                        {% endwith %}
-                                                                        {% if pick.tieBreakerScore != None %}
-                                                                        (p: {{ pick.tieBreakerScore }},
-                                                                         y: {{ pick.tieBreakerYards }})
-                                                                        {% endif %}
-                                                                    </span>
-                                                                {% else %}
-                                                                    <span class="badge loss text-uppercase">
-                                                                        {% with pick.uid|lookupname as username %}
-                                                                        {{ username }}
-                                                                        {% endwith %}
-                                                                        {% if pick.tieBreakerScore != None %}
-                                                                        (p: {{ pick.tieBreakerScore }},
-                                                                         y: {{ pick.tieBreakerYards }})
-                                                                        {% endif %}
-                                                                    </span>
-                                                                {% endif %}
-                                                            {% endif %}
-                                                            {% if game.statusType == 'inprogress' %}                                                                                                         
-                                                                <span class="badge inprogress text-uppercase">
-                                                                    {% with pick.uid|lookupname as username %}
-                                                                        {{ username }}
-                                                                        {% endwith %}
-                                                                    {% if pick.tieBreakerScore != None %}
-                                                                    (p: {{ pick.tieBreakerScore }},
-                                                                     y: {{ pick.tieBreakerYards }})
-                                                                    {% endif %}
-                                                                </span>
-                                                            {% endif %}
-                                                        {% endif %}
-                                                        {% endfor %}
-                                                        {% endif %}
-                                                    </td>
-                                                {% endif %}
-                                            </tr>
-                                            <tr>
-                                                <td>
-                                                    {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                                        <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
-                                                    {% endwith %}
-
-                                                    {% if game.statusType == 'finished' %}
-                                                        {% if game.gameWinner == game.homeTeamSlug %}
-                                                            <b>{{ game.homeTeamName }}&#9664;</b>
-                                                            {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                            {% endif %}
-                                                        {% endfor %} 
-                                                        {% else %}
-                                                            <b class="text-muted">{{ game.homeTeamName }}</b>
-                                                            {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                            {% endif %}
-                                                        {% endfor %} 
-                                                        {% endif %}
-                                                    {% else %}
-                                                        <b>{{ game.homeTeamName }}</b>
-                                                        {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                            {% endif %}
-                                                        {% endfor %} 
-                                                    {% endif %}
-                                                </td>
-                                                
-                                                {% if game.statusType != 'notstarted' %}
-                                                    {% if game.homeTeamPeriod1 != None %}
-                                                    <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod1 }}</td>
-                                                    {% else %}
-                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
-                                                    {% endif %}
-                                                    {% if game.homeTeamPeriod2 != None %}
-                                                    <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod2 }}</td>
-                                                    {% else %}
-                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
-                                                    {% endif %}
-                                                    {% if game.homeTeamPeriod3 != None %}
-                                                    <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod3 }}</td>
-                                                    {% else %}
-                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
-                                                    {% endif %}
-                                                    {% if game.homeTeamPeriod4 != None %}
-                                                    <td class="d-none d-sm-table-cell">{{ game.homeTeamPeriod4 }}</td>
-                                                    {% else %}
-                                                    <td class="d-none d-sm-table-cell">&nbsp;</td>
-                                                    {% endif %}
-                                                    <td><b>{{ game.homeTeamScore }}</b></td>
-                                                    <td>&nbsp;&nbsp;&nbsp;</td>
-                                                    <td>
-                                                        {% if picks %}
-                                                        {% for pick in picks %}
-                                                        {% if pick.pick == game.homeTeamSlug %}
-                                                            {% if game.statusType == 'finished' %}
-                                                                {% if game.gameWinner == game.homeTeamSlug %}
-                                                                    <span class="badge win btn-sm text-uppercase">
-                                                                        {% with pick.uid|lookupname as username %}
-                                                                        {{ username }}
-                                                                        {% endwith %}
-                                                                        {% if pick.tieBreakerScore != None %}
-                                                                        (p: {{ pick.tieBreakerScore }},
-                                                                         y: {{ pick.tieBreakerYards }})
-                                                                        {% endif %}
-                                                                    </span>
-                                                                {% else %}
-                                                                    <span class="badge loss btn-sm text-uppercase">
-                                                                        {% with pick.uid|lookupname as username %}
-                                                                        {{ username }}
-                                                                        {% endwith %}
-                                                                        {% if pick.tieBreakerScore != None %}
-                                                                        (p: {{ pick.tieBreakerScore }},
-                                                                         y: {{ pick.tieBreakerYards }})
-                                                                        {% endif %}
-                                                                    </span>
-                                                                {% endif %}
-                                                            {% endif %}
-                                                            {% if game.statusType == 'inprogress' %}                                                                                                         
-                                                                <span class="badge inprogress btn-sm text-uppercase">
-                                                                    {% with pick.uid|lookupname as username %}
-                                                                        {{ username }}
-                                                                        {% endwith %}
-                                                                    {% if pick.tieBreakerScore != None %}
-                                                                    (p: {{ pick.tieBreakerScore }},
-                                                                     y: {{ pick.tieBreakerYards }})
-                                                                    {% endif %}
-                                                                </span>
-                                                            {% endif %}
-                                                        {% endif %}
-                                                        {% endfor %}
-                                                        {% endif %}
-                                                    </td>
-                                                {% endif %}
-                                            </tr>
-                                        </tbody>
-                                    </table>
-
-                                    {% if picks %}
-                                        {% for pick in picks %}
-                                            {% if pick.userEmail == user.email %}
-
-                                                {% if pick.pick == game.homeTeamSlug %}
-                                                <div class="dropdown-divider"></div>
-                                                <table>
-                                                    <tbody>
-                                                        {% comment %} <th class="text-black pick-header">&nbsp;&nbsp;Your pick:<a href="/">(edit)</a></th> {% endcomment %}
-                                                        <th class="text-black pick-header">&nbsp;&nbsp;Your pick:</th>
-                                                            <tr>
-                                                                <td>
-                                                                    {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                                                        {% if game.statusType == 'finished' %}
-                                                                            {% if game.gameWinner == game.homeTeamSlug %}
-                                                                                <span class="badge btn-success">
-                                                                                    <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
-                                                                            {% else %}
-                                                                                <span class="badge btn btn-danger">
-                                                                                    <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">     
-                                                                            {% endif %}
-                                                                        {% else %}
-                                                                            <span class="badge btn-secondary">
-                                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
-                                                                            {% endif %}
-                                                                        {% endwith %}
-                                                                        {{ game.homeTeamName }}
-                                                                        
-                                                                        {% if pick.tieBreakerScore != None %}
-                                                                        (points: {{ pick.tieBreakerScore }},
-                                                                         yards: {{ pick.tieBreakerYards }})
-                                                                        {% endif %}
-
-                                                                    </span>
-                                                                </td>
-                                                            </tr>
-                                                    </tbody>
-                                                </table>
-                                                {% endif %}
-
-                                                {% if pick.pick == game.awayTeamSlug %}
-                                                <div class="dropdown-divider"></div>
-                                                <table>
-                                                    <tbody>
-                                                        {% comment %} <th class="text-black pick-header">&nbsp;&nbsp;Your pick:<a href="/">(edit)</a></th> {% endcomment %}
-                                                        <th class="text-black pick-header">&nbsp;&nbsp;Your pick:</th>
-                                                            <tr>
-                                                                <td>
-                                                                    {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                                                        {% if game.statusType == 'finished' %}
-                                                                            {% if game.gameWinner == game.awayTeamSlug %}
-                                                                                <span class="badge btn-success">
-                                                                                    <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
-                                                                            {% else %}
-                                                                                <span class="badge btn btn-danger">
-                                                                                    <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">     
-                                                                            {% endif %}
-                                                                        {% else %}
-                                                                            <span class="badge btn-secondary">
-                                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
-                                                                            {% endif %}
-                                                                        {% endwith %}
-                                                                        {{ game.awayTeamName }}
-
-                                                                        {% if pick.tieBreakerScore != None %}
-                                                                        (points: {{ pick.tieBreakerScore }},
-                                                                         yards: {{ pick.tieBreakerYards }})
-                                                                         {% endif %}
-                                                                         
-                                                                    </span>
-                                                                </td>
-                                                            </tr>
-                                                    </tbody>
-                                                </table>
-                                                {% endif %} 
-                                            {% endif %}
-                                        {% endfor %}
-                                    {% endif %}
-                                    </div>
-
-                                    {% if game.statusType == 'notstarted' %}
-                                    {% if current_week == True %}
-                                    <div class="p-2 border bg-nfl-grey rounded-bottom">
-                                    <table>
-                                        <tbody>
-                                            <th class="text-white">&nbsp;&nbsp;Users without picks:</th> 
-                                            <tr>
-                                                <td>
-                                                {% for player in players_ids %}                                                    
-                                                        {% with player|addstr:"-"|addstr:game.id as gameid %}
-                                                            {% with gameid|lookuppick as count %}
-                                                                {% if count == 0 %}
-                                                                    {% with player|lookupname as username %}
-                                                                        <span class="badge inprogress text-uppercase">{{ username }}</span>
-                                                                    {% endwith %}
-                                                                {% endif %}
-                                                            {% endwith %}
-                                                        {% endwith %}
-                                                {% endfor %}
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>                                
+                        {% for player in players_names %}
+                        {% if player not in users_w_points %}
+                        <div class="player-points-card">
+                            {% with player|lookupname as username %}
+                            {% with player|lookupavatar as avatar %}
+                            <div class="player-info">
+                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                     alt="Profile picture for {{ username }}" 
+                                     class="player-mini-avatar">
+                                <div class="player-details">
+                                    <div class="player-name">{{ username|default:"Unknown Player" }}</div>
                                 </div>
-                                    {% endif %}
-                                    {% endif %}
-                                    <br>
-                                {% endif %}
-                            {% endfor %}
+                            </div>
+                            <div class="player-score">
+                                <span class="score-value">0</span>
+                                <span class="score-label">pts</span>
+                            </div>
+                            {% endwith %}
+                            {% endwith %}
+                        </div>
                         {% endif %}
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Main Scores Section -->
+            <div class="{% if points_total %}col-lg-8{% else %}col-12{% endif %}">
+                <!-- Games by Start Time -->
+                {% if game_list %}
+                    {% regroup game_list by startTimestamp as games_by_time %}
+                    {% for time_group in games_by_time %}
+                    <div class="section-container mb-4">
+                        <div class="section-header collapsible-header" data-bs-toggle="collapse" data-bs-target="#games-{{ time_group.grouper|date:'Y-m-d-Hi' }}" aria-expanded="true">
+                            <div class="section-header-content">
+                                <h3 class="section-title">
+                                    <i class="fas fa-calendar me-2"></i>{{ time_group.grouper|date:"l, F j" }}
+                                    <span class="game-time-display">{{ time_group.grouper|date:"g:i A" }}</span>
+                                </h3>
+                            </div>
+                            <div class="collapse-indicator">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+
+                        <div class="games-grid collapse show" id="games-{{ time_group.grouper|date:'Y-m-d-Hi' }}">
+                            {% for game in time_group.list %}
+                            <div class="game-score-card" data-game-status="{{ game.statusType|lower }}">
+                                <!-- Game Status Header -->
+                                <div class="game-status-header {% if game.statusType == 'inprogress' %}status-live{% else %}status-standard{% endif %}">
+                                    <div class="status-info">
+                                        <i class="fas {% if game.statusType == 'inprogress' %}fa-circle status-live-dot{% elif game.statusType == 'finished' %}fa-check-circle{% else %}fa-clock{% endif %} me-2"></i>
+                                        {{ game.statusTitle }}
+                                    </div>
+                                    <div class="game-time">
+                                        {{ game.startTimestamp|date:"g:i A" }}
+                                    </div>
+                                </div>
+
+                                <!-- Teams and Scores -->
+                                <div class="teams-matchup">
+                                    <!-- Away Team -->
+                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}winning-team{% endif %}">
+                                        <div class="team-info">
+                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                 alt="{{ game.awayTeamName }} logo" 
+                                                 class="team-logo">
+                                            {% endwith %}
+                                            <div class="team-details">
+                                                <div class="team-name {% if game.statusType == 'finished' and game.gameWinner != game.awayTeamSlug %}text-muted{% endif %}">
+                                                    {{ game.awayTeamName }}
+                                                    {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}
+                                                        <i class="fas fa-chevron-right ms-1 winner-indicator"></i>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="team-record">
+                                                    {% for team in wins_losses %}
+                                                        {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                            {% if team.teamTies > 0 %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                            {% else %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {% if game.statusType != 'notstarted' %}
+                                        <div class="score-breakdown">
+                                            <div class="quarters d-none d-lg-flex">
+                                                <span class="quarter-score">{{ game.awayTeamPeriod1|default:"—" }}</span>
+                                                <span class="quarter-score">{{ game.awayTeamPeriod2|default:"—" }}</span>
+                                                <span class="quarter-score">{{ game.awayTeamPeriod3|default:"—" }}</span>
+                                                <span class="quarter-score">{{ game.awayTeamPeriod4|default:"—" }}</span>
+                                            </div>
+                                            <div class="total-score">{{ game.awayTeamScore|default:"0" }}
+                                                {% if game.statusType|lower == 'inprogress' %}
+                                                    <span class="game-status live">LIVE</span>
+                                                {% elif game.statusType|lower == 'finished' %}
+                                                    <span class="game-status final">FINAL</span>
+                                                {% elif game.statusType|lower == 'notstarted' %}
+                                                    <span class="game-status upcoming">UPCOMING</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Home Team -->
+                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}winning-team{% endif %}">
+                                        <div class="team-info">
+                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                 alt="{{ game.homeTeamName }} logo" 
+                                                 class="team-logo">
+                                            {% endwith %}
+                                            <div class="team-details">
+                                                <div class="team-name {% if game.statusType == 'finished' and game.gameWinner != game.homeTeamSlug %}text-muted{% endif %}">
+                                                    {{ game.homeTeamName }}
+                                                    {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}
+                                                        <i class="fas fa-chevron-right ms-1 winner-indicator"></i>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="team-record">
+                                                    {% for team in wins_losses %}
+                                                        {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                            {% if team.teamTies > 0 %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                            {% else %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {% if game.statusType != 'notstarted' %}
+                                        <div class="score-breakdown">
+                                            <div class="quarters d-none d-lg-flex">
+                                                <span class="quarter-score">{{ game.homeTeamPeriod1|default:"—" }}</span>
+                                                <span class="quarter-score">{{ game.homeTeamPeriod2|default:"—" }}</span>
+                                                <span class="quarter-score">{{ game.homeTeamPeriod3|default:"—" }}</span>
+                                                <span class="quarter-score">{{ game.homeTeamPeriod4|default:"—" }}</span>
+                                            </div>
+                                            <div class="total-score">{{ game.homeTeamScore|default:"0" }}</div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Player Picks Section -->
+                                {% if picks %}
+                                <div class="picks-section">
+                                    <div class="picks-header">
+                                        <i class="fas fa-users me-2"></i>Player Picks
+                                    </div>
+                                    
+                                    <!-- Away Team Picks -->
+                                    <div class="team-picks-group away-team-picks" data-team="{{ game.awayTeamSlug }}">
+                                        <div class="team-picks-header">
+                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                 alt="{{ game.awayTeamName }} logo" 
+                                                 class="team-picks-logo">
+                                            {% endwith %}
+                                            <span class="team-picks-name">{{ game.awayTeamName }}</span>
+                                        </div>
+                                        <div class="team-picks-list">
+                                            {% for pick in picks %}
+                                                {% if pick.pick == game.awayTeamSlug %}
+                                                    {% if game.statusType == 'finished' %}
+                                                        {% if game.gameWinner == pick.pick %}
+                                                            <span class="player-pick-badge pick-win">
+                                                        {% else %}
+                                                            <span class="player-pick-badge pick-loss">
+                                                        {% endif %}
+                                                    {% elif game.statusType == 'inprogress' %}
+                                                        <span class="player-pick-badge pick-pending">
+                                                    {% else %}
+                                                        <span class="player-pick-badge pick-waiting">
+                                                    {% endif %}
+                                                        {% with pick.uid|lookupname as username %}
+                                                        {{ username|default:"Unknown" }}
+                                                        {% endwith %}
+                                                        {% if pick.tieBreakerScore != None %}
+                                                        <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                        {% endif %}
+                                                    </span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Home Team Picks -->
+                                    <div class="team-picks-group home-team-picks" data-team="{{ game.homeTeamSlug }}">
+                                        <div class="team-picks-header">
+                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                 alt="{{ game.homeTeamName }} logo" 
+                                                 class="team-picks-logo">
+                                            {% endwith %}
+                                            <span class="team-picks-name">{{ game.homeTeamName }}</span>
+                                        </div>
+                                        <div class="team-picks-list">
+                                            {% for pick in picks %}
+                                                {% if pick.pick == game.homeTeamSlug %}
+                                                    {% if game.statusType == 'finished' %}
+                                                        {% if game.gameWinner == pick.pick %}
+                                                            <span class="player-pick-badge pick-win">
+                                                        {% else %}
+                                                            <span class="player-pick-badge pick-loss">
+                                                        {% endif %}
+                                                    {% elif game.statusType == 'inprogress' %}
+                                                        <span class="player-pick-badge pick-pending">
+                                                    {% else %}
+                                                        <span class="player-pick-badge pick-waiting">
+                                                    {% endif %}
+                                                        {% with pick.uid|lookupname as username %}
+                                                        {{ username|default:"Unknown" }}
+                                                        {% endwith %}
+                                                        {% if pick.tieBreakerScore != None %}
+                                                        <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                        {% endif %}
+                                                    </span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- User's Pick Highlight -->
+                                {% if picks %}
+                                {% for pick in picks %}
+                                {% if pick.userEmail == user.email and pick.pick == game.homeTeamSlug or pick.userEmail == user.email and pick.pick == game.awayTeamSlug %}
+                                <div class="user-pick-section">
+                                    <div class="user-pick-header">
+                                        <i class="fas fa-star me-2"></i>Your Pick
+                                    </div>
+                                    <div class="user-pick-display">
+                                        {% if pick.pick == game.homeTeamSlug %}
+                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                 alt="{{ game.homeTeamName }} logo" 
+                                                 class="user-pick-logo">
+                                            {% endwith %}
+                                            <span class="user-pick-team">{{ game.homeTeamName }}</span>
+                                        {% else %}
+                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                 alt="{{ game.awayTeamName }} logo" 
+                                                 class="user-pick-logo">
+                                            {% endwith %}
+                                            <span class="user-pick-team">{{ game.awayTeamName }}</span>
+                                        {% endif %}
+                                        
+                                        {% if game.statusType == 'finished' %}
+                                            {% if game.gameWinner == pick.pick %}
+                                                <span class="pick-result pick-correct">
+                                                    <i class="fas fa-check-circle me-1"></i>Correct
+                                                </span>
+                                            {% else %}
+                                                <span class="pick-result pick-incorrect">
+                                                    <i class="fas fa-times-circle me-1"></i>Incorrect
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                        
+                                        {% if pick.tieBreakerScore != None %}
+                                        <div class="tiebreaker-display">
+                                            <small>Tiebreaker: {{ pick.tieBreakerScore }} pts, {{ pick.tieBreakerYards }} yds</small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                                {% endif %}
+
+                                <!-- Missing Picks Alert -->
+                                {% if game.statusType == 'notstarted' and current_week == True %}
+                                <div class="missing-picks-section">
+                                    <div class="missing-picks-header">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Missing Picks
+                                    </div>
+                                    <div class="missing-picks-list">
+                                        {% for player in players_ids %}
+                                            {% with player|addstr:"-"|addstr:game.id as gameid %}
+                                                {% with gameid|lookuppick as count %}
+                                                    {% if count == 0 %}
+                                                        {% with player|lookupname as username %}
+                                                            <span class="missing-pick-badge">{{ username|default:"Unknown" }}</span>
+                                                        {% endwith %}
+                                                    {% endif %}
+                                                {% endwith %}
+                                            {% endwith %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                                         </div>
+                             {% endfor %}
+                         </div>
+                     </div>
+                     {% endfor %}
+                {% else %}
+                <div class="section-container">
+                    <div class="no-games-message text-center">
+                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No games scheduled</h4>
+                        <p class="text-muted">Check back later or view other weeks.</p>
+                    </div>
+                </div>
                 {% endif %}
             </div>
         </div>
-
     </div>
-</div>
+
+    <!-- Collapsible Enhancement Script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+        
+        // Restore saved states from localStorage on page load
+        function restoreCollapseStates() {
+            collapsibleHeaders.forEach(header => {
+                const target = header.getAttribute('data-bs-target');
+                const targetElement = document.querySelector(target);
+                const savedState = localStorage.getItem('collapse-state-' + target);
+                
+                console.log('Restoring state for', target, ':', savedState); // Debug log
+                
+                if (savedState === 'collapsed' && targetElement) {
+                    // Remove the 'show' class to collapse it
+                    targetElement.classList.remove('show');
+                    header.setAttribute('aria-expanded', 'false');
+                } else if (savedState === 'expanded' && targetElement) {
+                    // Ensure it's expanded
+                    targetElement.classList.add('show');
+                    header.setAttribute('aria-expanded', 'true');
+                }
+            });
+        }
+        
+        // Save state when toggled
+        function saveCollapseState(target, isExpanded) {
+            const state = isExpanded ? 'expanded' : 'collapsed';
+            localStorage.setItem('collapse-state-' + target, state);
+            console.log('Saved state for', target, ':', state); // Debug log
+        }
+        
+        // Set up event listeners for state saving
+        collapsibleHeaders.forEach(header => {
+            const target = header.getAttribute('data-bs-target');
+            const targetElement = document.querySelector(target);
+            
+            // Listen for Bootstrap collapse events
+            targetElement.addEventListener('shown.bs.collapse', function() {
+                saveCollapseState(target, true);
+                header.setAttribute('aria-expanded', 'true');
+            });
+            
+            targetElement.addEventListener('hidden.bs.collapse', function() {
+                saveCollapseState(target, false);
+                header.setAttribute('aria-expanded', 'false');
+            });
+            
+            // Add smooth scroll when expanding sections
+            targetElement.addEventListener('shown.bs.collapse', function() {
+                setTimeout(() => {
+                    header.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
+            });
+        });
+        
+        // Add keyboard support
+        collapsibleHeaders.forEach(header => {
+            header.setAttribute('tabindex', '0');
+            header.setAttribute('role', 'button');
+            
+            header.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.click();
+                }
+            });
+        });
+        
+        // Restore states after a small delay to ensure Bootstrap is ready
+        setTimeout(restoreCollapseStates, 100);
+        
+        // Debug: Add button to clear all saved states (remove this if not needed)
+        if (localStorage.getItem('scores-debug-mode')) {
+            const debugBtn = document.createElement('button');
+            debugBtn.textContent = 'Clear Collapse States';
+            debugBtn.style.position = 'fixed';
+            debugBtn.style.top = '10px';
+            debugBtn.style.right = '10px';
+            debugBtn.style.zIndex = '9999';
+            debugBtn.onclick = function() {
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('collapse-state-')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                location.reload();
+            };
+            document.body.appendChild(debugBtn);
+        }
+    });
+    </script>
+
 {% endblock %}

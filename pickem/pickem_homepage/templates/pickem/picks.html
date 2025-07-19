@@ -1,299 +1,516 @@
 {% extends 'pickem/base.html' %}
-
 {% load static %}
 {% load pickem_homepage_extras %}
 
 {% block content %}
-<BR><BR><BR><BR>
 
-<div class="row">
-    <div class="container px-4">
-        <div class="row gx-4">
-            <div class="col">
-                <div class="p-3 border bg-dark rounded">
-                    <table>
-                        <tr></tr>
-                            <td><h3><img src="{% static '/images/nfl.svg' %}" alt="logo" class="img-responsive img-logo"></h3></td>
-                            <td class="standing">
-                                <h3 class="text-white">Submit your picks</h3>
-                                {% if competition == 'nfl-preseason' %}
-                                    <h5 class="text-muted">Preseason - Week {{ week }} </h5>
-                                {% else %}
-                                    <h5 class="text-muted">Regular Season - Week {{ week }} </h5>
-                                {% endif %}
-                            </td>
-                    </table>
+    <br><br><br><br>
+    <div class="container picks-main-container">
+        <div class="col">
+            <!-- Page Header -->
+            <div class="page-header text-center mb-4">
+                <h2 class="display-4 fw-bold mb-2">
+                    <i class="fas fa-edit me-3"></i>Submit Your Picks
+                </h2>
+                <p class="lead text-muted">
+                    {% if competition == 'nfl-preseason' %}
+                        Preseason - Week {{ week }}
+                    {% else %}
+                        Regular Season - Week {{ week }}
+                    {% endif %}
+                </p>
+                <hr class="border-primary border-2 opacity-25 w-50 mx-auto">
             </div>
-            
-            <div class="p-3 border bg-light rounded">
-                <div class="container px-4">
-                    {% if game_list %}
-                        <h3>Picks</h3>
-                        {% for game in game_list %}
-                        {% if game.slug not in pick_slugs %}
-                            {% with user.id|addstr:"-"|addstr:game.id as template %}
-                                {% if template not in pick_ids %}
-                                    {% if game.statusType != 'notstarted' %}
-                                        <div class="p-3 border bg-light rounded">
-                                            <form action="/picks/" method="POST" enctype="multipart/form-data">
-                                                <tr>
-                                                    <td><b>{{ game.startTimestamp|date:"D, M d Y @ P" }}</b><hr></td>
-                                                </tr>
-                                                <tr>
-                                                    <td><b class="text-muted">{{ game.awayTeamName }} @ {{ game.homeTeamName }}<br><br></b></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>
-                                                        <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled>
-                                                        <label for="html" class="text-muted">
-                                                            {{ game.awayTeamName }}
-                                                            {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                            {% endif %}
-                                                        {% endfor %} 
-                                                        </label><br>
-                                                        <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled>
-                                                        <label for="css" class="text-muted">
-                                                            {{ game.homeTeamName }}
-                                                            {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                            {% endif %}
-                                                        {% endfor %} 
-                                                        </label><br>
-                                                    </td>
-                                                </tr>
-                                                <BR>
-                                                <p><b class="text-danger">Pick Missed - Game already started!</b></p>
-                                            </form>
-                                            </div>
-                                            <BR>
-                                    {% else %}
-                                        <div class="p-3 border bg-light rounded">
-                                            <form action="/picks/" method="POST" enctype="multipart/form-data">
-                                            {% csrf_token %}
-                                            <tr>
-                                                <td><b>{{ game.startTimestamp|date:"D, M d Y @ P" }}</b><hr></td>
-                                            </tr>
-                                            <tr>
-                                                <td><b>{{ game.awayTeamName }} @ {{ game.homeTeamName }}<br><br></b></td>
-                                            </tr>
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" name="id" value="{{ user.id }}-{{ game.id }}" required id="id_id">
-                                                </td>
-                                            </tr>
-                                    
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" name="userEmail" value={{ user.email }} maxlength="254" required id="id_userEmail">
-                                                </td>
-                                            </tr>
-                                    
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" name="userID" value="{{ user.username }}" maxlength="250" required id="id_userID">
-                                                </td>
-                                            </tr>
 
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" name="uid" value="{{ user.id }}" maxlength="250" required id="id_uid">
-                                                </td>
-                                            </tr>
+            <!-- Pick Progress Summary -->
+            <div class="section-container mb-4">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-chart-pie me-2"></i>Your Progress
+                    </h3>
+                </div>
+                
+                <div class="progress-summary">
+                    {% with game_list|length as total_games %}
+                    {% with pick_slugs|length as submitted_picks %}
+                    <div class="progress-stats">
+                        <div class="progress-stat-item">
+                            <div class="progress-stat-value">{{ submitted_picks }}</div>
+                            <div class="progress-stat-label">Picks Submitted</div>
+                        </div>
+                        <div class="progress-stat-divider">/</div>
+                        <div class="progress-stat-item">
+                            <div class="progress-stat-value">{{ total_games }}</div>
+                            <div class="progress-stat-label">Total Games</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: {% widthratio submitted_picks total_games 100 %}%"></div>
+                    </div>
+                    <div class="progress-percentage">
+                        {% widthratio submitted_picks total_games 100 %}% Complete
+                    </div>
+                    {% endwith %}
+                    {% endwith %}
+                </div>
+            </div>
 
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" name="slug" value="{{ game.slug }}" maxlength="250" required id="id_slug">
-                                                </td>
-                                            </tr>
-                                    
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" name="competition" value="{{ game.competition }}" maxlength="250" required id="id_competition">
-                                                </td>
-                                            </tr>
-                                    
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" name="gameWeek" value="{{ game.gameWeek }}" maxlength="2" required id="id_gameWeek">
-                                                </td>
-                                            </tr>
-                                    
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" name="gameyear" value="{{ game.gameyear }}" maxlength="4" required id="id_gameyear">
-                                                </td>
-                                            </tr>
-
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" name="gameseason" value="{{ game.gameseason }}" maxlength="4" required id="id_gameseason">
-                                                </td>
-                                            </tr>
-
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" name="pick_game_id" value="{{ game.id }}" required id="id_pick_game_id">
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>
-                                                    <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" required>
-                                                    <label for="html">
-                                                        {{ game.awayTeamName }}
-                                                        {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                            {% endif %}
-                                                        {% endfor %} 
-                                                       
-                                                    </label><br>
-                                                    <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}">
-                                                    <label for="css">
-                                                        {{ game.homeTeamName }}
-                                                        {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                                    {% else %}
-                                                                        <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                                    {% endif %}
-                                                            {% endif %}
-                                                        {% endfor %} 
-                                                    </label><br>
-                                                </td>
-                                            </tr>
-                                            
-                                            {% if game.tieBreakerGame == True %}
-                                            <tr>
-                                                <td>
-                                                    <br>
-                                                    <label for="quantity"><b>Tie Breaker 1:</b><br>How many total points will be scored in {{ game.awayTeamName }} @ {{ game.homeTeamName }}?</label>
-                                                    <br>
-                                                    <input type="number" id="tieBreakerScore" name="tieBreakerScore" required>
-                                                    <br>
-                                                </td>
-                                                <br>
-                                                    <label for="quantity"><b>Tie Breaker 2:</b><br>How many total yards will there be in {{ game.awayTeamName }} @ {{ game.homeTeamName }}?</label>
-                                                    <br>
-                                                    <input type="number" id="tieBreakerYards" name="tieBreakerYards" required>
-                                                <br>
-                                                </td>                                                
-                                            </tr>
-                                            {% endif %}
-
-                                            <br>
-                                                <button type="submit" class="btn btn-primary" >Save</button>
-                                            </form>
-                                        </div>
-                                        <BR>   
-                                    {% endif %}                                   
-                                {% endif %}
+            <!-- Available Games Section -->
+            {% if game_list %}
+            <div class="section-container mb-4">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-football-ball me-2"></i>Make Your Picks
+                        <span class="games-remaining-badge">
+                            {% with game_list|length as total_games %}
+                            {% with pick_slugs|length as submitted_picks %}
+                            {{ total_games|sub:submitted_picks }} remaining
                             {% endwith %}
-                        {% endif %}
-                        {% endfor %}
+                            {% endwith %}
+                        </span>
+                    </h3>
+                </div>
+                
+                <div class="games-grid">
+                    {% for game in game_list %}
+                    {% if game.slug not in pick_slugs %}
+                        {% with user.id|addstr:"-"|addstr:game.id as template %}
+                            {% if template not in pick_ids %}
+                                <div class="game-card" data-game-id="{{ game.id }}">
+                                    <!-- Game Header -->
+                                    <div class="game-header">
+                                        <div class="game-date">
+                                            <i class="fas fa-calendar me-2"></i>
+                                            {{ game.startTimestamp|date:"D, M d" }}
+                                        </div>
+                                        <div class="game-time">
+                                            {{ game.startTimestamp|date:"g:i A" }}
+                                        </div>
+                                        {% if game.statusType != 'notstarted' %}
+                                        <div class="game-status locked">
+                                            <i class="fas fa-lock me-1"></i>
+                                            Game Started
+                                        </div>
+                                        {% else %}
+                                        <div class="game-status available">
+                                            <i class="fas fa-check-circle me-1"></i>
+                                            Available
+                                        </div>
+                                        {% endif %}
+                                    </div>
 
-                        <h3>Picks Submitted</h3>
+                                    <!-- Team Selection -->
+                                    <div class="team-selection">
+                                        <!-- Away Team -->
+                                        <div class="team-option {% if game.statusType != 'notstarted' %}disabled{% endif %}" 
+                                             data-team="{{ game.awayTeamSlug }}"
+                                             data-team-name="{{ game.awayTeamName }}">
+                                            <div class="team-logo-container">
+                                                {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                     alt="{{ game.awayTeamName }} logo" 
+                                                     class="team-logo">
+                                                {% endwith %}
+                                            </div>
+                                            <div class="team-info">
+                                                <div class="team-name">{{ game.awayTeamName }}</div>
+                                                <div class="team-record">
+                                                    {% for team in wins_losses %}
+                                                        {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                            {% if team.teamTies > 0 %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                            {% else %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            <div class="team-selection-indicator">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                        </div>
+
+                                        <!-- VS Divider -->
+                                        <div class="vs-divider">
+                                            <span class="vs-text">VS</span>
+                                            <div class="at-indicator">@</div>
+                                        </div>
+
+                                        <!-- Home Team -->
+                                        <div class="team-option {% if game.statusType != 'notstarted' %}disabled{% endif %}" 
+                                             data-team="{{ game.homeTeamSlug }}"
+                                             data-team-name="{{ game.homeTeamName }}">
+                                            <div class="team-logo-container">
+                                                {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                     alt="{{ game.homeTeamName }} logo" 
+                                                     class="team-logo">
+                                                {% endwith %}
+                                            </div>
+                                            <div class="team-info">
+                                                <div class="team-name">{{ game.homeTeamName }}</div>
+                                                <div class="team-record">
+                                                    {% for team in wins_losses %}
+                                                        {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                            {% if team.teamTies > 0 %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                            {% else %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            <div class="team-selection-indicator">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tiebreaker Section -->
+                                    {% if game.tieBreakerGame %}
+                                    <div class="tiebreaker-section">
+                                        <div class="tiebreaker-header">
+                                            <i class="fas fa-balance-scale me-2"></i>
+                                            Tiebreakers Required
+                                        </div>
+                                        <div class="tiebreaker-inputs">
+                                            <div class="tiebreaker-input-group">
+                                                <label for="tiebreaker1-{{ game.id }}">Total Points Scored</label>
+                                                <input type="number" 
+                                                       id="tiebreaker1-{{ game.id }}" 
+                                                       name="tieBreakerScore" 
+                                                       placeholder="e.g. 45"
+                                                       min="0" 
+                                                       max="200"
+                                                       {% if game.statusType != 'notstarted' %}disabled{% endif %}>
+                                            </div>
+                                            <div class="tiebreaker-input-group">
+                                                <label for="tiebreaker2-{{ game.id }}">Total Yards</label>
+                                                <input type="number" 
+                                                       id="tiebreaker2-{{ game.id }}" 
+                                                       name="tieBreakerYards" 
+                                                       placeholder="e.g. 750"
+                                                       min="0" 
+                                                       max="2000"
+                                                       {% if game.statusType != 'notstarted' %}disabled{% endif %}>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Locked Game Message -->
+                                    {% if game.statusType != 'notstarted' %}
+                                    <div class="locked-message">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>Pick Missed - Game already started!</strong>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Hidden Form Data -->
+                                    <form class="pick-form" style="display: none;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="id" value="{{ user.id }}-{{ game.id }}">
+                                        <input type="hidden" name="userEmail" value="{{ user.email }}">
+                                        <input type="hidden" name="userID" value="{{ user.username }}">
+                                        <input type="hidden" name="uid" value="{{ user.id }}">
+                                        <input type="hidden" name="slug" value="{{ game.slug }}">
+                                        <input type="hidden" name="competition" value="{{ game.competition }}">
+                                        <input type="hidden" name="gameWeek" value="{{ game.gameWeek }}">
+                                        <input type="hidden" name="gameyear" value="{{ game.gameyear }}">
+                                        <input type="hidden" name="gameseason" value="{{ game.gameseason }}">
+                                        <input type="hidden" name="pick_game_id" value="{{ game.id }}">
+                                        <input type="hidden" name="pick" value="">
+                                        <input type="hidden" name="tieBreakerScore" value="">
+                                        <input type="hidden" name="tieBreakerYards" value="">
+                                    </form>
+
+                                    <!-- Save Status Indicator -->
+                                    <div class="save-status" style="display: none;">
+                                        <div class="save-indicator saving">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>
+                                            Saving...
+                                        </div>
+                                        <div class="save-indicator success">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            Saved!
+                                        </div>
+                                        <div class="save-indicator error">
+                                            <i class="fas fa-exclamation-circle me-2"></i>
+                                            Error saving
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Submitted Picks Section -->
+            <div class="section-container">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-check-square me-2"></i>Submitted Picks
+                        <span class="submitted-count-badge">{{ pick_slugs|length }}</span>
+                    </h3>
+                </div>
+                
+                <div class="submitted-picks-grid">
+                    {% if pick_slugs %}
                         {% for game in game_list %}
                         {% if game.slug in pick_slugs %}
                             {% with user.id|addstr:"-"|addstr:game.id as template %}
                                 {% if template in pick_ids %}
-                            <div class="p-3 border bg-light rounded">
-                                <form action="/picks/" method="POST" enctype="multipart/form-data">
-                                    <tr>
-                                        <td><b>{{ game.startTimestamp|date:"D, M d Y @ P" }}</b><hr></td>
-                                    </tr>
-                                    <tr>
-                                        <td><b>{{ game.awayTeamName }} @ {{ game.homeTeamName }}<br><br></b></td>
-                                    </tr>
-                                    <tr>
-                                        <td>
+                                <div class="submitted-game-card">
+                                    <div class="submitted-game-header">
+                                        <div class="game-date-small">
+                                            {{ game.startTimestamp|date:"M d @ g:i A" }}
+                                        </div>
+                                        <div class="submitted-badge">
+                                            <i class="fas fa-check me-1"></i>
+                                            Submitted
+                                        </div>
+                                    </div>
+
+                                    <div class="submitted-matchup">
                                         {% for p in picks %}
-                                            {% if p.pick == game.homeTeamSlug %}
-                                                <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled>
-                                                <label for="html">
-                                                    {{ game.awayTeamName }}
-                                                    {% for team in wins_losses %}
-                                                        {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                            {% if team.teamTies > 0 %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                            {% else %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                            {% endif %}
+                                            {% if p.slug == game.slug %}
+                                                <!-- Away Team -->
+                                                <div class="submitted-team {% if p.pick != game.awayTeamSlug %}not-selected{% endif %}">
+                                                    {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                         alt="{{ game.awayTeamName }} logo" 
+                                                         class="submitted-team-logo">
+                                                    {% endwith %}
+                                                    <div class="submitted-team-info">
+                                                        <div class="submitted-team-name">{{ game.awayTeamName }}</div>
+                                                        {% if p.pick == game.awayTeamSlug %}
+                                                            <div class="your-pick-indicator">
+                                                                <i class="fas fa-star me-1"></i>Your Pick
+                                                            </div>
                                                         {% endif %}
-                                                    {% endfor %} 
-                                                </label><br>
-                                                <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled checked>
-                                                <label for="css">
-                                                    {{ game.homeTeamName }}
-                                                    {% for team in wins_losses %}
-                                                        {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                            {% if team.teamTies > 0 %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                            {% else %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                            {% endif %}
+                                                    </div>
+                                                </div>
+
+                                                <!-- VS -->
+                                                <div class="submitted-vs">@</div>
+
+                                                <!-- Home Team -->
+                                                <div class="submitted-team {% if p.pick != game.homeTeamSlug %}not-selected{% endif %}">
+                                                    {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                         alt="{{ game.homeTeamName }} logo" 
+                                                         class="submitted-team-logo">
+                                                    {% endwith %}
+                                                    <div class="submitted-team-info">
+                                                        <div class="submitted-team-name">{{ game.homeTeamName }}</div>
+                                                        {% if p.pick == game.homeTeamSlug %}
+                                                            <div class="your-pick-indicator">
+                                                                <i class="fas fa-star me-1"></i>Your Pick
+                                                            </div>
                                                         {% endif %}
-                                                    {% endfor %} 
-                                                </label><br>
-                                            {% elif p.pick == game.awayTeamSlug %}
-                                                <input type="radio" id="{{ game.awayTeamSlug }}" name="pick" value="{{ game.awayTeamSlug }}" Disabled checked>
-                                                <label for="html">
-                                                    {{ game.awayTeamName }}
-                                                    {% for team in wins_losses %}
-                                                        {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                            {% if team.teamTies > 0 %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                            {% else %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                            {% endif %}
-                                                        {% endif %}
-                                                    {% endfor %} 
-                                                </label><br>
-                                                <input type="radio" id="{{ game.homeTeamSlug }}" name="pick" value="{{ game.homeTeamSlug }}" Disabled>
-                                                <label for="css">
-                                                    {{ game.homeTeamName }}
-                                                    {% for team in wins_losses %}
-                                                        {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                            {% if team.teamTies > 0 %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})</i>
-                                                            {% else %}
-                                                                <i>({{ team.teamWins }}-{{ team.teamLosses }})</i>
-                                                            {% endif %}
-                                                        {% endif %}
-                                                    {% endfor %} 
-                                                </label><br>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Tiebreaker Info -->
+                                                {% if game.tieBreakerGame and p.tieBreakerScore and p.tieBreakerYards %}
+                                                <div class="tiebreaker-info">
+                                                    <div class="tiebreaker-item">
+                                                        <span class="tiebreaker-label">Points:</span>
+                                                        <span class="tiebreaker-value">{{ p.tieBreakerScore }}</span>
+                                                    </div>
+                                                    <div class="tiebreaker-item">
+                                                        <span class="tiebreaker-label">Yards:</span>
+                                                        <span class="tiebreaker-value">{{ p.tieBreakerYards }}</span>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
                                             {% endif %}
                                         {% endfor %}
-                                        </td>
-                                    </tr>                                 
-                                </form>
+                                    </div>
                                 </div>
-                                <BR>
-                                    {% endif %}
-                                    {% endwith %}
                                 {% endif %}
-                                {% endfor %}
+                            {% endwith %}
+                        {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-picks-message">
+                            <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No picks submitted yet. Get started above!</p>
+                        </div>
                     {% endif %}
                 </div>
             </div>
+            {% else %}
+            <div class="section-container">
+                <div class="no-games-message text-center">
+                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No games available for this week</h4>
+                    <p class="text-muted">Check back later or view other weeks.</p>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
-</div>
+    <!-- Auto-save JavaScript -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle team selection clicks
+        document.querySelectorAll('.team-option:not(.disabled)').forEach(option => {
+            option.addEventListener('click', function() {
+                const gameCard = this.closest('.game-card');
+                const gameId = gameCard.dataset.gameId;
+                const selectedTeam = this.dataset.team;
+                const teamName = this.dataset.teamName;
+                
+                // Remove selection from all teams in this game
+                gameCard.querySelectorAll('.team-option').forEach(team => {
+                    team.classList.remove('selected');
+                });
+                
+                // Add selection to clicked team
+                this.classList.add('selected');
+                
+                // Auto-save the pick
+                savePick(gameCard, selectedTeam);
+            });
+        });
+
+        // Handle tiebreaker input changes
+        document.querySelectorAll('.tiebreaker-section input').forEach(input => {
+            input.addEventListener('change', function() {
+                const gameCard = this.closest('.game-card');
+                const selectedTeam = gameCard.querySelector('.team-option.selected');
+                
+                if (selectedTeam) {
+                    savePick(gameCard, selectedTeam.dataset.team);
+                }
+            });
+        });
+
+        function savePick(gameCard, selectedTeam) {
+            console.log('savePick called with:', selectedTeam);
+            const form = gameCard.querySelector('.pick-form');
+            const saveStatus = gameCard.querySelector('.save-status');
+            const tiebreakerScore = gameCard.querySelector('input[name="tieBreakerScore"]');
+            const tiebreakerYards = gameCard.querySelector('input[name="tieBreakerYards"]');
+            
+            console.log('Form found:', form);
+            console.log('Save status found:', saveStatus);
+            
+            if (!form) {
+                console.error('Form not found in game card');
+                return;
+            }
+            if (!saveStatus) {
+                console.error('Save status not found in game card');
+                return;
+            }
+            
+            // Check if this is a tiebreaker game and validate
+            const tiebreakerSection = gameCard.querySelector('.tiebreaker-section');
+            if (tiebreakerSection) {
+                // This is a tiebreaker game - validate both fields are filled
+                const scoreValue = tiebreakerScore ? tiebreakerScore.value.trim() : '';
+                const yardsValue = tiebreakerYards ? tiebreakerYards.value.trim() : '';
+                
+                // For tiebreaker games, both fields must be filled
+                if (!scoreValue || !yardsValue) {
+                    // Show validation message
+                    let validationMsg = tiebreakerSection.querySelector('.tiebreaker-validation');
+                    
+                    if (!validationMsg) {
+                        validationMsg = document.createElement('div');
+                        validationMsg.className = 'tiebreaker-validation text-warning mt-2';
+                        validationMsg.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Both tiebreaker fields are required to save';
+                        tiebreakerSection.appendChild(validationMsg);
+                    }
+                    
+                    // Remove validation message after 3 seconds
+                    setTimeout(() => {
+                        if (validationMsg.parentNode) {
+                            validationMsg.remove();
+                        }
+                    }, 3000);
+                    
+                    return; // Don't save if tiebreaker is incomplete
+                }
+            }
+            
+            // Update form data
+            const pickInput = form.querySelector('input[name="pick"]');
+            console.log('Pick input found:', pickInput);
+            if (pickInput) {
+                pickInput.value = selectedTeam;
+                console.log('Set pick value to:', selectedTeam);
+            }
+            
+            if (tiebreakerScore) {
+                const tiebreakerScoreInput = form.querySelector('input[name="tieBreakerScore"]');
+                if (tiebreakerScoreInput) {
+                    tiebreakerScoreInput.value = tiebreakerScore.value || '';
+                }
+            }
+            if (tiebreakerYards) {
+                const tiebreakerYardsInput = form.querySelector('input[name="tieBreakerYards"]');
+                if (tiebreakerYardsInput) {
+                    tiebreakerYardsInput.value = tiebreakerYards.value || '';
+                }
+            }
+            
+            // Show saving indicator
+            saveStatus.style.display = 'block';
+            saveStatus.querySelector('.saving').style.display = 'flex';
+            saveStatus.querySelector('.success').style.display = 'none';
+            saveStatus.querySelector('.error').style.display = 'none';
+            
+            // Prepare form data
+            const formData = new FormData(form);
+            console.log('About to submit form data:', formData);
+            
+            // Submit the pick
+            fetch('/picks/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(response => {
+                console.log('Response received:', response);
+                if (response.ok) {
+                    console.log('Save successful');
+                    // Show success indicator briefly
+                    saveStatus.querySelector('.saving').style.display = 'none';
+                    saveStatus.querySelector('.success').style.display = 'flex';
+                    
+                    // Quick reload to update the page and move card to submitted section
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 300);
+                } else {
+                    console.error('Save failed with status:', response.status);
+                    throw new Error('Save failed');
+                }
+            })
+            .catch(error => {
+                // Show error indicator
+                saveStatus.querySelector('.saving').style.display = 'none';
+                saveStatus.querySelector('.error').style.display = 'flex';
+                
+                // Hide error after 3 seconds
+                setTimeout(() => {
+                    saveStatus.style.display = 'none';
+                }, 3000);
+                
+                console.error('Error saving pick:', error);
+            });
+        }
+    });
+    </script>
 
 {% endblock %}

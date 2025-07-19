@@ -4,155 +4,334 @@
 {% load pickem_homepage_extras %}
 
 {% block content %}
-<BR><BR><BR><BR>
 
-    <div class="container min-vh-100">
-        <link rel="stylesheet" href="{% static 'css/style.css' %}">
-        <div class="container" style="width: 100%; padding: 0px;">
-            <div class="col">
-                <div class="table-responsive border p-3 bg-light rounded text-center">
-                    <h3>Player Pick Statistics</h3>
-                    <hr>
+    <br><br><br><br>
+    <div class="container stats-main-container">
+        <div class="col">
+            <!-- Page Header -->
+            <div class="page-header text-center mb-4">
+                <h2 class="display-4 fw-bold mb-2">
+                    <i class="fas fa-chart-bar me-3"></i>Player Statistics
+                </h2>
+                <p class="lead text-muted">Detailed performance analytics and season insights</p>
+                <hr class="border-primary border-2 opacity-25 w-50 mx-auto">
+            </div>
+
+            <!-- Quick Stats Summary -->
+            <div class="section-container mb-4">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-tachometer-alt me-2"></i>League Overview
+                    </h3>
+                </div>
+                
+                <div class="quick-stats-grid">
+                    {% with player_points|length as total_players %}
+                    <div class="quick-stat-card">
+                        <div class="quick-stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="quick-stat-value">{{ total_players }}</div>
+                        <div class="quick-stat-label">Active Players</div>
+                    </div>
                     
+                    <!-- Calculate league averages -->
+                    {% with player_points|first as leader %}
+                    <div class="quick-stat-card">
+                        <div class="quick-stat-icon">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div class="quick-stat-value">{{ leader.total_points|default:0 }}</div>
+                        <div class="quick-stat-label">Leading Score</div>
+                    </div>
+                    {% endwith %}
+                    
+                    <div class="quick-stat-card">
+                        <div class="quick-stat-icon">
+                            <i class="fas fa-calendar-week"></i>
+                        </div>
+                        <div class="quick-stat-value">18</div>
+                        <div class="quick-stat-label">Total Weeks</div>
+                    </div>
+                    
+                    <div class="quick-stat-card">
+                        <div class="quick-stat-icon">
+                            <i class="fas fa-football-ball"></i>
+                        </div>
+                        <div class="quick-stat-value">32</div>
+                        <div class="quick-stat-label">NFL Teams</div>
+                    </div>
+                    {% endwith %}
+                </div>
+            </div>
 
-                    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-                    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-                    <div class="container py-3">
-                        <div class="row">
-                            {% for player in player_points %}
-                            {% with player.userID|lookupavatar as avatar %}
-                            {% with player.userID|lookupname as username %}
-                            {% with player.userID|lookupStats as stats %}
-                            <div class="col-lg-4 col-md-6 mb-4">
-                                <div class="card">
-                                    <div class="card-header bg-dark text-white d-flex align-items-center">
-                                        <img class="player-profile-img mr-3" src="{{ avatar }}">
-                                        <h5 class="mb-0 text-uppercase">&nbsp;&nbsp;&nbsp;{{ username }}</h5>
+            <!-- Player Sort Controls -->
+            <div class="section-container mb-4">
+                <div class="sort-controls d-flex flex-wrap gap-2 justify-content-center">
+                    <button class="btn btn-outline-primary btn-sm sort-btn active" data-sort="position">
+                        <i class="fas fa-sort-numeric-down me-1"></i>By Position
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm sort-btn" data-sort="accuracy">
+                        <i class="fas fa-percentage me-1"></i>By Accuracy
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm sort-btn" data-sort="wins">
+                        <i class="fas fa-trophy me-1"></i>By Weeks Won
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm sort-btn" data-sort="name">
+                        <i class="fas fa-sort-alpha-down me-1"></i>By Name
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Cards Section -->
+            <div class="section-container">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-users me-2"></i>Player Performance Analysis
+                    </h3>
+                </div>
+                
+                <div class="stats-cards-container" id="statsContainer">
+                    {% for player in player_points %}
+                    {% with player.userID|lookupavatar as avatar %}
+                    {% with player.userID|lookupname as username %}
+                    {% with player.userID|lookupStats as stats %}
+                    <div class="stats-player-card" 
+                         data-position="{{ forloop.counter }}" 
+                         data-accuracy="{{ stats.pickPercentSeason|default:0 }}"
+                         data-wins="{{ stats.weeksWonSeason|default:0 }}"
+                         data-name="{{ username|default:'Unknown Player' }}">
+                        <!-- Player Header -->
+                        <div class="stats-card-header d-flex align-items-center">
+                            <img class="player-profile-img me-3" src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" alt="Profile picture for {{ username }}">
+                            <div class="flex-grow-1">
+                                <h5 class="mb-0 text-uppercase">{{ username|default:"Unknown Player" }}</h5>
+                                <small class="text-muted">League Member</small>
+                            </div>
+                            <div class="position-badge position-{{ forloop.counter }}">
+                                <span class="position-number">{{ forloop.counter }}</span>
+                                <small class="position-label">Position</small>
+                            </div>
+                        </div>
+
+                        <!-- Performance Summary -->
+                        <div class="performance-summary mb-3">
+                            <div class="performance-item">
+                                <span class="performance-label">Season Accuracy</span>
+                                <div class="progress-container">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: {{ stats.pickPercentSeason|default:0 }}%"></div>
                                     </div>
-                                    <div class="card-body">
-                                        <table class="table table-borderless">
-                                            <tbody>
-                                                <tr>
-                                                    <td class="d-flex align-items-center justify-content-center">
-                                                        <span class="d-block">Current Position</span>
-                                                    </td>
-                                                    <td class="d-flex align-items-center justify-content-center">
-                                                        <span class="position-number display-4 d-block">{{ forloop.counter }}</span>
-                                                </tr>
-                                                <tr>
-                                                    <tr>
-                                                        <td colspan="2"><hr></td>
-                                                    </tr>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                        <h4><strong>Current Season Stats</strong></h4>
-                                        <table class="table table-borderless">
-                                            <tbody>
-                                                <tr>
-                                                    <td>Percent Correct Picks</td>
-                                                    <td>{{ stats.pickPercentSeason }}%</td>
-                                                </tr>
-                                                </tr>
-                                                <tr>
-                                                    <td>Total Correct Picks</td>
-                                                    <td>{{ stats.correctPickTotalSeason }}</td>
-                                                </tr>
-                                                </tr>
-                                                <tr>
-                                                    <td>Weeks Won</td>
-                                                    <td>{{ stats.weeksWonSeason }}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Most Picked Team</td>
-                                                    <td>
-                                                        {% if stats.mostPickedSeason %}
-                                                            {% with stats.mostPickedSeason|lookuplogo as logo_url %}
-                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
-                                                            {% endwith %}
-                                                        {% else %}
-                                                            <i>unknown</i>
-                                                        {% endif %}
-                                                    </td>
-                                                </tr>
-                                                </tr>
-                                                <tr>
-                                                    <td>Least Picked Team</td>
-                                                    <td>
-                                                        {% if stats.leastPickedSeason %}
-                                                            {% with stats.leastPickedSeason|lookuplogo as logo_url %}
-                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
-                                                            {% endwith %}
-                                                        {% else %}
-                                                            <i>unknown</i>
-                                                        {% endif %}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                        <hr>
-                                        <h4><strong>Lifetime Stats</strong></h4>
-                                        <table class="table table-borderless">
-                                            <tbody>
-                                                <tr>
-                                                    <td>Percent Correct Picks</td>
-                                                    <td>{{ stats.pickPercentTotal }}%</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Total Correct Picks</td>
-                                                    <td>{{ stats.correctPickTotalTotal }}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Weeks Won</td>
-                                                    <td>{{ stats.weeksWonTotal }}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Most Picked Team</td>
-                                                    <td>
-                                                        {% if stats.mostPickedTotal %}
-                                                            {% with stats.mostPickedTotal|lookuplogo as logo_url %}
-                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
-                                                            {% endwith %}
-                                                        {% else %}
-                                                            <i>unknown</i>
-                                                        {% endif %}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Least Picked Team</td>
-                                                    <td>
-                                                        {% if stats.leastPickedTotal %}
-                                                            {% with stats.leastPickedTotal|lookuplogo as logo_url %}
-                                                                <img src="{{ logo_url.teamLogo }}" alt="logo" class="nfl-logo">
-                                                            {% endwith %}
-                                                        {% else %}
-                                                            <i>unknown</i>
-                                                        {% endif %}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Seasons Won</td>
-                                                    {% if stats.seasonsWon != None %}
-                                                            <td>🥇{{ stats.seasonsWon }}</td>
-                                                    {% else %}
-                                                            <td>0</td>
-                                                    {% endif %}
-                                                </tr>
-                                            </tbody>
-                                        </table>
+                                    <span class="progress-text">{{ stats.pickPercentSeason|default:0 }}%</span>
+                                </div>
+                            </div>
+                            <div class="performance-item">
+                                <span class="performance-label">Lifetime Accuracy</span>
+                                <div class="progress-container">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill lifetime" style="width: {{ stats.pickPercentTotal|default:0 }}%"></div>
+                                    </div>
+                                    <span class="progress-text">{{ stats.pickPercentTotal|default:0 }}%</span>
+                                </div>
+                            </div>
+                        </div>
 
+                        <!-- Stats Content -->
+                        <div class="stats-content">
+                            <!-- Current Season Stats -->
+                            <div class="stats-section">
+                                <h6 class="stats-section-title">
+                                    <i class="fas fa-calendar-alt me-2"></i>Current Season
+                                    {% if stats.pickPercentSeason >= 70 %}
+                                        <span class="trend-badge trend-up">
+                                            <i class="fas fa-arrow-up"></i> Hot Streak
+                                        </span>
+                                    {% elif stats.pickPercentSeason >= 50 %}
+                                        <span class="trend-badge trend-stable">
+                                            <i class="fas fa-equals"></i> Steady
+                                        </span>
+                                    {% else %}
+                                        <span class="trend-badge trend-down">
+                                            <i class="fas fa-arrow-down"></i> Improving
+                                        </span>
+                                    {% endif %}
+                                </h6>
+                                <div class="stats-grid">
+                                    <div class="stat-item highlight-stat">
+                                        <div class="stat-label">Pick Accuracy</div>
+                                        <div class="stat-value">{{ stats.pickPercentSeason|default:0 }}%</div>
+                                        <div class="stat-trend">
+                                            {% if stats.pickPercentSeason >= stats.pickPercentTotal %}
+                                                <i class="fas fa-arrow-up text-success"></i>
+                                            {% else %}
+                                                <i class="fas fa-arrow-down text-danger"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Correct Picks</div>
+                                        <div class="stat-value">{{ stats.correctPickTotalSeason|default:0 }}</div>
+                                    </div>
+                                    <div class="stat-item {% if stats.weeksWonSeason > 0 %}winner-highlight{% endif %}">
+                                        <div class="stat-label">Weeks Won</div>
+                                        <div class="stat-value">
+                                            {{ stats.weeksWonSeason|default:0 }}
+                                            {% if stats.weeksWonSeason > 0 %}
+                                                <i class="fas fa-trophy text-warning ms-1"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Most Picked</div>
+                                        <div class="stat-value">
+                                            {% if stats.mostPickedSeason %}
+                                                {% with stats.mostPickedSeason|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo }}" alt="{{ stats.mostPickedSeason }} team logo" class="team-logo-sm">
+                                                {% endwith %}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Least Picked</div>
+                                        <div class="stat-value">
+                                            {% if stats.leastPickedSeason %}
+                                                {% with stats.leastPickedSeason|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo }}" alt="{{ stats.leastPickedSeason }} team logo" class="team-logo-sm">
+                                                {% endwith %}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            {% endwith %}
-                            {% endwith %}
-                            {% endwith %}
-                            {% endfor %}
+
+                            <!-- Lifetime Stats -->
+                            <div class="stats-section">
+                                <h6 class="stats-section-title">
+                                    <i class="fas fa-history me-2"></i>Lifetime Performance
+                                    {% if stats.seasonsWon > 0 %}
+                                        <span class="champion-badge">
+                                            <i class="fas fa-crown"></i> Champion
+                                        </span>
+                                    {% endif %}
+                                </h6>
+                                <div class="stats-grid">
+                                    <div class="stat-item">
+                                        <div class="stat-label">Pick Accuracy</div>
+                                        <div class="stat-value">{{ stats.pickPercentTotal|default:0 }}%</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Total Correct</div>
+                                        <div class="stat-value">{{ stats.correctPickTotalTotal|default:0 }}</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Weeks Won</div>
+                                        <div class="stat-value">{{ stats.weeksWonTotal|default:0 }}</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Most Picked</div>
+                                        <div class="stat-value">
+                                            {% if stats.mostPickedTotal %}
+                                                {% with stats.mostPickedTotal|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo }}" alt="{{ stats.mostPickedTotal }} team logo" class="team-logo-sm">
+                                                {% endwith %}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Least Picked</div>
+                                        <div class="stat-value">
+                                            {% if stats.leastPickedTotal %}
+                                                {% with stats.leastPickedTotal|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo }}" alt="{{ stats.leastPickedTotal }} team logo" class="team-logo-sm">
+                                                {% endwith %}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="stat-item {% if stats.seasonsWon > 0 %}championship-highlight{% endif %}">
+                                        <div class="stat-label">Seasons Won</div>
+                                        <div class="stat-value">
+                                            {% if stats.seasonsWon and stats.seasonsWon > 0 %}
+                                                <span class="championship-badge">
+                                                    <i class="fas fa-trophy text-warning me-1"></i>{{ stats.seasonsWon }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">0</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div
+                    {% endwith %}
+                    {% endwith %}
+                    {% endwith %}
+                    {% empty %}
+                    <div class="no-data-message">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No player statistics available.</p>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- JavaScript for sorting functionality -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sortButtons = document.querySelectorAll('.sort-btn');
+        const container = document.getElementById('statsContainer');
+        
+        sortButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Update active button
+                sortButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Get sort criteria
+                const sortBy = this.getAttribute('data-sort');
+                const cards = Array.from(container.children);
+                
+                // Sort cards
+                cards.sort((a, b) => {
+                    let aValue, bValue;
+                    
+                    switch(sortBy) {
+                        case 'position':
+                            aValue = parseInt(a.getAttribute('data-position'));
+                            bValue = parseInt(b.getAttribute('data-position'));
+                            return aValue - bValue;
+                        case 'accuracy':
+                            aValue = parseInt(a.getAttribute('data-accuracy'));
+                            bValue = parseInt(b.getAttribute('data-accuracy'));
+                            return bValue - aValue; // Descending
+                        case 'wins':
+                            aValue = parseInt(a.getAttribute('data-wins'));
+                            bValue = parseInt(b.getAttribute('data-wins'));
+                            return bValue - aValue; // Descending
+                        case 'name':
+                            aValue = a.getAttribute('data-name').toLowerCase();
+                            bValue = b.getAttribute('data-name').toLowerCase();
+                            return aValue.localeCompare(bValue);
+                        default:
+                            return 0;
+                    }
+                });
+                
+                // Reorder DOM elements
+                cards.forEach(card => container.appendChild(card));
+            });
+        });
+    });
+    </script>
+
 {% endblock %}

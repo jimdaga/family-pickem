@@ -40,7 +40,6 @@ def lookupavatar(user_id):
     
     return avatar_url
 
-
 @register.filter
 def lookuplogo(slug):
     if slug != None:
@@ -66,6 +65,33 @@ def lookweekwinner(weekno):
     winner_object = "week_{}_winner".format(weekno)
     week_winner = userSeasonPoints.objects.filter(**{winner_object: True},gameseason=gameseason).distinct() 
     return week_winner
+
+@register.filter
+def get_week_points(player, week_num):
+    """Get points for a specific week dynamically"""
+    if not player or not week_num:
+        return None
+    field_name = f'week_{week_num}_points'
+    return getattr(player, field_name, None)
+
+@register.filter
+def get_week_winner(player, week_num):
+    """Check if player won a specific week dynamically"""
+    if not player or not week_num:
+        return False
+    field_name = f'week_{week_num}_winner'
+    return getattr(player, field_name, False)
+
+@register.filter
+def safe_username(user_id):
+    """Safely get username with fallback"""
+    try:
+        user = User.objects.get(id=user_id)
+        return user.username if hasattr(user, 'username') and user.username else user.email.split('@')[0] if user.email else f"User {user_id}"
+    except User.DoesNotExist:
+        return f"Unknown User"
+    except Exception:
+        return f"User {user_id}"
 
 @register.filter
 def lookupStats(user_id):
@@ -103,3 +129,19 @@ def lookupStats(user_id):
     }
 
     return data
+
+@register.filter
+def mul(value, arg):
+    """Multiply the value by the argument"""
+    try:
+        return int(value) * int(arg)
+    except (ValueError, TypeError):
+        return 0
+
+@register.filter
+def sub(value, arg):
+    """Subtract the argument from the value"""
+    try:
+        return int(value) - int(arg)
+    except (ValueError, TypeError):
+        return 0

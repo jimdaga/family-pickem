@@ -9,346 +9,155 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
     <br><br><br><br>
-    <div class="container" style="width: 100%; padding: 0px;">
+    <div class="container standings-main-container">
         <div class="col">
-            <div class="table-responsive border p-3 bg-light rounded text-center">
-                <h3>League Standings</h3>
-                <hr>
-                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-             
+            <!-- Page Header -->
+            <div class="page-header text-center mb-4">
+                <h2 class="display-4 fw-bold mb-2">
+                    <i class="fas fa-trophy me-3"></i>League Standings
+                </h2>
+                <p class="lead text-muted">Track your picks, celebrate your wins</p>
+                <hr class="border-primary border-2 opacity-25 w-50 mx-auto">
+            </div>
 
-                <div class="container" style="width: 99%; padding: 0px;">
-                    <div class="row" >
-                        <div class="col-md-6 mb-3">
-
-                            <div class="border p-3 bg-dark rounded-top text-center">
-                                <b class="text-white">Overall Points</b>
+            <!-- Overall Points Section -->
+            <div class="section-container mb-5">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-medal me-2"></i>Leaderboard
+                    </h3>
+                </div>
+                
+                <div class="leaderboard-container">
+                    {% for player in player_points %}
+                    <div class="leaderboard-card position-relative">
+                        {% with player.userID|safe_username as username %}
+                        {% with player.userID|lookupavatar as avatar %}
+                        
+                        <!-- Rank Badge -->
+                        <div class="rank-badge {% if forloop.counter == 1 %}rank-first{% elif forloop.counter == 2 %}rank-second{% elif forloop.counter == 3 %}rank-third{% endif %}">
+                            <span class="rank-number">{{ forloop.counter }}</span>
+                        </div>
+                        
+                        <div class="player-info d-flex align-items-center">
+                            <img class="player-avatar me-3" src="{{ avatar }}" alt="Profile picture for {{ username }}">
+                            <div class="player-details flex-grow-1">
+                                <h5 class="player-name mb-1">{{ username }}</h5>
+                                <small class="text-muted">League Member</small>
                             </div>
-
-                            <div class="border p-3 bg-light rounded-bottom text-center">
-                                {% for player in player_points %}
-                                <div class="player-info-wrapper">        
-                                    <span class="player-row">
-                                        {% with player.userID|lookupname as username %}
-                                        {% with player.userID|lookupavatar as avatar %}
-                                        <div class="container-fluid">
-                                            <div class="row align-items-center">
-                                                <div class="col-auto pr-2">
-                                                    <img class="player-profile-img" src="{{ avatar }}">
-                                                </div>
-                                                <div class="col">
-                                                    <h8 class="player-username text-uppercase d-flex justify-content-start">{{ username }}</h8>
-                                                </div>
-
-                                                <div class="col text-right">
-                                                    <h8 class="player-score d-flex justify-content-end">
-                                                        {{ player.total_points }}
-                                                    </h8>
-                                                </div>                            
-                                            </div>
-                                        </div>
-                                        {% endwith %}
-                                        {% endwith %}
-                                    </span>
-                                </div>
-                                {% endfor %}
+                            <div class="points-display">
+                                <div class="points-number">{{ player.total_points|default:0 }}</div>
+                                <small class="points-label">points</small>
                             </div>
                         </div>
                         
-                        <div class="col-md-6 mb-3">
+                        {% endwith %}
+                        {% endwith %}
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-users text-muted mb-3"></i>
+                        <p class="text-muted">No player data available.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
 
-                            <div class="border p-3 bg-dark rounded-top text-center">
-                                <b class="text-white">Week Winners</b>
-                            </div>
-                            
-                            <div class="border p-3 bg-light rounded-bottom text-center">
-                                {% for i in 18|times %}
-                                <div class="player-info-wrapper">        
-                                    <span class="player-row">
-                                        <div class="container-fluid">
-                                            <div class="row align-items-center">
-                                                <div class="col text-right">
-                                                    <h8 class="player-username text-uppercase d-flex justify-content-start">
-                                                        Week {{ i }}
-                                                    </h8>
-                                                </div>
-
-                                                <div class="col text-right">
-                                                    <h8 class="player-score d-flex text-uppercase justify-content-end">
-                                                        {% with i|lookweekwinner as winnername %}
-                                                            {% for x in winnername %}
-                                                                {% with x.userID|lookupname as username %}
-                                                                    {{ username }}
-                                                                {% endwith %}
-                                                            {% endfor %}
-                                                        {% endwith %}
-                                                    </h8>
-                                                </div>                            
+            <!-- Week Winners Section -->
+            <div class="section-container mb-5">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-calendar-check me-2"></i>Weekly Champions
+                    </h3>
+                </div>
+                
+                <div class="week-winners-grid">
+                    {% for i in 18|times %}
+                    <div class="week-winner-card">
+                        <div class="week-number">Week {{ i }}</div>
+                        <div class="winner-info">
+                            {% with i|lookweekwinner as winnername %}
+                                {% for x in winnername %}
+                                    {% with x.userID|safe_username as username %}
+                                    {% with x.userID|lookupavatar as avatar %}
+                                    <div class="winner-display d-flex align-items-center">
+                                        <img class="winner-avatar me-2" src="{{ avatar }}" alt="Profile picture for {{ username }}">
+                                        <div class="winner-details">
+                                            <div class="winner-name">
+                                                <i class="fas fa-trophy text-warning me-1"></i>
+                                                {{ username }}
                                             </div>
                                         </div>
-                                    </span>
-                                </div>
+                                    </div>
+                                    {% endwith %}
+                                    {% endwith %}
+                                {% empty %}
+                                    <div class="winner-placeholder">
+                                        <i class="fas fa-clock text-muted me-1"></i>
+                                        <span class="text-muted">TBD</span>
+                                    </div>
                                 {% endfor %}
-                            </div>
+                            {% endwith %}
                         </div>
                     </div>
-                  </div>
+                    {% endfor %}
+                </div>
+            </div>
 
-                <div class="container" style="width: 99%; padding: 0px;">
-                    <div class="row" >
-                        <div class="mb-3">
+            <!-- Week Details Section -->
+            <div class="section-container">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-chart-line me-2"></i>Detailed Breakdown
+                    </h3>
+                </div>
 
-                            <div class="border p-3 bg-dark rounded-top text-center">
-                                <b class="text-white">Week Details</b>
-                            </div>
-
-                            <div class="border p-3 bg-light rounded-bottom text-center">
-
-                                <table class="styled-table center" style="width: 90%;">
-                                    <thead>
-                                        <tr>
-                                            <th>Week</th>
-                                            <th>1</th>
-                                            <th>2</th>
-                                            <th>3</th>
-                                            <th>4</th>
-                                            <th>5</th>
-                                            <th>6</th>
-                                            <th>7</th>
-                                            <th>8</th>
-                                            <th>9</th>
-                                            <th>10</th>
-                                            <th>11</th>
-                                            <th>12</th>
-                                            <th>13</th>
-                                            <th>14</th>
-                                            <th>15</th>
-                                            <th>16</th>
-                                            <th>17</th>
-                                            <th>18</th>
-                                            <th>Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for player in player_points %}
-                                        <tr>
-                                            {% with player.userID|lookupname as username %}
-                                            <td class="text-uppercase"><b>{{ username }}</b></td>
-                                            {% endwith %}
-                                            
-                                            {% if player.week_1_points != None %}
-                                                <td>
-                                                    {{ player.week_1_points }}
-                                                    {% if player.week_1_winner == True %}
-                                                    + &#127942;
-                                                    {% endif %}
-                                                </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_2_points != None %}
-                                            <td>
-                                                {{ player.week_2_points }}
-                                                {% if player.week_2_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_3_points != None %}
-                                            <td>
-                                                {{ player.week_3_points }}
-                                                {% if player.week_3_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_4_points != None %}
-                                            <td>
-                                                {{ player.week_4_points }}
-                                                {% if player.week_4_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_5_points != None %}
-                                            <td>
-                                                {{ player.week_5_points }}
-                                                {% if player.week_5_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_6_points != None %}
-                                            <td>
-                                                {{ player.week_6_points }}
-                                                {% if player.week_6_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_7_points != None %}
-                                            <td>
-                                                {{ player.week_7_points }}
-                                                {% if player.week_7_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_8_points != None %}
-                                            <td>
-                                                {{ player.week_8_points }}
-                                                {% if player.week_8_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_9_points != None %}
-                                            <td>
-                                                {{ player.week_9_points }}
-                                                {% if player.week_9_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_10_points != None %}
-                                            <td>
-                                                {{ player.week_10_points }}
-                                                {% if player.week_10_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_11_points != None %}
-                                            <td>
-                                                {{ player.week_11_points }}
-                                                {% if player.week_11_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_12_points != None %}
-                                            <td>
-                                                {{ player.week_12_points }}
-                                                {% if player.week_12_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_13_points != None %}
-                                            <td>
-                                                {{ player.week_13_points }}
-                                                {% if player.week_13_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_14_points != None %}
-                                            <td>
-                                                {{ player.week_14_points }}
-                                                {% if player.week_14_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_15_points != None %}
-                                            <td>
-                                                {{ player.week_15_points }}
-                                                {% if player.week_15_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_16_points != None %}
-                                            <td>
-                                                {{ player.week_16_points }}
-                                                {% if player.week_16_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_17_points != None %}
-                                            <td>
-                                                {{ player.week_17_points }}
-                                                {% if player.week_17_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.week_18_points != None %}
-                                            <td>
-                                                {{ player.week_18_points }}
-                                                {% if player.week_18_winner == True %}
-                                                + &#127942;
-                                                {% endif %}
-                                            </td>
-                                            {% else %}
-                                            <td>&nbsp;</td>
-                                            {% endif %}
-
-                                            {% if player.total_points != None %}
-                                            <td>{{ player.total_points }}</td>
-                                            {% else %}
-                                            <td>0</td>
-                                            {% endif %}
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                <!-- Player Detail Cards for All Screen Sizes -->
+                <div class="player-cards-container">
+                    {% for player in player_points %}
+                    <div class="player-detail-card">
+                        {% with player.userID|safe_username as username %}
+                        <div class="player-card-header d-flex align-items-center mb-3">
+                            {% with player.userID|lookupavatar as avatar %}
+                            <img class="player-profile-img me-3" src="{{ avatar }}" alt="Profile picture for {{ username }}">
+                            {% endwith %}
+                            <div class="flex-grow-1">
+                                <h5 class="mb-0 text-uppercase">{{ username }}</h5>
+                                <small class="text-muted">Total: <strong>{{ player.total_points|default:0 }} points</strong></small>
                             </div>
                         </div>
+                        {% endwith %}
+                        
+                        <div class="weeks-grid">
+                            {% for week_num in 18|times %}
+                                {% with player|get_week_points:week_num as points %}
+                                    {% if points != None %}
+                                        <div class="week-item">
+                                            <div class="week-label">Week {{ week_num }}</div>
+                                            <div class="week-points">
+                                                {{ points }}
+                                                {% if player|get_week_winner:week_num %}
+                                                    <span class="trophy-icon ms-1" aria-label="Week winner">&#127942;</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endfor %}
+                        </div>
                     </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-chart-line text-muted mb-3"></i>
+                        <p class="text-muted">No player data available.</p>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+
+
 {% endblock %}

@@ -1,136 +1,367 @@
 {% extends 'pickem/base.html' %}
 {% load static %}
 {% load socialaccount %}
+{% load pickem_homepage_extras %}
+
+{% block banner %}
+<div class="site-banner banner-success">
+    <div class="container">
+        <div class="banner-content">
+            <div class="banner-icon">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <div class="banner-text">
+                Welcome to the Family Pickem 2025 Season!
+            </div>
+            <button type="button" class="banner-close" aria-label="Close banner">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="container min-vh-100">
 
-  <BR><BR><BR><BR>
-  {% comment %} <div class="charts-container">
-      <!-- green -->
-      <div class="clearfix">
-        <div class="c100 p25 green">
-            <span>25%</span>
-            <div class="slice">
-                <div class="bar"></div>
-                <div class="fill"></div>
+    <div class="container homepage-main-container">
+        
+        <!-- Hero Welcome Section -->
+        <div class="hero-section text-center mb-5">
+            <div class="hero-content">
+                <div class="hero-logo mb-3">
+                    <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="hero-logo-img">
+                </div>
+                <h1 class="hero-title">Welcome to Family Pickem</h1>
+                <p class="hero-subtitle">Your ultimate NFL pick 'em league experience</p>
+                
+                {% if user.is_authenticated %}
+                    <div class="welcome-user-info">
+                        <div class="user-avatar-container">
+                            <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}" 
+                                 alt="Your profile picture" 
+                                 class="welcome-avatar">
+                        </div>
+                        <h4 class="welcome-message">
+                            Welcome back, {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}!
+                        </h4>
+                        <p class="text-muted">Ready to make your Week {{ current_week }} picks?</p>
+                    </div>
+                {% else %}
+                    <div class="guest-welcome">
+                        <h4>Join the Family League</h4>
+                        <p class="text-muted">Sign in to start making picks and compete with friends!</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
-      </div>
-      <!-- /green -->
 
-      <!-- green -->
-      <div class="clearfix">
-        <div class="c100 p25 green">
-            <span>25%</span>
-            <div class="slice">
-                <div class="bar"></div>
-                <div class="fill"></div>
+        <!-- Current Week Status -->
+        <div class="section-container mb-4">
+            <div class="section-header">
+                <h3 class="section-title">
+                    <i class="fas fa-calendar-week me-2"></i>Week {{ current_week }} Status
+                </h3>
+            </div>
+            
+            <div class="week-status-grid">
+                <div class="status-card">
+                    <div class="status-icon">
+                        <i class="fas fa-football-ball"></i>
+                    </div>
+                    <div class="status-info">
+                        <div class="status-value">{{ current_games }}</div>
+                        <div class="status-label">Games This Week</div>
+                    </div>
+                </div>
+                
+                <div class="status-card">
+                    <div class="status-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="status-info">
+                        <div class="status-value">{{ total_players }}</div>
+                        <div class="status-label">Active Players</div>
+                    </div>
+                </div>
+                
+                {% if current_week_winner %}
+                <div class="status-card winner-card">
+                    <div class="status-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="status-info">
+                        <div class="status-value">
+                            {% with current_week_winner.userID|safe_username as winner_name %}
+                                {{ winner_name|truncatechars:12 }}
+                            {% endwith %}
+                        </div>
+                        <div class="status-label">Week Winner</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="status-card pending-card">
+                    <div class="status-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="status-info">
+                        <div class="status-value">TBD</div>
+                        <div class="status-label">Week Winner</div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if user.is_authenticated %}
+                <div class="status-card {% if user_has_picks %}picks-submitted{% else %}picks-pending{% endif %}">
+                    <div class="status-icon">
+                        <i class="fas {% if user_has_picks %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                    </div>
+                    <div class="status-info">
+                        <div class="status-value">
+                            {% if user_has_picks %}Submitted{% else %}Pending{% endif %}
+                        </div>
+                        <div class="status-label">Your Picks</div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
-      </div>
-      <!-- /green -->
 
-      <!-- green -->
-      <div class="clearfix">
-        <div class="c100 p25 green">
-            <span>25%</span>
-            <div class="slice">
-                <div class="bar"></div>
-                <div class="fill"></div>
+        <!-- Quick Navigation -->
+        <div class="section-container mb-4">
+            <div class="section-header">
+                <h3 class="section-title">
+                    <i class="fas fa-compass me-2"></i>Quick Actions
+                </h3>
+            </div>
+            
+            <div class="quick-nav-grid">
+                {% if user.is_authenticated %}
+                <a href="/picks/" class="nav-card picks-card">
+                    <div class="nav-card-icon">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                    <div class="nav-card-content">
+                        <h5 class="nav-card-title">Submit Picks</h5>
+                        <p class="nav-card-subtitle">Make your Week {{ current_week }} predictions</p>
+                        {% if not user_has_picks %}
+                            <span class="nav-card-badge">Action Required</span>
+                        {% endif %}
+                    </div>
+                </a>
+                {% else %}
+                <a href="{% provider_login_url 'google' %}" class="nav-card login-card">
+                    <div class="nav-card-icon">
+                        <i class="fab fa-google"></i>
+                    </div>
+                    <div class="nav-card-content">
+                        <h5 class="nav-card-title">Sign In</h5>
+                        <p class="nav-card-subtitle">Join the league with Google</p>
+                    </div>
+                </a>
+                {% endif %}
+                
+                <a href="/scores/" class="nav-card scores-card">
+                    <div class="nav-card-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="nav-card-content">
+                        <h5 class="nav-card-title">Live Scores</h5>
+                        <p class="nav-card-subtitle">Track current week results</p>
+                    </div>
+                </a>
+                
+                <a href="/standings/" class="nav-card standings-card">
+                    <div class="nav-card-icon">
+                        <i class="fas fa-medal"></i>
+                    </div>
+                    <div class="nav-card-content">
+                        <h5 class="nav-card-title">Standings</h5>
+                        <p class="nav-card-subtitle">View league leaderboard</p>
+                    </div>
+                </a>
+                
+                <a href="/stats/" class="nav-card stats-card">
+                    <div class="nav-card-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="nav-card-content">
+                        <h5 class="nav-card-title">Statistics</h5>
+                        <p class="nav-card-subtitle">Player performance data</p>
+                    </div>
+                </a>
+                
+                <a href="/rules/" class="nav-card rules-card">
+                    <div class="nav-card-icon">
+                        <i class="fas fa-gavel"></i>
+                    </div>
+                    <div class="nav-card-content">
+                        <h5 class="nav-card-title">Rules</h5>
+                        <p class="nav-card-subtitle">League guidelines</p>
+                    </div>
+                </a>
             </div>
         </div>
-      </div>
-      <!-- /green -->
 
-      <!-- green -->
-      <div class="clearfix">
-        <div class="c100 p25 green">
-            <span>25%</span>
-            <div class="slice">
-                <div class="bar"></div>
-                <div class="fill"></div>
-            </div>
-        </div>
-      </div>
-      <!-- /green -->
-
-      <!-- green -->
-      <div class="clearfix">
-        <div class="c100 p25 green">
-            <span>25%</span>
-            <div class="slice">
-                <div class="bar"></div>
-                <div class="fill"></div>
-            </div>
-        </div>
-      </div>
-      <!-- /green -->
-
-      <!-- green -->
-      <div class="clearfix">
-        <div class="c100 p25 green">
-            <span>25%</span>
-            <div class="slice">
-                <div class="bar"></div>
-                <div class="fill"></div>
-            </div>
-        </div>
-      </div>
-      <!-- /green -->
-
-  </div> {% endcomment %}
-      
-
-      <div class="image"><img src="{% static '/images/homepage.png' %}" class="img-fluid" alt="Responsive image"></div>
-      <BR>
-      <div class="col-lg-6 mx-auto">
-        <!-- <p class="lead mb-4">Welcome to the 2022/23 FFPL year!</p> -->
-
-        {% comment %} <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
-
-          
-            <div class="border p-3 bg-dark rounded-top text-center">
-                <b class="text-white">Seson Winner</b>
-            </div>
-  
-            <div class="border p-3 bg-light rounded-bottom text-center">
-                <div class="player-winner-wrapper">        
-                    <span class="player-row">
-                        {% with player.userID|lookupname as username %}
-                        {% with player.userID|lookupavatar as avatar %}
-                            <div class="col-auto pr-2">
-                                <img class="player-profile-xl-img" src="{{ avatar }}">
+        <div class="row">
+            <!-- Leaderboard Preview -->
+            <div class="col-lg-6 mb-4">
+                <div class="section-container">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <i class="fas fa-trophy me-2"></i>Top Players
+                        </h3>
+                        <a href="/standings/" class="section-link">View All</a>
+                    </div>
+                    
+                    <div class="leaderboard-preview">
+                        {% for player in top_players %}
+                        <div class="player-preview-card">
+                            <div class="player-rank-badge position-{{ forloop.counter }}">
+                                {{ forloop.counter }}
                             </div>
-                            <div class="col">
-                                <h8 class="player-username text-uppercase d-flex justify-content-center">{{ username }}</h8>
+                            <div class="player-preview-info">
+                                {% with player.userID|lookupavatar as avatar %}
+                                {% with player.userID|safe_username as username %}
+                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                     alt="Profile picture for {{ username }}" 
+                                     class="player-preview-avatar">
+                                <div class="player-preview-details">
+                                    <div class="player-preview-name">{{ username|default:"Unknown Player" }}</div>
+                                    <div class="player-preview-points">{{ player.total_points|default:0 }} points</div>
+                                </div>
+                                {% endwith %}
+                                {% endwith %}
                             </div>
-                        {% endwith %}
-                        {% endwith %}
-                    </span>
+                        </div>
+                        {% empty %}
+                        <div class="no-data-message">
+                            <p class="text-muted">No standings data available yet.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
-                      
-                  <BR>
-          
 
-        </div> {% endcomment %}
+            <!-- League Statistics & Recent Activity -->
+            <div class="col-lg-6 mb-4">
+                <div class="section-container">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <i class="fas fa-chart-pie me-2"></i>League Stats
+                        </h3>
+                    </div>
+                    
+                    <div class="stats-summary">
+                        <div class="stat-summary-item">
+                            <div class="stat-summary-icon">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <div class="stat-summary-content">
+                                <div class="stat-summary-value">{{ league_accuracy }}%</div>
+                                <div class="stat-summary-label">League Accuracy</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-summary-item">
+                            <div class="stat-summary-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-summary-content">
+                                <div class="stat-summary-value">{{ total_correct_picks|default:0 }}</div>
+                                <div class="stat-summary-label">Correct Picks</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-summary-item">
+                            <div class="stat-summary-icon">
+                                <i class="fas fa-list-ol"></i>
+                            </div>
+                            <div class="stat-summary-content">
+                                <div class="stat-summary-value">{{ total_picks|default:0 }}</div>
+                                <div class="stat-summary-label">Total Picks</div>
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
-          <a href="/scores/" class="btn btn-primary btn-lg px-4 me-sm-3" role="button">Current Week Scores</a>
-          {% if user.is_authenticated %}
-          <a href="/picks" class="btn btn-outline-secondary btn-lg px-4" role="button">Submit Weekly Picks</a>
-          {% else %}
-          <a  href="{% provider_login_url 'google' %}" class="btn btn-outline-secondary btn-lg px-4" role="button">Login With Google</a>
-          {% endif %}
+                    <!-- Recent Winners -->
+                    {% if recent_winners %}
+                    <div class="recent-activity mt-4">
+                        <h6 class="activity-title">
+                            <i class="fas fa-history me-2"></i>Recent Week Winners
+                        </h6>
+                        <div class="recent-winners-list">
+                            {% for winner_data in recent_winners %}
+                            <div class="recent-winner-item">
+                                <div class="winner-week-badge">W{{ winner_data.week }}</div>
+                                <div class="winner-info">
+                                    {% with winner_data.winner.userID|safe_username as winner_name %}
+                                    {% with winner_data.winner.userID|lookupavatar as winner_avatar %}
+                                    <img src="{{ winner_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                         alt="Profile picture for {{ winner_name }}" 
+                                         class="winner-mini-avatar">
+                                    <span class="winner-name">{{ winner_name|default:"Unknown Player" }}</span>
+                                    {% endwith %}
+                                    {% endwith %}
+                                </div>
+                                <div class="winner-trophy">
+                                    <i class="fas fa-trophy text-warning"></i>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="overflow-hidden" style="max-height: 30vh;">
-        <div class="container px-5">
-          <!-- <img src="bootstrap-docs.png" class="img-fluid border rounded-3 shadow-lg mb-4" alt="Example image" width="700" height="500" loading="lazy"> -->
+
+        <!-- Season Champion Section (if exists) -->
+        {% if season_winner %}
+        <div class="section-container mb-4">
+            <div class="champion-spotlight">
+                <div class="champion-content">
+                    <div class="champion-crown">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <h3 class="champion-title">Season Champion</h3>
+                    {% with season_winner.userID|safe_username as champion_name %}
+                    {% with season_winner.userID|lookupavatar as champion_avatar %}
+                    <div class="champion-info">
+                        <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                             alt="Profile picture for {{ champion_name }}" 
+                             class="champion-avatar">
+                        <div class="champion-details">
+                            <h4 class="champion-name">{{ champion_name|default:"Unknown Champion" }}</h4>
+                            <p class="champion-subtitle">Congratulations on your victory!</p>
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% endwith %}
+                </div>
+            </div>
         </div>
-      </div>    
+        {% endif %}
+
+        <!-- Footer Information -->
+        <div class="homepage-footer text-center">
+            <div class="footer-features">
+                <div class="feature-item">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span>Mobile Friendly</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-sync"></i>
+                    <span>Real-time Updates</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Secure Login</span>
+                </div>
+            </div>
+            <p class="footer-text text-muted mt-3">
+                Join the excitement • Make your picks • Win prizes • Have fun!
+            </p>
+        </div>
     </div>
-  </div>
-</div>
+
 {% endblock %}
