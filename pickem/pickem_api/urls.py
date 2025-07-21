@@ -5,6 +5,9 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
+    # CURRENT SEASON
+    re_path(r'^currentseason', views.get_current_season_api, name='get_current_season'),
+
     # GAMES
     re_path(r'^games/(?P<pk>[0-9]+)$', views.game_detail),
     re_path(r'^games', views.game_list),

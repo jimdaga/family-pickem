@@ -285,6 +285,8 @@ class userStats(models.Model):
     # Number of seasons won (All Time)
     seasonsWon = models.IntegerField(max_length=250, blank=True, null=True)
 
+class currentSeason(models.Model):
+    season = models.IntegerField(blank=True, null=True)
 
 def __str__(self):
     return self.slug

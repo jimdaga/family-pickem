@@ -4,25 +4,35 @@ import requests
 import json
 from datetime import date
 import argparse
+import os
+import requests
+from datetime import date
+from espn_api.football import League
+
 
 parser = argparse.ArgumentParser(description='Populate/Update NFL Games.')
+parser.add_argument('--url', default='localhost', help='The host for the API endpoint (e.g., localhost or a domain name)')
 parser.add_argument("--gameweek", help="Specify the week to update.")
-parser.add_argument("--url", help="Specify the API url.")
 args, leftovers = parser.parse_known_args()
 
 
 def get_season():
-    # I'll probably hate myself in the future for hardcoding this :) 
-    today = date.today()
-    today_datestamp = date(today.year, today.month, today.day)
-
-    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
-        return '2223'
-    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
-        return '2324'
-    elif today_datestamp > date(2024, 4, 1):
-        return '2425'
+    """
+    Fetches the current season from the API endpoint.
+    This avoids hardcoding the season in multiple places.
+    """
+    try:
+        # The script now expects a --url argument, which defaults to 'localhost'.
+        response = requests.get('http://{}/api/currentseason/'.format(args.url))
+        response.raise_for_status()  # Raise an exception for bad status codes
+        return response.json()['current_season']
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching current season from API: {e}. Using fallback logic.")
         
+        # Fallback to YYZZ date format logic. The season year changes in April.
+        return 2526
+
+
 def check_game_id(id):
     """
     Check if game ID has already been added.
@@ -134,7 +144,8 @@ def build_payload(week):
     """
     url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
 
-    querystring = {"week": week}
+    game_year = "2025"
+    querystring = {"week": week, "dates": game_year}
 
     headers = {
         "Content-Type": "application/json",
@@ -142,16 +153,15 @@ def build_payload(week):
     
     try:
         response = requests.request("GET", url, headers=headers, params=querystring)
+        response.raise_for_status()
         json_response = json.loads(response.text)    
 
         game_competition = "nfl"
-        game_year = "2024"
         game_season = get_season()
         game_week = json_response['week']['number']
 
         for event in json_response["events"]:
             print("###################################################")
-            game_year = event['season']['year']
             
             for competition in event["competitions"]:
                 game_id = competition['id']       
@@ -280,8 +290,11 @@ def build_payload(week):
             json_string = json.dumps(payload, default=str)
             add_games(json_string, game_id)
 
-    except requests.exceptions.RequestException:
-        print(response.text)
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP Error: {e}")
+        print(f"Response text: {response.text}")
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
 
 
 def update_games():

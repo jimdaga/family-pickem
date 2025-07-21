@@ -32,22 +32,45 @@ parser.add_argument("--gamedate", help="Specify the date to update.")
 args, leftovers = parser.parse_known_args()
 
 def get_season():
-    # I'll probably hate myself in the future for hardcoding this :) 
-    today = date.today()
-    today_datestamp = date(today.year, today.month, today.day)
+    """
+    Fetches the current season from the API endpoint.
+    This avoids hardcoding the season in multiple places.
+    """
+    try:
+        # The script now expects a --url argument, which defaults to 'localhost'.
+        response = requests.get('http://{}/api/currentseason/'.format(args.url))
+        response.raise_for_status()  # Raise an exception for bad status codes
+        return response.json()['current_season']
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching current season from API: {e}. Using fallback logic.")
+        
+        # Fallback to YYZZ date format logic. The season year changes in April.
+        today = date.today()
+        if today.month < 4:
+            season_start_year = today.year - 1
+        else:
+            season_start_year = today.year
+        
+        season_end_year = season_start_year + 1
+        fallback_season = f"{str(season_start_year)[-2:]}{str(season_end_year)[-2:]}"
+        print(f"Fallback season is: {fallback_season}")
+        return fallback_season
 
-    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
-        return '2223'
-    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
-        return '2324'
-    elif today_datestamp > date(2024, 4, 1):
-        return '2425'
+def get_game_year(game_season):
+    """
+    Get the game year from the game season.
+    """
+    today = date.today()
+    if today.month >= 8:
+        return today.year
+    else:
+        return today.year + 1
 
 def check_game_id(id):
     """
     Check if game ID has already been added.
     """
-    url = "http://localhost:8000/api/games/{}".format(id)
+    url = "http://localhost/api/games/{}".format(id)
 
     headers = {
         "Content-Type": "application/json",
@@ -90,7 +113,7 @@ def get_game_week(game_date):
     """
     Check week number for a date
     """
-    url = "http://localhost:8000/api/weeks/{}".format(game_date)
+    url = "http://localhost/api/weeks/{}".format(game_date)
 
     headers = {
         "Content-Type": "application/json",
@@ -110,11 +133,11 @@ def add_games(payload, id):
     }
 
     if check_game_id(id): 
-        url = "http://localhost:8000/api/games/{}".format(id)
+        url = "http://localhost/api/games/{}".format(id)
         x = requests.put(url, data = payload, headers = headers)
         verb = "Updated"
     else:
-        url = "http://localhost:8000/api/games/"
+        url = "http://localhost/api/games/"
         x = requests.post(url, data = payload, headers = headers)
         verb = "Added"
     
@@ -146,7 +169,7 @@ def build_payload(payload):
             else:
                 tieBreakerGame = False
             gameWeek = get_game_week(startDate)
-            gameYear = "2024"
+            gameYear = "2025"
             if "winner" in entry:
                 if entry['winner'] == 1:
                     gameWinner = entry['homeTeam']['slug']

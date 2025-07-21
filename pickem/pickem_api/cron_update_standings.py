@@ -11,16 +11,29 @@ parser.add_argument("--url", help="Specify the API url.")
 args, leftovers = parser.parse_known_args()
 
 def get_season():
-    # I'll probably hate myself in the future for hardcoding this :)
-    today = date.today()
-    today_datestamp = date(today.year, today.month, today.day)
-
-    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
-        return '2223'
-    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
-        return '2324'
-    elif today_datestamp > date(2024, 4, 1):
-        return '2425'
+    """
+    Fetches the current season from the API endpoint.
+    This avoids hardcoding the season in multiple places.
+    """
+    try:
+        # The script now expects a --url argument, which defaults to 'localhost'.
+        response = requests.get('http://{}/api/currentseason/'.format(args.url))
+        response.raise_for_status()  # Raise an exception for bad status codes
+        return response.json()['current_season']
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching current season from API: {e}. Using fallback logic.")
+        
+        # Fallback to YYZZ date format logic. The season year changes in April.
+        today = date.today()
+        if today.month < 4:
+            season_start_year = today.year - 1
+        else:
+            season_start_year = today.year
+        
+        season_end_year = season_start_year + 1
+        fallback_season = f"{str(season_start_year)[-2:]}{str(season_end_year)[-2:]}"
+        print(f"Fallback season is: {fallback_season}")
+        return fallback_season
     
 def unique_list(list):
     """

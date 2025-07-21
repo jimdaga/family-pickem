@@ -4916,3 +4916,9 @@ body:has(.site-banner) .homepage-main-container {
         transform: translateY(0);
     }
 }
+
+/* Prevent horizontal scrolling on mobile */
+html, body {
+    overflow-x: hidden;
+    width: 100%;
+}

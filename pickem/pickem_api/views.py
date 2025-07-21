@@ -1,10 +1,10 @@
 from functools import partial
 from itertools import count
-from .serializers import GameSerializer, GameWeeksSerializer, GamePicksSerializer, TeamsSerializer, UserSeasonPointsSerializer, UserSerializer
+from .serializers import GameSerializer, GameWeeksSerializer, GamePicksSerializer, TeamsSerializer, UserSeasonPointsSerializer, UserSerializer, currentSeasonSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.contrib.auth.models import User
-from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userSeasonPoints
+from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userSeasonPoints, currentSeason
 from django.db.models import Q
 from django.http import HttpResponse
 from django.http.response import JsonResponse
@@ -15,19 +15,29 @@ from datetime import datetime
 from django.db.models import Count
 
 
-def get_season():
-    # I'll probably hate myself in the future for hardcoding this :)
-    today = date.today()
-    today_datestamp = date(today.year, today.month, today.day)
-
-    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
-        return '2223'
-    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
-        return '2324'
-    elif today_datestamp > date(2024, 4, 1):
-        return '2425'
-
 # Create your views here.
+
+def get_season():
+    # Select the 'season' value directly from the currentSeason model.
+    # This is more efficient as it avoids fetching the entire object.
+    try:
+        # Assuming there should be only one 'current' season entry.
+        return currentSeason.objects.get().season
+    except currentSeason.DoesNotExist:
+        # Fallback to a default season if none is configured.
+        return 2025
+    except currentSeason.MultipleObjectsReturned:
+        # If multiple entries exist, return the latest one.
+        return currentSeason.objects.latest('id').season
+
+
+@api_view(['GET'])
+def get_current_season_api(request):
+    """
+    API endpoint to get the current configured season.
+    """
+    current_season = get_season()
+    return JsonResponse({'current_season': current_season})
 
 
 def index(request):

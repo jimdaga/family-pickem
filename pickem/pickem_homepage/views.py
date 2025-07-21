@@ -14,18 +14,10 @@ from django.db.models.functions import Coalesce
 from datetime import date
 
 from django.forms import formset_factory
+from pickem.utils import get_season as get_season_from_api
 
 def get_season():
-    # I'll probably hate myself in the future for hardcoding this :) 
-    today = date.today()
-    today_datestamp = date(today.year, today.month, today.day)
-
-    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
-        return '2223'
-    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
-        return '2324'
-    elif today_datestamp > date(2024, 4, 1):
-        return '2425'
+    return get_season_from_api()
 
 def index(request):
     today = date.today()
