@@ -110,10 +110,18 @@ def index(request):
 
 
 def standings(request):
-    return render(request, 'pickem/standings.html')
+    gameseason = get_season()
+    template = loader.get_template('pickem/standings.html')
+    context = {'gameseason': gameseason}
+    return HttpResponse(template.render(context, request))
+
 
 def rules(request):
-    return render(request, 'pickem/rules.html')
+    gameseason = get_season()
+    template = loader.get_template('pickem/rules.html')
+    context = {'gameseason': gameseason}
+    return HttpResponse(template.render(context, request))
+
 
 def scores(request):
 
@@ -237,7 +245,8 @@ def standings(request):
 
     context = {
         'players': players,
-        'player_points': player_points
+        'player_points': player_points,
+        'gameseason': gameseason,
     }
     return HttpResponse(template.render(context, request))
 
@@ -257,6 +266,7 @@ def stats(request):
     context = {
         'players': players,
         'player_points': player_points,
+        'gameseason': gameseason,
     }
     return HttpResponse(template.render(context, request))
 
@@ -310,10 +320,15 @@ def submit_game_picks(request):
 
     return render(request, 'pickem/picks.html', context)
 
+
 def rules(request):
+    gameseason = get_season()
     template = loader.get_template('pickem/rules.html')
-    context = {}
+    context = {
+        'gameseason': gameseason,
+    }
     return HttpResponse(template.render(context, request))
+
 
 def home_view(request):
     context = {

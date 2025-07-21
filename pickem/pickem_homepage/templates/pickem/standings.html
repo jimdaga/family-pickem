@@ -3,6 +3,17 @@
 {% load socialaccount %}
 {% load pickem_homepage_extras %}
 
+{% block mobile_title %}
+    <div class="mobile-page-header">
+        <h2 class="mobile-title-text">
+            <i class="fas fa-trophy me-2"></i>League Standings
+        </h2>
+        <div class="mobile-subtitle">
+            Track your picks, celebrate your wins
+        </div>
+    </div>
+{% endblock %}
+
 {% block content %}
 
 <div class="container min-vh-100">
@@ -12,7 +23,7 @@
     <div class="container standings-main-container">
         <div class="col">
             <!-- Page Header -->
-            <div class="page-header text-center mb-4">
+            <div class="page-header text-center mb-4 d-none d-lg-block">
                 <h2 class="display-4 fw-bold mb-2">
                     <i class="fas fa-trophy me-3"></i>League Standings
                 </h2>

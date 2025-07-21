@@ -2,11 +2,26 @@
 {% load static %}
 {% load pickem_homepage_extras %}
 
+{% block mobile_title %}
+    <div class="mobile-page-header">
+        <h2 class="mobile-title-text">
+            <i class="fas fa-chart-line me-2"></i>Live Scores
+        </h2>
+        <div class="mobile-subtitle">
+            {% if competition == 'nfl-preseason' %}
+                Preseason - Week {{ week }}
+            {% else %}
+                Regular Season - Week {{ week }}
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
 {% block content %}
 
     <div class="container scores-main-container">
         <!-- Page Header -->
-        <div class="page-header text-center mb-4">
+        <div class="page-header text-center mb-4 d-none d-lg-block">
             <h2 class="display-4 fw-bold mb-2">
                 <i class="fas fa-chart-line me-3"></i>Live Scores
             </h2>

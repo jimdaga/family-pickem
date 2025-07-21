@@ -18,7 +18,7 @@ Pickem
 - [ ] Hide "picks" or "picks made" if == 0 
 - [ ] Add audit database 
 - [ ] Give users way to change username (remove dependency on username in points)
-
+- [ ] Add a cronjob to delete stuck update data jobs 
 ### Done 
 - [x] Update prod instance with weeks/games for 2023/24
 - [x] Fix records to use current season

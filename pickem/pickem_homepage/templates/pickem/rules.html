@@ -2,13 +2,24 @@
 {% load static %}
 {% load socialaccount %}
 
+{% block mobile_title %}
+    <div class="mobile-page-header">
+        <h2 class="mobile-title-text">
+            <i class="fas fa-gavel me-2"></i>League Rules
+        </h2>
+        <div class="mobile-subtitle">
+            Official guidelines and regulations for fair play
+        </div>
+    </div>
+{% endblock %}
+
 {% block content %}
 
     <br><br><br><br>
     <div class="container rules-main-container">
         <div class="col">
             <!-- Page Header -->
-            <div class="page-header text-center mb-4">
+            <div class="page-header text-center mb-4 d-none d-lg-block">
                 <h2 class="display-4 fw-bold mb-2">
                     <i class="fas fa-gavel me-3"></i>League Rules
                 </h2>

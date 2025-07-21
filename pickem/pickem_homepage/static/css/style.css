@@ -2699,7 +2699,7 @@ body:has(.site-banner) .homepage-main-container {
 
 /* Main Container */
 .scores-main-container {
-    margin-top: 5rem;
+    margin-top: 2rem;
     padding-top: 1rem;
 }
 
@@ -4921,4 +4921,58 @@ body:has(.site-banner) .homepage-main-container {
 html, body {
     overflow-x: hidden;
     width: 100%;
+}
+
+/* Mobile Navbar Title */
+.navbar-mobile-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    color: #fff;
+}
+
+.mobile-page-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.mobile-title-text {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.mobile-subtitle {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+/* Hide the expanded title by default */
+.navbar-mobile-title-expanded {
+    display: none;
+}
+
+/* When the navbar is expanded, hide the centered title */
+.navbar-expanded .navbar-mobile-title {
+    display: none;
+}
+
+/* When the navbar is expanded, show the title at the top of the list */
+.navbar-expanded .navbar-mobile-title-expanded {
+    display: block;
+    text-align: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid #495057;
+}
+
+.navbar-collapse.show ~ .navbar-mobile-title,
+.navbar-collapse.collapsing ~ .navbar-mobile-title {
+    display: none;
+}
+
+/* When the mobile menu is expanded, hide the centered title */
+.navbar-menu-expanded .navbar-mobile-title {
+    display: none;
 }
