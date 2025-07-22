@@ -1288,10 +1288,19 @@ tr.spaceUnder>td {
 .page-header {
     background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
     color: white;
-    padding: 3rem 2rem;
+    padding: 1.5rem 2rem;
     border-radius: 15px;
     margin-bottom: 2rem;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.page-header-picks {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 50%, #3c3c3c 100%) !important;
+    padding: 1.5rem 2rem !important;
+}
+
+.page-header-picks .lead {
+    color: rgba(255,255,255,0.9);
 }
 
 .page-header .display-4 {
@@ -1475,6 +1484,9 @@ tr.spaceUnder>td {
     font-weight: 600;
     color: #212529;
     font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .winner-placeholder {
@@ -2315,6 +2327,8 @@ tr.spaceUnder>td {
     box-shadow: 0 15px 40px rgba(0,0,0,0.3);
     position: relative;
     overflow: hidden;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
 }
 
 .hero-section::before {
@@ -2955,6 +2969,7 @@ body:has(.site-banner) .homepage-main-container {
 /* Game Score Cards */
 .games-grid {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
     gap: 1.5rem;
 }
 
@@ -4234,7 +4249,7 @@ body:has(.site-banner) .homepage-main-container {
 /* Games Grid */
 .games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
     gap: 1.5rem;
 }
 
@@ -4975,4 +4990,133 @@ html, body {
 /* When the mobile menu is expanded, hide the centered title */
 .navbar-menu-expanded .navbar-mobile-title {
     display: none;
+}
+
+/* Center right-side nav items on mobile */
+@media (max-width: 991.98px) {
+    .nav-right-mobile-center {
+        align-items: center;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    
+    .nav-right-mobile-center .nav-item {
+        margin-bottom: 0.5rem;
+    }
+
+    .nav-right-mobile-center .nav-item:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* PROFILE PAGE STYLES */
+.profile-main-container {
+    padding-top: 2rem;
+    padding-bottom: 4rem;
+}
+
+.profile-header {
+    margin-bottom: 3rem;
+}
+
+.profile-avatar-container {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 1.5rem;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 5px solid white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.online-indicator {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    background-color: #28a745;
+    border-radius: 50%;
+    border: 3px solid white;
+}
+
+.profile-name {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.profile-email {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+}
+
+.profile-actions .btn {
+    margin: 0 0.5rem;
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+}
+
+.profile-card-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.profile-card-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.profile-card-body {
+    padding: 1.5rem;
+}
+
+.info-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    font-weight: 500;
+}
+
+.settings-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.setting-label {
+    font-weight: 500;
 }

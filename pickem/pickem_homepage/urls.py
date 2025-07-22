@@ -16,4 +16,5 @@ urlpatterns = [
     re_path(
         r'^scores/competition/(?P<competition>[0-9]+)/season/(?P<gameseason>[0-9]+)/week/(?P<week>[0-9]+)$', views.scores_long, name='scores_long'),
     path('picks/', views.submit_game_picks, name='game_picks'),
+    path('profile/', views.profile, name='profile'),
 ]

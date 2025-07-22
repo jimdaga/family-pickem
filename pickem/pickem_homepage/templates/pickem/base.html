@@ -126,7 +126,7 @@
                  </ul>
 
                  <!-- Right Side Navigation -->
-                 <ul class="navbar-nav ms-auto">
+                 <ul class="navbar-nav ms-auto nav-right-mobile-center">
                     {% if user.is_authenticated %}
                         <!-- Submit Picks Button -->
                         <li class="nav-item me-3">
@@ -152,12 +152,15 @@
                             
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <h6 class="dropdown-header">
-                                        {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} 
-                                        {{ user.socialaccount_set.all.0.extra_data.family_name }}
-                                    </h6>
+                                    <a class="dropdown-item" href="{% url 'profile' %}">
+                                        <strong>
+                                            {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} 
+                                            {{ user.socialaccount_set.all.0.extra_data.family_name }}
+                                        </strong>
+                                        <br>
+                                        <small class="text-muted">{{ user.email }}</small>
+                                    </a>
                                 </li>
-                                <li><h6 class="dropdown-header text-muted">{{ user.email }}</h6></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="/logout">
                                     <i class="fas fa-sign-out-alt me-2"></i>Logout

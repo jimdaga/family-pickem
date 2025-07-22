@@ -111,16 +111,18 @@ def index(request):
 
 def standings(request):
     gameseason = get_season()
-    template = loader.get_template('pickem/standings.html')
-    context = {'gameseason': gameseason}
-    return HttpResponse(template.render(context, request))
+    player_points = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
+    context = {
+        'player_points': player_points,
+        'gameseason': gameseason
+    }
+    return render(request, 'pickem/standings.html', context)
 
 
 def rules(request):
     gameseason = get_season()
-    template = loader.get_template('pickem/rules.html')
     context = {'gameseason': gameseason}
-    return HttpResponse(template.render(context, request))
+    return render(request, 'pickem/rules.html', context)
 
 
 def scores(request):
@@ -183,7 +185,8 @@ def scores(request):
         'week_winner': week_winner,
         'current_week': True,
         'points_total': points_total,
-        'game_weeks': range(1,19)
+        'game_weeks': range(1,19),
+        'gameseason': gameseason
     }
     return HttpResponse(template.render(context, request))
 
@@ -228,7 +231,8 @@ def scores_long(request, competition, gameseason, week):
         'players_ids': players_ids,
         'week_winner': week_winner,
         'points_total': points_total,
-        'game_weeks': range(1,19)
+        'game_weeks': range(1,19),
+        'gameseason': gameseason
     }
     return HttpResponse(template.render(context, request))
 
@@ -246,7 +250,7 @@ def standings(request):
     context = {
         'players': players,
         'player_points': player_points,
-        'gameseason': gameseason,
+        'gameseason': gameseason
     }
     return HttpResponse(template.render(context, request))
 
@@ -266,7 +270,7 @@ def stats(request):
     context = {
         'players': players,
         'player_points': player_points,
-        'gameseason': gameseason,
+        'gameseason': gameseason
     }
     return HttpResponse(template.render(context, request))
 
@@ -331,10 +335,20 @@ def rules(request):
 
 
 def home_view(request):
+    gameseason = get_season()
     context = {
         'banner_message': 'Week 15 picks are due by Sunday at 1 PM EST!',
         'banner_type': 'warning',
         'banner_icon': 'fas fa-clock',
-        'banner_dismissible': True
+        'banner_dismissible': True,
+        'gameseason': gameseason
     }
     return render(request, 'pickem/home.html', context)
+
+
+def profile(request):
+    gameseason = get_season()
+    context = {
+        'gameseason': gameseason,
+    }
+    return render(request, 'pickem/profile.html', context)
