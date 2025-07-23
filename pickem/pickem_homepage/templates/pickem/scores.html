@@ -273,7 +273,7 @@
                                 </div>
 
                                 <!-- Player Picks Section -->
-                                {% if picks %}
+                                {% if picks and game.statusType != 'notstarted' %}
                                 <div class="picks-section">
                                     <div class="picks-header">
                                         <i class="fas fa-users me-2"></i>Player Picks
@@ -300,8 +300,6 @@
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
                                                         <span class="player-pick-badge pick-pending">
-                                                    {% else %}
-                                                        <span class="player-pick-badge pick-waiting">
                                                     {% endif %}
                                                         {% with pick.uid|lookupname as username %}
                                                         {{ username|default:"Unknown" }}
@@ -336,8 +334,6 @@
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
                                                         <span class="player-pick-badge pick-pending">
-                                                    {% else %}
-                                                        <span class="player-pick-badge pick-waiting">
                                                     {% endif %}
                                                         {% with pick.uid|lookupname as username %}
                                                         {{ username|default:"Unknown" }}
