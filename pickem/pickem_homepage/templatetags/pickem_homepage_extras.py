@@ -4,20 +4,10 @@ from pickem_api.models import Teams, GamePicks, userSeasonPoints, userStats
 from django.shortcuts import render
 from allauth.socialaccount.models import SocialAccount
 from datetime import date
+import requests
+from pickem.utils import get_season
 
 register = template.Library()
-
-def get_season():
-    # I'll probably hate myself in the future for hardcoding this :) 
-    today = date.today()
-    today_datestamp = date(today.year, today.month, today.day)
-
-    if today_datestamp > date(2022, 4, 1) and today_datestamp < date(2023, 4, 1):
-        return '2223'
-    elif today_datestamp > date(2023, 4, 1) and today_datestamp < date(2024, 4, 1):
-        return '2324'
-    elif today_datestamp > date(2024, 4, 1):
-        return '2425'
 
 @register.filter
 def addstr(arg1, arg2):
@@ -60,8 +50,9 @@ def times(number):
     return range(1, number+1)
 
 @register.filter
-def lookweekwinner(weekno):
-    gameseason=get_season()
+def lookweekwinner(weekno, gameseason):
+    if not gameseason:
+        gameseason=get_season()
     winner_object = "week_{}_winner".format(weekno)
     week_winner = userSeasonPoints.objects.filter(**{winner_object: True},gameseason=gameseason).distinct() 
     return week_winner

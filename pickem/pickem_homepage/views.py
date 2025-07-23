@@ -110,11 +110,35 @@ def index(request):
 
 
 def standings(request):
-    gameseason = get_season()
-    player_points = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
+    # Get all unique seasons from the database
+    all_seasons = GamesAndScores.objects.values_list('gameseason', flat=True).distinct().order_by('-gameseason')
+    
+    # Determine the selected season
+    selected_season = str(request.GET.get('season', get_season()))
+    
+    # Filter player points based on the selected season
+    player_points = userSeasonPoints.objects.filter(gameseason=selected_season).order_by('-total_points')
+    
+    # Format seasons for the dropdown
+    formatted_seasons = []
+    for season in all_seasons:
+        if season:
+            start_year = 2000 + int(str(season)[:2])
+            end_year = start_year + 1
+            formatted_seasons.append({
+                'value': str(season),
+                'display': f"{start_year}-{end_year}"
+            })
+    
+    User = get_user_model()
+    players = User.objects.all()
+
     context = {
+        'players': players,
         'player_points': player_points,
-        'gameseason': gameseason
+        'all_seasons': formatted_seasons,
+        'selected_season': selected_season,
+        'gameseason': selected_season
     }
     return render(request, 'pickem/standings.html', context)
 
@@ -235,25 +259,6 @@ def scores_long(request, competition, gameseason, week):
         'gameseason': gameseason
     }
     return HttpResponse(template.render(context, request))
-
-def standings(request):
-    today = date.today()
-    gameseason = get_season()
-    
-    User = get_user_model()
-    players = User.objects.all()
-
-    player_points = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
-
-    template = loader.get_template('pickem/standings.html')
-
-    context = {
-        'players': players,
-        'player_points': player_points,
-        'gameseason': gameseason
-    }
-    return HttpResponse(template.render(context, request))
-
 
 def stats(request):
     today = date.today()

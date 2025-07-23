@@ -1494,6 +1494,15 @@ tr.spaceUnder>td {
     font-style: italic;
 }
 
+.winner-avatar-placeholder {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid #dee2e6;
+    object-fit: cover;
+    background-color: #e9ecef;
+}
+
 /* Trophy icon styling */
 .trophy-icon {
     margin-left: 4px;
@@ -2688,7 +2697,7 @@ body:has(.site-banner) .main-content {
 
 /* Fallback for browsers that don't support :has() */
 .main-content {
-    padding-top: 20px;
+    padding-top: 6rem;
 }
 
 /* Homepage hero section spacing */
@@ -5011,7 +5020,6 @@ html, body {
 
 /* PROFILE PAGE STYLES */
 .profile-main-container {
-    padding-top: 2rem;
     padding-bottom: 4rem;
 }
 

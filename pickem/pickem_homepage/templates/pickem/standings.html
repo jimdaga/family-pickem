@@ -18,8 +18,6 @@
 
 <div class="container min-vh-100">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-
-    <br><br>
     <div class="container standings-main-container">
         <div class="col">
             <!-- Page Header -->
@@ -34,10 +32,30 @@
 
             <!-- Overall Points Section -->
             <div class="section-container mb-5">
-                <div class="section-header">
-                    <h3 class="section-title">
+                <div class="section-header d-flex justify-content-between align-items-center">
+                    <h3 class="section-title mb-0">
                         <i class="fas fa-medal me-2"></i>Leaderboard
                     </h3>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="seasonDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            {% for season in all_seasons %}
+                                {% if season.value == selected_season %}
+                                    {{ season.display }}
+                                {% endif %}
+                            {% empty %}
+                                Select Season
+                            {% endfor %}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="seasonDropdown">
+                            {% for season in all_seasons %}
+                            <li>
+                                <a class="dropdown-item {% if season.value == selected_season %}active{% endif %}" href="?season={{ season.value }}">
+                                    {{ season.display }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
                 </div>
                 
                 <div class="leaderboard-container">
@@ -87,26 +105,29 @@
                     {% for i in 18|times %}
                     <div class="week-winner-card">
                         <div class="week-number">Week {{ i }}</div>
-                        <div class="winner-info">
-                            {% with i|lookweekwinner as winnername %}
+                        <div class="winner-info d-flex flex-column align-items-center justify-content-center">
+                            {% with i|lookweekwinner:selected_season as winnername %}
                                 {% for x in winnername %}
                                     {% with x.userID|safe_username as username %}
                                     {% with x.userID|lookupavatar as avatar %}
-                                    <div class="winner-display d-flex align-items-center">
-                                        <img class="winner-avatar me-2" src="{{ avatar }}" alt="Profile picture for {{ username }}">
+                                    <div class="winner-display">
+                                        <img class="winner-avatar mb-2" src="{{ avatar }}" alt="Profile picture for {{ username }}">
                                         <div class="winner-details">
                                             <div class="winner-name">
                                                 <i class="fas fa-trophy text-warning me-1"></i>
-                                                {{ username }}
+                                                <span>{{ username }}</span>
                                             </div>
                                         </div>
                                     </div>
                                     {% endwith %}
                                     {% endwith %}
                                 {% empty %}
-                                    <div class="winner-placeholder">
-                                        <i class="fas fa-clock text-muted me-1"></i>
-                                        <span class="text-muted">TBD</span>
+                                    <!-- If no winner, show a placeholder -->
+                                    <img class="winner-avatar-placeholder mb-2" src="{% static 'images/profile.png' %}" alt="TDB User Profile Picture">
+                                    <div class="winner-details">
+                                        <div class="winner-name">
+                                            <span class="text-muted">TBD</span>
+                                        </div>
                                     </div>
                                 {% endfor %}
                             {% endwith %}
@@ -142,19 +163,21 @@
                         
                         <div class="weeks-grid">
                             {% for week_num in 18|times %}
-                                {% with player|get_week_points:week_num as points %}
-                                    {% if points != None %}
-                                        <div class="week-item">
-                                            <div class="week-label">Week {{ week_num }}</div>
-                                            <div class="week-points">
+                                <div class="week-item">
+                                    <div class="week-label">Week {{ week_num }}</div>
+                                    {% with player|get_week_points:week_num as points %}
+                                        <div class="week-points">
+                                            {% if points != None %}
                                                 {{ points }}
                                                 {% if player|get_week_winner:week_num %}
                                                     <span class="trophy-icon ms-1" aria-label="Week winner">&#127942;</span>
                                                 {% endif %}
-                                            </div>
+                                            {% else %}
+                                                -
+                                            {% endif %}
                                         </div>
-                                    {% endif %}
-                                {% endwith %}
+                                    {% endwith %}
+                                </div>
                             {% endfor %}
                         </div>
                     </div>
