@@ -2700,7 +2700,7 @@ nav.navbar.fixed-bottom {
 
 /* Adjust page content when banner is present */
 body:has(.site-banner) .main-content {
-    margin-top: 60px; /* Space for banner */
+    margin-top: 8px; /* Space for banner */
 }
 
 /* Fallback for browsers that don't support :has() */
@@ -5372,4 +5372,29 @@ html, body {
 
 .modern-brand:hover .navbar-logo {
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+}
+
+/* Clean Page Header Styling */
+.page-header-clean {
+    margin-bottom: 2rem;
+    padding: 1rem 0;
+}
+
+.page-title {
+    color: #212529;
+    font-weight: 700;
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+}
+
+.page-subtitle {
+    color: #6c757d;
+    font-size: 1.1rem;
+    margin: 0;
+    font-weight: 400;
+}
+
+.page-title i {
+    color: #495057;
 }
