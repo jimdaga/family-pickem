@@ -111,13 +111,25 @@
                 {% endif %}
                 
                 {% if user.is_authenticated %}
-                <div class="status-card {% if user_has_picks %}picks-submitted{% else %}picks-pending{% endif %}">
+                <div class="status-card {% if user_pick_status == 'complete' %}picks-submitted{% elif user_pick_status == 'partial' %}picks-partial{% else %}picks-pending{% endif %}">
                     <div class="status-icon">
-                        <i class="fas {% if user_has_picks %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                        {% if user_pick_status == 'complete' %}
+                            <i class="fas fa-check-circle"></i>
+                        {% elif user_pick_status == 'partial' %}
+                            <i class="fas fa-clock"></i>
+                        {% else %}
+                            <i class="fas fa-exclamation-circle"></i>
+                        {% endif %}
                     </div>
                     <div class="status-info">
                         <div class="status-value">
-                            {% if user_has_picks %}Submitted{% else %}Pending{% endif %}
+                            {% if user_pick_status == 'complete' %}
+                                Complete
+                            {% elif user_pick_status == 'partial' %}
+                                {{ user_picks_count }}/{{ current_games }}
+                            {% else %}
+                                Pending
+                            {% endif %}
                         </div>
                         <div class="status-label">Your Picks</div>
                     </div>
@@ -143,7 +155,7 @@
                     <div class="nav-card-content">
                         <h5 class="nav-card-title">Submit Picks</h5>
                         <p class="nav-card-subtitle">Make your Week {{ current_week }} predictions</p>
-                        {% if not user_has_picks %}
+                        {% if user_pick_status != 'complete' %}
                             <span class="nav-card-badge">Action Required</span>
                         {% endif %}
                     </div>

@@ -31,11 +31,12 @@
     {% load socialaccount %}
     
     <!-- Main Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top" role="navigation" aria-label="Main navigation">
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top modern-navbar" role="navigation" aria-label="Main navigation">
         <div class="container">
             <!-- Brand Logo -->
-            <a class="navbar-brand d-flex align-items-center" href="/" aria-label="Family Pickem Home">
+            <a class="navbar-brand d-flex align-items-center modern-brand" href="/" aria-label="Family Pickem Home">
                 <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="navbar-logo">
+                <span class="brand-text d-none d-sm-inline ms-2">Family Pickem</span>
             </a>
 
             <!-- Mobile Page Title -->
@@ -44,13 +45,13 @@
             </div>
 
             <!-- Mobile Toggle Button -->
-            <button class="navbar-toggler" type="button" 
+            <button class="navbar-toggler modern-toggler" type="button" 
                     data-bs-toggle="collapse" 
                     data-bs-target="#navbarContent" 
                     aria-controls="navbarContent" 
                     aria-expanded="false" 
                     aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
+                <i class="fas fa-bars"></i>
             </button>
 
                          <!-- Collapsible Content -->
@@ -62,9 +63,7 @@
                  <ul class="navbar-nav navbar-nav-center">
                      <li class="nav-item">
                          <a class="nav-link" href="/" aria-label="Home">
-                             &nbsp; &nbsp;
-                             <img src="{% static 'images/home.png' %}" alt="Home">
-                             &nbsp; &nbsp;
+                             <i class="fas fa-home"></i>
                          </a>
                      </li>
 
@@ -72,9 +71,7 @@
                      <li class="nav-item dropdown">
                          <a class="nav-link dropdown-toggle" href="#" role="button" 
                             data-bs-toggle="dropdown" aria-expanded="false" aria-label="Scores menu">
-                             &nbsp; &nbsp;
-                             <img src="{% static 'images/scores.png' %}" alt="Scores">
-                             &nbsp; &nbsp;
+                             <i class="fas fa-chart-line"></i>
                          </a>
                          <ul class="dropdown-menu">
                              <li><a class="dropdown-item" href="/scores">Current Week</a></li>
@@ -102,25 +99,19 @@
 
                      <li class="nav-item">
                          <a class="nav-link" href="/standings/" aria-label="Standings">
-                             &nbsp; &nbsp;
-                             <img src="{% static 'images/leaderboard.png' %}" alt="Standings">
-                             &nbsp; &nbsp;
+                             <i class="fas fa-medal"></i>
                          </a>
                      </li>
 
                      <li class="nav-item">
                          <a class="nav-link" href="/stats/" aria-label="Statistics">
-                             &nbsp; &nbsp;
-                             <img src="{% static 'images/graph.png' %}" alt="Statistics">
-                             &nbsp; &nbsp;
+                             <i class="fas fa-chart-bar"></i>
                          </a>
                      </li>
 
                      <li class="nav-item">
                          <a class="nav-link" href="/rules/" aria-label="Rules">
-                             &nbsp; &nbsp;
-                             <img src="{% static 'images/rules.png' %}" alt="Rules">
-                             &nbsp; &nbsp;
+                             <i class="fas fa-gavel"></i>
                          </a>
                      </li>
                  </ul>
@@ -130,14 +121,16 @@
                     {% if user.is_authenticated %}
                         <!-- Submit Picks Button -->
                         <li class="nav-item me-3">
-                            <a class="btn btn-primary btn-sm navbar-btn" href="/picks" role="button">
-                                <i class="fas fa-edit me-1"></i>Submit Weekly Picks
+                            <a class="btn btn-gradient-primary btn-sm modern-btn" href="/picks" role="button">
+                                <i class="fas fa-edit me-1"></i>
+                                <span class="d-none d-md-inline">Submit Weekly Picks</span>
+                                <span class="d-inline d-md-none">Picks</span>
                             </a>
                         </li>
 
                         <!-- User Profile Dropdown -->
                         <li class="nav-item dropdown">
-                            <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" 
+                            <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center modern-user-btn" 
                                     type="button" 
                                     data-bs-toggle="dropdown" 
                                     aria-expanded="false"
@@ -145,35 +138,43 @@
                                 <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}" 
                                      alt="Profile picture" 
                                      class="user-avatar me-2">
-                                <span class="d-none d-md-inline">
+                                <span class="d-none d-lg-inline user-name-text">
                                     {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
                                 </span>
                             </button>
                             
-                            <ul class="dropdown-menu dropdown-menu-end">
+                            <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'profile' %}">
-                                        <strong>
-                                            {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} 
-                                            {{ user.socialaccount_set.all.0.extra_data.family_name }}
-                                        </strong>
-                                        <br>
-                                        <small class="text-muted">{{ user.email }}</small>
+                                    <a class="dropdown-item modern-dropdown-item" href="{% url 'profile' %}">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user-circle me-2"></i>
+                                            <div>
+                                                <div class="fw-bold">
+                                                    {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} 
+                                                    {{ user.socialaccount_set.all.0.extra_data.family_name }}
+                                                </div>
+                                                <small class="text-muted">{{ user.email }}</small>
+                                            </div>
+                                        </div>
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="/logout">
-                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
-                                </a></li>
+                                <li>
+                                    <a class="dropdown-item modern-dropdown-item" href="/logout">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Sign Out
+                                    </a>
+                                </li>
                             </ul>
                         </li>
                     {% else %}
                         <!-- Login Button -->
                         <li class="nav-item">
-                            <a class="btn btn-primary btn-sm navbar-btn" 
+                            <a class="btn btn-gradient-primary btn-sm modern-btn" 
                                href="{% provider_login_url 'google' %}" 
                                role="button">
-                                <i class="fab fa-google me-1"></i>Login With Google
+                                <i class="fab fa-google me-1"></i>
+                                <span class="d-none d-sm-inline">Sign In with Google</span>
+                                <span class="d-inline d-sm-none">Sign In</span>
                             </a>
                         </li>
                     {% endif %}
@@ -209,13 +210,13 @@
 
      <!-- Main Content -->
      <main class="main-content" role="main">
-        <div class="container">
-            {% block content %}
+        {% block content %}
+            <div class="container">
                 <div class="text-center py-5">
                     <p class="text-muted">No content available</p>
                 </div>
-            {% endblock %}
-        </div>
+            </div>
+        {% endblock %}
     </main>
 
     <!-- Bottom Navigation Bar -->

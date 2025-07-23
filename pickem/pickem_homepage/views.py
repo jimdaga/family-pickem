@@ -81,13 +81,31 @@ def index(request):
     
     # Check if user has submitted picks for current week
     user_has_picks = False
+    user_picks_count = 0
+    user_pick_status = 'pending'  # pending, partial, complete
+    
     if request.user.is_authenticated:
-        user_has_picks = GamePicks.objects.filter(
+        # Count total games for current week
+        total_week_games = current_games
+        
+        # Count user's submitted picks for current week
+        user_picks_count = GamePicks.objects.filter(
             gameseason=gameseason,
             gameWeek=current_week,
             competition=current_competition,
             userEmail=request.user.email
-        ).exists()
+        ).count()
+        
+        # Determine pick status
+        if user_picks_count == 0:
+            user_pick_status = 'pending'
+            user_has_picks = False
+        elif user_picks_count < total_week_games:
+            user_pick_status = 'partial'
+            user_has_picks = False  # Not fully submitted
+        else:
+            user_pick_status = 'complete'
+            user_has_picks = True  # Fully submitted
     
     template = loader.get_template('pickem/home.html')
 
@@ -104,6 +122,8 @@ def index(request):
         'league_accuracy': league_accuracy,
         'recent_winners': recent_winners,
         'user_has_picks': user_has_picks,
+        'user_picks_count': user_picks_count,
+        'user_pick_status': user_pick_status,
         'gameseason': gameseason
     }
     return HttpResponse(template.render(context, request))

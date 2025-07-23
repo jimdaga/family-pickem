@@ -2480,6 +2480,14 @@ tr.spaceUnder>td {
     color: #28a745;
 }
 
+.picks-partial::before {
+    background: linear-gradient(90deg, #fd7e14, #f59e0b);
+}
+
+.picks-partial .status-icon {
+    color: #fd7e14;
+}
+
 .picks-pending::before {
     background: linear-gradient(90deg, #dc3545, #c82333);
 }
@@ -2702,7 +2710,7 @@ body:has(.site-banner) .main-content {
 
 /* Homepage hero section spacing */
 .homepage-main-container {
-    margin-top: 2rem;
+    margin-top: -5.5rem;
 }
 
 /* When banner is present, reduce top margin */
@@ -2978,8 +2986,16 @@ body:has(.site-banner) .homepage-main-container {
 /* Game Score Cards */
 .games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
     gap: 1.5rem;
+    max-width: 100%;
+}
+
+@media (min-width: 992px) {
+    .games-grid {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: none;
+    }
 }
 
 .game-score-card {
@@ -4255,11 +4271,24 @@ body:has(.site-banner) .homepage-main-container {
     background: linear-gradient(135deg, #28a745, #20c997);
 }
 
-/* Games Grid */
-.games-grid {
+/* Games Grid - Picks Page Specific */
+.picks-main-container .games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
     gap: 1.5rem;
+    max-width: 100%;
+}
+
+@media (min-width: 1200px) {
+    .picks-main-container .games-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .picks-main-container .games-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .game-card {
@@ -4329,16 +4358,17 @@ body:has(.site-banner) .homepage-main-container {
     background: #f8f9fa;
     border: 3px solid #e9ecef;
     border-radius: 15px;
-    padding: 1.5rem;
+    padding: 1rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
-    min-height: 120px;
+    min-height: 150px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    width: 100%;
 }
 
 .team-option:hover:not(.disabled) {
@@ -4361,18 +4391,27 @@ body:has(.site-banner) .homepage-main-container {
 }
 
 .team-logo-container {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .team-logo {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     object-fit: contain;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
 }
 
 .team-info {
     text-align: center;
+    width: 100%;
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .team-name {
@@ -4380,11 +4419,18 @@ body:has(.site-banner) .homepage-main-container {
     color: #212529;
     margin-bottom: 0.25rem;
     font-size: 0.9rem;
+    line-height: 1.2;
+    overflow: visible;
+    text-overflow: unset;
+    white-space: normal;
+    word-wrap: break-word;
+    hyphens: auto;
 }
 
 .team-record {
     color: #6c757d;
     font-size: 0.8rem;
+    line-height: 1;
 }
 
 .team-selection-indicator {
@@ -5127,4 +5173,203 @@ html, body {
 
 .setting-label {
     font-weight: 500;
+}
+
+/* Navbar Icon Improvements */
+.navbar-nav-center .nav-link {
+    padding: 0.75rem 1.25rem;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    margin: 0 0.5rem;
+}
+
+.navbar-nav-center .nav-link i {
+    font-size: 1.4rem;
+    color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
+
+.navbar-nav-center .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.navbar-nav-center .nav-link:hover i {
+    color: #ffffff;
+    transform: scale(1.1);
+}
+
+.navbar-nav-center .nav-link:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.3);
+    outline-offset: 2px;
+}
+
+/* Active nav link styling */
+.navbar-nav-center .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.navbar-nav-center .nav-link.active i {
+    color: #ffffff;
+}
+
+/* Dropdown toggle specific styling */
+.navbar-nav-center .dropdown-toggle::after {
+    margin-left: 0.5rem;
+    vertical-align: 0.15em;
+}
+
+/* Mobile responsiveness for navbar icons */
+@media (max-width: 991.98px) {
+    .navbar-nav-center .nav-link {
+        padding: 1rem;
+        text-align: center;
+        margin: 0.25rem 0;
+    }
+    
+    .navbar-nav-center .nav-link i {
+        font-size: 1.5rem;
+    }
+}
+
+/* Modern Navbar Styling */
+.modern-navbar {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 50%, #3c3c3c 100%) !important;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.modern-brand {
+    transition: all 0.3s ease;
+}
+
+.modern-brand:hover {
+    transform: scale(1.05);
+}
+
+.brand-text {
+    font-weight: 600;
+    color: white;
+    font-size: 1.1rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.modern-toggler {
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255,255,255,0.1);
+    transition: all 0.3s ease;
+}
+
+.modern-toggler:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.4);
+    transform: scale(1.05);
+}
+
+.modern-toggler i {
+    color: white;
+    font-size: 1.1rem;
+}
+
+/* Modern Button Styling */
+.btn-gradient-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.btn-gradient-primary:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    box-shadow: 0 6px 20px rgba(0,123,255,0.4);
+    transform: translateY(-2px);
+}
+
+.modern-btn {
+    border-radius: 8px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.modern-user-btn {
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.modern-user-btn:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.user-name-text {
+    font-weight: 500;
+    color: white;
+}
+
+/* Modern Dropdown Styling */
+.modern-dropdown {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    backdrop-filter: blur(20px);
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(0,0,0,0.1);
+    margin-top: 0.5rem;
+}
+
+.modern-dropdown-item {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin: 0.25rem;
+    transition: all 0.3s ease;
+    color: #495057;
+}
+
+.modern-dropdown-item:hover {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    color: #212529;
+    transform: translateX(5px);
+}
+
+.modern-dropdown-item i {
+    color: #6c757d;
+    transition: color 0.3s ease;
+}
+
+.modern-dropdown-item:hover i {
+    color: #007bff;
+}
+
+/* Enhanced User Avatar */
+.user-avatar {
+    border: 2px solid rgba(255,255,255,0.3);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.modern-user-btn:hover .user-avatar {
+    border-color: rgba(255,255,255,0.6);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* Navbar Logo Enhancement */
+.navbar-logo {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    transition: all 0.3s ease;
+}
+
+.modern-brand:hover .navbar-logo {
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
 }
