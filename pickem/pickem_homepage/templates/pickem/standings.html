@@ -73,7 +73,7 @@
                             <img class="player-avatar me-3" src="{{ avatar }}" alt="Profile picture for {{ username }}">
                             <div class="player-details flex-grow-1">
                                 <h5 class="player-name mb-1">{{ username }}</h5>
-                                <small class="text-muted">League Member</small>
+                                <small class="text-muted">{{ player.userID|lookuptagline }}</small>
                             </div>
                             <div class="points-display">
                                 <div class="points-number">{{ player.total_points|default:0 }}</div>

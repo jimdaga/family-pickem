@@ -1,25 +1,75 @@
 # Project Name
 Pickem
 
-## TO TRACKER
+## To Do
 
-### In Progress
-- [ ] homepage 
-- [ ] standings page 
-- [ ] Mark the TieBreaker games in db 
+#### General Changes 
+High Priority 
+- [ ] Set all the tiebreaker games for 2025-2026
+- [ ] Disable devmode on prod site
 
-### To Do
-- [ ] Setup `eb deploy` using github actions 
-- [ ] Users without picks doesn't show when everyone has picked 
-- [ ] Standings page to include "most weeks won" metrics 
-- [ ] Add phone numbers to users 
+Medium Priority 
+- [ ] Add a cronjob to delete stuck update data jobs
+- [ ] Add dark mode to site
+- [ ] Setup pick e-mail reminders -- or --
 - [ ] Send text when picks not made 
-- [ ] Add (5/12) type counter to picks made/not made 
-- [ ] Hide "picks" or "picks made" if == 0 
+
+Low Priority
 - [ ] Add audit database 
+
+#### Profile Page Changes
+Medium Priority 
+- [ ] Add "Favorite Team"
+- [ ] Add "Tagline" and update League Member 
+- [ ] Implement "Edit" button 
 - [ ] Give users way to change username (remove dependency on username in points)
-- [ ] Add a cronjob to delete stuck update data jobs 
-### Done 
+- [ ] Add phone numbers to users 
+
+#### Standings Page Changes
+Medium Priority 
+- [ ] Fix place circle to be top left 
+- [ ] For past seasons show the winner at the top
+- [ ] Standings page to include "most weeks won" metrics 
+- [ ] Add up/down icons with week over week change
+
+#### Picks Page Changes
+High Priority 
+- [ ] Fullscreen tiebreaker should be a new line so it doesn't overflow
+- [ ] Make picks lock at 1PM Sat (add "locked" to game?)
+
+Medium Priority 
+- [ ] Allow editing picks before they lock 
+- [ ] Add % win likely 
+
+#### Stats Page Changes 
+High Priority 
+- [ ] Finish writing tool to generate stats
+
+#### Homepage Changes
+Medium Priority 
+- [ ] Show prior season winner 
+- [ ] Add AI Summary of prior week 
+
+#### Scores Page Changes 
+High Priority 
+- [ ] Fix alignment so LIVE doesn't make scores not line up 
+- [ ] Make live/final/upcoming buttons work 
+- [ ] Show box score on mobile
+- [ ] Make site live refresh 
+
+Medium Priority 
+- [ ] Ensure team record shows
+- [ ] Show what % each team was picked 
+- [ ] Add stadium / tv details
+- [ ] Link "preview" to ESPN preview 
+
+#### Long Term Changes 
+- [ ] Concept of "Families" 
+- [ ] Add user profiles and link user avatars 
+- [ ] Prop Bets page 
+- [ ] hall of fame
+
+## Done 
 - [x] Update prod instance with weeks/games for 2023/24
 - [x] Fix records to use current season
 - [x] Add 'season' logic to picks
@@ -43,4 +93,3 @@ Pickem
 - [x] rules page 
 - [x] Show submitted "tie breaker" on picks page 
 - [x] Recollect all the game data (for each week, update)
-- [ ] test

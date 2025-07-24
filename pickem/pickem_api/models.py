@@ -2,8 +2,35 @@ from time import timezone
 import uuid
 from xmlrpc.client import Boolean
 from django.db import models
+from django.contrib.auth.models import User
 
 # Create your models here.
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    
+    # Personal Information
+    tagline = models.CharField(max_length=200, blank=True, null=True, help_text="A short personal tagline or bio")
+    favorite_team = models.CharField(max_length=250, blank=True, null=True, help_text="User's favorite NFL team slug")
+    phone_number = models.CharField(max_length=20, blank=True, null=True, help_text="Contact phone number")
+    
+    # Site Settings
+    email_notifications = models.BooleanField(default=True, help_text="Receive email notifications")
+    dark_mode = models.BooleanField(default=False, help_text="Use dark mode theme")
+    private_profile = models.BooleanField(default=False, help_text="Make profile private to other users")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.username}'s Profile"
+    
+    class Meta:
+        verbose_name = "User Profile"
+        verbose_name_plural = "User Profiles"
+        ordering = ['user__username']
 
 
 class Teams(models.Model):

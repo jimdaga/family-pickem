@@ -1,13 +1,24 @@
 from dataclasses import fields
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
-from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userPoints, userSeasonPoints, userStats, currentSeason
+from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userPoints, userSeasonPoints, userStats, currentSeason, UserProfile
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = '__all__'
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+    
+    class Meta:
+        model = UserProfile
+        fields = ['id', 'user', 'tagline', 'favorite_team', 'phone_number', 
+                 'email_notifications', 'dark_mode', 'private_profile', 
+                 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class GameSerializer(serializers.ModelSerializer):

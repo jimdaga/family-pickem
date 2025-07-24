@@ -116,7 +116,7 @@
                             <img class="player-profile-img me-3" src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" alt="Profile picture for {{ username }}">
                             <div class="flex-grow-1">
                                 <h5 class="mb-0 text-uppercase">{{ username|default:"Unknown Player" }}</h5>
-                                <small class="text-muted">League Member</small>
+                                <small class="text-muted">{{ player.userID|lookuptagline }}</small>
                             </div>
                             <div class="position-badge position-{{ forloop.counter }}">
                                 <span class="position-number">{{ forloop.counter }}</span>

@@ -1,15 +1,19 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template import loader
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from pickem_api.models import GamePicks
-from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats
+from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile
 from .forms import GamePicksForm
 
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.db.models import Sum
 from django.db.models import Count
 from django.db.models.functions import Coalesce
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
 
 from datetime import date
 
@@ -371,9 +375,86 @@ def home_view(request):
     return render(request, 'pickem/home.html', context)
 
 
+@login_required
 def profile(request):
     gameseason = get_season()
+    
+    # Get or create user profile
+    user_profile, created = UserProfile.objects.get_or_create(user=request.user)
+    
+    # Get all unique NFL teams for the favorite team dropdown
+    teams = Teams.objects.values('teamNameSlug', 'teamNameName', 'teamLogo').distinct().order_by('teamNameName')
+    
+    if request.method == 'POST':
+        # Handle AJAX requests for settings updates
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                data = json.loads(request.body)
+                setting_name = data.get('setting')
+                setting_value = data.get('value')
+                
+                # Update the specific setting
+                if setting_name == 'email_notifications':
+                    user_profile.email_notifications = setting_value
+                elif setting_name == 'dark_mode':
+                    user_profile.dark_mode = setting_value
+                elif setting_name == 'private_profile':
+                    user_profile.private_profile = setting_value
+                
+                user_profile.save()
+                return JsonResponse({'success': True})
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': str(e)})
+        
+        # Handle form submissions for profile updates
+        else:
+            tagline = request.POST.get('tagline', '').strip()
+            favorite_team = request.POST.get('favorite_team', '').strip()
+            phone_number = request.POST.get('phone_number', '').strip()
+            
+            # Update profile fields
+            user_profile.tagline = tagline if tagline else None
+            user_profile.favorite_team = favorite_team if favorite_team else None
+            user_profile.phone_number = phone_number if phone_number else None
+            user_profile.save()
+            
+            # You could add a success message here
+            
     context = {
         'gameseason': gameseason,
+        'user_profile': user_profile,
+        'teams': teams,
     }
     return render(request, 'pickem/profile.html', context)
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def toggle_theme(request):
+    """
+    Dedicated endpoint for handling theme toggle requests.
+    Accepts JSON with theme preference and updates user profile.
+    """
+    try:
+        data = json.loads(request.body)
+        theme = data.get('theme', 'light')
+        
+        # Get or create user profile
+        user_profile, created = UserProfile.objects.get_or_create(user=request.user)
+        
+        # Update dark mode setting based on theme
+        user_profile.dark_mode = (theme == 'dark')
+        user_profile.save()
+        
+        return JsonResponse({
+            'success': True,
+            'theme': theme,
+            'dark_mode': user_profile.dark_mode
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)

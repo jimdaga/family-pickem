@@ -27,27 +27,23 @@
             {{ user.socialaccount_set.all.0.extra_data.family_name }}
         </h2>
         <p class="profile-email text-muted">{{ user.email }}</p>
-        <div class="profile-actions">
-            <a href="#" class="btn btn-primary btn-sm">
-                <i class="fas fa-edit me-1"></i>Edit Profile
-            </a>
-            <a href="#" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-cog me-1"></i>Settings
-            </a>
-        </div>
     </div>
 
     <!-- Profile Content Grid -->
     <div class="profile-grid">
         <!-- User Information Card -->
         <div class="profile-card">
-            <div class="profile-card-header">
-                <h5 class="profile-card-title">
+            <div class="profile-card-header d-flex justify-content-between align-items-center">
+                <h5 class="profile-card-title mb-0">
                     <i class="fas fa-info-circle me-2"></i>Personal Information
                 </h5>
+                <button class="btn btn-primary btn-sm" id="editProfileBtn">
+                    <i class="fas fa-edit me-1"></i>Edit Profile
+                </button>
             </div>
             <div class="profile-card-body">
-                <div class="info-grid">
+                <!-- Display Mode -->
+                <div id="profileDisplayMode" class="info-grid">
                     <div class="info-item">
                         <span class="info-label">Full Name</span>
                         <span class="info-value">{{ user.get_full_name|default:"Not set" }}</span>
@@ -61,9 +57,76 @@
                         <span class="info-value">{{ user.email }}</span>
                     </div>
                     <div class="info-item">
+                        <span class="info-label">Tagline</span>
+                        <span class="info-value">{{ user_profile.tagline|default:"Not set" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Favorite Team</span>
+                        <span class="info-value">
+                            {% if user_profile.favorite_team %}
+                                {% for team in teams %}
+                                    {% if team.teamNameSlug == user_profile.favorite_team %}
+                                        <img src="{{ team.teamLogo }}" alt="{{ team.teamNameName }}" class="team-logo-sm me-2">
+                                        {{ team.teamNameName }}
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                Not set
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Phone Number</span>
+                        <span class="info-value">{{ user_profile.phone_number|default:"Not set" }}</span>
+                    </div>
+                    <div class="info-item">
                         <span class="info-label">Date Joined</span>
                         <span class="info-value">{{ user.date_joined|date:"M d, Y" }}</span>
+                        <small class="text-muted">Member Since</small>
                     </div>
+                </div>
+
+                <!-- Edit Mode -->
+                <div id="profileEditMode" class="edit-form" style="display: none;">
+                    <form id="profileEditForm" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="tagline" class="form-label">Tagline</label>
+                            <input type="text" class="form-control" id="tagline" name="tagline" 
+                                   value="{{ user_profile.tagline|default:'' }}" 
+                                   placeholder="Your personal tagline or motto" maxlength="200">
+                            <div class="form-text">A short phrase that represents you (max 200 characters)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="favorite_team" class="form-label">Favorite Team</label>
+                            <select class="form-select" id="favorite_team" name="favorite_team">
+                                <option value="">Select your favorite team</option>
+                                {% for team in teams %}
+                                    <option value="{{ team.teamNameSlug }}" 
+                                            {% if team.teamNameSlug == user_profile.favorite_team %}selected{% endif %}>
+                                        {{ team.teamNameName }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone_number" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                                   value="{{ user_profile.phone_number|default:'' }}" 
+                                   placeholder="(555) 123-4567"
+                                   pattern="[0-9\s\(\)\-\+\.]+"
+                                   maxlength="20">
+                            <div class="form-text">Optional contact number (e.g., (555) 123-4567)</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>Save Changes
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="cancelEditBtn">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -80,27 +143,36 @@
                     <div class="setting-item">
                         <div class="setting-label">
                             <i class="fas fa-bell me-2"></i>Email Notifications
+                            <small class="text-muted d-block">Receive updates about picks and results</small>
                         </div>
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                            <input class="form-check-input setting-toggle" type="checkbox" 
+                                   id="emailNotifications" data-setting="email_notifications"
+                                   {% if user_profile.email_notifications %}checked{% endif %}>
                             <label class="form-check-label" for="emailNotifications"></label>
                         </div>
                     </div>
                     <div class="setting-item">
                         <div class="setting-label">
                             <i class="fas fa-moon me-2"></i>Dark Mode
+                            <small class="text-muted d-block">Use dark theme for better night viewing</small>
                         </div>
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="darkMode">
+                            <input class="form-check-input setting-toggle" type="checkbox" 
+                                   id="darkMode" data-setting="dark_mode"
+                                   {% if user_profile.dark_mode %}checked{% endif %}>
                             <label class="form-check-label" for="darkMode"></label>
                         </div>
                     </div>
                     <div class="setting-item">
                         <div class="setting-label">
-                            <i class="fas fa-eye-slash me-2"></i>Make Profile Private
+                            <i class="fas fa-eye-slash me-2"></i>Private Profile
+                            <small class="text-muted d-block">Hide your profile from other users</small>
                         </div>
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="privateProfile">
+                            <input class="form-check-input setting-toggle" type="checkbox" 
+                                   id="privateProfile" data-setting="private_profile"
+                                   {% if user_profile.private_profile %}checked{% endif %}>
                             <label class="form-check-label" for="privateProfile"></label>
                         </div>
                     </div>
@@ -109,4 +181,202 @@
         </div>
     </div>
 </div>
+
+<!-- JavaScript for Profile Functionality -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const editBtn = document.getElementById('editProfileBtn');
+    const cancelBtn = document.getElementById('cancelEditBtn');
+    const displayMode = document.getElementById('profileDisplayMode');
+    const editMode = document.getElementById('profileEditMode');
+    const form = document.getElementById('profileEditForm');
+    const settingToggles = document.querySelectorAll('.setting-toggle');
+    const phoneInput = document.getElementById('phone_number');
+
+    // Phone Number Formatting
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+            let formattedValue = '';
+            
+            if (value.length > 0) {
+                if (value.length <= 3) {
+                    formattedValue = `(${value}`;
+                } else if (value.length <= 6) {
+                    formattedValue = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+                } else {
+                    formattedValue = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
+                }
+            }
+            
+            e.target.value = formattedValue;
+        });
+
+        // Validation on blur
+        phoneInput.addEventListener('blur', function(e) {
+            const value = e.target.value.replace(/\D/g, '');
+            if (value.length > 0 && value.length !== 10) {
+                e.target.setCustomValidity('Please enter a valid 10-digit phone number');
+                e.target.classList.add('is-invalid');
+            } else {
+                e.target.setCustomValidity('');
+                e.target.classList.remove('is-invalid');
+            }
+        });
+    }
+
+    // Edit Profile Button
+    editBtn.addEventListener('click', function() {
+        displayMode.style.display = 'none';
+        editMode.style.display = 'block';
+        editBtn.textContent = 'Editing...';
+        editBtn.disabled = true;
+    });
+
+    // Cancel Edit Button
+    cancelBtn.addEventListener('click', function() {
+        editMode.style.display = 'none';
+        displayMode.style.display = 'grid';
+        editBtn.innerHTML = '<i class="fas fa-edit me-1"></i>Edit Profile';
+        editBtn.disabled = false;
+        
+        // Reset form to original values
+        form.reset();
+    });
+
+    // Profile Form Submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+        submitBtn.disabled = true;
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => {
+            if (response.ok) {
+                // Success - reload the page to show updated data
+                window.location.reload();
+            } else {
+                throw new Error('Save failed');
+            }
+        })
+        .catch(error => {
+            // Reset button state
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            
+            // Show error message
+            alert('Error saving profile. Please try again.');
+            console.error('Error:', error);
+        });
+    });
+
+    // Settings Toggle Handlers
+    settingToggles.forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const settingName = this.dataset.setting;
+            const settingValue = this.checked;
+            
+            // Show loading state
+            this.disabled = true;
+            
+            // Handle dark mode toggle specially
+            if (settingName === 'dark_mode') {
+                // Update theme immediately using dark mode manager
+                const theme = settingValue ? 'dark' : 'light';
+                if (window.DarkMode && window.DarkMode.manager) {
+                    window.DarkMode.manager.setTheme(theme);
+                }
+                
+                // Save to backend
+                fetch('/toggle-theme/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        theme: theme
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success feedback
+                        this.parentElement.style.opacity = '0.7';
+                        setTimeout(() => {
+                            this.parentElement.style.opacity = '1';
+                        }, 300);
+                    } else {
+                        // Revert toggle on error
+                        this.checked = !settingValue;
+                        alert('Error saving setting. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    // Revert toggle on error
+                    this.checked = !settingValue;
+                    alert('Error saving setting. Please try again.');
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    // Re-enable toggle
+                    this.disabled = false;
+                });
+            } else {
+                // Handle other settings normally
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        setting: settingName,
+                        value: settingValue
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success feedback
+                        this.parentElement.style.opacity = '0.7';
+                        setTimeout(() => {
+                            this.parentElement.style.opacity = '1';
+                        }, 300);
+                    } else {
+                        // Revert toggle on error
+                        this.checked = !settingValue;
+                        alert('Error saving setting. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    // Revert toggle on error
+                    this.checked = !settingValue;
+                    alert('Error saving setting. Please try again.');
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    // Re-enable toggle
+                    this.disabled = false;
+                });
+            }
+        });
+    });
+});
+</script>
+
 {% endblock %} 

@@ -1,6 +1,6 @@
 from django import template
 from django.contrib.auth.models import User
-from pickem_api.models import Teams, GamePicks, userSeasonPoints, userStats
+from pickem_api.models import Teams, GamePicks, userSeasonPoints, userStats, UserProfile
 from django.shortcuts import render
 from allauth.socialaccount.models import SocialAccount
 from datetime import date
@@ -136,3 +136,13 @@ def sub(value, arg):
         return int(value) - int(arg)
     except (ValueError, TypeError):
         return 0
+
+@register.filter
+def lookuptagline(user_id):
+    """Get user's tagline from UserProfile, default to 'League Member' if not set"""
+    try:
+        user = User.objects.get(id=user_id)
+        profile = UserProfile.objects.get(user=user)
+        return profile.tagline if profile.tagline else "League Member"
+    except (User.DoesNotExist, UserProfile.DoesNotExist):
+        return "League Member"

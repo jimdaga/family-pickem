@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="{% if user_theme_preference %}{{ user_theme_preference }}{% else %}light{% endif %}">
 <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-LJ2FN8G22Z"></script>
@@ -13,6 +13,8 @@
     <title>{% block title %}Family Pickem{% endblock %}</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="user-authenticated" content="{% if user_authenticated %}true{% else %}false{% endif %}">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="description" content="Family Pickem - Your ultimate NFL pick 'em league experience">
     
     <!-- Bootstrap CSS -->
@@ -25,6 +27,7 @@
     {% load static %}
     <link rel="shortcut icon" type="image/png" href="{% static 'images/windowlogo.png' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}">
 </head>
 
 <body>
@@ -314,5 +317,16 @@
     `;
     document.head.appendChild(style);
     </script>
+
+    <!-- Dark Mode JavaScript - Load early for FOUC prevention -->
+    <script src="{% static 'css/dark-mode.js' %}"></script>
+    
+    <!-- Initialize theme from Django backend for authenticated users -->
+    {% if user_authenticated %}
+    <script>
+        // Initialize dark mode from Django backend
+        window.DarkMode.init({{ user_dark_mode|yesno:"true,false,null" }});
+    </script>
+    {% endif %}
 </body>
 </html>
