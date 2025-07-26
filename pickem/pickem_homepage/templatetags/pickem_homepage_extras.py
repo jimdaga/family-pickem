@@ -1,6 +1,6 @@
 from django import template
 from django.contrib.auth.models import User
-from pickem_api.models import Teams, GamePicks, userSeasonPoints, userStats, UserProfile
+from pickem_api.models import Teams, GamePicks, userSeasonPoints, userStats, UserProfile, GamesAndScores
 from django.shortcuts import render
 from allauth.socialaccount.models import SocialAccount
 from datetime import date
@@ -86,7 +86,7 @@ def safe_username(user_id):
 
 @register.filter
 def lookupStats(user_id):
-    stats = userStats.objects.filter(userID=user_id).first()
+    stats = userStats.objects.filter(userID=str(user_id)).first()
 
     weeksWonSeason = stats.weeksWonSeason if stats else '0'
     weeksWonTotal = stats.weeksWonTotal if stats else '0'
@@ -146,3 +146,51 @@ def lookuptagline(user_id):
         return profile.tagline if profile.tagline else "League Member"
     except (User.DoesNotExist, UserProfile.DoesNotExist):
         return "League Member"
+
+@register.filter
+def is_game_locked(game):
+    """Check if picks are locked for a specific game using new Sunday 1PM EST logic"""
+    try:
+        from pickem.utils import is_pick_locked
+        # Get all games in the same week
+        week_games = GamesAndScores.objects.filter(
+            gameseason=game.gameseason,
+            gameWeek=game.gameWeek,
+            competition=game.competition
+        )
+        is_locked, lock_reason = is_pick_locked(game, week_games)
+        return is_locked
+    except:
+        # Fallback to old logic if there's an error
+        return game.statusType != 'notstarted'
+
+@register.filter
+def game_lock_reason(game):
+    """Get the reason why picks are locked for a specific game"""
+    try:
+        from pickem.utils import is_pick_locked
+        # Get all games in the same week
+        week_games = GamesAndScores.objects.filter(
+            gameseason=game.gameseason,
+            gameWeek=game.gameWeek,
+            competition=game.competition
+        )
+        is_locked, lock_reason = is_pick_locked(game, week_games)
+        return lock_reason if is_locked else "Available"
+    except:
+        # Fallback to old logic if there's an error
+        return "Game has started" if game.statusType != 'notstarted' else "Available"
+
+@register.simple_tag
+def week_lock_status(games):
+    """Get the overall locking status for a week of games"""
+    try:
+        from pickem.utils import are_picks_locked_for_week
+        return are_picks_locked_for_week(games)
+    except:
+        return {
+            'any_locked': False,
+            'sunday_cutoff_passed': False,
+            'sunday_cutoff_time': None,
+            'individual_locks': {}
+        }

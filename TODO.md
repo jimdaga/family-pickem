@@ -17,14 +17,6 @@ Medium Priority
 Low Priority
 - [ ] Add audit database 
 
-#### Profile Page Changes
-Medium Priority 
-- [ ] Add "Favorite Team"
-- [ ] Add "Tagline" and update League Member 
-- [ ] Implement "Edit" button 
-- [ ] Give users way to change username (remove dependency on username in points)
-- [ ] Add phone numbers to users 
-
 #### Standings Page Changes
 Medium Priority 
 - [ ] Fix place circle to be top left 
@@ -35,7 +27,6 @@ Medium Priority
 #### Picks Page Changes
 High Priority 
 - [ ] Fullscreen tiebreaker should be a new line so it doesn't overflow
-- [ ] Make picks lock at 1PM Sat (add "locked" to game?)
 
 Medium Priority 
 - [ ] Allow editing picks before they lock 
@@ -65,6 +56,12 @@ Medium Priority
 - [ ] hall of fame
 
 ## Done 
+- [x] Make picks lock at 1PM Sat (add "locked" to game?)
+- [x] Give users way to change username (remove dependency on username in points)
+- [x] Add "Favorite Team"
+- [x] Add "Tagline" and update League Member 
+- [x] Implement "Edit" button 
+- [x] Add phone numbers to users 
 - [x] Fix alignment so LIVE doesn't make scores not line up 
 - [x] Make live/final/upcoming buttons work 
 - [x] Show box score on mobile

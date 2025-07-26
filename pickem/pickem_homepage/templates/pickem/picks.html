@@ -225,7 +225,7 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="id" value="{{ user.id }}-{{ game.id }}">
                                         <input type="hidden" name="userEmail" value="{{ user.email }}">
-                                        <input type="hidden" name="userID" value="{{ user.username }}">
+                                        <input type="hidden" name="userID" value="{{ user.id }}">
                                         <input type="hidden" name="uid" value="{{ user.id }}">
                                         <input type="hidden" name="slug" value="{{ game.slug }}">
                                         <input type="hidden" name="competition" value="{{ game.competition }}">
@@ -281,9 +281,11 @@
                                         <div class="game-date-small">
                                             {{ game.startTimestamp|date:"M d @ g:i A" }}
                                         </div>
-                                        <div class="submitted-badge">
-                                            <i class="fas fa-check me-1"></i>
-                                            Submitted
+                                        <div class="submitted-header-actions">
+                                            <div class="submitted-badge">
+                                                <i class="fas fa-check me-1"></i>
+                                                Submitted
+                                            </div>
                                         </div>
                                     </div>
 
@@ -340,8 +342,42 @@
                                                     </div>
                                                 </div>
                                                 {% endif %}
+
+
                                             {% endif %}
                                         {% endfor %}
+                                    </div>
+
+                                    <!-- Edit/Lock Actions - Always at bottom -->
+                                    <div class="submitted-pick-actions">
+                                        {% if not game|is_game_locked %}
+                                        {% for p in picks %}
+                                            {% if p.slug == game.slug %}
+                                        <button class="edit-pick-btn" 
+                                                data-game-id="{{ game.id }}" 
+                                                data-pick-id="{{ p.id }}"
+                                                data-game-slug="{{ game.slug }}"
+                                                data-current-pick="{{ p.pick }}"
+                                                data-away-team="{{ game.awayTeamSlug }}"
+                                                data-away-name="{{ game.awayTeamName }}"
+                                                data-home-team="{{ game.homeTeamSlug }}"
+                                                data-home-name="{{ game.homeTeamName }}"
+                                                data-away-logo="{% with game.awayTeamSlug|lookuplogo as logo_url %}{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}{% endwith %}"
+                                                data-home-logo="{% with game.homeTeamSlug|lookuplogo as logo_url %}{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}{% endwith %}"
+                                                data-is-tiebreaker="{{ game.tieBreakerGame|yesno:'true,false' }}"
+                                                data-tiebreaker-score="{{ p.tieBreakerScore|default:'' }}"
+                                                data-tiebreaker-yards="{{ p.tieBreakerYards|default:'' }}">
+                                            <i class="fas fa-edit me-1"></i>
+                                            Edit Pick
+                                        </button>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="pick-locked-indicator">
+                                            <i class="fas fa-lock me-1"></i>
+                                            Pick Locked - {{ game|game_lock_reason }}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endif %}
@@ -365,6 +401,94 @@
                 </div>
             </div>
             {% endif %}
+        </div>
+    </div>
+
+    <!-- Edit Pick Modal -->
+    <div class="modal fade" id="editPickModal" tabindex="-1" aria-labelledby="editPickModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editPickModalLabel">
+                        <i class="fas fa-edit me-2"></i>Edit Your Pick
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editPickForm">
+                        {% csrf_token %}
+                        <input type="hidden" id="editPickId" name="pick_id">
+                        <input type="hidden" id="editGameId" name="game_id">
+                        <input type="hidden" id="editGameSlug" name="slug">
+                        <input type="hidden" name="userEmail" value="{{ user.email }}">
+                        <input type="hidden" name="userID" value="{{ user.id }}">
+                        <input type="hidden" name="uid" value="{{ user.id }}">
+
+                        <!-- Game Info -->
+                        <div class="edit-game-info mb-4">
+                            <h6 class="game-title" id="editGameTitle"></h6>
+                            <div class="game-time" id="editGameTime"></div>
+                        </div>
+
+                        <!-- Team Selection -->
+                        <div class="edit-team-selection mb-4">
+                            <h6 class="mb-3">Select Your Pick:</h6>
+                            <div class="team-options-edit">
+                                <div class="team-option-edit" id="editAwayTeam">
+                                    <div class="team-logo-container">
+                                        <img id="editAwayLogo" src="" alt="" class="team-logo-edit">
+                                    </div>
+                                    <div class="team-name-edit" id="editAwayName"></div>
+                                    <div class="selection-indicator">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                </div>
+                                <div class="vs-divider-edit">VS</div>
+                                <div class="team-option-edit" id="editHomeTeam">
+                                    <div class="team-logo-container">
+                                        <img id="editHomeLogo" src="" alt="" class="team-logo-edit">
+                                    </div>
+                                    <div class="team-name-edit" id="editHomeName"></div>
+                                    <div class="selection-indicator">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tiebreaker Section -->
+                        <div id="editTiebreakerSection" class="edit-tiebreaker-section mb-4" style="display: none;">
+                            <h6 class="mb-3">
+                                <i class="fas fa-balance-scale me-2"></i>Tiebreakers
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editTiebreakerScore">Total Points Scored</label>
+                                        <input type="number" id="editTiebreakerScore" name="tieBreakerScore" 
+                                               class="form-control" placeholder="e.g. 45" min="0" max="200">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editTiebreakerYards">Total Yards</label>
+                                        <input type="number" id="editTiebreakerYards" name="tieBreakerYards" 
+                                               class="form-control" placeholder="e.g. 750" min="0" max="2000">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="saveEditPickBtn">
+                        <i class="fas fa-save me-1"></i>Save Changes
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -522,6 +646,134 @@
                 console.error('Error saving pick:', error);
             });
         }
+
+        // Edit Pick Functionality
+        document.querySelectorAll('.edit-pick-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const gameId = this.dataset.gameId;
+                const pickId = this.dataset.pickId;
+                const gameSlug = this.dataset.gameSlug;
+                const currentPick = this.dataset.currentPick;
+                const awayTeam = this.dataset.awayTeam;
+                const awayName = this.dataset.awayName;
+                const homeTeam = this.dataset.homeTeam;
+                const homeName = this.dataset.homeName;
+                const awayLogo = this.dataset.awayLogo;
+                const homeLogo = this.dataset.homeLogo;
+                const isTiebreaker = this.dataset.isTiebreaker === 'true';
+                const tiebreakerScore = this.dataset.tiebreakerScore;
+                const tiebreakerYards = this.dataset.tiebreakerYards;
+
+                // Populate modal with game data
+                document.getElementById('editPickId').value = pickId;
+                document.getElementById('editGameId').value = gameId;
+                document.getElementById('editGameSlug').value = gameSlug;
+                document.getElementById('editGameTitle').textContent = `${awayName} @ ${homeName}`;
+                
+                // Set team information
+                document.getElementById('editAwayName').textContent = awayName;
+                document.getElementById('editHomeName').textContent = homeName;
+                document.getElementById('editAwayTeam').dataset.team = awayTeam;
+                document.getElementById('editHomeTeam').dataset.team = homeTeam;
+                
+                // Set team logos
+                document.getElementById('editAwayLogo').src = awayLogo;
+                document.getElementById('editAwayLogo').alt = `${awayName} logo`;
+                document.getElementById('editHomeLogo').src = homeLogo;
+                document.getElementById('editHomeLogo').alt = `${homeName} logo`;
+
+                // Set current selection
+                document.querySelectorAll('.team-option-edit').forEach(option => {
+                    option.classList.remove('selected');
+                });
+                
+                if (currentPick === awayTeam) {
+                    document.getElementById('editAwayTeam').classList.add('selected');
+                } else if (currentPick === homeTeam) {
+                    document.getElementById('editHomeTeam').classList.add('selected');
+                }
+
+                // Handle tiebreaker
+                const tiebreakerSection = document.getElementById('editTiebreakerSection');
+                if (isTiebreaker) {
+                    tiebreakerSection.style.display = 'block';
+                    document.getElementById('editTiebreakerScore').value = tiebreakerScore || '';
+                    document.getElementById('editTiebreakerYards').value = tiebreakerYards || '';
+                } else {
+                    tiebreakerSection.style.display = 'none';
+                }
+
+                // Show modal
+                new bootstrap.Modal(document.getElementById('editPickModal')).show();
+            });
+        });
+
+        // Edit modal team selection
+        document.querySelectorAll('.team-option-edit').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.team-option-edit').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                this.classList.add('selected');
+            });
+        });
+
+        // Save edited pick
+        document.getElementById('saveEditPickBtn').addEventListener('click', function() {
+            const form = document.getElementById('editPickForm');
+            const selectedTeam = document.querySelector('.team-option-edit.selected');
+            
+            if (!selectedTeam) {
+                alert('Please select a team');
+                return;
+            }
+
+            const formData = new FormData(form);
+            formData.set('pick', selectedTeam.dataset.team);
+
+            // Validate tiebreaker if required
+            const tiebreakerSection = document.getElementById('editTiebreakerSection');
+            if (tiebreakerSection.style.display !== 'none') {
+                const score = document.getElementById('editTiebreakerScore').value;
+                const yards = document.getElementById('editTiebreakerYards').value;
+                
+                if (!score || !yards) {
+                    alert('Please fill in both tiebreaker fields');
+                    return;
+                }
+            }
+
+            // Show loading state
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+
+            // Submit update
+            fetch('/picks/edit/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Close modal and reload page
+                    bootstrap.Modal.getInstance(document.getElementById('editPickModal')).hide();
+                    window.location.reload();
+                } else {
+                    throw new Error('Update failed');
+                }
+            })
+            .catch(error => {
+                alert('Error updating pick. Please try again.');
+                console.error('Error updating pick:', error);
+            })
+            .finally(() => {
+                // Reset button state
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-save me-1"></i>Save Changes';
+            });
+        });
     });
     </script>
 

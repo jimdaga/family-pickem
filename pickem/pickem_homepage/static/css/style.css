@@ -1351,19 +1351,20 @@ tr.spaceUnder>td {
 
 .rank-badge {
     position: absolute;
-    top: -8px;
-    left: 20px;
+    top: 0.8rem; /* Much further up */
+    left: 0.8rem; /* Much further left */
     background: white;
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    font-size: 1.2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    font-size: 0.9rem;
     font-weight: bold;
     border: 2px solid #dee2e6;
+    z-index: 10;
 }
 
 .rank-number {
@@ -4587,6 +4588,9 @@ body:has(.site-banner) .homepage-main-container {
     overflow: hidden;
     transition: all 0.3s ease;
     box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    min-height: 200px;
 }
 
 .submitted-game-card:hover {
@@ -4602,6 +4606,12 @@ body:has(.site-banner) .homepage-main-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.submitted-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .game-date-small {
@@ -4624,6 +4634,8 @@ body:has(.site-banner) .homepage-main-container {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    flex-wrap: wrap;
+    flex: 1;
 }
 
 .submitted-team {
@@ -4678,6 +4690,8 @@ body:has(.site-banner) .homepage-main-container {
     display: flex;
     gap: 1rem;
     justify-content: center;
+    width: 100%;
+    flex-basis: 100%;
 }
 
 .tiebreaker-item {
@@ -4695,6 +4709,180 @@ body:has(.site-banner) .homepage-main-container {
 .tiebreaker-value {
     color: #495057;
     font-weight: bold;
+}
+
+/* Submitted Pick Actions */
+.submitted-pick-actions {
+    margin-top: auto;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    background: #f8f9fa;
+}
+
+.edit-pick-btn {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.edit-pick-btn:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+}
+
+.pick-locked-indicator {
+    color: #6c757d;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.8rem;
+    background: #f1f3f4;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+/* Edit Pick Modal Styles */
+.edit-game-info {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.edit-game-info .game-title {
+    color: #495057;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.edit-game-info .game-time {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.team-options-edit {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.team-option-edit {
+    flex: 1;
+    background: #f8f9fa;
+    border: 3px solid #e9ecef;
+    border-radius: 15px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: 200px;
+}
+
+.team-option-edit:hover {
+    border-color: #007bff;
+    background: #e3f2fd;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,123,255,0.2);
+}
+
+.team-option-edit.selected {
+    border-color: #28a745 !important;
+    background: linear-gradient(135deg, #d4edda, #c3e6cb) !important;
+    box-shadow: 0 5px 20px rgba(40,167,69,0.3) !important;
+}
+
+.team-logo-edit {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+}
+
+.team-name-edit {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.team-option-edit .selection-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #28a745;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+}
+
+.team-option-edit.selected .selection-indicator {
+    display: flex;
+}
+
+.vs-divider-edit {
+    color: #6c757d;
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin: 0 0.5rem;
+}
+
+.edit-tiebreaker-section {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 10px;
+    padding: 1.5rem;
+}
+
+.edit-tiebreaker-section h6 {
+    color: #856404;
+    margin-bottom: 1rem;
+}
+
+.edit-tiebreaker-section .form-group {
+    margin-bottom: 1rem;
+}
+
+.edit-tiebreaker-section label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.edit-tiebreaker-section .form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem;
+    transition: border-color 0.3s ease;
+}
+
+.edit-tiebreaker-section .form-control:focus {
+    border-color: #ffc107;
+    box-shadow: 0 0 0 3px rgba(255,193,7,0.25);
 }
 
 /* No Data Messages */
@@ -5549,6 +5737,48 @@ html, body {
 .game-status-display .game-status.upcoming {
     background: linear-gradient(135deg, #6c757d, #495057);
     color: white;
+}
+
+/* Large Screen Optimizations for Submitted Picks */
+@media (min-width: 1200px) {
+    .submitted-picks-grid {
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .submitted-matchup {
+        padding: 1.5rem;
+        gap: 1rem;
+    }
+    
+    .submitted-team {
+        min-width: 140px;
+        padding: 0.75rem;
+    }
+    
+    .tiebreaker-info {
+        margin-top: 1rem;
+        padding: 0.75rem 1rem;
+        gap: 1.5rem;
+        border-top: 1px solid #e9ecef;
+        background: #f8f9fa;
+    }
+    
+    .tiebreaker-item {
+        font-size: 0.9rem;
+        gap: 0.5rem;
+    }
+}
+
+@media (min-width: 1400px) {
+    .submitted-picks-grid {
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 2rem;
+    }
+    
+    .submitted-matchup {
+        padding: 2rem;
+    }
 }
 
 /* Teams Matchup */

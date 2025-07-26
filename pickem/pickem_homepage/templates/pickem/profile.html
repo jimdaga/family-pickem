@@ -14,6 +14,19 @@
 
 {% block content %}
 <div class="container profile-main-container">
+    <!-- Messages -->
+    {% if messages %}
+        <div class="messages-container mb-4">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     <!-- Profile Header -->
     <div class="profile-header text-center">
         <div class="profile-avatar-container">
@@ -80,9 +93,9 @@
                         <span class="info-value">{{ user_profile.phone_number|default:"Not set" }}</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Date Joined</span>
-                        <span class="info-value">{{ user.date_joined|date:"M d, Y" }}</span>
                         <small class="text-muted">Member Since</small>
+                        <span class="info-value">{{ user.date_joined|date:"M d, Y" }}</span>
+                        
                     </div>
                 </div>
 
@@ -90,6 +103,17 @@
                 <div id="profileEditMode" class="edit-form" style="display: none;">
                     <form id="profileEditForm" method="post">
                         {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   value="{{ user.username }}" 
+                                   placeholder="Your unique username" 
+                                   minlength="3" maxlength="20" required>
+                            <div class="form-text">
+                                3-20 characters, letters, numbers, and underscores only. Must be unique.
+                            </div>
+                            <div class="invalid-feedback" id="usernameError"></div>
+                        </div>
                         <div class="mb-3">
                             <label for="tagline" class="form-label">Tagline</label>
                             <input type="text" class="form-control" id="tagline" name="tagline" 
@@ -182,6 +206,44 @@
     </div>
 </div>
 
+<!-- CSS for Username Validation -->
+<style>
+.is-info {
+    border-color: #17a2b8 !important;
+    box-shadow: 0 0 0 0.25rem rgba(23, 162, 184, 0.25) !important;
+}
+
+.form-text.text-info {
+    color: #17a2b8 !important;
+}
+
+#username {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.username-checking {
+    position: relative;
+}
+
+.username-checking::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid #17a2b8;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: translateY(-50%) rotate(360deg); }
+}
+</style>
+
 <!-- JavaScript for Profile Functionality -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -192,6 +254,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('profileEditForm');
     const settingToggles = document.querySelectorAll('.setting-toggle');
     const phoneInput = document.getElementById('phone_number');
+    const usernameInput = document.getElementById('username');
+    const usernameError = document.getElementById('usernameError');
+    let usernameCheckTimeout;
 
     // Phone Number Formatting
     if (phoneInput) {
@@ -225,6 +290,143 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Username Validation Functions
+    function validateUsernameFormat(username) {
+        // Check length
+        if (username.length < 3 || username.length > 20) {
+            return { valid: false, message: 'Username must be between 3 and 20 characters' };
+        }
+        
+        // Check for valid characters (letters, numbers, underscores only)
+        const validPattern = /^[a-zA-Z0-9_]+$/;
+        if (!validPattern.test(username)) {
+            return { valid: false, message: 'Username can only contain letters, numbers, and underscores' };
+        }
+        
+        // Check that it doesn't start or end with underscore
+        if (username.startsWith('_') || username.endsWith('_')) {
+            return { valid: false, message: 'Username cannot start or end with an underscore' };
+        }
+        
+        // Check for consecutive underscores
+        if (username.includes('__')) {
+            return { valid: false, message: 'Username cannot contain consecutive underscores' };
+        }
+        
+        // Check for reserved words
+        const reservedWords = ['admin', 'administrator', 'root', 'system', 'moderator', 'mod', 'staff', 'support', 'help', 'api', 'www', 'mail', 'email', 'ftp', 'null', 'undefined', 'test', 'guest', 'anonymous', 'user', 'users'];
+        if (reservedWords.includes(username.toLowerCase())) {
+            return { valid: false, message: 'This username is reserved and cannot be used' };
+        }
+        
+        return { valid: true, message: '' };
+    }
+
+    async function checkUsernameAvailability(username, currentUsername) {
+        // Don't check if it's the same as current username
+        if (username === currentUsername) {
+            return { available: true, message: '' };
+        }
+        
+        try {
+            const response = await fetch('/check-username/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ username: username })
+            });
+            
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error checking username:', error);
+            return { available: false, message: 'Error checking username availability' };
+        }
+    }
+
+    function setUsernameValidation(isValid, message, isChecking = false) {
+        const input = usernameInput;
+        const errorDiv = usernameError;
+        
+        input.classList.remove('is-valid', 'is-invalid');
+        errorDiv.textContent = message;
+        
+        if (isChecking) {
+            input.classList.add('is-info');
+            errorDiv.textContent = 'Checking availability...';
+            errorDiv.className = 'form-text text-info';
+        } else if (isValid) {
+            input.classList.add('is-valid');
+            errorDiv.className = 'valid-feedback';
+            if (message) errorDiv.textContent = message;
+        } else {
+            input.classList.add('is-invalid');
+            errorDiv.className = 'invalid-feedback';
+        }
+    }
+
+    // Username Input Validation
+    if (usernameInput) {
+        const originalUsername = usernameInput.value;
+        
+        usernameInput.addEventListener('input', function(e) {
+            const username = e.target.value.trim();
+            
+            // Clear previous timeout
+            clearTimeout(usernameCheckTimeout);
+            
+            // Reset validation state
+            setUsernameValidation(true, '');
+            
+            if (username === '') {
+                setUsernameValidation(false, 'Username is required');
+                return;
+            }
+            
+            // Validate format first
+            const formatCheck = validateUsernameFormat(username);
+            if (!formatCheck.valid) {
+                setUsernameValidation(false, formatCheck.message);
+                return;
+            }
+            
+            // If format is valid, check availability after a delay
+            setUsernameValidation(true, '', true); // Show checking state
+            
+            usernameCheckTimeout = setTimeout(async () => {
+                const availabilityCheck = await checkUsernameAvailability(username, originalUsername);
+                
+                if (availabilityCheck.available) {
+                    if (username === originalUsername) {
+                        setUsernameValidation(true, 'Current username');
+                    } else {
+                        setUsernameValidation(true, 'Username is available');
+                    }
+                } else {
+                    setUsernameValidation(false, availabilityCheck.message || 'Username is not available');
+                }
+            }, 500); // Wait 500ms after user stops typing
+        });
+        
+        // Validate on blur as well
+        usernameInput.addEventListener('blur', function(e) {
+            const username = e.target.value.trim();
+            
+            if (username === '') {
+                setUsernameValidation(false, 'Username is required');
+                return;
+            }
+            
+            const formatCheck = validateUsernameFormat(username);
+            if (!formatCheck.valid) {
+                setUsernameValidation(false, formatCheck.message);
+            }
+        });
+    }
+
     // Edit Profile Button
     editBtn.addEventListener('click', function() {
         displayMode.style.display = 'none';
@@ -245,8 +447,30 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Profile Form Submission
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
+        
+        // Validate username before submitting
+        const username = usernameInput.value.trim();
+        const originalUsername = usernameInput.getAttribute('value');
+        
+        // Check username format
+        const formatCheck = validateUsernameFormat(username);
+        if (!formatCheck.valid) {
+            setUsernameValidation(false, formatCheck.message);
+            usernameInput.focus();
+            return;
+        }
+        
+        // Check username availability if it changed
+        if (username !== originalUsername) {
+            const availabilityCheck = await checkUsernameAvailability(username, originalUsername);
+            if (!availabilityCheck.available) {
+                setUsernameValidation(false, availabilityCheck.message || 'Username is not available');
+                usernameInput.focus();
+                return;
+            }
+        }
         
         const formData = new FormData(form);
         

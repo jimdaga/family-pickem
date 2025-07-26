@@ -6,7 +6,7 @@ from pickem_api.models import GamePicks
 from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile
 from .forms import GamePicksForm
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Sum
 from django.db.models import Count
 from django.db.models.functions import Coalesce
@@ -58,7 +58,7 @@ def index(request):
     ).count()
     
     # Get total players count
-    total_players = User.objects.exclude(username='admin').count()
+    total_players = User.objects.filter(is_active=True, is_superuser=False).count()
     
     # Get league statistics
     total_picks = GamePicks.objects.filter(gameseason=gameseason).count()
@@ -209,7 +209,7 @@ def scores(request):
     
     players = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
     players_names = players.values_list('uid', flat=True).distinct()
-    players_ids = User.objects.values_list('id', flat=True).distinct().exclude(username='admin')
+    players_ids = User.objects.filter(is_active=True, is_superuser=False).values_list('id', flat=True).distinct()
     wins_losses = Teams.objects.filter(gameseason=gameseason)
 
     winner_object = "week_{}_winner".format(game_week)
@@ -235,7 +235,7 @@ def scores(request):
         points_field = f"week_{game_week}_points"
         weekly_points = 0
         try:
-            user_points_obj = userSeasonPoints.objects.get(userID=request.user.id, gameseason=gameseason)
+            user_points_obj = userSeasonPoints.objects.get(userID=str(request.user.id), gameseason=gameseason)
             weekly_points = getattr(user_points_obj, points_field, 0)
         except userSeasonPoints.DoesNotExist:
             weekly_points = 0 # User may not have an entry yet
@@ -289,7 +289,7 @@ def scores_long(request, competition, gameseason, week):
     users_w_points = user_points.values_list('uid', flat=True).distinct()
     players = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
     players_names = players.values_list('uid', flat=True).distinct()
-    players_ids = User.objects.values_list('id', flat=True).distinct().exclude(username='admin')
+    players_ids = User.objects.filter(is_active=True, is_superuser=False).values_list('id', flat=True).distinct()
     wins_losses = Teams.objects.filter(gameseason=gameseason)
 
     winner_object = "week_{}_winner".format(week)
@@ -314,7 +314,7 @@ def scores_long(request, competition, gameseason, week):
         points_field = f"week_{week}_points"
         weekly_points = 0
         try:
-            user_points_obj = userSeasonPoints.objects.get(userID=request.user.id, gameseason=gameseason)
+            user_points_obj = userSeasonPoints.objects.get(userID=str(request.user.id), gameseason=gameseason)
             weekly_points = getattr(user_points_obj, points_field, 0)
         except userSeasonPoints.DoesNotExist:
             weekly_points = 0 # User may not have an entry yet
@@ -418,6 +418,94 @@ def submit_game_picks(request):
     return render(request, 'pickem/picks.html', context)
 
 
+@login_required
+def edit_game_pick(request):
+    """Handle editing of existing game picks"""
+    from pickem.utils import is_pick_locked
+    from django.http import JsonResponse
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': True, 'message': 'Only POST requests allowed'}, status=405)
+    
+    try:
+        pick_id = request.POST.get('pick_id')
+        new_pick = request.POST.get('pick')
+        tiebreaker_score = request.POST.get('tieBreakerScore', '')
+        tiebreaker_yards = request.POST.get('tieBreakerYards', '')
+        
+        if not pick_id or not new_pick:
+            return JsonResponse({'error': True, 'message': 'Missing required fields'}, status=400)
+        
+        # Get the existing pick
+        try:
+            existing_pick = GamePicks.objects.get(id=pick_id, userEmail=request.user.email)
+        except GamePicks.DoesNotExist:
+            return JsonResponse({'error': True, 'message': 'Pick not found or unauthorized'}, status=404)
+        
+        # Get the game to check if it's locked
+        try:
+            game = GamesAndScores.objects.get(id=existing_pick.pick_game_id)
+        except GamesAndScores.DoesNotExist:
+            return JsonResponse({'error': True, 'message': 'Game not found'}, status=404)
+        
+        # Check if the game is locked
+        is_locked, lock_reason = is_pick_locked(game)
+        if is_locked:
+            return JsonResponse({
+                'error': True, 
+                'message': f'Cannot edit pick: {lock_reason}'
+            }, status=400)
+        
+        # Validate the new pick is for the correct game
+        if new_pick not in [game.awayTeamSlug, game.homeTeamSlug]:
+            return JsonResponse({'error': True, 'message': 'Invalid team selection'}, status=400)
+        
+        # Validate tiebreaker if this is a tiebreaker game
+        if game.tieBreakerGame:
+            if not tiebreaker_score or not tiebreaker_yards:
+                return JsonResponse({
+                    'error': True, 
+                    'message': 'Tiebreaker fields are required for this game'
+                }, status=400)
+            
+            try:
+                score_val = int(tiebreaker_score)
+                yards_val = int(tiebreaker_yards)
+                if score_val < 0 or score_val > 200 or yards_val < 0 or yards_val > 2000:
+                    return JsonResponse({
+                        'error': True, 
+                        'message': 'Tiebreaker values out of valid range'
+                    }, status=400)
+            except ValueError:
+                return JsonResponse({
+                    'error': True, 
+                    'message': 'Tiebreaker values must be numbers'
+                }, status=400)
+        
+        # Update the pick
+        existing_pick.pick = new_pick
+        if game.tieBreakerGame:
+            existing_pick.tieBreakerScore = int(tiebreaker_score) if tiebreaker_score else None
+            existing_pick.tieBreakerYards = int(tiebreaker_yards) if tiebreaker_yards else None
+        
+        existing_pick.save()
+        
+        # Return success response
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Pick updated successfully'})
+        else:
+            # For non-AJAX requests, redirect back to picks page
+            return redirect('game_picks')
+            
+    except Exception as e:
+        error_msg = f'Error updating pick: {str(e)}'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': True, 'message': error_msg}, status=500)
+        else:
+            # For non-AJAX requests, you might want to show an error page or redirect with error
+            return JsonResponse({'error': True, 'message': error_msg}, status=500)
+
+
 def rules(request):
     gameseason = get_season()
     template = loader.get_template('pickem/rules.html')
@@ -472,9 +560,32 @@ def profile(request):
         
         # Handle form submissions for profile updates
         else:
+            import re
+            from django.contrib import messages
+            
+            username = request.POST.get('username', '').strip()
             tagline = request.POST.get('tagline', '').strip()
             favorite_team = request.POST.get('favorite_team', '').strip()
             phone_number = request.POST.get('phone_number', '').strip()
+            
+            # Validate and update username if changed
+            if username and username != request.user.username:
+                # Server-side username validation
+                if len(username) < 3 or len(username) > 20:
+                    messages.error(request, 'Username must be between 3 and 20 characters.')
+                elif not re.match(r'^[a-zA-Z0-9_]+$', username):
+                    messages.error(request, 'Username can only contain letters, numbers, and underscores.')
+                elif username.startswith('_') or username.endswith('_'):
+                    messages.error(request, 'Username cannot start or end with an underscore.')
+                elif '__' in username:
+                    messages.error(request, 'Username cannot contain consecutive underscores.')
+                elif User.objects.filter(username__iexact=username).exclude(id=request.user.id).exists():
+                    messages.error(request, 'This username is already taken.')
+                else:
+                    # Username is valid, update it
+                    request.user.username = username
+                    request.user.save()
+                    messages.success(request, 'Username updated successfully!')
             
             # Update profile fields
             user_profile.tagline = tagline if tagline else None
@@ -482,7 +593,9 @@ def profile(request):
             user_profile.phone_number = phone_number if phone_number else None
             user_profile.save()
             
-            # You could add a success message here
+            # Success message for profile fields if no username errors
+            if not messages.get_messages(request):
+                messages.success(request, 'Profile updated successfully!')
             
     context = {
         'gameseason': gameseason,
@@ -490,6 +603,43 @@ def profile(request):
         'teams': teams,
     }
     return render(request, 'pickem/profile.html', context)
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def check_username(request):
+    """
+    Check if a username is available.
+    Returns JSON with availability status and message.
+    """
+    try:
+        data = json.loads(request.body)
+        username = data.get('username', '').strip()
+        
+        if not username:
+            return JsonResponse({
+                'available': False,
+                'message': 'Username is required'
+            })
+        
+        # Check if username is taken by another user
+        if User.objects.filter(username__iexact=username).exclude(id=request.user.id).exists():
+            return JsonResponse({
+                'available': False,
+                'message': 'This username is already taken'
+            })
+        
+        return JsonResponse({
+            'available': True,
+            'message': 'Username is available'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'available': False,
+            'error': str(e)
+        }, status=400)
 
 
 @login_required
