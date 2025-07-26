@@ -52,13 +52,8 @@ Medium Priority
 
 #### Scores Page Changes 
 High Priority 
-- [ ] Fix alignment so LIVE doesn't make scores not line up 
-- [ ] Make live/final/upcoming buttons work 
-- [ ] Show box score on mobile
-- [ ] Make site live refresh 
 
 Medium Priority 
-- [ ] Ensure team record shows
 - [ ] Show what % each team was picked 
 - [ ] Add stadium / tv details
 - [ ] Link "preview" to ESPN preview 
@@ -70,6 +65,11 @@ Medium Priority
 - [ ] hall of fame
 
 ## Done 
+- [x] Fix alignment so LIVE doesn't make scores not line up 
+- [x] Make live/final/upcoming buttons work 
+- [x] Show box score on mobile
+- [x] Make site live refresh 
+- [x] Ensure team record shows
 - [x] Update prod instance with weeks/games for 2023/24
 - [x] Fix records to use current season
 - [x] Add 'season' logic to picks

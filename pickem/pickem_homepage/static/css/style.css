@@ -3459,12 +3459,13 @@ body:has(.site-banner) .homepage-main-container {
 @media (max-width: 992px) {
     .score-breakdown {
         flex-direction: column;
-        align-items: flex-end;
+        align-items: center;
         gap: 0.75rem;
     }
     
     .quarters {
         order: 2;
+        justify-content: center;
     }
     
     .total-score {
@@ -3474,7 +3475,7 @@ body:has(.site-banner) .homepage-main-container {
     
     .team-score-row {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
         gap: 1.5rem;
         padding: 1.5rem 1rem;
     }
@@ -3616,12 +3617,21 @@ body:has(.site-banner) .homepage-main-container {
         font-size: 1rem;
     }
     
+    .score-breakdown {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
     .total-score {
         font-size: 1.6rem;
+        order: 1;
     }
     
     .quarters {
         gap: 0.4rem;
+        order: 2;
+        justify-content: center;
     }
     
     .quarter-score {
@@ -5446,5 +5456,99 @@ html, body {
 }
 
 .page-title i {
-    color: #495057;
+    color: var(--bs-primary);
 }
+
+.weekly-performance-stats .stat-item {
+    display: block;
+    margin-bottom: .5rem;
+}
+
+/* Compact Weekly Performance Card on Scores Page */
+.weekly-performance-compact {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background-color: #f8f9fa;
+    border-radius: .75rem;
+    padding: 1rem 1.5rem;
+    border: 1px solid #dee2e6;
+}
+
+.weekly-performance-avatar .player-avatar {
+    width: 60px;
+    height: 60px;
+    border: 2px solid #dee2e6;
+}
+
+.weekly-performance-stats {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    flex-grow: 1;
+}
+
+.weekly-performance-stats .stat-item {
+    text-align: left;
+}
+
+.weekly-performance-stats .stat-label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: .9rem;
+    white-space: nowrap;
+}
+
+.weekly-performance-stats .stat-value {
+    font-weight: 700;
+    color: #212529;
+    font-size: 1.1rem;
+}
+
+.weekly-performance-stats .stat-value small {
+    font-size: .85rem;
+    font-weight: 400;
+    color: #6c757d;
+}
+
+/* Page Header */
+.page-header-clean {
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+/* Game Status Badge (Centered between teams) */
+.game-status-display {
+    text-align: center;
+    padding: 1rem 2rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.game-status-display .game-status {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+.game-status-display .game-status.live {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+.game-status-display .game-status.final {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.game-status-display .game-status.upcoming {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+}
+
+/* Teams Matchup */

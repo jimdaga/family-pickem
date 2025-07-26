@@ -216,7 +216,37 @@ def scores(request):
     week_winner = userSeasonPoints.objects.filter(**{winner_object: True},gameseason=gameseason).distinct() 
 
     # TODO: Give zero points to users that didn't win yet
+    user_weekly_stats = {}
+    if request.user.is_authenticated:
+        total_games_in_week = game_list.count()
+        user_picks = picks.filter(userEmail=request.user.email)
 
+        # Base accuracy on picks made for games that are finished
+        finished_games_slugs = game_list.filter(statusType='finished').values_list('slug', flat=True)
+        user_picks_for_finished_games = user_picks.filter(slug__in=finished_games_slugs)
+        total_graded_picks = user_picks_for_finished_games.count()
+        correct_graded_picks = user_picks_for_finished_games.filter(pick_correct=True).count()
+
+        accuracy = 0
+        if total_graded_picks > 0:
+            accuracy = round((correct_graded_picks / total_graded_picks) * 100, 1)
+
+        # Get weekly points
+        points_field = f"week_{game_week}_points"
+        weekly_points = 0
+        try:
+            user_points_obj = userSeasonPoints.objects.get(userID=request.user.id, gameseason=gameseason)
+            weekly_points = getattr(user_points_obj, points_field, 0)
+        except userSeasonPoints.DoesNotExist:
+            weekly_points = 0 # User may not have an entry yet
+        
+        user_weekly_stats = {
+            'total_games_in_week': total_games_in_week,
+            'correct_picks': correct_graded_picks, # show correct picks out of finished games
+            'total_graded_picks': total_graded_picks,
+            'accuracy': accuracy,
+            'weekly_points': weekly_points if weekly_points is not None else 0,
+        }
     template = loader.get_template('pickem/scores.html')
 
     context = {
@@ -234,7 +264,8 @@ def scores(request):
         'current_week': True,
         'points_total': points_total,
         'game_weeks': range(1,19),
-        'gameseason': gameseason
+        'gameseason': gameseason,
+        'user_weekly_stats': user_weekly_stats
     }
     return HttpResponse(template.render(context, request))
 
@@ -264,6 +295,38 @@ def scores_long(request, competition, gameseason, week):
     winner_object = "week_{}_winner".format(week)
     week_winner = userSeasonPoints.objects.filter(**{winner_object: True},gameseason=gameseason).distinct() 
 
+    user_weekly_stats = {}
+    if request.user.is_authenticated:
+        total_games_in_week = game_list.count()
+        user_picks = picks.filter(userEmail=request.user.email)
+
+        # Base accuracy on picks made for games that are finished
+        finished_games_slugs = game_list.filter(statusType='finished').values_list('slug', flat=True)
+        user_picks_for_finished_games = user_picks.filter(slug__in=finished_games_slugs)
+        total_graded_picks = user_picks_for_finished_games.count()
+        correct_graded_picks = user_picks_for_finished_games.filter(pick_correct=True).count()
+
+        accuracy = 0
+        if total_graded_picks > 0:
+            accuracy = round((correct_graded_picks / total_graded_picks) * 100, 1)
+
+        # Get weekly points
+        points_field = f"week_{week}_points"
+        weekly_points = 0
+        try:
+            user_points_obj = userSeasonPoints.objects.get(userID=request.user.id, gameseason=gameseason)
+            weekly_points = getattr(user_points_obj, points_field, 0)
+        except userSeasonPoints.DoesNotExist:
+            weekly_points = 0 # User may not have an entry yet
+        
+        user_weekly_stats = {
+            'total_games_in_week': total_games_in_week,
+            'correct_picks': correct_graded_picks, # show correct picks out of finished games
+            'total_graded_picks': total_graded_picks,
+            'accuracy': accuracy,
+            'weekly_points': weekly_points if weekly_points is not None else 0,
+        }
+
     template = loader.get_template('pickem/scores.html')
 
     context = {
@@ -280,7 +343,8 @@ def scores_long(request, competition, gameseason, week):
         'week_winner': week_winner,
         'points_total': points_total,
         'game_weeks': range(1,19),
-        'gameseason': gameseason
+        'gameseason': gameseason,
+        'user_weekly_stats': user_weekly_stats
     }
     return HttpResponse(template.render(context, request))
 

@@ -37,6 +37,29 @@
             </p>
         </div>
 
+        <!-- Your Weekly Performance Section (Compact) -->
+        {% if user.is_authenticated and user_weekly_stats %}
+        <div class="section-container mb-4 weekly-performance-compact">
+            <div class="weekly-performance-avatar">
+                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}" 
+                     alt="Your profile picture" 
+                     class="player-avatar">
+            </div>
+            <div class="weekly-performance-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Picks Accuracy:</span>
+                    <span class="stat-value">{{ user_weekly_stats.accuracy }}% <small>({{ user_weekly_stats.correct_picks }}/{{ user_weekly_stats.total_graded_picks }} Graded)</small></span>
+                    <br />
+                    <span class="stat-label">Correct Picks:</span>
+                    <span class="stat-value">{{ user_weekly_stats.correct_picks }}</span>
+                    <br />
+                    <span class="stat-label">Week {{ week }} Points:</span>
+                    <span class="stat-value">{{ user_weekly_stats.weekly_points }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="section-container mb-4">
             <div class="filter-controls d-flex flex-wrap gap-2 justify-content-center">
                 <button class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all">
@@ -210,21 +233,13 @@
                                         
                                         {% if game.statusType != 'notstarted' %}
                                         <div class="score-breakdown">
-                                            <div class="quarters d-none d-lg-flex">
+                                            <div class="quarters">
                                                 <span class="quarter-score">{{ game.awayTeamPeriod1|default:"—" }}</span>
                                                 <span class="quarter-score">{{ game.awayTeamPeriod2|default:"—" }}</span>
                                                 <span class="quarter-score">{{ game.awayTeamPeriod3|default:"—" }}</span>
                                                 <span class="quarter-score">{{ game.awayTeamPeriod4|default:"—" }}</span>
                                             </div>
-                                            <div class="total-score">{{ game.awayTeamScore|default:"0" }}
-                                                {% if game.statusType|lower == 'inprogress' %}
-                                                    <span class="game-status live">LIVE</span>
-                                                {% elif game.statusType|lower == 'finished' %}
-                                                    <span class="game-status final">FINAL</span>
-                                                {% elif game.statusType|lower == 'notstarted' %}
-                                                    <span class="game-status upcoming">UPCOMING</span>
-                                                {% endif %}
-                                            </div>
+                                            <div class="total-score">{{ game.awayTeamScore|default:"0" }}</div>
                                         </div>
                                         {% endif %}
                                     </div>
@@ -260,7 +275,7 @@
                                         
                                         {% if game.statusType != 'notstarted' %}
                                         <div class="score-breakdown">
-                                            <div class="quarters d-none d-lg-flex">
+                                            <div class="quarters">
                                                 <span class="quarter-score">{{ game.homeTeamPeriod1|default:"—" }}</span>
                                                 <span class="quarter-score">{{ game.homeTeamPeriod2|default:"—" }}</span>
                                                 <span class="quarter-score">{{ game.homeTeamPeriod3|default:"—" }}</span>
@@ -271,6 +286,19 @@
                                         {% endif %}
                                     </div>
                                 </div>
+
+                                <!-- Game Status Badge (Centered between teams) -->
+                                {% if game.statusType != 'notstarted' %}
+                                <div class="game-status-display">
+                                    {% if game.statusType|lower == 'inprogress' %}
+                                        <span class="game-status live">LIVE</span>
+                                    {% elif game.statusType|lower == 'finished' %}
+                                        <span class="game-status final">FINAL</span>
+                                    {% elif game.statusType|lower == 'notstarted' %}
+                                        <span class="game-status upcoming">UPCOMING</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
 
                                 <!-- Player Picks Section -->
                                 {% if picks and game.statusType != 'notstarted' %}
@@ -531,6 +559,322 @@
             document.body.appendChild(debugBtn);
         }
     });
+
+    // Game Filtering Functionality
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const gameCards = document.querySelectorAll('.game-score-card');
+    
+    function filterGames(filterType) {
+        gameCards.forEach(card => {
+            const gameStatus = card.getAttribute('data-game-status');
+            let shouldShow = false;
+            
+            switch(filterType) {
+                case 'all':
+                    shouldShow = true;
+                    break;
+                case 'live':
+                    shouldShow = gameStatus === 'inprogress';
+                    break;
+                case 'final':
+                    shouldShow = gameStatus === 'finished';
+                    break;
+                case 'upcoming':
+                    shouldShow = gameStatus === 'notstarted';
+                    break;
+            }
+            
+            if (shouldShow) {
+                card.style.display = 'block';
+                card.style.animation = 'fadeIn 0.3s ease-in';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        // Hide empty time groups
+        const timeGroups = document.querySelectorAll('.games-grid');
+        timeGroups.forEach(group => {
+            const visibleCards = group.querySelectorAll('.game-score-card[style*="display: block"], .game-score-card:not([style*="display: none"])');
+            const parentContainer = group.closest('.section-container');
+            
+            if (visibleCards.length === 0) {
+                parentContainer.style.display = 'none';
+            } else {
+                parentContainer.style.display = 'block';
+            }
+        });
+    }
+    
+    // Add click event listeners to filter buttons
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            // Get filter type and apply filter
+            const filterType = this.getAttribute('data-filter');
+            filterGames(filterType);
+            
+            // Save filter preference
+            localStorage.setItem('scores-filter', filterType);
+        });
+    });
+    
+    // Restore saved filter on page load
+    const savedFilter = localStorage.getItem('scores-filter');
+    if (savedFilter && savedFilter !== 'all') {
+        const targetButton = document.querySelector(`[data-filter="${savedFilter}"]`);
+        if (targetButton) {
+            // Remove active from all buttons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active to saved filter button
+            targetButton.classList.add('active');
+            // Apply the filter
+            filterGames(savedFilter);
+        }
+    }
+    
+    // Add fade-in animation CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .filter-btn.active {
+            background-color: var(--bs-primary);
+            border-color: var(--bs-primary);
+            color: white;
+        }
+        .score-updating {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .live-update-indicator {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .live-update-indicator.show {
+            transform: translateX(0);
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Live Score Updates
+    let updateInterval;
+    let lastUpdateTime = Date.now();
+    
+    function createUpdateIndicator() {
+        const indicator = document.createElement('div');
+        indicator.className = 'live-update-indicator';
+        indicator.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Live Updates Active';
+        document.body.appendChild(indicator);
+        return indicator;
+    }
+    
+    function showUpdateIndicator(indicator, message = 'Updating scores...') {
+        indicator.innerHTML = `<i class="fas fa-sync-alt me-1"></i>${message}`;
+        indicator.classList.add('show');
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 2000);
+    }
+    
+    function hasLiveGames() {
+        return document.querySelectorAll('[data-game-status="inprogress"]').length > 0;
+    }
+    
+    async function updateLiveScores() {
+        if (!hasLiveGames()) {
+            return false; // No live games, stop updating
+        }
+        
+        const indicator = document.querySelector('.live-update-indicator') || createUpdateIndicator();
+        
+        try {
+            // Add visual indication that scores are updating
+            const liveCards = document.querySelectorAll('[data-game-status="inprogress"]');
+            liveCards.forEach(card => card.classList.add('score-updating'));
+            
+            showUpdateIndicator(indicator, 'Updating live scores...');
+            
+            // Fetch updated page content
+            const response = await fetch(window.location.href, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const html = await response.text();
+            const parser = new DOMParser();
+            const newDoc = parser.parseFromString(html, 'text/html');
+            
+            // Update game scores and status
+            const currentGames = document.querySelectorAll('.game-score-card');
+            const newGames = newDoc.querySelectorAll('.game-score-card');
+            
+            let gamesUpdated = 0;
+            let completedGames = 0;
+            
+            currentGames.forEach((currentGame, index) => {
+                if (newGames[index]) {
+                    const currentStatus = currentGame.getAttribute('data-game-status');
+                    const newStatus = newGames[index].getAttribute('data-game-status');
+                    
+                    // Check if game status changed or scores updated
+                    const currentScores = currentGame.querySelectorAll('.total-score, .quarter-score');
+                    const newScores = newGames[index].querySelectorAll('.total-score, .quarter-score');
+                    
+                    let scoresChanged = false;
+                    currentScores.forEach((score, scoreIndex) => {
+                        if (newScores[scoreIndex] && score.textContent !== newScores[scoreIndex].textContent) {
+                            scoresChanged = true;
+                        }
+                    });
+                    
+                    // Update if scores changed or status changed
+                    if (scoresChanged || currentStatus !== newStatus) {
+                        // Update the entire game card content
+                        currentGame.innerHTML = newGames[index].innerHTML;
+                        currentGame.setAttribute('data-game-status', newStatus);
+                        
+                        // Add update animation
+                        currentGame.style.animation = 'none';
+                        currentGame.offsetHeight; // Trigger reflow
+                        currentGame.style.animation = 'fadeIn 0.5s ease-in';
+                        
+                        gamesUpdated++;
+                        
+                        // Check if game just completed
+                        if (currentStatus === 'inprogress' && newStatus === 'finished') {
+                            completedGames++;
+                            // Add completion effect
+                            currentGame.style.border = '2px solid #28a745';
+                            setTimeout(() => {
+                                currentGame.style.border = '';
+                            }, 3000);
+                        }
+                    }
+                }
+            });
+            
+            // Update weekly performance stats if user is authenticated
+            const currentStats = document.querySelector('.weekly-performance-stats');
+            const newStats = newDoc.querySelector('.weekly-performance-stats');
+            if (currentStats && newStats && currentStats.innerHTML !== newStats.innerHTML) {
+                currentStats.innerHTML = newStats.innerHTML;
+                currentStats.style.animation = 'fadeIn 0.5s ease-in';
+            }
+            
+            // Update week points leaderboard
+            const currentLeaderboard = document.querySelector('.points-leaderboard');
+            const newLeaderboard = newDoc.querySelector('.points-leaderboard');
+            if (currentLeaderboard && newLeaderboard && currentLeaderboard.innerHTML !== newLeaderboard.innerHTML) {
+                currentLeaderboard.innerHTML = newLeaderboard.innerHTML;
+                currentLeaderboard.style.animation = 'fadeIn 0.5s ease-in';
+            }
+            
+            // Remove updating animation
+            liveCards.forEach(card => card.classList.remove('score-updating'));
+            
+            // Show appropriate update message
+            if (completedGames > 0) {
+                showUpdateIndicator(indicator, `${completedGames} game(s) completed! Picks scored.`);
+            } else if (gamesUpdated > 0) {
+                showUpdateIndicator(indicator, `${gamesUpdated} game(s) updated`);
+            }
+            
+            lastUpdateTime = Date.now();
+            return hasLiveGames(); // Return true if there are still live games
+            
+        } catch (error) {
+            console.error('Error updating live scores:', error);
+            showUpdateIndicator(indicator, 'Update failed - retrying...');
+            
+            // Remove updating animation on error
+            const liveCards = document.querySelectorAll('[data-game-status="inprogress"]');
+            liveCards.forEach(card => card.classList.remove('score-updating'));
+            
+            return hasLiveGames();
+        }
+    }
+    
+    function startLiveUpdates() {
+        if (!hasLiveGames()) {
+            return;
+        }
+        
+        const indicator = createUpdateIndicator();
+        showUpdateIndicator(indicator, 'Live updates starting...');
+        
+        // Update every 30 seconds when games are live
+        updateInterval = setInterval(async () => {
+            const stillHasLiveGames = await updateLiveScores();
+            
+            if (!stillHasLiveGames) {
+                // No more live games, stop updates
+                clearInterval(updateInterval);
+                const indicator = document.querySelector('.live-update-indicator');
+                if (indicator) {
+                    showUpdateIndicator(indicator, 'All games completed');
+                    setTimeout(() => {
+                        indicator.remove();
+                    }, 3000);
+                }
+            }
+        }, 30000); // Update every 30 seconds
+        
+        // Also update when user returns to tab (visibility change)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && hasLiveGames()) {
+                // User returned to tab, update immediately if it's been more than 10 seconds
+                if (Date.now() - lastUpdateTime > 10000) {
+                    updateLiveScores();
+                }
+            }
+        });
+    }
+    
+    // Start live updates when page loads if there are live games
+    if (hasLiveGames()) {
+        // Initial delay to let page fully load
+        setTimeout(startLiveUpdates, 2000);
+    }
+    
+    // Restart live updates when filter changes to show live games
+    const originalFilterGames = filterGames;
+    filterGames = function(filterType) {
+        originalFilterGames(filterType);
+        
+        // If user filters to show live games and there are live games, start updates
+        if ((filterType === 'all' || filterType === 'live') && hasLiveGames() && !updateInterval) {
+            setTimeout(startLiveUpdates, 1000);
+        }
+    };
+    
     </script>
 
 {% endblock %}
