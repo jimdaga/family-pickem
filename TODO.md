@@ -7,6 +7,7 @@ Pickem
 High Priority 
 - [ ] Set all the tiebreaker games for 2025-2026
 - [ ] Disable devmode on prod site
+- [ ] setup argocd to auto deploy 
 
 Medium Priority 
 - [ ] Add a cronjob to delete stuck update data jobs
