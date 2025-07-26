@@ -11,7 +11,7 @@ High Priority
 
 Medium Priority 
 - [ ] Add a cronjob to delete stuck update data jobs
-- [ ] Add dark mode to site
+- [ ] Add dark mode to site {WIP}
 - [ ] Setup pick e-mail reminders -- or --
 - [ ] Send text when picks not made 
 
@@ -20,17 +20,12 @@ Low Priority
 
 #### Standings Page Changes
 Medium Priority 
-- [ ] Fix place circle to be top left 
 - [ ] For past seasons show the winner at the top
 - [ ] Standings page to include "most weeks won" metrics 
 - [ ] Add up/down icons with week over week change
 
 #### Picks Page Changes
-High Priority 
-- [ ] Fullscreen tiebreaker should be a new line so it doesn't overflow
-
 Medium Priority 
-- [ ] Allow editing picks before they lock 
 - [ ] Add % win likely 
 
 #### Stats Page Changes 
@@ -43,8 +38,6 @@ Medium Priority
 - [ ] Add AI Summary of prior week 
 
 #### Scores Page Changes 
-High Priority 
-
 Medium Priority 
 - [ ] Show what % each team was picked 
 - [ ] Add stadium / tv details
@@ -57,6 +50,9 @@ Medium Priority
 - [ ] hall of fame
 
 ## Done 
+- [x] Allow editing picks before they lock 
+- [x] Fullscreen tiebreaker should be a new line so it doesn't overflow
+- [x] Fix place circle to be top left 
 - [x] Make picks lock at 1PM Sat (add "locked" to game?)
 - [x] Give users way to change username (remove dependency on username in points)
 - [x] Add "Favorite Team"

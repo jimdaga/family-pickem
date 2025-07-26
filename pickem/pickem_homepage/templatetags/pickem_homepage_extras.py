@@ -33,12 +33,41 @@ def lookupavatar(user_id):
 @register.filter
 def lookuplogo(slug):
     if slug != None:
-        logo = Teams.objects.get(teamNameSlug=slug)
+        # Handle comma-separated team names (ties) by taking the first team
+        if ',' in slug:
+            first_team_slug = slug.split(',')[0].strip()
+            try:
+                logo = Teams.objects.get(teamNameSlug=first_team_slug)
+            except Teams.DoesNotExist:
+                logo = {
+                    'teamLogo': None
+                }
+        else:
+            try:
+                logo = Teams.objects.get(teamNameSlug=slug)
+            except Teams.DoesNotExist:
+                logo = {
+                    'teamLogo': None
+                }
     else:
         logo = {
             'teamLogo': None
         }
     return logo
+
+@register.filter
+def has_multiple_teams(team_string):
+    """Check if a team string contains multiple teams (comma-separated)"""
+    if not team_string:
+        return False
+    return ',' in str(team_string)
+
+@register.filter
+def count_teams(team_string):
+    """Count the number of teams in a comma-separated team string"""
+    if not team_string:
+        return 0
+    return len([team.strip() for team in str(team_string).split(',') if team.strip()])
 
 @register.filter
 def lookuppick(id):

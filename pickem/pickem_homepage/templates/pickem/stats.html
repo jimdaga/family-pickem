@@ -197,6 +197,11 @@
                                             {% if stats.mostPickedSeason %}
                                                 {% with stats.mostPickedSeason|lookuplogo as logo_url %}
                                                     <img src="{{ logo_url.teamLogo }}" alt="{{ stats.mostPickedSeason }} team logo" class="team-logo-sm">
+                                                    {% if stats.mostPickedSeason|has_multiple_teams %}
+                                                        <span class="tie-indicator" title="{{ stats.mostPickedSeason|count_teams }} teams tied">
+                                                            <i class="fas fa-plus-circle text-info ms-1"></i>
+                                                        </span>
+                                                    {% endif %}
                                                 {% endwith %}
                                             {% else %}
                                                 <span class="text-muted">N/A</span>
@@ -209,6 +214,11 @@
                                             {% if stats.leastPickedSeason %}
                                                 {% with stats.leastPickedSeason|lookuplogo as logo_url %}
                                                     <img src="{{ logo_url.teamLogo }}" alt="{{ stats.leastPickedSeason }} team logo" class="team-logo-sm">
+                                                    {% if stats.leastPickedSeason|has_multiple_teams %}
+                                                        <span class="tie-indicator" title="{{ stats.leastPickedSeason|count_teams }} teams tied">
+                                                            <i class="fas fa-plus-circle text-info ms-1"></i>
+                                                        </span>
+                                                    {% endif %}
                                                 {% endwith %}
                                             {% else %}
                                                 <span class="text-muted">N/A</span>
@@ -247,6 +257,11 @@
                                             {% if stats.mostPickedTotal %}
                                                 {% with stats.mostPickedTotal|lookuplogo as logo_url %}
                                                     <img src="{{ logo_url.teamLogo }}" alt="{{ stats.mostPickedTotal }} team logo" class="team-logo-sm">
+                                                    {% if stats.mostPickedTotal|has_multiple_teams %}
+                                                        <span class="tie-indicator" title="{{ stats.mostPickedTotal|count_teams }} teams tied">
+                                                            <i class="fas fa-plus-circle text-info ms-1"></i>
+                                                        </span>
+                                                    {% endif %}
                                                 {% endwith %}
                                             {% else %}
                                                 <span class="text-muted">N/A</span>
@@ -259,6 +274,11 @@
                                             {% if stats.leastPickedTotal %}
                                                 {% with stats.leastPickedTotal|lookuplogo as logo_url %}
                                                     <img src="{{ logo_url.teamLogo }}" alt="{{ stats.leastPickedTotal }} team logo" class="team-logo-sm">
+                                                    {% if stats.leastPickedTotal|has_multiple_teams %}
+                                                        <span class="tie-indicator" title="{{ stats.leastPickedTotal|count_teams }} teams tied">
+                                                            <i class="fas fa-plus-circle text-info ms-1"></i>
+                                                        </span>
+                                                    {% endif %}
                                                 {% endwith %}
                                             {% else %}
                                                 <span class="text-muted">N/A</span>
