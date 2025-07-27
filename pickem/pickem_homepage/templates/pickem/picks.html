@@ -111,6 +111,50 @@
                                         {% endif %}
                                     </div>
 
+                                    <!-- Game Info (Spread, Weather, etc.) -->
+                                    {% if game.spread or game.overUnder or game.temperature or game.weatherCondition %}
+                                    <div class="game-info-bar">
+                                        {% if game.spread %}
+                                        <div class="game-info-item spread-item">
+                                            <i class="fas fa-chart-line me-1"></i>
+                                            <span class="info-label">Spread:</span>
+                                            <span class="info-value spread-value">
+                                                {% if game.spread > 0 %}
+                                                    {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="spread-team-logo">
+                                                    {% endwith %}
+                                                    -{{ game.spread|floatformat:1 }}
+                                                {% else %}
+                                                    {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="spread-team-logo">
+                                                    {% endwith %}
+                                                    -{{ game.spread|floatformat:1|cut:"-" }}
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        {% endif %}
+                                        {% if game.overUnder %}
+                                        <div class="game-info-item">
+                                            <i class="fas fa-calculator me-1"></i>
+                                            <span class="info-label">O/U:</span>
+                                            <span class="info-value">{{ game.overUnder|floatformat:1 }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if game.temperature and game.weatherCondition %}
+                                        <div class="game-info-item">
+                                            <i class="fas fa-thermometer-half me-1"></i>
+                                            <span class="info-value">{{ game.temperature }}°F, {{ game.weatherCondition }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if game.venueIndoor %}
+                                        <div class="game-info-item">
+                                            <i class="fas fa-home me-1"></i>
+                                            <span class="info-value">Indoor</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+
                                     <!-- Team Selection -->
                                     <div class="team-selection">
                                         <!-- Away Team -->
@@ -126,16 +170,23 @@
                                             </div>
                                             <div class="team-info">
                                                 <div class="team-name">{{ game.awayTeamName }}</div>
-                                                <div class="team-record">
-                                                    {% for team in wins_losses %}
-                                                        {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                            {% if team.teamTies > 0 %}
-                                                                ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
-                                                            {% else %}
-                                                                ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                <div class="team-details">
+                                                    <div class="team-record">
+                                                        {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                                {% if team.teamTies > 0 %}
+                                                                    ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                                {% else %}
+                                                                    ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                                {% endif %}
                                                             {% endif %}
-                                                        {% endif %}
-                                                    {% endfor %}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% if game.awayTeamWinProbability %}
+                                                    <div class="win-probability">
+                                                        <i class="fas fa-percentage me-1"></i>{{ game.awayTeamWinProbability|floatformat:0 }}% chance
+                                                    </div>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                             <div class="team-selection-indicator">
@@ -162,16 +213,23 @@
                                             </div>
                                             <div class="team-info">
                                                 <div class="team-name">{{ game.homeTeamName }}</div>
-                                                <div class="team-record">
-                                                    {% for team in wins_losses %}
-                                                        {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                            {% if team.teamTies > 0 %}
-                                                                ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
-                                                            {% else %}
-                                                                ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                <div class="team-details">
+                                                    <div class="team-record">
+                                                        {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                                {% if team.teamTies > 0 %}
+                                                                    ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                                {% else %}
+                                                                    ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                                {% endif %}
                                                             {% endif %}
-                                                        {% endif %}
-                                                    {% endfor %}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% if game.homeTeamWinProbability %}
+                                                    <div class="win-probability">
+                                                        <i class="fas fa-percentage me-1"></i>{{ game.homeTeamWinProbability|floatformat:0 }}% chance
+                                                    </div>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                             <div class="team-selection-indicator">
@@ -366,7 +424,14 @@
                                                 data-home-logo="{% with game.homeTeamSlug|lookuplogo as logo_url %}{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}{% endwith %}"
                                                 data-is-tiebreaker="{{ game.tieBreakerGame|yesno:'true,false' }}"
                                                 data-tiebreaker-score="{{ p.tieBreakerScore|default:'' }}"
-                                                data-tiebreaker-yards="{{ p.tieBreakerYards|default:'' }}">
+                                                data-tiebreaker-yards="{{ p.tieBreakerYards|default:'' }}"
+                                                data-spread="{{ game.spread|default:'' }}"
+                                                data-over-under="{{ game.overUnder|default:'' }}"
+                                                data-temperature="{{ game.temperature|default:'' }}"
+                                                data-weather-condition="{{ game.weatherCondition|default:'' }}"
+                                                data-venue-indoor="{{ game.venueIndoor|yesno:'true,false' }}"
+                                                data-home-win-probability="{{ game.homeTeamWinProbability|default:'' }}"
+                                                data-away-win-probability="{{ game.awayTeamWinProbability|default:'' }}">
                                             <i class="fas fa-edit me-1"></i>
                                             Edit Pick
                                         </button>
@@ -430,6 +495,28 @@
                             <div class="game-time" id="editGameTime"></div>
                         </div>
 
+                        <!-- Game Stats (Spread, Weather, etc.) -->
+                        <div id="editGameStatsBar" class="game-info-bar mb-4" style="display: none;">
+                            <div id="editSpreadInfo" class="game-info-item" style="display: none;">
+                                <i class="fas fa-chart-line me-1"></i>
+                                <span class="info-label">Spread:</span>
+                                <span class="info-value" id="editSpreadValue"></span>
+                            </div>
+                            <div id="editOverUnderInfo" class="game-info-item" style="display: none;">
+                                <i class="fas fa-calculator me-1"></i>
+                                <span class="info-label">O/U:</span>
+                                <span class="info-value" id="editOverUnderValue"></span>
+                            </div>
+                            <div id="editWeatherInfo" class="game-info-item" style="display: none;">
+                                <i class="fas fa-thermometer-half me-1"></i>
+                                <span class="info-value" id="editWeatherValue"></span>
+                            </div>
+                            <div id="editVenueInfo" class="game-info-item" style="display: none;">
+                                <i class="fas fa-home me-1"></i>
+                                <span class="info-value">Indoor</span>
+                            </div>
+                        </div>
+
                         <!-- Team Selection -->
                         <div class="edit-team-selection mb-4">
                             <h6 class="mb-3">Select Your Pick:</h6>
@@ -439,6 +526,9 @@
                                         <img id="editAwayLogo" src="" alt="" class="team-logo-edit">
                                     </div>
                                     <div class="team-name-edit" id="editAwayName"></div>
+                                    <div id="editAwayWinProb" class="win-probability" style="display: none;">
+                                        <i class="fas fa-percentage me-1"></i><span id="editAwayWinProbValue"></span>% chance
+                                    </div>
                                     <div class="selection-indicator">
                                         <i class="fas fa-check"></i>
                                     </div>
@@ -449,6 +539,9 @@
                                         <img id="editHomeLogo" src="" alt="" class="team-logo-edit">
                                     </div>
                                     <div class="team-name-edit" id="editHomeName"></div>
+                                    <div id="editHomeWinProb" class="win-probability" style="display: none;">
+                                        <i class="fas fa-percentage me-1"></i><span id="editHomeWinProbValue"></span>% chance
+                                    </div>
                                     <div class="selection-indicator">
                                         <i class="fas fa-check"></i>
                                     </div>
@@ -663,6 +756,13 @@
                 const isTiebreaker = this.dataset.isTiebreaker === 'true';
                 const tiebreakerScore = this.dataset.tiebreakerScore;
                 const tiebreakerYards = this.dataset.tiebreakerYards;
+                const spread = this.dataset.spread;
+                const overUnder = this.dataset.overUnder;
+                const temperature = this.dataset.temperature;
+                const weatherCondition = this.dataset.weatherCondition;
+                const venueIndoor = this.dataset.venueIndoor === 'true';
+                const homeWinProbability = this.dataset.homeWinProbability;
+                const awayWinProbability = this.dataset.awayWinProbability;
 
                 // Populate modal with game data
                 document.getElementById('editPickId').value = pickId;
@@ -681,6 +781,24 @@
                 document.getElementById('editAwayLogo').alt = `${awayName} logo`;
                 document.getElementById('editHomeLogo').src = homeLogo;
                 document.getElementById('editHomeLogo').alt = `${homeName} logo`;
+
+                // Set win probabilities
+                const awayWinProbElement = document.getElementById('editAwayWinProb');
+                const homeWinProbElement = document.getElementById('editHomeWinProb');
+                
+                if (awayWinProbability && awayWinProbability !== '') {
+                    document.getElementById('editAwayWinProbValue').textContent = Math.round(parseFloat(awayWinProbability));
+                    awayWinProbElement.style.display = 'flex';
+                } else {
+                    awayWinProbElement.style.display = 'none';
+                }
+                
+                if (homeWinProbability && homeWinProbability !== '') {
+                    document.getElementById('editHomeWinProbValue').textContent = Math.round(parseFloat(homeWinProbability));
+                    homeWinProbElement.style.display = 'flex';
+                } else {
+                    homeWinProbElement.style.display = 'none';
+                }
 
                 // Set current selection
                 document.querySelectorAll('.team-option-edit').forEach(option => {
@@ -702,6 +820,60 @@
                 } else {
                     tiebreakerSection.style.display = 'none';
                 }
+
+                // Handle game stats bar
+                const statsBar = document.getElementById('editGameStatsBar');
+                const spreadInfo = document.getElementById('editSpreadInfo');
+                const overUnderInfo = document.getElementById('editOverUnderInfo');
+                const weatherInfo = document.getElementById('editWeatherInfo');
+                const venueInfo = document.getElementById('editVenueInfo');
+                
+                let hasStats = false;
+
+                // Show spread if available
+                if (spread && spread !== '') {
+                    const spreadValue = parseFloat(spread);
+                    const spreadElement = document.getElementById('editSpreadValue');
+                    
+                    if (spreadValue > 0) {
+                        spreadElement.innerHTML = `<img src="${homeLogo}" alt="${homeName} logo" class="spread-team-logo"> -${Math.abs(spreadValue).toFixed(1)}`;
+                    } else {
+                        spreadElement.innerHTML = `<img src="${awayLogo}" alt="${awayName} logo" class="spread-team-logo"> -${Math.abs(spreadValue).toFixed(1)}`;
+                    }
+                    spreadInfo.style.display = 'flex';
+                    hasStats = true;
+                } else {
+                    spreadInfo.style.display = 'none';
+                }
+
+                // Show over/under if available
+                if (overUnder && overUnder !== '') {
+                    document.getElementById('editOverUnderValue').textContent = parseFloat(overUnder).toFixed(1);
+                    overUnderInfo.style.display = 'flex';
+                    hasStats = true;
+                } else {
+                    overUnderInfo.style.display = 'none';
+                }
+
+                // Show weather if available
+                if (temperature && weatherCondition) {
+                    document.getElementById('editWeatherValue').textContent = `${temperature}°F, ${weatherCondition}`;
+                    weatherInfo.style.display = 'flex';
+                    hasStats = true;
+                } else {
+                    weatherInfo.style.display = 'none';
+                }
+
+                // Show venue if indoor
+                if (venueIndoor) {
+                    venueInfo.style.display = 'flex';
+                    hasStats = true;
+                } else {
+                    venueInfo.style.display = 'none';
+                }
+
+                // Show/hide the entire stats bar
+                statsBar.style.display = hasStats ? 'flex' : 'none';
 
                 // Show modal
                 new bootstrap.Modal(document.getElementById('editPickModal')).show();

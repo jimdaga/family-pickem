@@ -8,6 +8,7 @@ High Priority
 - [ ] Set all the tiebreaker games for 2025-2026
 - [ ] Disable devmode on prod site
 - [ ] setup argocd to auto deploy 
+- [ ] refactor python cron scripts into go app 
 
 Medium Priority 
 - [ ] Add a cronjob to delete stuck update data jobs
@@ -19,12 +20,8 @@ Low Priority
 - [ ] Add audit database 
 
 #### Standings Page Changes
-Medium Priority 
-- [ ] Add up/down icons with week over week change
 
 #### Picks Page Changes
-Medium Priority 
-- [ ] Add % win likely 
 
 #### Stats Page Changes 
 
@@ -45,6 +42,7 @@ Medium Priority
 - [ ] hall of fame
 
 ## Done 
+- [x] Add % win likely 
 - [x] Finish writing tool to generate stats
 - [x] For past seasons show the winner at the top
 - [x] Allow editing picks before they lock 

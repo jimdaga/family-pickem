@@ -4356,6 +4356,66 @@ body:has(.site-banner) .homepage-main-container {
     background: linear-gradient(135deg, #dc3545, #c82333);
 }
 
+/* Game Info Bar */
+.game-info-bar {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    align-items: center;
+}
+
+.game-info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: #495057;
+    background: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.game-info-item i {
+    color: #6c757d;
+    font-size: 0.7rem;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.info-value {
+    font-weight: 700;
+    color: #495057;
+}
+
+.spread-item {
+    justify-content: center;
+    width: fit-content;
+}
+
+.spread-value {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+.spread-team-logo {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+    flex-shrink: 0;
+}
+
 /* Team Selection */
 .team-selection {
     padding: 1.5rem;
@@ -4442,6 +4502,32 @@ body:has(.site-banner) .homepage-main-container {
     color: #6c757d;
     font-size: 0.8rem;
     line-height: 1;
+}
+
+.team-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.win-probability {
+    font-size: 0.7rem;
+    color: #007bff;
+    font-weight: 600;
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    padding: 0.15rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #90caf9;
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    box-shadow: 0 1px 3px rgba(0,123,255,0.2);
+    margin-top: 0.25rem;
+}
+
+.win-probability i {
+    font-size: 0.6rem;
 }
 
 .team-selection-indicator {

@@ -257,6 +257,62 @@ def build_payload(week):
                 else:
                     game_winner = ""
 
+                # Extract betting odds and calculate win probabilities
+                home_win_probability = None
+                away_win_probability = None
+                spread = None
+                over_under = None
+                
+                if 'odds' in competition and len(competition['odds']) > 0:
+                    odds_data = competition['odds'][0]  # Use primary odds provider
+                    
+                    # Get spread and over/under
+                    spread = odds_data.get('spread')
+                    over_under = odds_data.get('overUnder')
+                    
+                    # Calculate win probabilities from favorite status and spread
+                    home_odds = odds_data.get('homeTeamOdds', {})
+                    away_odds = odds_data.get('awayTeamOdds', {})
+                    
+                    home_is_favorite = home_odds.get('favorite', False)
+                    away_is_favorite = away_odds.get('favorite', False)
+                    
+                    if spread is not None:
+                        # Convert spread to win probability
+                        # Basic formula: favorite gets base probability + spread factor
+                        spread_magnitude = abs(spread)
+                        base_favorite_prob = 52  # Base probability for favorite
+                        spread_factor = min(spread_magnitude * 2, 25)  # Cap impact at 25%
+                        
+                        if home_is_favorite:
+                            home_win_probability = min(base_favorite_prob + spread_factor, 85)
+                            away_win_probability = 100 - home_win_probability
+                        elif away_is_favorite:
+                            away_win_probability = min(base_favorite_prob + spread_factor, 85)
+                            home_win_probability = 100 - away_win_probability
+                        else:
+                            # Pick'em game
+                            home_win_probability = 50
+                            away_win_probability = 50
+                    else:
+                        # No spread data, default to 50/50
+                        home_win_probability = 50
+                        away_win_probability = 50
+                
+                # Extract weather information
+                temperature = None
+                weather_condition = None
+                if 'weather' in event:
+                    weather_data = event['weather']
+                    temperature = weather_data.get('temperature')
+                    weather_condition = weather_data.get('displayValue')
+                
+                # Extract venue information
+                venue_indoor = False
+                if 'venue' in competition:
+                    venue_data = competition['venue']
+                    venue_indoor = venue_data.get('indoor', False)
+
             payload = {
                 "id": game_id,
                 "slug": "{}-{}".format(home_team_slug, away_team_slug),
@@ -285,7 +341,16 @@ def build_payload(week):
                 "awayTeamPeriod2": away_team_score_2,
                 "awayTeamPeriod3": away_team_score_3,
                 "awayTeamPeriod4": away_team_score_4,
-                "awayTeamPeriodOT": away_team_score_ot
+                "awayTeamPeriodOT": away_team_score_ot,
+                # Betting and odds information
+                "homeTeamWinProbability": home_win_probability,
+                "awayTeamWinProbability": away_win_probability,
+                "spread": spread,
+                "overUnder": over_under,
+                # Weather and venue information
+                "temperature": temperature,
+                "weatherCondition": weather_condition,
+                "venueIndoor": venue_indoor
             }
             json_string = json.dumps(payload, default=str)
             add_games(json_string, game_id)

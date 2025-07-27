@@ -76,6 +76,17 @@ class GamesAndScores(models.Model):
     gameAdded = models.DateTimeField(auto_now_add=True)
     gameUpdated = models.DateTimeField(auto_now=True)
     gameScored = models.BooleanField(default=False)
+    
+    # Betting and Odds Information
+    homeTeamWinProbability = models.FloatField(blank=True, null=True, help_text="Home team win probability as percentage (0-100)")
+    awayTeamWinProbability = models.FloatField(blank=True, null=True, help_text="Away team win probability as percentage (0-100)")
+    spread = models.FloatField(blank=True, null=True, help_text="Point spread (positive favors home team)")
+    overUnder = models.FloatField(blank=True, null=True, help_text="Over/under total points line")
+    
+    # Weather and Venue Information
+    temperature = models.IntegerField(blank=True, null=True, help_text="Game temperature in Fahrenheit")
+    weatherCondition = models.CharField(max_length=100, blank=True, null=True, help_text="Weather condition description")
+    venueIndoor = models.BooleanField(default=False, help_text="Whether the game is played indoors")
 
     class Meta:
         ordering = ['startTimestamp']
