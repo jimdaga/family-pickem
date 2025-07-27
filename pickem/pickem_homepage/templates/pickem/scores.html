@@ -200,6 +200,50 @@
                                     </div>
                                 </div>
 
+                                <!-- Game Info (Spread, Weather, etc.) -->
+                                {% if game.spread or game.overUnder or game.temperature or game.weatherCondition %}
+                                <div class="game-info-bar">
+                                    {% if game.spread %}
+                                    <div class="game-info-item spread-item">
+                                        <i class="fas fa-chart-line me-1"></i>
+                                        <span class="info-label">Spread:</span>
+                                        <span class="info-value spread-value">
+                                            {% if game.spread > 0 %}
+                                                {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="spread-team-logo">
+                                                {% endwith %}
+                                                -{{ game.spread|floatformat:1 }}
+                                            {% else %}
+                                                {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="spread-team-logo">
+                                                {% endwith %}
+                                                -{{ game.spread|floatformat:1|cut:"-" }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    {% if game.overUnder %}
+                                    <div class="game-info-item">
+                                        <i class="fas fa-calculator me-1"></i>
+                                        <span class="info-label">O/U:</span>
+                                        <span class="info-value">{{ game.overUnder|floatformat:1 }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if game.temperature and game.weatherCondition %}
+                                    <div class="game-info-item">
+                                        <i class="fas fa-thermometer-half me-1"></i>
+                                        <span class="info-value">{{ game.temperature }}°F, {{ game.weatherCondition }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if game.venueIndoor %}
+                                    <div class="game-info-item">
+                                        <i class="fas fa-home me-1"></i>
+                                        <span class="info-value">Indoor</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
                                 <!-- Teams and Scores -->
                                 <div class="teams-matchup">
                                     <!-- Away Team -->
@@ -217,16 +261,23 @@
                                                         <i class="fas fa-chevron-right ms-1 winner-indicator"></i>
                                                     {% endif %}
                                                 </div>
-                                                <div class="team-record">
-                                                    {% for team in wins_losses %}
-                                                        {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                            {% if team.teamTies > 0 %}
-                                                                ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
-                                                            {% else %}
-                                                                ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                <div class="team-details">
+                                                    <div class="team-record">
+                                                        {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                                {% if team.teamTies > 0 %}
+                                                                    ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                                {% else %}
+                                                                    ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                                {% endif %}
                                                             {% endif %}
-                                                        {% endif %}
-                                                    {% endfor %}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% if game.awayTeamWinProbability %}
+                                                    <div class="win-probability">
+                                                        <i class="fas fa-percentage me-1"></i>{{ game.awayTeamWinProbability|floatformat:0 }}% chance
+                                                    </div>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                         </div>
@@ -259,16 +310,23 @@
                                                         <i class="fas fa-chevron-right ms-1 winner-indicator"></i>
                                                     {% endif %}
                                                 </div>
-                                                <div class="team-record">
-                                                    {% for team in wins_losses %}
-                                                        {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                            {% if team.teamTies > 0 %}
-                                                                ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
-                                                            {% else %}
-                                                                ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                <div class="team-details">
+                                                    <div class="team-record">
+                                                        {% for team in wins_losses %}
+                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                                {% if team.teamTies > 0 %}
+                                                                    ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                                {% else %}
+                                                                    ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                                {% endif %}
                                                             {% endif %}
-                                                        {% endif %}
-                                                    {% endfor %}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% if game.homeTeamWinProbability %}
+                                                    <div class="win-probability">
+                                                        <i class="fas fa-percentage me-1"></i>{{ game.homeTeamWinProbability|floatformat:0 }}% chance
+                                                    </div>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                         </div>
