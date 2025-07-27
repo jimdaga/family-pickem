@@ -143,6 +143,9 @@ def standings(request):
     # Filter player points based on the selected season
     player_points = userSeasonPoints.objects.filter(gameseason=selected_season).order_by('-total_points')
     
+    # Get season winner for the selected season
+    season_winner = userSeasonPoints.objects.filter(year_winner=True, gameseason=selected_season).first()
+    
     # Format seasons for the dropdown
     formatted_seasons = []
     for season in all_seasons:
@@ -160,6 +163,7 @@ def standings(request):
     context = {
         'players': players,
         'player_points': player_points,
+        'season_winner': season_winner,
         'all_seasons': formatted_seasons,
         'selected_season': selected_season,
         'gameseason': selected_season
@@ -357,12 +361,21 @@ def stats(request):
     # Get list of players and their rankings
     players = User.objects.all()
     player_points = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
+    
+    # Get players with stats entries for Player Performance Analysis
+    # Order by season accuracy (descending), then by weeks won (descending)
+    player_stats = userStats.objects.all().order_by(
+        '-pickPercentSeason', 
+        '-weeksWonSeason',
+        '-correctPickTotalSeason'
+    )
 
     template = loader.get_template('pickem/stats.html')
 
     context = {
         'players': players,
         'player_points': player_points,
+        'player_stats': player_stats,
         'gameseason': gameseason
     }
     return HttpResponse(template.render(context, request))

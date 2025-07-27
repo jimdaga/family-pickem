@@ -30,6 +30,33 @@
                 </p>
             </div>
 
+            <!-- Season Champion Section (if exists) -->
+            {% if season_winner %}
+            <div class="section-container mb-4">
+                <div class="champion-spotlight">
+                    <div class="champion-content">
+                        <div class="champion-crown">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <h3 class="champion-title">Season Champion</h3>
+                        {% with season_winner.userID|safe_username as champion_name %}
+                        {% with season_winner.userID|lookupavatar as champion_avatar %}
+                        <div class="champion-info">
+                            <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                 alt="Profile picture for {{ champion_name }}" 
+                                 class="champion-avatar">
+                            <div class="champion-details">
+                                <h4 class="champion-name">{{ champion_name|default:"Unknown Champion" }}</h4>
+                                <p class="champion-subtitle">Congratulations on your victory!</p>
+                            </div>
+                        </div>
+                        {% endwith %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Overall Points Section -->
             <div class="section-container mb-5">
                 <div class="section-header d-flex justify-content-between align-items-center">

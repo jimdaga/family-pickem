@@ -130,6 +130,10 @@ def lookupStats(user_id):
     leastPickedSeason = stats.leastPickedSeason if stats else None
     leastPickedTotal = stats.leastPickedTotal if stats else None
     seasonsWon = stats.seasonsWon if stats else None
+    missedPicksSeason = stats.missedPicksSeason if stats else '0'
+    missedPicksTotal = stats.missedPicksTotal if stats else '0'
+    perfectWeeksSeason = stats.perfectWeeksSeason if stats else '0'
+    perfectWeeksTotal = stats.perfectWeeksTotal if stats else '0'
 
 
     data = {
@@ -146,6 +150,10 @@ def lookupStats(user_id):
         'leastPickedSeason': leastPickedSeason,
         'leastPickedTotal': leastPickedTotal,
         'seasonsWon': seasonsWon,
+        'missedPicksSeason': missedPicksSeason,
+        'missedPicksTotal': missedPicksTotal,
+        'perfectWeeksSeason': perfectWeeksSeason,
+        'perfectWeeksTotal': perfectWeeksTotal,
     }
 
     return data

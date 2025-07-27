@@ -36,13 +36,13 @@
                 </div>
                 
                 <div class="quick-stats-grid">
-                    {% with player_points|length as total_players %}
+                    {% with player_stats|length as total_players %}
                     <div class="quick-stat-card">
                         <div class="quick-stat-icon">
                             <i class="fas fa-users"></i>
                         </div>
                         <div class="quick-stat-value">{{ total_players }}</div>
-                        <div class="quick-stat-label">Active Players</div>
+                        <div class="quick-stat-label">Players with Stats</div>
                     </div>
                     
                     <!-- Calculate league averages -->
@@ -102,10 +102,9 @@
                 </div>
                 
                 <div class="stats-cards-container" id="statsContainer">
-                    {% for player in player_points %}
-                    {% with player.userID|lookupavatar as avatar %}
-                    {% with player.userID|lookupname as username %}
-                    {% with player.userID|lookupStats as stats %}
+                    {% for stats in player_stats %}
+                    {% with stats.userID|lookupavatar as avatar %}
+                    {% with stats.userID|lookupname as username %}
                     <div class="stats-player-card" 
                          data-position="{{ forloop.counter }}" 
                          data-accuracy="{{ stats.pickPercentSeason|default:0 }}"
@@ -116,7 +115,7 @@
                             <img class="player-profile-img me-3" src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" alt="Profile picture for {{ username }}">
                             <div class="flex-grow-1">
                                 <h5 class="mb-0 text-uppercase">{{ username|default:"Unknown Player" }}</h5>
-                                <small class="text-muted">{{ player.userID|lookuptagline }}</small>
+                                <small class="text-muted">{{ stats.userID|lookuptagline }}</small>
                             </div>
                             <div class="position-badge position-{{ forloop.counter }}">
                                 <span class="position-number">{{ forloop.counter }}</span>
@@ -182,12 +181,30 @@
                                         <div class="stat-label">Correct Picks</div>
                                         <div class="stat-value">{{ stats.correctPickTotalSeason|default:0 }}</div>
                                     </div>
+                                    <div class="stat-item {% if stats.missedPicksSeason > 0 %}missed-picks-highlight{% endif %}">
+                                        <div class="stat-label">Missed Picks</div>
+                                        <div class="stat-value">
+                                            {{ stats.missedPicksSeason|default:0 }}
+                                            {% if stats.missedPicksSeason > 0 %}
+                                                <i class="fas fa-exclamation-triangle text-warning ms-1"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                     <div class="stat-item {% if stats.weeksWonSeason > 0 %}winner-highlight{% endif %}">
                                         <div class="stat-label">Weeks Won</div>
                                         <div class="stat-value">
                                             {{ stats.weeksWonSeason|default:0 }}
                                             {% if stats.weeksWonSeason > 0 %}
                                                 <i class="fas fa-trophy text-warning ms-1"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="stat-item {% if stats.perfectWeeksSeason > 0 %}perfect-week-highlight{% endif %}">
+                                        <div class="stat-label">Perfect Weeks</div>
+                                        <div class="stat-value">
+                                            {{ stats.perfectWeeksSeason|default:0 }}
+                                            {% if stats.perfectWeeksSeason > 0 %}
+                                                <i class="fas fa-star text-success ms-1"></i>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -247,9 +264,27 @@
                                         <div class="stat-label">Total Correct</div>
                                         <div class="stat-value">{{ stats.correctPickTotalTotal|default:0 }}</div>
                                     </div>
+                                    <div class="stat-item {% if stats.missedPicksTotal > 0 %}missed-picks-highlight{% endif %}">
+                                        <div class="stat-label">Total Missed</div>
+                                        <div class="stat-value">
+                                            {{ stats.missedPicksTotal|default:0 }}
+                                            {% if stats.missedPicksTotal > 0 %}
+                                                <i class="fas fa-exclamation-triangle text-warning ms-1"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                     <div class="stat-item">
                                         <div class="stat-label">Weeks Won</div>
                                         <div class="stat-value">{{ stats.weeksWonTotal|default:0 }}</div>
+                                    </div>
+                                    <div class="stat-item {% if stats.perfectWeeksTotal > 0 %}perfect-week-highlight{% endif %}">
+                                        <div class="stat-label">Perfect Weeks</div>
+                                        <div class="stat-value">
+                                            {{ stats.perfectWeeksTotal|default:0 }}
+                                            {% if stats.perfectWeeksTotal > 0 %}
+                                                <i class="fas fa-star text-success ms-1"></i>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                     <div class="stat-item">
                                         <div class="stat-label">Most Picked</div>
@@ -301,7 +336,6 @@
                             </div>
                         </div>
                     </div>
-                    {% endwith %}
                     {% endwith %}
                     {% endwith %}
                     {% empty %}

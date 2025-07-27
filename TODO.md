@@ -20,8 +20,6 @@ Low Priority
 
 #### Standings Page Changes
 Medium Priority 
-- [ ] For past seasons show the winner at the top
-- [ ] Standings page to include "most weeks won" metrics 
 - [ ] Add up/down icons with week over week change
 
 #### Picks Page Changes
@@ -29,12 +27,9 @@ Medium Priority
 - [ ] Add % win likely 
 
 #### Stats Page Changes 
-High Priority 
-- [ ] Finish writing tool to generate stats
 
 #### Homepage Changes
 Medium Priority 
-- [ ] Show prior season winner 
 - [ ] Add AI Summary of prior week 
 
 #### Scores Page Changes 
@@ -50,6 +45,8 @@ Medium Priority
 - [ ] hall of fame
 
 ## Done 
+- [x] Finish writing tool to generate stats
+- [x] For past seasons show the winner at the top
 - [x] Allow editing picks before they lock 
 - [x] Fullscreen tiebreaker should be a new line so it doesn't overflow
 - [x] Fix place circle to be top left 

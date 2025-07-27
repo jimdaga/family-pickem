@@ -311,6 +311,12 @@ class userStats(models.Model):
     leastPickedTotal = models.TextField(blank=True, null=True)
     # Number of seasons won (All Time)
     seasonsWon = models.IntegerField(max_length=250, blank=True, null=True)
+    # Missed Picks (Season / All Time)
+    missedPicksSeason = models.IntegerField(max_length=250, blank=True, null=True)
+    missedPicksTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    # Perfect Weeks (Season / All Time)
+    perfectWeeksSeason = models.IntegerField(max_length=250, blank=True, null=True)
+    perfectWeeksTotal = models.IntegerField(max_length=250, blank=True, null=True)
 
 class currentSeason(models.Model):
     season = models.IntegerField(blank=True, null=True)
