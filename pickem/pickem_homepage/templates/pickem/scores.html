@@ -274,8 +274,14 @@
                                                         {% endfor %}
                                                     </div>
                                                     {% if game.awayTeamWinProbability %}
-                                                    <div class="win-probability">
-                                                        <i class="fas fa-percentage me-1"></i>{{ game.awayTeamWinProbability|floatformat:0 }}% chance
+                                                    <div class="performance-item">
+                                                        <span class="performance-label">Win Chance</span>
+                                                        <div class="progress-container">
+                                                            <div class="progress-bar">
+                                                                <div class="progress-fill" style="width: {{ game.awayTeamWinProbability|floatformat:0 }}%"></div>
+                                                            </div>
+                                                            <span class="progress-text">{{ game.awayTeamWinProbability|floatformat:0 }}%</span>
+                                                        </div>
                                                     </div>
                                                     {% endif %}
                                                 </div>
@@ -323,8 +329,14 @@
                                                         {% endfor %}
                                                     </div>
                                                     {% if game.homeTeamWinProbability %}
-                                                    <div class="win-probability">
-                                                        <i class="fas fa-percentage me-1"></i>{{ game.homeTeamWinProbability|floatformat:0 }}% chance
+                                                    <div class="performance-item">
+                                                        <span class="performance-label">Win Chance</span>
+                                                        <div class="progress-container">
+                                                            <div class="progress-bar">
+                                                                <div class="progress-fill" style="width: {{ game.homeTeamWinProbability|floatformat:0 }}%"></div>
+                                                            </div>
+                                                            <span class="progress-text">{{ game.homeTeamWinProbability|floatformat:0 }}%</span>
+                                                        </div>
                                                     </div>
                                                     {% endif %}
                                                 </div>

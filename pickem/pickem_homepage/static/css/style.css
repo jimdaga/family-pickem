@@ -4530,6 +4530,52 @@ body:has(.site-banner) .homepage-main-container {
     font-size: 0.6rem;
 }
 
+/* Win probability bars in scores page */
+.team-details .performance-item {
+    margin-top: 0.5rem;
+    width: 100%;
+}
+
+.team-details .progress-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.team-details .progress-bar {
+    flex: 1;
+    height: 12px;
+    background: #e9ecef;
+    border-radius: 6px;
+    overflow: hidden;
+    min-width: 100px;
+}
+
+.team-details .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #007bff, #0056b3);
+    border-radius: 6px;
+    transition: width 0.8s ease;
+}
+
+.team-details .progress-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #007bff;
+    min-width: 35px;
+    text-align: right;
+}
+
+.team-details .performance-label {
+    font-size: 0.7rem;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+
+
 .team-selection-indicator {
     position: absolute;
     top: 10px;
