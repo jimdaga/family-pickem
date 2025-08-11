@@ -403,10 +403,21 @@ def submit_game_picks(request):
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
     competition = game_list.values_list('competition', flat=True).distinct()
 
-    picks = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition, userEmail=request.user.email)
-
-    pick_slugs = picks.values_list('slug', flat=True).distinct()
-    pick_ids = picks.values_list('id', flat=True).distinct()
+    # Handle unauthenticated users gracefully
+    if request.user.is_authenticated:
+        picks = GamePicks.objects.filter(
+            gameseason=gameseason,
+            gameWeek=game_week,
+            competition=game_competition,
+            userEmail=request.user.email,
+        )
+        pick_slugs = picks.values_list('slug', flat=True).distinct()
+        pick_ids = picks.values_list('id', flat=True).distinct()
+    else:
+        # No picks context for logged-out users
+        picks = GamePicks.objects.none()
+        pick_slugs = []
+        pick_ids = []
 
     wins_losses = Teams.objects.filter(gameseason=gameseason)
 
@@ -420,7 +431,8 @@ def submit_game_picks(request):
         'picks': picks,
         'pick_slugs': pick_slugs,
         'pick_ids': pick_ids,
-        'is_default_week': is_default_week
+        'is_default_week': is_default_week,
+        'auth_required': not request.user.is_authenticated
         
     }
 

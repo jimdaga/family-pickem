@@ -68,7 +68,16 @@
             </div>
 
             <!-- Available Games Section -->
-            {% if game_list %}
+            {% if auth_required %}
+            <div class="section-container text-center">
+                <i class="fas fa-lock fa-3x text-muted mb-3"></i>
+                <h4 class="mb-2">Sign in to submit your picks</h4>
+                <p class="text-muted">You need to be logged in to make or edit picks. Please sign in and try again.</p>
+                <a href="/accounts/google/login/" class="btn btn-primary mt-2">
+                    <i class="fab fa-google me-2"></i>Sign in with Google
+                </a>
+            </div>
+            {% elif game_list %}
             <div class="section-container mb-4">
                 <div class="section-header">
                     <h3 class="section-title">
@@ -85,10 +94,10 @@
                 
                 <div class="games-grid">
                     {% for game in game_list %}
-                    {% if game.slug not in pick_slugs %}
+                     {% if game.slug not in pick_slugs %}
                         {% with user.id|addstr:"-"|addstr:game.id as template %}
                             {% if template not in pick_ids %}
-                                <div class="game-card" data-game-id="{{ game.id }}">
+                                <div class="game-card {% if auth_required %}disabled-card{% endif %}" data-game-id="{{ game.id }}">
                                     <!-- Game Header -->
                                     <div class="game-header">
                                         <div class="game-date">
@@ -158,7 +167,7 @@
                                     <!-- Team Selection -->
                                     <div class="team-selection">
                                         <!-- Away Team -->
-                                        <div class="team-option {% if game.statusType != 'notstarted' %}disabled{% endif %}" 
+                                        <div class="team-option {% if game.statusType != 'notstarted' or auth_required %}disabled{% endif %}"
                                              data-team="{{ game.awayTeamSlug }}"
                                              data-team-name="{{ game.awayTeamName }}">
                                             <div class="team-logo-container">
@@ -201,7 +210,7 @@
                                         </div>
 
                                         <!-- Home Team -->
-                                        <div class="team-option {% if game.statusType != 'notstarted' %}disabled{% endif %}" 
+                                        <div class="team-option {% if game.statusType != 'notstarted' or auth_required %}disabled{% endif %}"
                                              data-team="{{ game.homeTeamSlug }}"
                                              data-team-name="{{ game.homeTeamName }}">
                                             <div class="team-logo-container">
@@ -329,7 +338,7 @@
                 </div>
                 
                 <div class="submitted-picks-grid">
-                    {% if pick_slugs %}
+                    {% if pick_slugs and not auth_required %}
                         {% for game in game_list %}
                         {% if game.slug in pick_slugs %}
                             {% with user.id|addstr:"-"|addstr:game.id as template %}
