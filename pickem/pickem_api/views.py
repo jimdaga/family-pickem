@@ -169,7 +169,25 @@ def week_detail(request, date):
     try:
         game = GameWeeks.objects.get(date=date)
     except GameWeeks.DoesNotExist:
-        return JsonResponse({'message': 'This Game Date does not exist'}, status=status.HTTP_404_NOT_FOUND)
+        # If no GameWeeks record exists for this date (e.g., before season starts),
+        # default to week 1 for the current season
+        current_season = get_season()
+        try:
+            # Try to find week 1 for the current season
+            game = GameWeeks.objects.filter(
+                weekNumber=1,
+                season=current_season
+            ).first()
+            
+            if not game:
+                # If no week 1 exists for current season, try to find any week 1
+                game = GameWeeks.objects.filter(weekNumber=1).first()
+                
+            if not game:
+                return JsonResponse({'message': 'No GameWeeks data available'}, status=status.HTTP_404_NOT_FOUND)
+                
+        except Exception as e:
+            return JsonResponse({'message': 'Error retrieving week data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     if request.method == 'GET':
         game_week_serializer = GameWeeksSerializer(game)
