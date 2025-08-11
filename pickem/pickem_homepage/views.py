@@ -200,9 +200,15 @@ def scores(request):
     competition = game_list.values_list('competition', flat=True).distinct()
     
     picks = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
+    picks_total = picks.count()
 
-    points = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition, pick_correct=True)
-    points_total = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition, pick_correct=True).count
+    points = GamePicks.objects.filter(
+        gameseason=gameseason,
+        gameWeek=game_week,
+        competition=game_competition,
+        pick_correct=True,
+    )
+    points_total = points.count()
     
     # user_points = points.values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
     user_points = points.filter(gameseason=gameseason).values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
@@ -268,6 +274,7 @@ def scores(request):
         'week_winner': week_winner,
         'current_week': True,
         'points_total': points_total,
+        'show_week_stats_sidebar': picks_total > 0,
         'game_weeks': range(1,19),
         'gameseason': gameseason,
         'user_weekly_stats': user_weekly_stats,
@@ -288,8 +295,13 @@ def scores_long(request, competition, gameseason, week):
     
     picks = GamePicks.objects.filter(gameseason=gameseason, gameWeek=week, competition=competition_name)
 
-    points = GamePicks.objects.filter(gameseason=gameseason, gameWeek=week, competition=competition_name, pick_correct=True)
-    points_total = GamePicks.objects.filter(gameseason=gameseason, gameWeek=week, competition=competition_name, pick_correct=True).count
+    points = GamePicks.objects.filter(
+        gameseason=gameseason,
+        gameWeek=week,
+        competition=competition_name,
+        pick_correct=True,
+    )
+    points_total = points.count()
     # user_points = points.values('uid').order_by('-uid').annotate(wins=Count('uid')).order_by('-wins')
     user_points = points.values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
     users_w_points = user_points.values_list('uid', flat=True).distinct()
