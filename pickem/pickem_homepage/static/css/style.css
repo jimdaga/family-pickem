@@ -5914,3 +5914,260 @@ html, body {
 }
 
 /* Teams Matchup */
+
+/* Season Prep Cards for Pre-season */
+.season-prep-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    justify-content: center;
+    margin: 2rem 0;
+}
+
+.prep-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    flex: 1;
+    min-width: 200px;
+    max-width: 280px;
+}
+
+.prep-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.prep-card h6 {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.prep-card .small {
+    line-height: 1.4;
+}
+
+/* Dark mode support for prep cards */
+body.dark-mode .prep-card {
+    background: #2c3e50;
+    box-shadow: 0 2px 8px rgba(255,255,255,0.1);
+}
+
+body.dark-mode .prep-card:hover {
+    box-shadow: 0 4px 16px rgba(255,255,255,0.15);
+}
+
+body.dark-mode .prep-card h6 {
+    color: #ecf0f1;
+}
+
+@media (max-width: 768px) {
+    .season-prep-info {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .prep-card {
+        max-width: 100%;
+        margin: 0 1rem;
+    }
+}
+
+
+/* Full-width time groups with no padding/margin */
+.time-group-full-width {
+    background: #f8f9fa;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #dee2e6;
+    margin: 0 0 1rem 0;
+    padding: 0;
+}
+
+.time-group-full-width .section-header {
+    padding: 1.5rem 2rem 1rem 2rem;
+    margin: 0;
+}
+
+.time-group-full-width .games-grid {
+    padding: 0 2rem 2rem 2rem;
+}
+
+/* Dark mode support */
+[data-bs-theme="dark"] .time-group-full-width,
+body.dark-mode .time-group-full-width {
+    background-color: var(--app-card-bg, #2c3e50);
+    border: 1px solid var(--app-card-border, #34495e);
+    box-shadow: none;
+}
+
+@media (max-width: 768px) {
+    .time-group-full-width .section-header {
+        padding: 1rem 1.5rem 0.5rem 1.5rem;
+    }
+    
+    .time-group-full-width .games-grid {
+        padding: 0 1.5rem 1.5rem 1.5rem;
+    }
+}
+
+/* Updated full-width time groups - no bottom radius, games spacing */
+.time-group-full-width {
+    background: #f8f9fa;
+    border-radius: 15px 15px 0 0;  /* Only top corners rounded */
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #dee2e6;
+    margin: 0 0 1rem 0;
+    padding: 0;
+}
+
+.time-group-full-width .section-header {
+    padding: 1.5rem 2rem 1rem 2rem;
+    margin: 0;
+}
+
+.time-group-full-width .games-grid {
+    padding: 1rem 2rem 2rem 2rem;  /* Added top padding for spacing */
+}
+
+/* Dark mode support */
+[data-bs-theme="dark"] .time-group-full-width,
+body.dark-mode .time-group-full-width {
+    background-color: var(--app-card-bg, #2c3e50);
+    border: 1px solid var(--app-card-border, #34495e);
+    box-shadow: none;
+}
+
+@media (max-width: 768px) {
+    .time-group-full-width .section-header {
+        padding: 1rem 1.5rem 0.5rem 1.5rem;
+    }
+    
+    .time-group-full-width .games-grid {
+        padding: 0.75rem 1.5rem 1.5rem 1.5rem;  /* Added top padding for mobile too */
+    }
+}
+
+/* Corrected: Make the date header section square, keep container rounded */
+.time-group-full-width {
+    background: #f8f9fa;
+    border-radius: 15px;  /* Keep container fully rounded */
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #dee2e6;
+    margin: 0 0 1rem 0;
+    padding: 0;
+}
+
+.time-group-full-width .section-header {
+    padding: 1.5rem 2rem 1rem 2rem;
+    margin: 0;
+    border-radius: 0;  /* Make the date header section square */
+    background: inherit;
+}
+
+.time-group-full-width .games-grid {
+    padding: 1rem 2rem 2rem 2rem;
+}
+
+/* Dark mode support */
+[data-bs-theme="dark"] .time-group-full-width,
+body.dark-mode .time-group-full-width {
+    background-color: var(--app-card-bg, #2c3e50);
+    border: 1px solid var(--app-card-border, #34495e);
+    box-shadow: none;
+}
+
+@media (max-width: 768px) {
+    .time-group-full-width .section-header {
+        padding: 1rem 1.5rem 0.5rem 1.5rem;
+        border-radius: 0;  /* Square on mobile too */
+    }
+    
+    .time-group-full-width .games-grid {
+        padding: 0.75rem 1.5rem 1.5rem 1.5rem;
+    }
+}
+
+/* Final fix: Top-level div with rounded top corners, square date header */
+.time-group-full-width {
+    background: #f8f9fa;
+    border-radius: 15px 15px 0 0;  /* Rounded top corners, square bottom */
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #dee2e6;
+    margin: 0 0 1rem 0;
+    padding: 0;
+}
+
+.time-group-full-width .section-header {
+    padding: 1.5rem 2rem 1rem 2rem;
+    margin: 0;
+    border-radius: 0;  /* Square date header section */
+    background: inherit;
+}
+
+.time-group-full-width .games-grid {
+    padding: 1rem 2rem 2rem 2rem;
+}
+
+/* Dark mode support */
+[data-bs-theme="dark"] .time-group-full-width,
+body.dark-mode .time-group-full-width {
+    background-color: var(--app-card-bg, #2c3e50);
+    border: 1px solid var(--app-card-border, #34495e);
+    box-shadow: none;
+}
+
+@media (max-width: 768px) {
+    .time-group-full-width .section-header {
+        padding: 1rem 1.5rem 0.5rem 1.5rem;
+        border-radius: 0;
+    }
+    
+    .time-group-full-width .games-grid {
+        padding: 0.75rem 1.5rem 1.5rem 1.5rem;
+    }
+}
+
+/* Correct layout: Overall container rounded, date header rounded top/square bottom */
+.time-group-full-width {
+    background: #f8f9fa;
+    border-radius: 15px;  /* Fully rounded container */
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #dee2e6;
+    margin: 0 0 1rem 0;
+    padding: 0;
+}
+
+.time-group-full-width .section-header {
+    padding: 1.5rem 2rem 1rem 2rem;
+    margin: 0;
+    border-radius: 15px 15px 0 0;  /* Rounded top, square bottom to blend */
+    background: inherit;
+}
+
+.time-group-full-width .games-grid {
+    padding: 1rem 2rem 2rem 2rem;
+}
+
+/* Dark mode support */
+[data-bs-theme="dark"] .time-group-full-width,
+body.dark-mode .time-group-full-width {
+    background-color: var(--app-card-bg, #2c3e50);
+    border: 1px solid var(--app-card-border, #34495e);
+    box-shadow: none;
+}
+
+@media (max-width: 768px) {
+    .time-group-full-width .section-header {
+        padding: 1rem 1.5rem 0.5rem 1.5rem;
+        border-radius: 15px 15px 0 0;  /* Rounded top, square bottom on mobile too */
+    }
+    
+    .time-group-full-width .games-grid {
+        padding: 0.75rem 1.5rem 1.5rem 1.5rem;
+    }
+}

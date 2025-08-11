@@ -183,15 +183,16 @@ def scores(request):
     today_date = today.strftime("%Y-%m-%d")
     gameseason = get_season()
 
+    # Track if we're defaulting to week 1 (before season starts)
+    is_default_week = False
     try:
-        game_week = GameWeeks.objects.get(date=today_date).weekNumber
+        week_obj = GameWeeks.objects.get(date=today_date)
+        game_week = week_obj.weekNumber
+        game_competition = week_obj.competition
     except GameWeeks.DoesNotExist:
         game_week = '1'
-
-    try:
-        game_competition = GameWeeks.objects.get(date=today_date).competition
-    except GameWeeks.DoesNotExist:
         game_competition = 'nfl'
+        is_default_week = True
     
     game_list = GamesAndScores.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
 
@@ -256,7 +257,7 @@ def scores(request):
     context = {
         'game_list': game_list,
         'game_days': game_days,
-        'competition': competition,
+        'competition': game_competition,
         'wins_losses': wins_losses,
         'picks': picks,
         'week': game_week,
@@ -269,7 +270,8 @@ def scores(request):
         'points_total': points_total,
         'game_weeks': range(1,19),
         'gameseason': gameseason,
-        'user_weekly_stats': user_weekly_stats
+        'user_weekly_stats': user_weekly_stats,
+        'is_default_week': is_default_week
     }
     return HttpResponse(template.render(context, request))
 
@@ -384,15 +386,16 @@ def submit_game_picks(request):
     today = date.today()
     today_date = today.strftime("%Y-%m-%d")
 
+    # Track if we're defaulting to week 1 (before season starts)
+    is_default_week = False
     try:
-        game_week = GameWeeks.objects.get(date=today_date).weekNumber
+        week_obj = GameWeeks.objects.get(date=today_date)
+        game_week = week_obj.weekNumber
+        game_competition = week_obj.competition
     except GameWeeks.DoesNotExist:
         game_week = '1'
-
-    try:
-        game_competition = GameWeeks.objects.get(date=today_date).competition
-    except GameWeeks.DoesNotExist:
         game_competition = 'nfl'
+        is_default_week = True
 
     gameseason = get_season()
 
@@ -410,13 +413,14 @@ def submit_game_picks(request):
     context = {
         'game_list': game_list,
         'game_days': game_days,
-        'competition': competition,
+        'competition': game_competition,
         'wins_losses': wins_losses,
         'gameseason': gameseason,
         'week': game_week,
         'picks': picks,
         'pick_slugs': pick_slugs,
-        'pick_ids': pick_ids
+        'pick_ids': pick_ids,
+        'is_default_week': is_default_week
         
     }
 

@@ -461,8 +461,38 @@
             <div class="section-container">
                 <div class="no-games-message text-center">
                     <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                    {% if is_default_week %}
+                    <h4 class="text-primary">Ready for Week {{ week }}?</h4>
+                    <p class="text-muted mb-4">The NFL schedule for Week {{ week }} is being finalized. Games will appear here once released, but you can check back soon to start making your picks!</p>
+                    <div class="season-prep-info">
+                        <div class="prep-card">
+                            <i class="fas fa-trophy fa-2x text-warning mb-2"></i>
+                            <h6>Get Ready</h6>
+                            <p class="small text-muted">Review team stats and prepare your strategy for the upcoming season.</p>
+                        </div>
+                        <div class="prep-card">
+                            <i class="fas fa-users fa-2x text-info mb-2"></i>
+                            <h6>Join the Competition</h6>
+                            <p class="small text-muted">Week {{ week }} picks will be available as soon as games are scheduled.</p>
+                        </div>
+                        <div class="prep-card">
+                            <i class="fas fa-chart-line fa-2x text-success mb-2"></i>
+                            <h6>Track Progress</h6>
+                            <p class="small text-muted">Check the scores page for live updates once the season begins.</p>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'scores' %}" class="btn btn-outline-primary me-2">
+                            <i class="fas fa-chart-line me-1"></i>View Scores
+                        </a>
+                        <a href="{% url 'standings' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-trophy me-1"></i>Standings
+                        </a>
+                    </div>
+                    {% else %}
                     <h4 class="text-muted">No games available for this week</h4>
                     <p class="text-muted">Check back later or view other weeks.</p>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
