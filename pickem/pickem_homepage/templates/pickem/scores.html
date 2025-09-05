@@ -176,53 +176,85 @@
                         {% endfor %}
                     </div>
                     <script>
-                        // Reorganize player cards into column-wise layout
-                        (function() {
-                            const container = document.getElementById('week-points-leaderboard');
-                            if (!container) return;
+                        // Week Points Leaderboard Layout Manager
+                        window.weekPointsLayoutManager = (function() {
+                            const CONTAINER_ID = 'week-points-leaderboard';
+                            let originalCards = [];
                             
-                            const cards = Array.from(container.querySelectorAll('.player-points-card'));
-                            const totalCards = cards.length;
-                            
-                            // Only apply column layout on large screens
-                            function applyColumnLayout() {
-                                if (window.innerWidth >= 992 && totalCards > 0) {
-                                    // Clear container
-                                    container.innerHTML = '';
-                                    
-                                    // Create two columns
-                                    const leftColumn = document.createElement('div');
-                                    leftColumn.className = 'points-column points-column-left';
-                                    const rightColumn = document.createElement('div');
-                                    rightColumn.className = 'points-column points-column-right';
-                                    
-                                    // Calculate split point (first half goes to left, second half to right)
-                                    const halfPoint = Math.ceil(totalCards / 2);
-                                    
-                                    // Distribute cards
-                                    for (let i = 0; i < totalCards; i++) {
-                                        if (i < halfPoint) {
-                                            leftColumn.appendChild(cards[i].cloneNode(true));
-                                        } else {
-                                            rightColumn.appendChild(cards[i].cloneNode(true));
-                                        }
-                                    }
-                                    
-                                    container.appendChild(leftColumn);
-                                    container.appendChild(rightColumn);
-                                } else {
-                                    // Mobile: restore original single-column layout
-                                    container.innerHTML = '';
-                                    cards.forEach(card => {
-                                        container.appendChild(card.cloneNode(true));
-                                    });
+                            function captureOriginalCards() {
+                                const container = document.getElementById(CONTAINER_ID);
+                                if (!container) return;
+                                
+                                // Capture cards if we haven't already or if container was reset
+                                if (originalCards.length === 0 || !container.querySelector('.points-column')) {
+                                    originalCards = Array.from(container.querySelectorAll('.player-points-card')).map(card => card.cloneNode(true));
                                 }
                             }
                             
-                            // Apply layout on load and resize
-                            applyColumnLayout();
-                            window.addEventListener('resize', applyColumnLayout);
+                            function applyColumnLayout() {
+                                const container = document.getElementById(CONTAINER_ID);
+                                if (!container) return;
+                                
+                                captureOriginalCards();
+                                const totalCards = originalCards.length;
+                                
+                                if (window.innerWidth >= 992 && totalCards > 0) {
+                                    // Only rebuild if not already in column layout
+                                    if (!container.querySelector('.points-column')) {
+                                        // Clear container
+                                        container.innerHTML = '';
+                                        
+                                        // Create two columns
+                                        const leftColumn = document.createElement('div');
+                                        leftColumn.className = 'points-column points-column-left';
+                                        const rightColumn = document.createElement('div');
+                                        rightColumn.className = 'points-column points-column-right';
+                                        
+                                        // Calculate split point (first half goes to left, second half to right)
+                                        const halfPoint = Math.ceil(totalCards / 2);
+                                        
+                                        // Distribute cards
+                                        for (let i = 0; i < totalCards; i++) {
+                                            if (i < halfPoint) {
+                                                leftColumn.appendChild(originalCards[i].cloneNode(true));
+                                            } else {
+                                                rightColumn.appendChild(originalCards[i].cloneNode(true));
+                                            }
+                                        }
+                                        
+                                        container.appendChild(leftColumn);
+                                        container.appendChild(rightColumn);
+                                    }
+                                } else {
+                                    // Mobile: restore original single-column layout
+                                    if (container.querySelector('.points-column')) {
+                                        container.innerHTML = '';
+                                        originalCards.forEach(card => {
+                                            container.appendChild(card.cloneNode(true));
+                                        });
+                                    }
+                                }
+                            }
+                            
+                            function refreshLayout() {
+                                // Reset to allow recapture of cards
+                                originalCards = [];
+                                applyColumnLayout();
+                            }
+                            
+                            // Public interface
+                            return {
+                                init: function() {
+                                    applyColumnLayout();
+                                    window.addEventListener('resize', applyColumnLayout);
+                                },
+                                refresh: refreshLayout,
+                                apply: applyColumnLayout
+                            };
                         })();
+                        
+                        // Initialize on page load
+                        weekPointsLayoutManager.init();
                     </script>
                 </div>
             </div>
@@ -1052,6 +1084,13 @@
             if (currentLeaderboard && newLeaderboard && currentLeaderboard.innerHTML !== newLeaderboard.innerHTML) {
                 currentLeaderboard.innerHTML = newLeaderboard.innerHTML;
                 currentLeaderboard.style.animation = 'fadeIn 0.5s ease-in';
+                
+                // Refresh the Week Points layout after updating leaderboard content
+                if (typeof window.weekPointsLayoutManager !== 'undefined') {
+                    setTimeout(() => {
+                        window.weekPointsLayoutManager.refresh();
+                    }, 100); // Small delay to let animation start
+                }
             }
             
             // Remove updating animation
