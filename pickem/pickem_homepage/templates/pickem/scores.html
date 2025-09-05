@@ -1003,10 +1003,14 @@
     }
     
     async function updateLiveScores() {
+        console.log('updateLiveScores called');
+        
         if (!hasLiveGames()) {
+            console.log('No live games found, stopping updates');
             return false; // No live games, stop updating
         }
         
+        console.log('Live games detected, proceeding with update');
         const indicator = document.querySelector('.live-update-indicator') || createUpdateIndicator();
         
         try {
@@ -1017,15 +1021,29 @@
             showUpdateIndicator(indicator, 'Updating live scores...');
             
             // Fetch updated page content
-            const response = await fetch(window.location.href, {
+            const currentUrl = window.location.href;
+            console.log('Fetching fresh data from:', currentUrl);
+            
+            // Add timestamp to prevent caching issues
+            const separator = currentUrl.includes('?') ? '&' : '?';
+            const fetchUrl = `${currentUrl}${separator}_t=${Date.now()}`;
+            
+            const response = await fetch(fetchUrl, {
+                method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'Cache-Control': 'no-cache'
-                }
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                },
+                cache: 'no-store',
+                credentials: 'same-origin'
             });
             
+            console.log('Fetch response status:', response.status, response.statusText);
+            
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const html = await response.text();
@@ -1035,6 +1053,8 @@
             // Update game scores and status
             const currentGames = document.querySelectorAll('.game-score-card');
             const newGames = newDoc.querySelectorAll('.game-score-card');
+            
+            console.log(`Found ${currentGames.length} current games, ${newGames.length} new games`);
             
             let gamesUpdated = 0;
             let completedGames = 0;
@@ -1051,12 +1071,18 @@
                     let scoresChanged = false;
                     currentScores.forEach((score, scoreIndex) => {
                         if (newScores[scoreIndex] && score.textContent !== newScores[scoreIndex].textContent) {
+                            console.log(`Score changed: "${score.textContent}" → "${newScores[scoreIndex].textContent}"`);
                             scoresChanged = true;
                         }
                     });
                     
+                    const statusChanged = currentStatus !== newStatus;
+                    if (statusChanged) {
+                        console.log(`Status changed: "${currentStatus}" → "${newStatus}"`);
+                    }
+                    
                     // Update if scores changed or status changed
-                    if (scoresChanged || currentStatus !== newStatus) {
+                    if (scoresChanged || statusChanged) {
                         // Update the entire game card content
                         currentGame.innerHTML = newGames[index].innerHTML;
                         currentGame.setAttribute('data-game-status', newStatus);
@@ -1089,25 +1115,14 @@
                 currentStats.style.animation = 'fadeIn 0.5s ease-in';
             }
             
-            // Update week points leaderboard
-            const currentLeaderboard = document.getElementById('week-points-leaderboard');
-            const newLeaderboard = newDoc.getElementById('week-points-leaderboard');
-            if (currentLeaderboard && newLeaderboard && currentLeaderboard.innerHTML !== newLeaderboard.innerHTML) {
-                currentLeaderboard.innerHTML = newLeaderboard.innerHTML;
-                currentLeaderboard.style.animation = 'fadeIn 0.5s ease-in';
-                
-                // Refresh the Week Points layout after updating leaderboard content
-                if (typeof window.weekPointsLayoutManager !== 'undefined') {
-                    setTimeout(() => {
-                        try {
-                            window.weekPointsLayoutManager.refresh();
-                            console.log('Week Points layout refreshed successfully');
-                        } catch (error) {
-                            console.error('Error refreshing Week Points layout:', error);
-                        }
-                    }, 100); // Small delay to let animation start
-                }
-            }
+            // Update week points leaderboard (temporarily disabled to isolate score update issue)
+            // const currentLeaderboard = document.getElementById('week-points-leaderboard');
+            // const newLeaderboard = newDoc.getElementById('week-points-leaderboard');
+            // if (currentLeaderboard && newLeaderboard && currentLeaderboard.innerHTML !== newLeaderboard.innerHTML) {
+            //     currentLeaderboard.innerHTML = newLeaderboard.innerHTML;
+            //     currentLeaderboard.style.animation = 'fadeIn 0.5s ease-in';
+            // }
+            console.log('Week Points update temporarily disabled for debugging');
             
             // Remove updating animation
             liveCards.forEach(card => card.classList.remove('score-updating'));
@@ -1128,7 +1143,19 @@
             
         } catch (error) {
             console.error('Error updating live scores:', error);
-            showUpdateIndicator(indicator, 'Update failed - retrying...');
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                url: window.location.href
+            });
+            
+            // Show specific error message
+            if (error.message.includes('Failed to fetch')) {
+                showUpdateIndicator(indicator, 'Network error - retrying in 30s...');
+                console.log('Network error detected - this could be due to CORS, server issues, or connectivity');
+            } else {
+                showUpdateIndicator(indicator, 'Update failed - retrying...');
+            }
             
             // Remove updating animation on error
             const liveCards = document.querySelectorAll('[data-game-status="inprogress"]');
@@ -1174,10 +1201,21 @@
         });
     }
     
+    // Debug function for manual testing
+    window.testLiveUpdate = function() {
+        console.log('Manual live update test initiated');
+        console.log('Live games present:', hasLiveGames());
+        console.log('Live games count:', document.querySelectorAll('[data-game-status="inprogress"]').length);
+        updateLiveScores();
+    };
+    
     // Start live updates when page loads if there are live games
     if (hasLiveGames()) {
+        console.log('Live games detected on page load, starting updates in 2 seconds');
         // Initial delay to let page fully load
         setTimeout(startLiveUpdates, 2000);
+    } else {
+        console.log('No live games detected on page load');
     }
     
     // Restart live updates when filter changes to show live games
