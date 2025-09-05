@@ -2990,12 +2990,14 @@ body:has(.site-banner) .homepage-main-container {
     grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
     gap: 1.5rem;
     max-width: 100%;
+    align-items: start; /* Align cards to top of grid cells */
 }
 
 @media (min-width: 992px) {
     .games-grid {
         grid-template-columns: repeat(2, 1fr);
         max-width: none;
+        align-items: start; /* Ensure cards align to top in 2-column layout */
     }
 }
 
@@ -6169,6 +6171,77 @@ body.dark-mode .time-group-full-width {
     
     .time-group-full-width .games-grid {
         padding: 0.75rem 1.5rem 1.5rem 1.5rem;
+    }
+}
+
+/* Multi-column Points Leaderboard for Large Screens */
+.points-leaderboard-multi-column {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* Two columns on large screens, single column on mobile */
+@media (min-width: 992px) {
+    .points-leaderboard-multi-column {
+        display: flex;
+        gap: 1rem; /* Space between columns */
+        background: transparent; /* Remove background since individual cards have it */
+        box-shadow: none; /* Remove container shadow */
+        border-radius: 0; /* Remove container border radius */
+        overflow: visible; /* Allow individual card shadows */
+    }
+    
+    .points-column {
+        flex: 1;
+        background: transparent; /* Remove column background */
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem; /* Space between cards in same column */
+    }
+    
+    .points-column-left {
+        border-right: none; /* Remove column border */
+    }
+    
+    .points-column .player-points-card {
+        background: white; /* Individual card background */
+        border-radius: 12px; /* Rounded corners for each card */
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1); /* Individual card shadow */
+        border: 1px solid #e9ecef; /* Individual card border */
+        border-bottom: 1px solid #e9ecef; /* Override any bottom border removal */
+        margin: 0; /* Reset any margins */
+    }
+    
+    /* Hover effect for individual cards */
+    .points-column .player-points-card:hover {
+        transform: translateY(-2px); /* Slight lift on hover */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15); /* Enhanced shadow on hover */
+        background: white; /* Keep white background on hover */
+    }
+}
+
+/* Mobile stays the same - single column */
+@media (max-width: 991.98px) {
+    .points-leaderboard-multi-column {
+        display: block;
+    }
+}
+
+/* Dark mode support for multi-column leaderboard */
+@media (min-width: 992px) {
+    [data-bs-theme="dark"] .points-column .player-points-card,
+    body.dark-mode .points-column .player-points-card {
+        background-color: var(--app-card-bg, #2c3e50);
+        border: 1px solid var(--app-card-border, #34495e);
+        box-shadow: none;
+    }
+    
+    [data-bs-theme="dark"] .points-column .player-points-card:hover,
+    body.dark-mode .points-column .player-points-card:hover {
+        background-color: var(--app-card-bg, #34495e);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
 }
 

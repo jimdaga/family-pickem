@@ -81,11 +81,12 @@
 
         <!-- Week Stats Sidebar - Moved Above Games -->
         {% if show_week_stats_sidebar %}
+        
+        <!-- Week Winner Card - Full Width on Top -->
+        {% for player in week_winner %}
+        {% if player.id != None %}
         <div class="row mt-2 mb-3">
-            <div class="col-lg-6 mb-4">
-                <!-- Week Winner Card -->
-                {% for player in week_winner %}
-                {% if player.id != None %}
+            <div class="col-12">
                 <div class="section-container mb-4">
                     <div class="section-header">
                         <h3 class="section-title">
@@ -110,19 +111,21 @@
                         {% endwith %}
                     </div>
                 </div>
-                {% endif %}
-                {% endfor %}
             </div>
-            
-            <div class="col-lg-6 mb-4">
-                <!-- Week Points Leaderboard -->
+        </div>
+        {% endif %}
+        {% endfor %}
+        
+        <!-- Week Points Leaderboard - Two Columns on Large Screens -->
+        <div class="row mt-2 mb-3">
+            <div class="col-12">
                 <div class="section-container">
                     <div class="section-header">
                         <h3 class="section-title">
                             <i class="fas fa-list-ol me-2"></i>Week Points
                         </h3>
                     </div>
-                    <div class="points-leaderboard">
+                    <div class="points-leaderboard points-leaderboard-multi-column" id="points-leaderboard-container">
                         {% for player in user_points %}
                         <div class="player-points-card">
                             {% with player.uid|lookupname as username %}
@@ -167,6 +170,55 @@
                         {% endif %}
                         {% endfor %}
                     </div>
+                    <script>
+                        // Reorganize player cards into column-wise layout
+                        (function() {
+                            const container = document.getElementById('points-leaderboard-container');
+                            if (!container) return;
+                            
+                            const cards = Array.from(container.querySelectorAll('.player-points-card'));
+                            const totalCards = cards.length;
+                            
+                            // Only apply column layout on large screens
+                            function applyColumnLayout() {
+                                if (window.innerWidth >= 992 && totalCards > 0) {
+                                    // Clear container
+                                    container.innerHTML = '';
+                                    
+                                    // Create two columns
+                                    const leftColumn = document.createElement('div');
+                                    leftColumn.className = 'points-column points-column-left';
+                                    const rightColumn = document.createElement('div');
+                                    rightColumn.className = 'points-column points-column-right';
+                                    
+                                    // Calculate split point (first half goes to left, second half to right)
+                                    const halfPoint = Math.ceil(totalCards / 2);
+                                    
+                                    // Distribute cards
+                                    for (let i = 0; i < totalCards; i++) {
+                                        if (i < halfPoint) {
+                                            leftColumn.appendChild(cards[i].cloneNode(true));
+                                        } else {
+                                            rightColumn.appendChild(cards[i].cloneNode(true));
+                                        }
+                                    }
+                                    
+                                    container.appendChild(leftColumn);
+                                    container.appendChild(rightColumn);
+                                } else {
+                                    // Mobile: restore original single-column layout
+                                    container.innerHTML = '';
+                                    cards.forEach(card => {
+                                        container.appendChild(card.cloneNode(true));
+                                    });
+                                }
+                            }
+                            
+                            // Apply layout on load and resize
+                            applyColumnLayout();
+                            window.addEventListener('resize', applyColumnLayout);
+                        })();
+                    </script>
                 </div>
             </div>
         </div>
@@ -500,7 +552,7 @@
 
                                 <!-- Missing Picks Alert -->
                                 {% if game.statusType == 'notstarted' and current_week == True %}
-                                <div class="missing-picks-section">
+                                <div class="missing-picks-section" style="display: none;" id="missing-picks-{{ game.id }}">
                                     <div class="missing-picks-header">
                                         <i class="fas fa-exclamation-triangle me-2"></i>Missing Picks
                                     </div>
@@ -518,6 +570,16 @@
                                         {% endfor %}
                                     </div>
                                 </div>
+                                <script>
+                                    // Show missing picks section only if there are missing pick badges
+                                    (function() {
+                                        var section = document.getElementById('missing-picks-{{ game.id }}');
+                                        var badges = section.querySelectorAll('.missing-pick-badge');
+                                        if (badges.length > 0) {
+                                            section.style.display = 'block';
+                                        }
+                                    })();
+                                </script>
                                 {% endif %}
                                                          </div>
                              {% endfor %}
