@@ -120,12 +120,17 @@
         <div class="row mt-2 mb-3">
             <div class="col-12">
                 <div class="section-container">
-                    <div class="section-header">
-                        <h3 class="section-title">
-                            <i class="fas fa-list-ol me-2"></i>Week Points
-                        </h3>
+                    <div class="section-header collapsible-header" data-bs-toggle="collapse" data-bs-target="#week-points-leaderboard" aria-expanded="true">
+                        <div class="section-header-content">
+                            <h3 class="section-title">
+                                <i class="fas fa-list-ol me-2"></i>Week Points
+                            </h3>
+                        </div>
+                        <div class="collapse-indicator">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
                     </div>
-                    <div class="points-leaderboard points-leaderboard-multi-column" id="points-leaderboard-container">
+                    <div class="points-leaderboard points-leaderboard-multi-column collapse show" id="week-points-leaderboard">
                         {% for player in user_points %}
                         <div class="player-points-card">
                             {% with player.uid|lookupname as username %}
@@ -173,7 +178,7 @@
                     <script>
                         // Reorganize player cards into column-wise layout
                         (function() {
-                            const container = document.getElementById('points-leaderboard-container');
+                            const container = document.getElementById('week-points-leaderboard');
                             if (!container) return;
                             
                             const cards = Array.from(container.querySelectorAll('.player-points-card'));

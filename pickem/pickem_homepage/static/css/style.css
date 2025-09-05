@@ -2820,6 +2820,15 @@ body:has(.site-banner) .homepage-main-container {
     overflow: hidden;
 }
 
+/* Week Points Leaderboard Collapse */
+.points-leaderboard-multi-column.collapse {
+    transition: all 0.4s ease;
+}
+
+.points-leaderboard-multi-column.collapsing {
+    overflow: hidden;
+}
+
 /* Active/Collapsed States */
 .collapsible-header[aria-expanded="false"] {
     background: linear-gradient(135deg, #f1f3f4, #e8eaed);
@@ -2990,14 +2999,14 @@ body:has(.site-banner) .homepage-main-container {
     grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
     gap: 1.5rem;
     max-width: 100%;
-    align-items: start; /* Align cards to top of grid cells */
+    align-items: stretch; /* Cards will have equal heights */
 }
 
 @media (min-width: 992px) {
     .games-grid {
         grid-template-columns: repeat(2, 1fr);
         max-width: none;
-        align-items: start; /* Ensure cards align to top in 2-column layout */
+        align-items: stretch; /* Ensure cards have equal heights in 2-column layout */
     }
 }
 
@@ -3008,6 +3017,9 @@ body:has(.site-banner) .homepage-main-container {
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
     border: 1px solid #e9ecef;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Use full height available in grid */
 }
 
 .game-score-card:hover {
@@ -3058,6 +3070,10 @@ body:has(.site-banner) .homepage-main-container {
     padding: 2rem;
     background: #fafbfc;
     margin: 0;
+    flex: 1; /* Grow to fill available space, pushing bottom sections down */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Center content vertically within the flexible space */
 }
 
 .team-score-row {
@@ -3367,6 +3383,25 @@ body:has(.site-banner) .homepage-main-container {
     z-index: 2;
 }
 
+/* Keep logo and team name on same line */
+.user-pick-display img.user-pick-logo + .user-pick-team {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+/* Wrapper for logo + team name to stay together */
+.user-pick-display .user-pick-logo {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.user-pick-display .user-pick-team {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.75rem;
+}
+
 .user-pick-logo {
     width: 36px;
     height: 36px;
@@ -3605,6 +3640,17 @@ body:has(.site-banner) .homepage-main-container {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
+    }
+    
+    /* Keep logo and team name together even on mobile */
+    .user-pick-display .user-pick-logo,
+    .user-pick-display .user-pick-team {
+        display: inline-block;
+        vertical-align: middle;
+    }
+    
+    .user-pick-display .user-pick-team {
+        margin-left: 0.5rem; /* Slightly less margin on mobile */
     }
     
     .pick-result {
