@@ -291,7 +291,23 @@
                                     {% endif %}
                                     {% if game.temperature and game.weatherCondition %}
                                     <div class="game-info-item">
-                                        <i class="fas fa-thermometer-half me-1"></i>
+                                        {% if 'Sun' in game.weatherCondition or 'Clear' in game.weatherCondition %}
+                                            <i class="fas fa-sun me-1" title="Sunny/Clear"></i>
+                                        {% elif 'Cloud' in game.weatherCondition %}
+                                            <i class="fas fa-cloud me-1" title="Cloudy"></i>
+                                        {% elif 'Rain' in game.weatherCondition or 'Shower' in game.weatherCondition %}
+                                            <i class="fas fa-cloud-rain me-1" title="Rainy"></i>
+                                        {% elif 'Snow' in game.weatherCondition %}
+                                            <i class="fas fa-snowflake me-1" title="Snowy"></i>
+                                        {% elif 'Storm' in game.weatherCondition or 'Thunder' in game.weatherCondition %}
+                                            <i class="fas fa-bolt me-1" title="Stormy"></i>
+                                        {% elif 'Wind' in game.weatherCondition %}
+                                            <i class="fas fa-wind me-1" title="Windy"></i>
+                                        {% elif 'Fog' in game.weatherCondition %}
+                                            <i class="fas fa-smog me-1" title="Foggy"></i>
+                                        {% else %}
+                                            <i class="fas fa-thermometer-half me-1" title="Weather"></i>
+                                        {% endif %}
                                         <span class="info-value">{{ game.temperature }}°F, {{ game.weatherCondition }}</span>
                                     </div>
                                     {% endif %}
