@@ -182,21 +182,29 @@
                             let originalCards = [];
                             
                             function captureOriginalCards() {
-                                const container = document.getElementById(CONTAINER_ID);
-                                if (!container) return;
-                                
-                                // Capture cards if we haven't already or if container was reset
-                                if (originalCards.length === 0 || !container.querySelector('.points-column')) {
-                                    originalCards = Array.from(container.querySelectorAll('.player-points-card')).map(card => card.cloneNode(true));
+                                try {
+                                    const container = document.getElementById(CONTAINER_ID);
+                                    if (!container) return;
+                                    
+                                    // Capture cards if we haven't already or if container was reset
+                                    if (originalCards.length === 0 || !container.querySelector('.points-column')) {
+                                        const playerCards = container.querySelectorAll('.player-points-card');
+                                        if (playerCards.length > 0) {
+                                            originalCards = Array.from(playerCards).map(card => card.cloneNode(true));
+                                        }
+                                    }
+                                } catch (error) {
+                                    console.error('Error capturing original cards:', error);
                                 }
                             }
                             
                             function applyColumnLayout() {
-                                const container = document.getElementById(CONTAINER_ID);
-                                if (!container) return;
-                                
-                                captureOriginalCards();
-                                const totalCards = originalCards.length;
+                                try {
+                                    const container = document.getElementById(CONTAINER_ID);
+                                    if (!container) return;
+                                    
+                                    captureOriginalCards();
+                                    const totalCards = originalCards.length;
                                 
                                 if (window.innerWidth >= 992 && totalCards > 0) {
                                     // Only rebuild if not already in column layout
@@ -233,6 +241,9 @@
                                             container.appendChild(card.cloneNode(true));
                                         });
                                     }
+                                }
+                                } catch (error) {
+                                    console.error('Error applying column layout:', error);
                                 }
                             }
                             
@@ -1079,8 +1090,8 @@
             }
             
             // Update week points leaderboard
-            const currentLeaderboard = document.querySelector('.points-leaderboard');
-            const newLeaderboard = newDoc.querySelector('.points-leaderboard');
+            const currentLeaderboard = document.getElementById('week-points-leaderboard');
+            const newLeaderboard = newDoc.getElementById('week-points-leaderboard');
             if (currentLeaderboard && newLeaderboard && currentLeaderboard.innerHTML !== newLeaderboard.innerHTML) {
                 currentLeaderboard.innerHTML = newLeaderboard.innerHTML;
                 currentLeaderboard.style.animation = 'fadeIn 0.5s ease-in';
@@ -1088,7 +1099,12 @@
                 // Refresh the Week Points layout after updating leaderboard content
                 if (typeof window.weekPointsLayoutManager !== 'undefined') {
                     setTimeout(() => {
-                        window.weekPointsLayoutManager.refresh();
+                        try {
+                            window.weekPointsLayoutManager.refresh();
+                            console.log('Week Points layout refreshed successfully');
+                        } catch (error) {
+                            console.error('Error refreshing Week Points layout:', error);
+                        }
                     }, 100); // Small delay to let animation start
                 }
             }
@@ -1099,8 +1115,12 @@
             // Show appropriate update message
             if (completedGames > 0) {
                 showUpdateIndicator(indicator, `${completedGames} game(s) completed! Picks scored.`);
+                console.log(`Live update: ${completedGames} game(s) completed`);
             } else if (gamesUpdated > 0) {
                 showUpdateIndicator(indicator, `${gamesUpdated} game(s) updated`);
+                console.log(`Live update: ${gamesUpdated} game(s) updated`);
+            } else {
+                console.log('Live update: No changes detected');
             }
             
             lastUpdateTime = Date.now();
