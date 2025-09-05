@@ -15,6 +15,38 @@ parser.add_argument('--url', default='localhost', help='The host for the API end
 parser.add_argument("--gameweek", help="Specify the week to update.")
 args, leftovers = parser.parse_known_args()
 
+# ESPN Weather Condition ID mapping (based on observation and common weather APIs)
+WEATHER_CONDITION_MAP = {
+    '1': 'Clear',
+    '2': 'Partly Cloudy', 
+    '3': 'Mostly Cloudy',
+    '4': 'Overcast',
+    '5': 'Hazy',
+    '6': 'Mostly Sunny',
+    '7': 'Cloudy',
+    '8': 'Dreary',
+    '11': 'Fog',
+    '12': 'Showers',
+    '13': 'Mostly Cloudy with Showers',
+    '14': 'Partly Sunny with Showers',
+    '15': 'Thunderstorms',
+    '16': 'Mostly Cloudy with Thunderstorms',
+    '17': 'Partly Sunny with Thunderstorms',
+    '18': 'Rain',
+    '19': 'Flurries',
+    '20': 'Mostly Cloudy with Flurries',
+    '21': 'Partly Sunny with Flurries',
+    '22': 'Snow',
+    '23': 'Mostly Cloudy with Snow',
+    '24': 'Ice',
+    '25': 'Sleet',
+    '26': 'Freezing Rain',
+    '29': 'Rain and Snow',
+    '30': 'Hot',
+    '31': 'Cold',
+    '32': 'Windy'
+}
+
 
 def get_season():
     """
@@ -305,7 +337,25 @@ def build_payload(week):
                 if 'weather' in event:
                     weather_data = event['weather']
                     temperature = weather_data.get('temperature')
+                    # Try to get displayValue first, fallback to conditionId if needed
                     weather_condition = weather_data.get('displayValue')
+                    
+                    # Debug: Print weather data structure if displayValue is missing or numeric
+                    if not weather_condition or weather_condition.isdigit():
+                        print(f"Debug - Weather data for game {game_id}: {weather_data}")
+                        # If displayValue is missing or numeric, try other possible fields
+                        if not weather_condition:
+                            weather_condition = weather_data.get('condition', weather_data.get('conditionId'))
+                    
+                    # Convert numeric condition IDs to descriptive text
+                    if weather_condition and weather_condition.isdigit():
+                        condition_id = weather_condition
+                        weather_condition = WEATHER_CONDITION_MAP.get(condition_id)
+                        if weather_condition:
+                            print(f"Converted weather condition ID '{condition_id}' to '{weather_condition}' for game {game_id}")
+                        else:
+                            print(f"Warning: Unknown weather condition ID '{condition_id}' for game {game_id}, setting to None")
+                            weather_condition = None
                 
                 # Extract venue information
                 venue_indoor = False
