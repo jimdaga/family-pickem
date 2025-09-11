@@ -615,7 +615,7 @@
                                 {% endif %}
 
                                 <!-- Missing Picks Alert -->
-                                {% if game.statusType == 'notstarted' and current_week == True %}
+                                {% if (game.statusType == 'notstarted' or game.statusType == 'delayed') and current_week == True %}
                                 <div class="missing-picks-section" style="display: none;" id="missing-picks-{{ game.id }}">
                                     <div class="missing-picks-header">
                                         <i class="fas fa-exclamation-triangle me-2"></i>Missing Picks
@@ -1064,14 +1064,23 @@
                     const currentStatus = currentGame.getAttribute('data-game-status');
                     const newStatus = newGames[index].getAttribute('data-game-status');
                     
+                    console.log(`\n--- Game ${index} (Status: ${currentStatus} → ${newStatus}) ---`);
+                    
                     // Check if game status changed or scores updated
                     const currentScores = currentGame.querySelectorAll('.total-score, .quarter-score');
                     const newScores = newGames[index].querySelectorAll('.total-score, .quarter-score');
                     
                     let scoresChanged = false;
+                    console.log(`Game ${index}: Comparing ${currentScores.length} current scores with ${newScores.length} new scores`);
+                    
                     currentScores.forEach((score, scoreIndex) => {
-                        if (newScores[scoreIndex] && score.textContent !== newScores[scoreIndex].textContent) {
-                            console.log(`Score changed: "${score.textContent}" → "${newScores[scoreIndex].textContent}"`);
+                        const currentText = score.textContent.trim();
+                        const newText = newScores[scoreIndex] ? newScores[scoreIndex].textContent.trim() : 'N/A';
+                        
+                        console.log(`  Score ${scoreIndex}: "${currentText}" vs "${newText}"`);
+                        
+                        if (newScores[scoreIndex] && currentText !== newText) {
+                            console.log(`  ✓ Score changed: "${currentText}" → "${newText}"`);
                             scoresChanged = true;
                         }
                     });
@@ -1083,6 +1092,8 @@
                     
                     // Update if scores changed or status changed
                     if (scoresChanged || statusChanged) {
+                        console.log(`  → Updating game ${index} (scores: ${scoresChanged}, status: ${statusChanged})`);
+                        
                         // Update the entire game card content
                         currentGame.innerHTML = newGames[index].innerHTML;
                         currentGame.setAttribute('data-game-status', newStatus);
@@ -1103,6 +1114,8 @@
                                 currentGame.style.border = '';
                             }, 3000);
                         }
+                    } else {
+                        console.log(`  → No changes detected for game ${index}`);
                     }
                 }
             });
@@ -1115,14 +1128,25 @@
                 currentStats.style.animation = 'fadeIn 0.5s ease-in';
             }
             
-            // Update week points leaderboard (temporarily disabled to isolate score update issue)
-            // const currentLeaderboard = document.getElementById('week-points-leaderboard');
-            // const newLeaderboard = newDoc.getElementById('week-points-leaderboard');
-            // if (currentLeaderboard && newLeaderboard && currentLeaderboard.innerHTML !== newLeaderboard.innerHTML) {
-            //     currentLeaderboard.innerHTML = newLeaderboard.innerHTML;
-            //     currentLeaderboard.style.animation = 'fadeIn 0.5s ease-in';
-            // }
-            console.log('Week Points update temporarily disabled for debugging');
+            // Update week points leaderboard
+            const currentLeaderboard = document.getElementById('week-points-leaderboard');
+            const newLeaderboard = newDoc.getElementById('week-points-leaderboard');
+            if (currentLeaderboard && newLeaderboard && currentLeaderboard.innerHTML !== newLeaderboard.innerHTML) {
+                currentLeaderboard.innerHTML = newLeaderboard.innerHTML;
+                currentLeaderboard.style.animation = 'fadeIn 0.5s ease-in';
+                
+                // Refresh the Week Points layout after updating leaderboard content
+                if (typeof window.weekPointsLayoutManager !== 'undefined') {
+                    setTimeout(() => {
+                        try {
+                            window.weekPointsLayoutManager.refresh();
+                            console.log('Week Points layout refreshed successfully');
+                        } catch (error) {
+                            console.error('Error refreshing Week Points layout:', error);
+                        }
+                    }, 100); // Small delay to let animation start
+                }
+            }
             
             // Remove updating animation
             liveCards.forEach(card => card.classList.remove('score-updating'));

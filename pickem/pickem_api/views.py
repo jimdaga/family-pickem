@@ -137,13 +137,14 @@ def week_list(request):
     gameseason = get_season()
 
     if request.method == 'GET':
+        # Get all game weeks for the current season
+        game_weeks = GameWeeks.objects.filter(season=gameseason).order_by('weekNumber')
+        
+        if not game_weeks.exists():
+            # If no game weeks exist, return empty list
+            return Response([])
 
-        try:
-            game_week = GameWeeks.objects.get(date=today_date).weekNumber
-        except:
-            game_week = '1'
-
-        game_week_serializer = GameWeeksSerializer(game_week, many=True)
+        game_week_serializer = GameWeeksSerializer(game_weeks, many=True)
         return Response(game_week_serializer.data)
 
     elif request.method == 'POST':
