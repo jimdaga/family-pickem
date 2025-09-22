@@ -304,7 +304,11 @@
 [data-bs-theme="dark"] .game-score-card,
 [data-bs-theme="dark"] .game-card,
 [data-bs-theme="dark"] .teams-matchup,
-[data-bs-theme="dark"] .collapsible-header {
+[data-bs-theme="dark"] .collapsible-header,
+[data-bs-theme="dark"] .picks-section,
+[data-bs-theme="dark"] .user-pick-section,
+[data-bs-theme="dark"] .missing-picks-section,
+[data-bs-theme="dark"] .team-picks-group {
   background-color: var(--app-card-bg) !important;
   border-color: var(--bs-border-color) !important;
   box-shadow: none !important;
