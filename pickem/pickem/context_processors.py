@@ -6,6 +6,7 @@ to all templates for consistent dark mode functionality.
 """
 
 from pickem_api.models import UserProfile
+from pickem_homepage.models import SiteBanner
 
 
 def theme_context(request):
@@ -42,4 +43,22 @@ def dark_mode_context(request):
     Legacy context processor name for backwards compatibility.
     Delegates to theme_context.
     """
-    return theme_context(request) 
+    return theme_context(request)
+
+
+def site_banner_context(request):
+    """
+    Context processor to inject active site banner into all templates.
+    
+    Provides:
+    - active_banner: The currently active SiteBanner object (or None if no active banner)
+    """
+    try:
+        active_banner = SiteBanner.get_active_banner()
+    except Exception:
+        # If there's any database error (e.g., during migrations), return None
+        active_banner = None
+    
+    return {
+        'active_banner': active_banner
+    } 

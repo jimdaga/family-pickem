@@ -4,21 +4,28 @@
 {% load pickem_homepage_extras %}
 
 {% block banner %}
-<div class="site-banner banner-success">
+{% if active_banner %}
+<div class="site-banner banner-{{ active_banner.banner_type }}">
     <div class="container">
         <div class="banner-content">
             <div class="banner-icon">
-                <i class="fas fa-trophy"></i>
+                <i class="{{ active_banner.icon }}"></i>
             </div>
             <div class="banner-text">
-                Welcome to the Family Pickem 2025 Season!
+                {{ active_banner.title }}
+                {% if active_banner.description %}
+                    <div class="banner-description">{{ active_banner.description }}</div>
+                {% endif %}
             </div>
+            {% if active_banner.show_close_button %}
             <button type="button" class="banner-close" aria-label="Close banner">
                 <i class="fas fa-times"></i>
             </button>
+            {% endif %}
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block content %}
