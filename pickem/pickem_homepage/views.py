@@ -60,9 +60,11 @@ def index(request):
     # Get total players count
     total_players = User.objects.filter(is_active=True, is_superuser=False).count()
     
-    # Get league statistics
-    total_picks = GamePicks.objects.filter(gameseason=gameseason).count()
-    total_correct_picks = GamePicks.objects.filter(gameseason=gameseason, pick_correct=True).count()
+    # Get league statistics - only count picks for finished games
+    finished_games = GamesAndScores.objects.filter(gameseason=gameseason, statusType='finished')
+    finished_game_slugs = finished_games.values_list('slug', flat=True)
+    total_picks = GamePicks.objects.filter(gameseason=gameseason, slug__in=finished_game_slugs).count()
+    total_correct_picks = GamePicks.objects.filter(gameseason=gameseason, slug__in=finished_game_slugs, pick_correct=True).count()
     
     # Calculate league accuracy
     league_accuracy = 0

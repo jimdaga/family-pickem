@@ -70,6 +70,32 @@ def count_teams(team_string):
     return len([team.strip() for team in str(team_string).split(',') if team.strip()])
 
 @register.filter
+def get_team_names(team_string):
+    """Get the team names from a comma-separated team slug string"""
+    if not team_string:
+        return ""
+    
+    team_slugs = [team.strip() for team in str(team_string).split(',') if team.strip()]
+    if len(team_slugs) <= 1:
+        # Single team - look up the name
+        try:
+            team = Teams.objects.get(teamNameSlug=str(team_string).strip())
+            return team.teamNameName
+        except Teams.DoesNotExist:
+            return str(team_string)
+    
+    # Multiple teams - look up all names
+    team_names = []
+    for slug in team_slugs:
+        try:
+            team = Teams.objects.get(teamNameSlug=slug)
+            team_names.append(team.teamNameName)
+        except Teams.DoesNotExist:
+            team_names.append(slug)  # Fallback to slug if not found
+    
+    return ", ".join(team_names)
+
+@register.filter
 def lookuppick(id):
     pick = GamePicks.objects.filter(id=id).distinct()
     return pick.count

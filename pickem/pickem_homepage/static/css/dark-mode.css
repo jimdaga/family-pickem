@@ -1,284 +1,141 @@
 /**
- * Dark Mode UX Redesign (v2 - Facebook-inspired)
+ * Dark Mode - Background Only
  * 
- * Design Goals:
- * - Neutral, grey-dominant palette to reduce color fatigue.
- * - Subtle, flat design, removing distracting gradients and shadows.
- * - High-contrast text for accessibility (WCAG AA/AAA).
- * - Consistency with modern dark mode standards.
+ * This CSS preserves all original colors from style.css 
+ * and only changes backgrounds to dark variants
  */
 
-/* ===== ROOT VARIABLES (Light Mode Defaults) - Unchanged for consistency ===== */
-:root {
-  /* Primary Colors */
-  --bs-primary: #0d6efd;
-  --bs-primary-rgb: 13, 110, 253;
-  --bs-secondary: #6c757d;
-  --bs-secondary-rgb: 108, 117, 125;
-  --bs-success: #198754;
-  --bs-success-rgb: 25, 135, 84;
-  --bs-info: #0dcaf0;
-  --bs-info-rgb: 13, 202, 240;
-  --bs-warning: #ffc107;
-  --bs-warning-rgb: 255, 193, 7;
-  --bs-danger: #dc3545;
-  --bs-danger-rgb: 220, 53, 69;
-
-  /* Background Colors */
-  --bs-body-bg: #ffffff;
-  --bs-body-bg-rgb: 255, 255, 255;
-  --bs-secondary-bg: #f8f9fa;
-  --bs-secondary-bg-rgb: 248, 249, 250;
-  --bs-tertiary-bg: #e9ecef;
-  --bs-tertiary-bg-rgb: 233, 236, 239;
-
-  /* Text Colors */
-  --bs-body-color: #212529;
-  --bs-body-color-rgb: 33, 37, 41;
-  --bs-secondary-color: #6c757d;
-  --bs-secondary-color-rgb: 108, 117, 125;
-  --bs-tertiary-color: #495057;
-  --bs-tertiary-color-rgb: 73, 80, 87;
-  --bs-emphasis-color: #000000;
-  --bs-emphasis-color-rgb: 0, 0, 0;
-
-  /* Border Colors */
-  --bs-border-color: #dee2e6;
-  --bs-border-color-rgb: 222, 226, 230;
-  --bs-border-color-translucent: rgba(0, 0, 0, 0.175);
-}
-
-/* ===== DARK MODE OVERRIDES (v2) ===== */
+/* ===== DARK MODE BACKGROUND OVERRIDES ===== */
 [data-bs-theme="dark"] {
-  /* Primary Colors - Desaturated and aligned with a neutral palette */
-  --bs-primary: #2563eb;
-  --bs-primary-rgb: 37, 99, 235;
-  --bs-secondary: #9ca3af;
-  --bs-secondary-rgb: 156, 163, 175;
-  --bs-success: #16a34a;
-  --bs-success-rgb: 22, 163, 74;
-  --bs-info: #0ea5e9;
-  --bs-info-rgb: 14, 165, 233;
-  --bs-warning: #f59e0b;
-  --bs-warning-rgb: 245, 158, 11;
-  --bs-danger: #dc2626;
-  --bs-danger-rgb: 220, 38, 38;
-
-  /* Background Colors - Facebook-style charcoal grays */
-  --bs-body-bg: #18191a;
-  --bs-body-bg-rgb: 24, 25, 26;
-  --bs-secondary-bg: #242526;
-  --bs-secondary-bg-rgb: 36, 37, 38;
-  --bs-tertiary-bg: #3a3b3c;
-  --bs-tertiary-bg-rgb: 58, 59, 60;
-
-  /* Text Colors - High-contrast off-whites and grays */
-  --bs-body-color: #e4e6eb;
-  --bs-body-color-rgb: 228, 230, 235;
-  --bs-secondary-color: #b0b3b8;
-  --bs-secondary-color-rgb: 176, 179, 184;
-  --bs-tertiary-color: #8a8d91;
-  --bs-tertiary-color-rgb: 138, 141, 145;
-  --bs-emphasis-color: #f5f6f7;
-  --bs-emphasis-color-rgb: 245, 246, 247;
-
-  /* Border Colors - Subtle dividers */
-  --bs-border-color: #3e4042;
-  --bs-border-color-rgb: 62, 64, 66;
-  --bs-border-color-translucent: rgba(228, 230, 235, 0.1);
-
-  /* Custom Application Colors */
-  --app-card-bg: var(--bs-secondary-bg);
-  --app-card-border: var(--bs-border-color);
-  --app-card-shadow: rgba(0, 0, 0, 0.2);
-  --app-navbar-bg: rgba(36, 37, 38, 0.95);
-  --app-sidebar-bg: var(--bs-secondary-bg);
-  --app-hover-bg: #3a3b3c;
-  --app-active-bg: rgba(37, 99, 235, 0.15);
+  /* Only override background colors - keep all other colors intact */
   
-  /* Gradients Removed - Using flat colors for a cleaner look */
-  --app-gradient-primary: var(--bs-primary);
-  --app-gradient-hero: var(--bs-secondary-bg);
+  /* Main body background - dark instead of #F2F3F7 */
+  --bs-body-bg: #1a1a1a;
+  --bs-body-bg-rgb: 26, 26, 26;
   
-  /* NFL Team Logo Filters - Neutral adjustments */
-  --team-logo-filter: saturate(0.9);
+  /* Card/container backgrounds - dark but with good contrast */
+  --bs-secondary-bg: #333333;
+  --bs-secondary-bg-rgb: 51, 51, 51;
+  
+  /* Tertiary backgrounds for form controls, etc */
+  --bs-tertiary-bg: #404040;
+  --bs-tertiary-bg-rgb: 64, 64, 64;
+  
+  /* Quaternary backgrounds for cards-on-cards */
+  --bs-quaternary-bg: #4a4a4a;
+  --bs-quaternary-bg-rgb: 74, 74, 74;
+  
+  /* Border colors for better separation */
+  --bs-border-color: #555555;
+  --bs-border-color-rgb: 85, 85, 85;
+  --bs-border-color-translucent: rgba(255, 255, 255, 0.1);
 }
 
-/* ===== GENERAL OVERRIDES & FIXES ===== */
+/* ===== BACKGROUND REPLACEMENTS ===== */
 
-/* Ensure the main background color is applied everywhere */
-[data-bs-theme="dark"] body,
-[data-bs-theme="dark"] .main-content,
-[data-bs-theme="dark"] .container,
-[data-bs-theme="dark"] .container-fluid {
+/* Main body background */
+[data-bs-theme="dark"] body {
     background-color: var(--bs-body-bg) !important;
 }
 
-/* Force correct text color on all headings and key titles */
-[data-bs-theme="dark"] h1, [data-bs-theme="dark"] h2, [data-bs-theme="dark"] h3, [data-bs-theme="dark"] h4, [data-bs-theme="dark"] h5, [data-bs-theme="dark"] h6,
-[data-bs-theme="dark"] .section-title,
-[data-bs-theme="dark"] .page-title,
-[data-bs-theme="dark"] .profile-name,
-[data-bs-theme="dark"] .player-name,
-[data-bs-theme="dark"] .winner-name,
-[data-bs-theme="dark"] .team-name,
-[data-bs-theme="dark"] .card-title,
-[data-bs-theme="dark"] .info-value,
-[data-bs-theme="dark"] .form-label,
-[data-bs-theme="dark"] a {
-    color: var(--bs-body-color);
-}
-
-[data-bs-theme="dark"] a:hover {
-    color: var(--bs-emphasis-color);
-}
-
-/* Use secondary color for paragraphs and subtitles */
-[data-bs-theme="dark"] p,
-[data-bs-theme="dark"] .page-subtitle,
-[data-bs-theme="dark"] .section-subtitle,
-[data-bs-theme="dark"] .info-label,
-[data-bs-theme="dark"] .form-text,
-[data-bs-theme="dark"] .text-muted {
-    color: var(--bs-secondary-color) !important;
-}
-
-/* ===== COMPONENT-SPECIFIC DARK MODE STYLES (v2) ===== */
-
-/* Cards and Containers - Flat and subtle */
+/* White card backgrounds become dark */
+[data-bs-theme="dark"] .player-row,
 [data-bs-theme="dark"] .card,
 [data-bs-theme="dark"] .section-container,
-[data-bs-theme="dark"] .profile-card {
-  background-color: var(--app-card-bg);
-  border: 1px solid var(--app-card-border);
-  box-shadow: none;
+[data-bs-theme="dark"] .leaderboard-card,
+[data-bs-theme="dark"] .week-winner-card,
+[data-bs-theme="dark"] .stats-player-card,
+[data-bs-theme="dark"] .quick-stat-card,
+[data-bs-theme="dark"] .profile-card,
+[data-bs-theme="dark"] .rule-card,
+[data-bs-theme="dark"] .game-score-card,
+[data-bs-theme="dark"] .game-card,
+[data-bs-theme="dark"] .submitted-game-card,
+[data-bs-theme="dark"] .player-detail-card,
+[data-bs-theme="dark"] .player-points-card,
+[data-bs-theme="dark"] .teams-matchup,
+[data-bs-theme="dark"] .picks-section,
+[data-bs-theme="dark"] .user-pick-section,
+[data-bs-theme="dark"] .team-picks-group,
+[data-bs-theme="dark"] .missing-picks-section,
+[data-bs-theme="dark"] .winner-showcase,
+[data-bs-theme="dark"] .champion-spotlight,
+[data-bs-theme="dark"] .hero-section,
+[data-bs-theme="dark"] .page-header,
+[data-bs-theme="dark"] .page-header-picks {
+  background-color: var(--bs-secondary-bg) !important;
 }
 
-/* Headers within cards */
-[data-bs-theme="dark"] .section-header,
-[data-bs-theme="dark"] .profile-card-header {
-  background-color: transparent;
-  border-bottom: 1px solid var(--bs-border-color);
-}
-
-/* Navigation - Opaque and simple */
-[data-bs-theme="dark"] .navbar {
-  background-color: var(--app-navbar-bg) !important;
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--bs-border-color);
-  box-shadow: none;
-}
-
-[data-bs-theme="dark"] .navbar .nav-link:hover {
-  background-color: var(--app-hover-bg);
-  border-radius: 6px;
-  transform: none;
-}
-
-/* Buttons - Minimalist and functional */
-[data-bs-theme="dark"] .btn {
-    box-shadow: none !important;
-    transform: none !important;
-}
-
-[data-bs-theme="dark"] .btn-outline-secondary {
-  color: var(--bs-body-color);
-  border-color: var(--bs-border-color);
-  background-color: var(--bs-tertiary-bg);
-}
-
-[data-bs-theme="dark"] .btn-outline-secondary:hover {
-  background-color: #4b4c4d;
-  border-color: var(--bs-border-color);
-  color: var(--bs-body-color);
-}
-
-[data-bs-theme="dark"] .btn-primary {
-  background-color: var(--bs-primary);
-  border-color: var(--bs-primary);
-}
-
-[data-bs-theme="dark"] .btn-primary:hover {
-  background-color: #1d4ed8;
-  border-color: #1d4ed8;
-}
-
-/* Forms - Simple and clear */
+/* Form controls and inputs */
 [data-bs-theme="dark"] .form-control,
 [data-bs-theme="dark"] .form-select {
-  background-color: var(--bs-tertiary-bg);
-  border: 1px solid var(--bs-border-color);
-  color: var(--bs-body-color);
-  box-shadow: none;
+  background-color: var(--bs-tertiary-bg) !important;
+  border-color: var(--bs-border-color) !important;
 }
 
-[data-bs-theme="dark"] .form-control:focus,
-[data-bs-theme="dark"] .form-select:focus {
-  background-color: var(--bs-tertiary-bg);
-  border-color: var(--bs-primary);
-  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25);
-  transform: none;
+/* Dropdown menus */
+[data-bs-theme="dark"] .dropdown-menu {
+  background-color: var(--bs-secondary-bg) !important;
+  border-color: var(--bs-border-color) !important;
 }
 
-/* Tables - Clean and readable */
+/* Table backgrounds */
 [data-bs-theme="dark"] .table {
-  --bs-table-bg: var(--app-card-bg);
-  --bs-table-striped-bg: rgba(58, 59, 60, 0.3);
-  --bs-table-hover-bg: #3a3b3c;
-  border-color: var(--bs-border-color);
+  --bs-table-bg: var(--bs-secondary-bg);
+  --bs-table-striped-bg: var(--bs-tertiary-bg);
+  --bs-table-hover-bg: var(--bs-tertiary-bg);
 }
 
 [data-bs-theme="dark"] .table th {
-  background-color: var(--app-card-bg);
-  color: var(--bs-body-color);
-  border-bottom: 2px solid var(--bs-border-color);
+  background-color: var(--bs-secondary-bg) !important;
 }
 
-/* Dropdowns - Opaque and simple */
-[data-bs-theme="dark"] .dropdown-menu {
-  background-color: var(--bs-secondary-bg);
-  border: 1px solid var(--bs-border-color);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
+/* Navbar - keep the original dark navbar color */
+[data-bs-theme="dark"] .navbar {
+  background-color: rgb(37, 37, 38) !important;
 }
 
-[data-bs-theme="dark"] .dropdown-item {
-  color: var(--bs-body-color);
+/* Team score rows */
+[data-bs-theme="dark"] .team-score-row {
+  background-color: transparent !important;
 }
 
-[data-bs-theme="dark"] .dropdown-item:hover,
-[data-bs-theme="dark"] .dropdown-item:focus {
-  background-color: var(--app-hover-bg);
-  color: var(--bs-emphasis-color);
-  border-radius: 4px;
+/* Section headers */
+[data-bs-theme="dark"] .section-header,
+[data-bs-theme="dark"] .collapsible-header {
+  background-color: var(--bs-secondary-bg) !important;
+  border-color: var(--bs-border-color) !important;
 }
 
-/* Hero Sections - No gradients, just clean containers */
-[data-bs-theme="dark"] .hero-section,
-[data-bs-theme="dark"] .page-header-picks {
-  background: var(--app-gradient-hero);
-  box-shadow: none;
-  border: 1px solid var(--bs-border-color);
-  border-radius: 12px;
+/* Hover states - slightly lighter */
+[data-bs-theme="dark"] .nav-card:hover,
+[data-bs-theme="dark"] .leaderboard-card:hover,
+[data-bs-theme="dark"] .week-winner-card:hover,
+[data-bs-theme="dark"] .stats-player-card:hover,
+[data-bs-theme="dark"] .quick-stat-card:hover,
+[data-bs-theme="dark"] .game-score-card:hover,
+[data-bs-theme="dark"] .game-card:hover,
+[data-bs-theme="dark"] .player-detail-card:hover,
+[data-bs-theme="dark"] .player-points-card:hover,
+[data-bs-theme="dark"] .rule-toggle:hover,
+[data-bs-theme="dark"] .dropdown-item:hover {
+  background-color: var(--bs-tertiary-bg) !important;
 }
 
-[data-bs-theme="dark"] .page-header-clean {
-    border-bottom: 1px solid var(--bs-border-color);
+/* Ensure borders are visible in dark mode */
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .section-container,
+[data-bs-theme="dark"] .player-row {
+  border: 1px solid var(--bs-border-color) !important;
 }
 
-/* Text selection colors */
-[data-bs-theme="dark"] ::selection {
-  background-color: rgba(37, 99, 235, 0.3);
-  color: var(--bs-emphasis-color);
+/* Light backgrounds that should become darker */
+[data-bs-theme="dark"] .bg-background {
+    background-color: var(--bs-body-bg) !important;
 }
 
-/* Stat Cards with subtle gradient highlight */
-[data-bs-theme="dark"] .quick-stat-card,
-[data-bs-theme="dark"] .winner-showcase {
-    background: linear-gradient(145deg, var(--bs-tertiary-bg), var(--bs-secondary-bg));
-    border: 1px solid var(--bs-border-color);
-    border-radius: .75rem;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+[data-bs-theme="dark"] .bg-light {
+  background-color: var(--bs-secondary-bg) !important;
 }
 
 /* Scrollbar styling for dark mode */
@@ -300,174 +157,1830 @@
   background: var(--bs-border-color);
 } 
 
-/* Game Cards and Score Sections - Flat and consistent */
-[data-bs-theme="dark"] .game-score-card,
-[data-bs-theme="dark"] .game-card,
-[data-bs-theme="dark"] .teams-matchup,
-[data-bs-theme="dark"] .collapsible-header,
-[data-bs-theme="dark"] .picks-section,
-[data-bs-theme="dark"] .user-pick-section,
-[data-bs-theme="dark"] .missing-picks-section,
-[data-bs-theme="dark"] .team-picks-group {
-  background-color: var(--app-card-bg) !important;
-  border-color: var(--bs-border-color) !important;
-  box-shadow: none !important;
+/* Striped table rows */
+[data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > td {
+  background-color: var(--bs-tertiary-bg) !important;
 }
 
-[data-bs-theme="dark"] .team-score-row {
-    background-color: transparent !important;
+/* Button focus states */
+[data-bs-theme="dark"] .btn:focus,
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
 }
 
-/* Leaderboard and Stats Cards - Premium feel */
-[data-bs-theme="dark"] .leaderboard-card,
-[data-bs-theme="dark"] .stats-player-card,
-[data-bs-theme="dark"] .player-points-card {
-  background: var(--app-card-bg);
-  border: 1px solid var(--app-card-border);
-  box-shadow: none;
-} 
+/* ===== TEXT COLOR OVERRIDES FOR READABILITY ===== */
 
-[data-bs-theme="dark"] .nav-card,
-[data-bs-theme="dark"] .status-card,
-[data-bs-theme="dark"] .player-preview-card,
-[data-bs-theme="dark"] .week-winner-card,
-[data-bs-theme="dark"] .rule-card {
-    background-color: var(--app-card-bg);
-    border: 1px solid var(--app-card-border);
-}
-
-/* Force correct text on specific components */
+/* Main text colors - ensure readability on dark backgrounds */
+[data-bs-theme="dark"] body,
+[data-bs-theme="dark"] .container,
+[data-bs-theme="dark"] .container-fluid,
+[data-bs-theme="dark"] h1, 
+[data-bs-theme="dark"] h2, 
+[data-bs-theme="dark"] h3, 
+[data-bs-theme="dark"] h4, 
+[data-bs-theme="dark"] h5, 
+[data-bs-theme="dark"] h6,
+[data-bs-theme="dark"] .card-title,
+[data-bs-theme="dark"] .section-title,
+[data-bs-theme="dark"] .page-title,
 [data-bs-theme="dark"] .nav-card-title,
-[data-bs-theme="dark"] .winner-name span,
-[data-bs-theme="dark"] .section-header .section-title,
-[data-bs-theme="dark"] .rule-title,
-[data-bs-theme="dark"] .team-name {
-    color: var(--bs-body-color) !important;
+[data-bs-theme="dark"] .status-value,
+[data-bs-theme="dark"] .info-value,
+[data-bs-theme="dark"] .stat-value,
+[data-bs-theme="dark"] .player-name,
+[data-bs-theme="dark"] .team-name,
+[data-bs-theme="dark"] .winner-name,
+[data-bs-theme="dark"] .points-number,
+[data-bs-theme="dark"] .score-value {
+  color: #ffffff !important;
 }
 
-[data-bs-theme="dark"] .rule-subtitle {
-    color: var(--bs-secondary-color) !important;
+/* Secondary text - lighter but still readable */
+[data-bs-theme="dark"] .text-muted,
+[data-bs-theme="dark"] .nav-card-subtitle,
+[data-bs-theme="dark"] .status-label,
+[data-bs-theme="dark"] .info-label,
+[data-bs-theme="dark"] .stat-label,
+[data-bs-theme="dark"] .points-label,
+[data-bs-theme="dark"] .team-record,
+[data-bs-theme="dark"] .game-time,
+[data-bs-theme="dark"] .page-subtitle,
+[data-bs-theme="dark"] .section-subtitle,
+[data-bs-theme="dark"] small,
+[data-bs-theme="dark"] .small {
+  color: #cccccc !important;
 }
 
-/* Stats Page Fixes */
+/* Icons - make them visible */
+[data-bs-theme="dark"] .status-icon,
+[data-bs-theme="dark"] .nav-card-icon i,
+[data-bs-theme="dark"] .material-symbols-outlined,
+[data-bs-theme="dark"] i {
+  color: #ffffff !important;
+}
+
+/* Links */
+[data-bs-theme="dark"] a {
+  color: #66b3ff !important;
+}
+
+[data-bs-theme="dark"] a:hover {
+  color: #99ccff !important;
+}
+
+/* Form labels and text */
+[data-bs-theme="dark"] .form-label,
+[data-bs-theme="dark"] label {
+  color: #ffffff !important;
+}
+
+/* Ensure form text is readable */
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+  color: #ffffff !important;
+}
+
+/* Card content text */
+[data-bs-theme="dark"] .card-text,
+[data-bs-theme="dark"] .card-body,
+[data-bs-theme="dark"] .section-container p {
+  color: #ffffff !important;
+}
+
+/* ===== SPECIFIC COMPONENT FIXES ===== */
+
+/* Status cards - make numbers and labels more visible, use quaternary background */
+[data-bs-theme="dark"] .status-card {
+  background-color: var(--bs-quaternary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-bs-theme="dark"] .status-card .status-value {
+  color: #ffffff !important;
+  font-weight: bold;
+}
+
+[data-bs-theme="dark"] .status-card .status-label {
+  color: #cccccc !important;
+}
+
+/* Navigation cards - use quaternary background for better contrast */
+[data-bs-theme="dark"] .nav-card {
+  background-color: var(--bs-quaternary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-bs-theme="dark"] .nav-card .nav-card-title {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .nav-card .nav-card-subtitle {
+  color: #cccccc !important;
+}
+
+/* Hero section text */
+[data-bs-theme="dark"] .hero-section h1,
+[data-bs-theme="dark"] .hero-section h2,
+[data-bs-theme="dark"] .hero-section .hero-title,
+[data-bs-theme="dark"] .hero-section .hero-subtitle {
+  color: #ffffff !important;
+}
+
+/* Section headers */
+[data-bs-theme="dark"] .section-header h3,
+[data-bs-theme="dark"] .section-header .section-title {
+  color: #ffffff !important;
+}
+
+/* Stats display */
+[data-bs-theme="dark"] .stat-summary-value,
+[data-bs-theme="dark"] .stat-summary-label {
+  color: #ffffff !important;
+}
+
+/* Leaderboard */
+[data-bs-theme="dark"] .player-preview-name,
+[data-bs-theme="dark"] .player-preview-points {
+  color: #ffffff !important;
+}
+
+/* ===== NESTED CARDS / CARDS-ON-CARDS ===== */
+
+/* ===== SCORES PAGE NESTED CARDS ===== */
+[data-bs-theme="dark"] .game-score-card,
+[data-bs-theme="dark"] .player-points-card,
+[data-bs-theme="dark"] .weekly-performance-compact,
+[data-bs-theme="dark"] .game-status-header,
+[data-bs-theme="dark"] .game-info-bar,
+[data-bs-theme="dark"] .teams-matchup,
+[data-bs-theme="dark"] .team-score-row,
+[data-bs-theme="dark"] .picks-section,
+[data-bs-theme="dark"] .team-picks-group,
+[data-bs-theme="dark"] .user-pick-section,
+[data-bs-theme="dark"] .missing-picks-section {
+  background-color: var(--bs-quaternary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* ============================================ */
+/* STANDINGS PAGE COMPLETE DARK MODE OVERHAUL */
+/* ============================================ */
+
+/* Main standings container */
+[data-bs-theme="dark"] .standings-main-container {
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Section containers */
+[data-bs-theme="dark"] .standings-main-container .section-container {
+  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
+  background-color: #333333 !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* Section headers and titles */
+[data-bs-theme="dark"] .standings-main-container .section-title {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Champion spotlight section */
+[data-bs-theme="dark"] .champion-spotlight {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%) !important;
+  color: #000000 !important;
+  border-radius: 12px !important;
+  padding: 2rem !important;
+  text-align: center !important;
+}
+
+[data-bs-theme="dark"] .champion-crown i {
+  color: #8B4513 !important;
+  font-size: 3rem !important;
+  margin-bottom: 1rem !important;
+}
+
+[data-bs-theme="dark"] .champion-title {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 1.8rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+[data-bs-theme="dark"] .champion-avatar {
+  border: 4px solid #8B4513 !important;
+  width: 80px !important;
+  height: 80px !important;
+  border-radius: 50% !important;
+  margin-bottom: 1rem !important;
+}
+
+[data-bs-theme="dark"] .champion-name {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 1.4rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+[data-bs-theme="dark"] .champion-subtitle {
+  color: #333333 !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+}
+
+/* Leaderboard container */
+[data-bs-theme="dark"] .leaderboard-container {
+  background: transparent !important;
+  padding: 1rem 0 !important;
+}
+
+/* Individual leaderboard cards */
+[data-bs-theme="dark"] .leaderboard-card {
+  background: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+  background-color: #404040 !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+  border-radius: 8px !important;
+  margin-bottom: 0.75rem !important;
+  padding: 1.25rem !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+[data-bs-theme="dark"] .leaderboard-card:hover {
+  background: linear-gradient(135deg, #4a4a4a 0%, #505050 50%, #555555 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
+}
+
+/* Rank badges */
+[data-bs-theme="dark"] .rank-badge {
+  background: var(--bs-quaternary-bg) !important;
+  color: #ffffff !important;
+  border-radius: 50% !important;
+  width: 45px !important;
+  height: 45px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+  position: absolute !important;
+  top: -8px !important;
+  right: -8px !important;
+  border: 2px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .rank-badge.rank-first {
+  background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+  color: #000000 !important;
+  border: 2px solid #B8860B !important;
+}
+
+[data-bs-theme="dark"] .rank-badge.rank-second {
+  background: linear-gradient(135deg, #C0C0C0, #A9A9A9) !important;
+  color: #000000 !important;
+  border: 2px solid #808080 !important;
+}
+
+[data-bs-theme="dark"] .rank-badge.rank-third {
+  background: linear-gradient(135deg, #CD7F32, #B87333) !important;
+  color: #ffffff !important;
+  border: 2px solid #8B4513 !important;
+}
+
+/* Player info in leaderboard */
+[data-bs-theme="dark"] .player-info {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .player-avatar {
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+  width: 60px !important;
+  height: 60px !important;
+}
+
+[data-bs-theme="dark"] .player-name {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 1.1rem !important;
+}
+
+[data-bs-theme="dark"] .player-details .text-muted {
+  color: #cccccc !important;
+}
+
+/* Points display */
+[data-bs-theme="dark"] .points-display {
+  text-align: center !important;
+}
+
+[data-bs-theme="dark"] .points-number {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 1.8rem !important;
+  line-height: 1 !important;
+}
+
+[data-bs-theme="dark"] .points-label {
+  color: #cccccc !important;
+  font-size: 0.8rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Week winners grid */
+[data-bs-theme="dark"] .week-winners-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+  gap: 1rem !important;
+  margin-top: 1.5rem !important;
+}
+
+[data-bs-theme="dark"] .week-winner-card {
+  background: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+  background-color: #404040 !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  text-align: center !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+[data-bs-theme="dark"] .week-winner-card:hover {
+  background: linear-gradient(135deg, #4a4a4a 0%, #505050 50%, #555555 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+[data-bs-theme="dark"] .week-number {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  margin-bottom: 0.75rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+[data-bs-theme="dark"] .winner-avatar,
+[data-bs-theme="dark"] .winner-avatar-placeholder {
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+  width: 50px !important;
+  height: 50px !important;
+}
+
+[data-bs-theme="dark"] .winner-name {
+  color: #ffffff !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  margin-top: 0.5rem !important;
+}
+
+[data-bs-theme="dark"] .winner-name .text-muted {
+  color: #cccccc !important;
+}
+
+/* Player detail cards */
+[data-bs-theme="dark"] .player-cards-container {
+  display: grid !important;
+  gap: 1.5rem !important;
+  margin-top: 1.5rem !important;
+}
+
+[data-bs-theme="dark"] .player-detail-card {
+  background: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+  background-color: #404040 !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+  border-radius: 8px !important;
+  padding: 1.5rem !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+}
+
+[data-bs-theme="dark"] .player-card-header {
+  border-bottom: 1px solid var(--bs-border-color) !important;
+  padding-bottom: 1rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+[data-bs-theme="dark"] .player-profile-img {
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+  width: 60px !important;
+  height: 60px !important;
+}
+
+[data-bs-theme="dark"] .player-card-header h5 {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.25rem !important;
+}
+
+[data-bs-theme="dark"] .player-card-header .text-muted {
+  color: #cccccc !important;
+}
+
+/* Weeks grid */
+[data-bs-theme="dark"] .weeks-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+  gap: 0.5rem !important;
+}
+
+[data-bs-theme="dark"] .week-item {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  padding: 0.75rem 0.5rem !important;
+  text-align: center !important;
+  transition: all 0.3s ease !important;
+}
+
+[data-bs-theme="dark"] .week-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-bs-theme="dark"] .week-label {
+  color: #cccccc !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  margin-bottom: 0.25rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+[data-bs-theme="dark"] .week-points {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+}
+
+[data-bs-theme="dark"] .trophy-icon {
+  color: #FFD700 !important;
+  filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5)) !important;
+}
+
+/* Dropdown styling */
+[data-bs-theme="dark"] .standings-main-container .dropdown-toggle {
+  background: var(--bs-secondary-bg) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .standings-main-container .dropdown-menu {
+  background: var(--bs-secondary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .standings-main-container .dropdown-item {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .standings-main-container .dropdown-item:hover,
+[data-bs-theme="dark"] .standings-main-container .dropdown-item.active {
+  background: var(--bs-primary) !important;
+  color: #ffffff !important;
+}
+
+/* Empty state styling */
+[data-bs-theme="dark"] .empty-state {
+  text-align: center !important;
+  padding: 3rem !important;
+  color: #cccccc !important;
+}
+
+[data-bs-theme="dark"] .empty-state i {
+  color: #666666 !important;
+  font-size: 3rem !important;
+  margin-bottom: 1rem !important;
+}
+
+/* ===== STATS PAGE NESTED CARDS ===== */
+[data-bs-theme="dark"] .quick-stat-card,
+[data-bs-theme="dark"] .stats-player-card {
+  background-color: var(--bs-quaternary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* Keep performance sections transparent */
 [data-bs-theme="dark"] .performance-summary,
-[data-bs-theme="dark"] .stats-grid {
-    background-color: transparent;
+[data-bs-theme="dark"] .stats-section {
+  background-color: transparent !important;
+  border: none !important;
 }
 
-[data-bs-theme="dark"] .stat-item {
-    background-color: rgba(0,0,0,0.1);
-    border: 1px solid var(--bs-border-color);
-    border-radius: .5rem;
+/* ===== STATS PAGE SPECIFIC FIXES ===== */
+/* Stats grid items within player cards */
+[data-bs-theme="dark"] .stats-content .stats-grid .stat-item,
+[data-bs-theme="dark"] .stats-player-card .stat-item,
+[data-bs-theme="dark"] .stats-player-card .stats-grid .stat-item {
+  background-color: var(--bs-tertiary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+  border-radius: 0.5rem;
 }
 
+/* Performance summary progress bars and accuracy displays */
+[data-bs-theme="dark"] .performance-summary .performance-item,
+[data-bs-theme="dark"] .stats-player-card .performance-item {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+/* Stats section headers and content */
+[data-bs-theme="dark"] .stats-section {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+/* Individual stat values and labels */
+[data-bs-theme="dark"] .stat-value,
+[data-bs-theme="dark"] .stat-label {
+  color: #ffffff !important;
+}
+
+/* Quick stats overview cards */
+[data-bs-theme="dark"] .quick-stats-grid .quick-stat-card {
+  background-color: var(--bs-quaternary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* Position badges */
 [data-bs-theme="dark"] .position-badge {
-    background-color: var(--bs-tertiary-bg);
-    border: 1px solid var(--bs-border-color);
-    color: var(--bs-secondary-color);
+  background-color: var(--bs-tertiary-bg) !important;
+  border: none !important;
+  color: #ffffff !important;
 }
 
 [data-bs-theme="dark"] .position-badge .position-number {
-    color: var(--bs-body-color);
+  color: #ffffff !important;
+  font-weight: bold !important;
 }
 
-[data-bs-theme="dark"] .position-1,
-[data-bs-theme="dark"] .position-2,
-[data-bs-theme="dark"] .position-3 {
-    background-color: var(--bs-primary);
-    border-color: var(--bs-primary);
-    color: var(--bs-emphasis-color);
+[data-bs-theme="dark"] .position-badge .position-label {
+  color: #cccccc !important;
 }
 
-[data-bs-theme="dark"] .position-1 .position-number,
-[data-bs-theme="dark"] .position-2 .position-number,
-[data-bs-theme="dark"] .position-3 .position-number {
-    color: var(--bs-emphasis-color);
+/* Trend badges and champion badges */
+[data-bs-theme="dark"] .trend-badge,
+[data-bs-theme="dark"] .champion-badge {
+  background-color: var(--bs-tertiary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
 }
 
+/* ===== ADDITIONAL STATS PAGE FIXES ===== */
+/* Force dark backgrounds on any remaining light elements */
+[data-bs-theme="dark"] .stats-player-card .stats-content,
+[data-bs-theme="dark"] .stats-player-card .stats-section {
+  background-color: transparent !important;
+}
 
-/* Rules Page Fixes */
+/* Ensure all nested stat containers are dark */
+[data-bs-theme="dark"] .stats-grid,
+[data-bs-theme="dark"] .performance-summary {
+  background-color: transparent !important;
+}
+
+/* ===== ALL STAT ITEMS GET DARK BACKGROUND ===== */
+/* Give all stat items the same dark background as Pick Accuracy */
+[data-bs-theme="dark"] .stats-player-card .stats-grid .stat-item {
+  background-color: var(--bs-tertiary-bg) !important;
+  background-image: none !important;
+  background: var(--bs-tertiary-bg) !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+/* Ensure all stat item text is white */
+[data-bs-theme="dark"] .stats-player-card .stat-item .stat-value,
+[data-bs-theme="dark"] .stats-player-card .stat-item .stat-label {
+  color: #ffffff !important;
+  background-color: transparent !important;
+}
+
+/* Progress bar text visibility fixes */
+[data-bs-theme="dark"] .progress-text,
+[data-bs-theme="dark"] .performance-summary .progress-text {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Progress container improvements */
+[data-bs-theme="dark"] .progress-container {
+  background-color: var(--bs-tertiary-bg) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.25rem !important;
+}
+
+/* Progress bar track */
+[data-bs-theme="dark"] .progress-bar {
+  background-color: var(--bs-border-color) !important;
+  border-radius: 0.25rem !important;
+}
+
+/* Progress fill bars */
+[data-bs-theme="dark"] .progress-fill {
+  border-radius: 0.25rem !important;
+}
+
+/* Ensure progress labels are visible */
+[data-bs-theme="dark"] .performance-label {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+/* Sort controls and filter buttons */
+[data-bs-theme="dark"] .sort-controls .sort-btn,
+[data-bs-theme="dark"] .filter-controls .filter-btn {
+  background-color: var(--bs-tertiary-bg) !important;
+  border-color: var(--bs-border-color) !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .sort-controls .sort-btn.active,
+[data-bs-theme="dark"] .filter-controls .filter-btn.active {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: #ffffff !important;
+}
+
+/* Progress bars within stats */
+[data-bs-theme="dark"] .progress-bar {
+  background-color: var(--bs-tertiary-bg) !important;
+}
+
+[data-bs-theme="dark"] .progress-fill {
+  background-color: var(--bs-primary) !important;
+}
+
+/* Team logo containers - make Most/Least Picked logos larger */
+[data-bs-theme="dark"] .team-logo-sm {
+  background-color: transparent !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+/* Specific targeting for Most/Least Picked team logos */
+[data-bs-theme="dark"] .stat-item .team-logo-sm {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 4px !important;
+}
+
+/* Highlight elements */
+[data-bs-theme="dark"] .highlight-stat,
+[data-bs-theme="dark"] .winner-highlight,
+[data-bs-theme="dark"] .championship-highlight {
+  background-color: var(--bs-tertiary-bg) !important;
+  border: 1px solid var(--bs-primary) !important;
+}
+
+/* ===== TARGET SPECIFIC PROBLEMATIC ELEMENTS ===== */
+
+/* Fix Pick Accuracy boxes (highlight-stat class) - use maximum specificity */
+[data-bs-theme="dark"] .stats-player-card .stats-grid .stat-item.highlight-stat {
+  background-color: var(--bs-tertiary-bg) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+/* Fix Seasons Won boxes (championship-highlight class) - use maximum specificity */
+[data-bs-theme="dark"] .stats-player-card .stats-grid .stat-item.championship-highlight {
+  background-color: var(--bs-tertiary-bg) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+/* Fallback with even more specificity */
+[data-bs-theme="dark"] div.stats-player-card div.stats-grid div.stat-item.highlight-stat,
+[data-bs-theme="dark"] div.stats-player-card div.stats-grid div.stat-item.championship-highlight {
+  background-color: var(--bs-tertiary-bg) !important;
+  background-image: none !important;
+  background: var(--bs-tertiary-bg) !important;
+  color: #ffffff !important;
+}
+
+/* Ensure text within these boxes is white */
+[data-bs-theme="dark"] .stat-item.highlight-stat .stat-value,
+[data-bs-theme="dark"] .stat-item.highlight-stat .stat-label,
+[data-bs-theme="dark"] .stat-item.championship-highlight .stat-value,
+[data-bs-theme="dark"] .stat-item.championship-highlight .stat-label {
+  color: #ffffff !important;
+  background-color: transparent !important;
+}
+
+/* All position badges get the same blue color */
+[data-bs-theme="dark"] .position-badge,
+[data-bs-theme="dark"] .player-rank-badge {
+  background: var(--bs-primary) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border-color: var(--bs-primary) !important;
+}
+
+[data-bs-theme="dark"] .position-badge .position-number,
+[data-bs-theme="dark"] .position-badge .position-label,
+[data-bs-theme="dark"] .player-rank-badge .position-number,
+[data-bs-theme="dark"] .player-rank-badge .position-label {
+  color: #ffffff !important;
+  font-weight: bold !important;
+}
+
+/* Championship badge with black text AND black icon */
+[data-bs-theme="dark"] .championship-badge {
+  background-color: var(--bs-warning) !important;
+  color: #000000 !important;
+}
+
+/* Make championship badge icons black too */
+[data-bs-theme="dark"] .championship-badge i,
+[data-bs-theme="dark"] .championship-badge .fas,
+[data-bs-theme="dark"] .championship-badge .material-symbols-outlined {
+  color: #000000 !important;
+}
+
+/* Make champion badge crown icon black */
+[data-bs-theme="dark"] .champion-badge i,
+[data-bs-theme="dark"] .champion-badge .fas,
+[data-bs-theme="dark"] .champion-badge .fa-crown {
+  color: #000000 !important;
+}
+
+/* ============================================ */
+/* SCORES PAGE SPECIFIC STYLING - GRAY GRADIENTS */
+/* ============================================ */
+
+/* Replace any blue backgrounds with gray gradients */
+[data-bs-theme="dark"] .scores-main-container,
+[data-bs-theme="dark"] body .scores-main-container {
+  background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 50%, #4a4a4a 100%) !important;
+}
+
+/* FORCE override time-group-full-width - this is the blue background culprit */
+[data-bs-theme="dark"] .time-group-full-width,
+[data-bs-theme="dark"] .scores-main-container .time-group-full-width,
+html[data-bs-theme="dark"] .time-group-full-width,
+html[data-bs-theme="dark"] body .time-group-full-width {
+  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
+  background-color: #333333 !important;
+  background-image: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
+  border: 1px solid var(--bs-border-color) !important;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3) !important;
+}
+
+/* Game score cards - FORCE gray gradients instead of blue */
+[data-bs-theme="dark"] .game-score-card,
+[data-bs-theme="dark"] .scores-main-container .game-score-card,
+[data-bs-theme="dark"] .section-container .game-score-card {
+  background: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+  background-color: #404040 !important;
+  background-image: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+  border: 1px solid var(--bs-border-color) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+}
+
+/* Force override any gradients in game status headers */
+[data-bs-theme="dark"] .game-status-header,
+[data-bs-theme="dark"] .game-score-card .game-status-header {
+  background: var(--bs-quaternary-bg) !important;
+  background-color: var(--bs-quaternary-bg) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid var(--bs-border-color) !important;
+}
+
+/* ENHANCED Game Info Bar with gray gradient */
+[data-bs-theme="dark"] .game-info-bar,
+[data-bs-theme="dark"] .game-score-card .game-info-bar {
+  background: linear-gradient(135deg, #2a2a2a 0%, #333333 50%, #3a3a3a 100%) !important;
+  background-color: #2a2a2a !important;
+  background-image: linear-gradient(135deg, #2a2a2a 0%, #333333 50%, #3a3a3a 100%) !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid var(--bs-border-color) !important;
+  padding: 0.75rem 1.5rem !important;
+}
+
+/* Game info items - individual spread, O/U, weather items */
+[data-bs-theme="dark"] .game-info-item,
+[data-bs-theme="dark"] .game-info-bar .game-info-item {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  padding: 0.5rem 0.75rem !important;
+  border-radius: 6px !important;
+  margin: 0.25rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+/* Labels like "Spread:", "O/U:", weather icons */
+[data-bs-theme="dark"] .info-label,
+[data-bs-theme="dark"] .game-info-item .info-label {
+  color: #e0e0e0 !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+}
+
+/* Values like "-3.5", "45.5", temperature */
+[data-bs-theme="dark"] .info-value,
+[data-bs-theme="dark"] .game-info-item .info-value {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+}
+
+/* Spread-specific styling - match other info items */
+[data-bs-theme="dark"] .spread-item,
+[data-bs-theme="dark"] .spread-value {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Remove borders from spread info items specifically and match background */
+[data-bs-theme="dark"] .game-info-item.spread-item {
+  border: none !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
+[data-bs-theme="dark"] .spread-team-logo {
+  filter: brightness(1.1) !important;
+  border-radius: 3px !important;
+}
+
+/* Weather and other info icons */
+[data-bs-theme="dark"] .game-info-item i {
+  color: #66ccff !important;
+  font-size: 0.9rem !important;
+}
+
+/* Specific weather icon colors */
+[data-bs-theme="dark"] .game-info-item .fa-sun {
+  color: #ffd700 !important;
+}
+
+[data-bs-theme="dark"] .game-info-item .fa-cloud {
+  color: #87ceeb !important;
+}
+
+[data-bs-theme="dark"] .game-info-item .fa-cloud-rain {
+  color: #4682b4 !important;
+}
+
+[data-bs-theme="dark"] .game-info-item .fa-snowflake {
+  color: #f0f8ff !important;
+}
+
+[data-bs-theme="dark"] .game-info-item .fa-bolt {
+  color: #ffd700 !important;
+}
+
+[data-bs-theme="dark"] .game-info-item .fa-wind {
+  color: #b0c4de !important;
+}
+
+[data-bs-theme="dark"] .game-info-item .fa-home {
+  color: #90ee90 !important;
+}
+
+/* Team matchup areas */
+[data-bs-theme="dark"] .teams-matchup {
+  background: transparent !important;
+}
+
+[data-bs-theme="dark"] .team-score-row {
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .team-name {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .team-record {
+  color: #cccccc !important;
+}
+
+/* Score breakdown */
+[data-bs-theme="dark"] .score-breakdown {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .quarter-score,
+[data-bs-theme="dark"] .total-score {
+  color: #ffffff !important;
+  background: var(--bs-secondary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* Win probability progress bars */
+[data-bs-theme="dark"] .performance-item .progress-container {
+  background: var(--bs-secondary-bg) !important;
+}
+
+[data-bs-theme="dark"] .performance-label {
+  color: #cccccc !important;
+}
+
+/* Player picks sections */
+[data-bs-theme="dark"] .picks-section {
+  background: var(--bs-secondary-bg) !important;
+  border-top: 1px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .picks-header {
+  color: #ffffff !important;
+  background: var(--bs-quaternary-bg) !important;
+}
+
+[data-bs-theme="dark"] .team-picks-group {
+  background: var(--bs-tertiary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .team-picks-header {
+  background: var(--bs-quaternary-bg) !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .team-picks-name {
+  color: #ffffff !important;
+}
+
+/* Player pick badges */
+[data-bs-theme="dark"] .player-pick-badge {
+  background: var(--bs-secondary-bg) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .pick-win {
+  background: #28a745 !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .pick-loss {
+  background: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .pick-pending {
+  background: #ffc107 !important;
+  color: #000000 !important;
+}
+
+/* User pick section */
+[data-bs-theme="dark"] .user-pick-section {
+  background: var(--bs-secondary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .user-pick-header {
+  color: #ffffff !important;
+  background: var(--bs-quaternary-bg) !important;
+}
+
+[data-bs-theme="dark"] .user-pick-team {
+  color: #ffffff !important;
+}
+
+/* ENHANCED weekly performance section with gray gradient */
+[data-bs-theme="dark"] .weekly-performance-compact,
+[data-bs-theme="dark"] .section-container .weekly-performance-compact {
+  background: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+  background-color: #404040 !important;
+  background-image: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+}
+
+/* Weekly performance stats container */
+[data-bs-theme="dark"] .weekly-performance-stats,
+[data-bs-theme="dark"] .weekly-performance-compact .weekly-performance-stats {
+  background: transparent !important;
+  color: #ffffff !important;
+  padding: 0.5rem !important;
+}
+
+/* Stat items within weekly performance */
+[data-bs-theme="dark"] .weekly-performance-stats .stat-item,
+[data-bs-theme="dark"] .weekly-performance-compact .stat-item {
+  background: rgba(255, 255, 255, 0.05) !important;
+  padding: 0.75rem !important;
+  border-radius: 8px !important;
+  margin-bottom: 0.5rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Stat labels - make them light gray and readable */
+[data-bs-theme="dark"] .weekly-performance-stats .stat-label,
+[data-bs-theme="dark"] .weekly-performance-compact .stat-label {
+  color: #e0e0e0 !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+}
+
+/* Stat values - make them bright white and bold */
+[data-bs-theme="dark"] .weekly-performance-stats .stat-value,
+[data-bs-theme="dark"] .weekly-performance-compact .stat-value {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+}
+
+/* Small text within stat values (like "Graded") */
+[data-bs-theme="dark"] .weekly-performance-stats .stat-value small,
+[data-bs-theme="dark"] .weekly-performance-compact .stat-value small {
+  color: #b0b0b0 !important;
+  font-weight: 500 !important;
+  font-size: 0.85rem !important;
+}
+
+/* ENHANCED Week Points leaderboard section */
+[data-bs-theme="dark"] .points-leaderboard,
+[data-bs-theme="dark"] .points-leaderboard.points-leaderboard-multi-column {
+  background: transparent !important;
+  padding: 0.5rem !important;
+}
+
+/* Individual player points cards */
+[data-bs-theme="dark"] .player-points-card {
+  background: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1rem !important;
+  margin-bottom: 0.5rem !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+[data-bs-theme="dark"] .player-points-card:hover {
+  background: linear-gradient(135deg, #4a4a4a 0%, #505050 50%, #555555 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+/* Player info section within cards */
+[data-bs-theme="dark"] .player-info {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .player-name,
+[data-bs-theme="dark"] .player-details .player-name {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+}
+
+/* Player mini avatars */
+[data-bs-theme="dark"] .player-mini-avatar {
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+  filter: brightness(1.1) !important;
+}
+
+/* Score values and labels */
+[data-bs-theme="dark"] .player-score {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .score-value {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 1.2rem !important;
+}
+
+[data-bs-theme="dark"] .score-label {
+  color: #cccccc !important;
+  font-weight: 500 !important;
+  font-size: 0.8rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Week Points section title */
+[data-bs-theme="dark"] .section-container .section-title {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Points column layout (for larger screens) */
+[data-bs-theme="dark"] .points-column {
+  background: transparent !important;
+}
+
+[data-bs-theme="dark"] .points-column-left,
+[data-bs-theme="dark"] .points-column-right {
+  background: transparent !important;
+  padding: 0 0.5rem !important;
+}
+
+/* Missing picks section */
+[data-bs-theme="dark"] .missing-picks-section {
+  background: var(--bs-secondary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .missing-picks-header {
+  color: #ffffff !important;
+  background: var(--bs-quaternary-bg) !important;
+}
+
+[data-bs-theme="dark"] .missing-pick-badge {
+  background: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+/* Game status displays */
+[data-bs-theme="dark"] .game-status {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .game-status.live {
+  background: #28a745 !important;
+}
+
+[data-bs-theme="dark"] .game-status.final {
+  background: #6c757d !important;
+}
+
+[data-bs-theme="dark"] .game-status.upcoming {
+  background: #007bff !important;
+}
+
+/* Winner indicators */
+[data-bs-theme="dark"] .winning-team {
+  border-left: 4px solid #28a745 !important;
+}
+
+[data-bs-theme="dark"] .winner-indicator {
+  color: #28a745 !important;
+}
+
+/* Filter controls */
+[data-bs-theme="dark"] .filter-controls .filter-btn {
+  background: var(--bs-secondary-bg) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .filter-controls .filter-btn.active {
+  background: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: #ffffff !important;
+}
+
+/* Time group headers */
+[data-bs-theme="dark"] .section-header-content {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .section-title {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .game-time-display {
+  color: #cccccc !important;
+}
+
+/* ============================================ */
+/* NUCLEAR OPTION - FORCE ALL WHITE BACKGROUNDS TO DARK */
+/* ============================================ */
+
+/* Force override any remaining white/light backgrounds in scores page */
+[data-bs-theme="dark"] .scores-main-container .bg-white,
+[data-bs-theme="dark"] .scores-main-container .bg-light,
+[data-bs-theme="dark"] .scores-main-container [style*="background-color: #f8f9fa"],
+[data-bs-theme="dark"] .scores-main-container [style*="background-color: white"],
+[data-bs-theme="dark"] .scores-main-container [style*="background: white"],
+[data-bs-theme="dark"] .scores-main-container [style*="background: #f8f9fa"] {
+  background: var(--bs-tertiary-bg) !important;
+  background-color: var(--bs-tertiary-bg) !important;
+  color: #ffffff !important;
+}
+
+/* Force all game-related containers to gray gradients */
+[data-bs-theme="dark"] .scores-main-container .time-group-full-width,
+[data-bs-theme="dark"] .scores-main-container .games-grid,
+[data-bs-theme="dark"] .scores-main-container .section-container {
+  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* Specific gray gradient for section containers */
+[data-bs-theme="dark"] .section-container {
+  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
+  background-color: #333333 !important;
+  color: #ffffff !important;
+}
+
+/* Spread section white boxes */
+[data-bs-theme="dark"] .game-score-card [style*="background"],
+[data-bs-theme="dark"] .spread-item,
+[data-bs-theme="dark"] .spread-value {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Force any remaining text to be visible */
+[data-bs-theme="dark"] .scores-main-container * {
+  color: inherit !important;
+}
+
+[data-bs-theme="dark"] .scores-main-container .text-dark,
+[data-bs-theme="dark"] .scores-main-container .text-muted {
+  color: #cccccc !important;
+}
+
+/* ============================================ */
+/* NUCLEAR OPTION - FORCE WEEK POINTS AND GAME SECTIONS */
+/* ============================================ */
+
+/* FORCE override Week Points section with highest specificity */
+html[data-bs-theme="dark"] body .scores-main-container .player-points-card,
+html[data-bs-theme="dark"] .container .scores-main-container .player-points-card,
+[data-bs-theme="dark"] .scores-main-container .player-points-card {
+  background: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+  background-color: #404040 !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+  border-bottom: 1px solid var(--bs-border-color) !important;
+}
+
+/* Force player names in Week Points to be white */
+html[data-bs-theme="dark"] .scores-main-container .player-name,
+html[data-bs-theme="dark"] .scores-main-container .score-value,
+html[data-bs-theme="dark"] .scores-main-container .score-label {
+  color: #ffffff !important;
+}
+
+/* FORCE override YOUR PICK section */
+html[data-bs-theme="dark"] .scores-main-container .user-pick-section,
+html[data-bs-theme="dark"] body .scores-main-container .user-pick-section {
+  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
+  background-color: #333333 !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .user-pick-header,
+html[data-bs-theme="dark"] .scores-main-container .user-pick-team {
+  color: #ffffff !important;
+  background: transparent !important;
+}
+
+/* FORCE override MISSING PICKS section */
+html[data-bs-theme="dark"] .scores-main-container .missing-picks-section,
+html[data-bs-theme="dark"] body .scores-main-container .missing-picks-section {
+  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
+  background-color: #333333 !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .missing-picks-header {
+  color: #ffffff !important;
+  background: transparent !important;
+}
+
+/* Force missing pick badges to be more readable */
+html[data-bs-theme="dark"] .scores-main-container .missing-pick-badge {
+  background: #dc3545 !important;
+  color: #ffffff !important;
+  border: 1px solid #c82333 !important;
+  font-weight: 600 !important;
+}
+
+/* FORCE override any remaining white sections in scores */
+html[data-bs-theme="dark"] .scores-main-container .section-container,
+html[data-bs-theme="dark"] body .scores-main-container .section-container {
+  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
+  background-color: #333333 !important;
+  color: #ffffff !important;
+}
+
+/* FORCE override JavaScript-created columns and dynamic content */
+html[data-bs-theme="dark"] .scores-main-container .points-column,
+html[data-bs-theme="dark"] .scores-main-container .points-column-left,
+html[data-bs-theme="dark"] .scores-main-container .points-column-right {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Override any dynamically created elements */
+html[data-bs-theme="dark"] .scores-main-container [style*="background"],
+html[data-bs-theme="dark"] .scores-main-container [style*="display"] {
+  background: var(--bs-tertiary-bg) !important;
+  background-color: var(--bs-tertiary-bg) !important;
+  color: #ffffff !important;
+}
+
+/* NUCLEAR: Override ALL elements in scores with background properties */
+html[data-bs-theme="dark"] .scores-main-container * {
+  border-color: var(--bs-border-color) !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container *[style*="background-color: white"],
+html[data-bs-theme="dark"] .scores-main-container *[style*="background-color: #ffffff"],
+html[data-bs-theme="dark"] .scores-main-container *[style*="background-color: #f8f9fa"],
+html[data-bs-theme="dark"] .scores-main-container *[style*="background: white"],
+html[data-bs-theme="dark"] .scores-main-container *[style*="background: #ffffff"],
+html[data-bs-theme="dark"] .scores-main-container *[style*="background: #f8f9fa"] {
+  background: var(--bs-tertiary-bg) !important;
+  background-color: var(--bs-tertiary-bg) !important;
+  color: #ffffff !important;
+}
+
+/* JavaScript override helper - add to end of scores page */
+/*
+<script>
+// Force dark mode styling after page loads
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.documentElement.getAttribute('data-bs-theme') === 'dark') {
+        // Force all white backgrounds to dark in scores page
+        const scoresContainer = document.querySelector('.scores-main-container');
+        if (scoresContainer) {
+            const whiteElements = scoresContainer.querySelectorAll('*');
+            whiteElements.forEach(el => {
+                const styles = window.getComputedStyle(el);
+                if (styles.backgroundColor === 'rgb(255, 255, 255)' || 
+                    styles.backgroundColor === 'rgb(248, 249, 250)' ||
+                    styles.backgroundColor === 'white') {
+                    el.style.setProperty('background-color', '#404040', 'important');
+                    el.style.setProperty('color', '#ffffff', 'important');
+                }
+            });
+        }
+    }
+});
+</script>
+*/
+
+/* ============================================ */
+/* LAST RESORT - OVERRIDE EVERYTHING */
+/* ============================================ */
+
+/* Use highest specificity possible to override any competing styles */
+html[data-bs-theme="dark"] .scores-main-container .game-score-card,
+html[data-bs-theme="dark"] body .scores-main-container .game-score-card,
+html[data-bs-theme="dark"] .container .scores-main-container .game-score-card {
+  background: #404040 !important;
+  background-color: #404040 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .game-info-bar,
+html[data-bs-theme="dark"] body .scores-main-container .game-info-bar,
+html[data-bs-theme="dark"] .container .scores-main-container .game-info-bar {
+  background: #333333 !important;
+  background-color: #333333 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .weekly-performance-compact,
+html[data-bs-theme="dark"] body .scores-main-container .weekly-performance-compact,
+html[data-bs-theme="dark"] .container .scores-main-container .weekly-performance-compact {
+  background: #404040 !important;
+  background-color: #404040 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .info-label,
+html[data-bs-theme="dark"] .scores-main-container .info-value,
+html[data-bs-theme="dark"] body .scores-main-container .info-label,
+html[data-bs-theme="dark"] body .scores-main-container .info-value {
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .stat-label,
+html[data-bs-theme="dark"] body .scores-main-container .stat-label {
+  color: #cccccc !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .stat-value,
+html[data-bs-theme="dark"] body .scores-main-container .stat-value {
+  color: #ffffff !important;
+}
+
+/* ===== TEAM TIE INDICATOR TOOLTIP ===== */
+/* Style the tie indicator with hover tooltip */
+[data-bs-theme="dark"] .tie-indicator {
+  position: relative;
+  cursor: help;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+/* Tooltip styling */
+[data-bs-theme="dark"] .tie-indicator::before {
+  content: attr(title);
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+    background-color: var(--bs-secondary-bg);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+    border: 1px solid var(--bs-border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  max-width: 200px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* Tooltip arrow */
+[data-bs-theme="dark"] .tie-indicator::after {
+  content: '';
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--bs-secondary-bg);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+  z-index: 1001;
+}
+
+/* Show tooltip on hover */
+[data-bs-theme="dark"] .tie-indicator:hover::before,
+[data-bs-theme="dark"] .tie-indicator:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Enhanced tie indicator icon */
+[data-bs-theme="dark"] .tie-indicator i {
+  color: #66b3ff !important;
+  font-size: 1.1em;
+}
+
+[data-bs-theme="dark"] .tie-indicator:hover i {
+  color: #99ccff !important;
+}
+
+/* ============================================ */
+/* RULES PAGE COMPLETE DARK MODE OVERHAUL */
+/* ============================================ */
+
+/* Main rules container */
+[data-bs-theme="dark"] .rules-main-container {
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+/* Section container - main rules wrapper */
+[data-bs-theme="dark"] .rules-main-container .section-container {
+  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
+  background-color: #333333 !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* Section headers and titles */
+[data-bs-theme="dark"] .rules-main-container .section-title,
+[data-bs-theme="dark"] .rules-main-container .section-subtitle {
+  color: #ffffff !important;
+}
+
+/* Rules accordion container */
+[data-bs-theme="dark"] .rules-accordion {
+  background: transparent !important;
+}
+
+/* Individual rule cards */
+[data-bs-theme="dark"] .rule-card {
+  background: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+  background-color: #404040 !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+  border-radius: 8px !important;
+  margin-bottom: 1rem !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+}
+
+/* Rule headers (clickable area) */
+[data-bs-theme="dark"] .rule-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--bs-border-color) !important;
+}
+
 [data-bs-theme="dark"] .rule-toggle {
-    background-color: transparent;
+  background: transparent !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 1.5rem !important;
+  width: 100% !important;
+  text-align: left !important;
 }
 
 [data-bs-theme="dark"] .rule-toggle:hover {
-    background-color: var(--app-hover-bg);
-} 
-
-[data-bs-theme="dark"] .modern-navbar {
-    background: var(--app-navbar-bg) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #ffffff !important;
 }
 
-[data-bs-theme="dark"] .banner-success {
-    background-color: var(--bs-success) !important;
-    color: var(--bs-emphasis-color) !important;
+/* Rule titles and subtitles */
+[data-bs-theme="dark"] .rule-title {
+  color: #ffffff !important;
+  font-weight: 600 !important;
 }
 
-[data-bs-theme="dark"] .banner-success .banner-text,
-[data-bs-theme="dark"] .banner-success .banner-icon i,
-[data-bs-theme="dark"] .banner-success .banner-close i {
-    color: var(--bs-emphasis-color) !important;
-} 
-
-/* Compact Weekly Performance Card on Scores Page */
-.weekly-performance-compact {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    background-color: var(--bs-secondary-bg);
-    border-radius: .75rem;
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--bs-border-color);
+[data-bs-theme="dark"] .rule-subtitle {
+  color: #cccccc !important;
+  font-size: 0.9rem !important;
 }
 
-.weekly-performance-avatar .player-avatar {
-    width: 60px;
-    height: 60px;
-    border: 2px solid var(--bs-border-color);
+/* Rule icons */
+[data-bs-theme="dark"] .rule-icon-container {
+  background: var(--bs-primary) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem !important;
+  margin-right: 1rem !important;
 }
 
-.weekly-performance-stats {
-    display: flex;
-    flex-direction: column;
-    gap: .2rem;
-    flex-grow: 1;
+[data-bs-theme="dark"] .rule-icon {
+  color: #ffffff !important;
+  font-size: 1.2rem !important;
 }
 
-.weekly-performance-stats .stat-item {
-    text-align: left;
+/* Rule arrow indicators */
+[data-bs-theme="dark"] .rule-arrow i {
+  color: #cccccc !important;
 }
 
-.weekly-performance-stats .stat-label {
-    font-weight: 600;
-    color: var(--bs-secondary-color);
-    font-size: .9rem;
-    white-space: nowrap;
+/* Rule body content areas */
+[data-bs-theme="dark"] .rule-body {
+  background: var(--bs-secondary-bg) !important;
+  background-color: #333333 !important;
+  color: #ffffff !important;
+  padding: 1.5rem !important;
+  border-top: 1px solid var(--bs-border-color) !important;
 }
 
-.weekly-performance-stats .stat-value {
-    font-weight: 700;
-    color: var(--bs-body-color);
-    font-size: 1.1rem;
+/* Rule items container */
+[data-bs-theme="dark"] .rule-items {
+  background: transparent !important;
 }
 
-.weekly-performance-stats .stat-value small {
-    font-size: .85rem;
-    font-weight: 400;
-    color: var(--bs-secondary-color);
+/* Individual rule items */
+[data-bs-theme="dark"] .rule-item {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  padding: 1rem !important;
+  margin-bottom: 0.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 1rem !important;
 }
 
-[data-bs-theme="dark"] .weekly-performance-compact {
-    background: linear-gradient(145deg, var(--bs-tertiary-bg), var(--bs-secondary-bg));
-    border: 1px solid var(--bs-border-color);
+/* Special rule item styling */
+[data-bs-theme="dark"] .rule-item.highlight-rule {
+  background: rgba(255, 193, 7, 0.15) !important;
+  border: 1px solid rgba(255, 193, 7, 0.3) !important;
 }
 
-/* Game Status Badge (Centered between teams) - Dark Mode */
-[data-bs-theme="dark"] .game-status-display {
-    background: var(--bs-secondary-bg);
-    border-top: 1px solid var(--bs-border-color);
+[data-bs-theme="dark"] .rule-item.important-rule {
+  background: rgba(220, 53, 69, 0.15) !important;
+  border: 1px solid rgba(220, 53, 69, 0.3) !important;
 }
 
-[data-bs-theme="dark"] .game-status-display .game-status {
-    color: var(--bs-emphasis-color);
+[data-bs-theme="dark"] .rule-item.special-rule {
+  background: rgba(25, 135, 84, 0.15) !important;
+  border: 1px solid rgba(25, 135, 84, 0.3) !important;
+}
+
+[data-bs-theme="dark"] .rule-item.money-rule {
+  background: rgba(25, 135, 84, 0.15) !important;
+  border: 1px solid rgba(25, 135, 84, 0.3) !important;
+}
+
+[data-bs-theme="dark"] .rule-item.playoff-rule {
+  background: rgba(255, 193, 7, 0.15) !important;
+  border: 1px solid rgba(255, 193, 7, 0.3) !important;
+}
+
+/* Rule numbers */
+[data-bs-theme="dark"] .rule-number {
+  background: var(--bs-quaternary-bg) !important;
+  color: #ffffff !important;
+  border-radius: 50% !important;
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  flex-shrink: 0 !important;
+}
+
+/* Rule content */
+[data-bs-theme="dark"] .rule-content {
+  flex-grow: 1 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+[data-bs-theme="dark"] .rule-text {
+  color: #ffffff !important;
+  font-size: 0.95rem !important;
+  line-height: 1.4 !important;
+}
+
+/* Rule visual elements */
+[data-bs-theme="dark"] .rule-visual {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+[data-bs-theme="dark"] .rule-visual i {
+  font-size: 1.1rem !important;
+}
+
+/* Badge styling for rules */
+[data-bs-theme="dark"] .rule-visual .badge {
+  font-size: 0.8rem !important;
+  padding: 0.4rem 0.6rem !important;
+  font-weight: 600 !important;
+}
+
+/* Rules footer */
+[data-bs-theme="dark"] .rules-footer {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  padding: 2rem !important;
+  margin-top: 2rem !important;
+}
+
+[data-bs-theme="dark"] .footer-icon i {
+  color: var(--bs-primary) !important;
+  font-size: 2rem !important;
+  margin-bottom: 1rem !important;
+}
+
+[data-bs-theme="dark"] .footer-title {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+[data-bs-theme="dark"] .footer-text {
+  color: #cccccc !important;
+  margin-bottom: 1.5rem !important;
+}
+
+/* Footer badges */
+[data-bs-theme="dark"] .footer-badges .badge {
+  font-size: 0.85rem !important;
+  padding: 0.5rem 0.75rem !important;
+  font-weight: 500 !important;
+}
+
+/* Collapse transitions */
+[data-bs-theme="dark"] .collapse {
+  transition: all 0.3s ease !important;
+}
+
+/* ===== PICKS PAGE NESTED CARDS ===== */
+[data-bs-theme="dark"] .game-card,
+[data-bs-theme="dark"] .submitted-game-card,
+[data-bs-theme="dark"] .team-option,
+[data-bs-theme="dark"] .team-option-edit,
+[data-bs-theme="dark"] .game-header,
+[data-bs-theme="dark"] .game-info-bar,
+[data-bs-theme="dark"] .team-selection,
+[data-bs-theme="dark"] .tiebreaker-section,
+[data-bs-theme="dark"] .submitted-matchup,
+[data-bs-theme="dark"] .tiebreaker-info {
+  background-color: var(--bs-quaternary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* ===== COMMON NESTED ELEMENTS ===== */
+[data-bs-theme="dark"] .stat-summary-item,
+[data-bs-theme="dark"] .player-preview-card,
+[data-bs-theme="dark"] .recent-winner-item,
+[data-bs-theme="dark"] .winner-item,
+[data-bs-theme="dark"] .player-mini-card,
+[data-bs-theme="dark"] .progress-summary {
+  background-color: var(--bs-quaternary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* Progress bars and other nested elements */
+[data-bs-theme="dark"] .progress,
+[data-bs-theme="dark"] .progress-container {
+  background-color: var(--bs-tertiary-bg) !important;
+}
+
+/* Make sure all white/light backgrounds become dark */
+[data-bs-theme="dark"] [style*="background-color: #ffffff"],
+[data-bs-theme="dark"] [style*="background-color: white"],
+[data-bs-theme="dark"] [style*="background-color: #fff"],
+[data-bs-theme="dark"] [style*="background: #ffffff"],
+[data-bs-theme="dark"] [style*="background: white"],
+[data-bs-theme="dark"] [style*="background: #fff"] {
+  background-color: var(--bs-quaternary-bg) !important;
+}
+
+/* Specific fixes for common Bootstrap classes */
+[data-bs-theme="dark"] .bg-white {
+  background-color: var(--bs-quaternary-bg) !important;
+}
+
+[data-bs-theme="dark"] .bg-light {
+  background-color: var(--bs-secondary-bg) !important;
+}
+
+/* Card groups and nested structures */
+[data-bs-theme="dark"] .card-group .card,
+[data-bs-theme="dark"] .list-group-item,
+[data-bs-theme="dark"] .list-group-item-light {
+  background-color: var(--bs-quaternary-bg) !important;
+  border-color: var(--bs-border-color) !important;
+}
+
+/* Any remaining white backgrounds */
+[data-bs-theme="dark"] *[style*="background:#fff"],
+[data-bs-theme="dark"] *[style*="background: #fff"],
+[data-bs-theme="dark"] *[style*="background-color:#fff"],
+[data-bs-theme="dark"] *[style*="background-color: #fff"] {
+  background-color: var(--bs-quaternary-bg) !important;
+}
+
+/* ===== MODAL AND OVERLAY FIXES ===== */
+[data-bs-theme="dark"] .modal-content {
+  background-color: var(--bs-secondary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .modal-header,
+[data-bs-theme="dark"] .modal-footer {
+  background-color: var(--bs-tertiary-bg) !important;
+  border-color: var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .modal-body {
+  background-color: var(--bs-secondary-bg) !important;
+}
+
+/* ===== ADDITIONAL COMPONENT FIXES ===== */
+[data-bs-theme="dark"] .alert {
+  background-color: var(--bs-quaternary-bg) !important;
+  border-color: var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .badge {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary:hover,
+[data-bs-theme="dark"] .btn-outline-primary:hover,
+[data-bs-theme="dark"] .filter-btn:hover {
+  background-color: var(--bs-quaternary-bg) !important;
+}
+
+/* Ensure nested cards don't get overridden by main card styles */
+[data-bs-theme="dark"] .section-container .game-score-card,
+[data-bs-theme="dark"] .section-container .leaderboard-card,
+[data-bs-theme="dark"] .section-container .week-winner-card,
+[data-bs-theme="dark"] .section-container .stats-player-card,
+[data-bs-theme="dark"] .section-container .quick-stat-card,
+[data-bs-theme="dark"] .section-container .rule-card,
+[data-bs-theme="dark"] .section-container .game-card,
+[data-bs-theme="dark"] .section-container .submitted-game-card {
+  background-color: var(--bs-quaternary-bg) !important;
 } 

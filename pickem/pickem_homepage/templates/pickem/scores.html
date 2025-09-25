@@ -939,8 +939,8 @@
     }
     
     // Add fade-in animation CSS
-    const style = document.createElement('style');
-    style.textContent = `
+    const scoresPageStyle = document.createElement('style');
+    scoresPageStyle.textContent = `
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -976,7 +976,7 @@
             transform: translateX(0);
         }
     `;
-    document.head.appendChild(style);
+    document.head.appendChild(scoresPageStyle);
 
     // Live Score Updates
     let updateInterval;
@@ -1252,6 +1252,86 @@
             setTimeout(startLiveUpdates, 1000);
         }
     };
+    
+    // Force dark mode styling - Clean version without debug logging
+    function forceDarkModeScores() {
+        if (document.documentElement.getAttribute('data-bs-theme') === 'dark') {
+            // Target Week Points leaderboard
+            const pointsLeaderboard = document.querySelector('#week-points-leaderboard');
+            if (pointsLeaderboard) {
+                pointsLeaderboard.style.setProperty('background-color', '#404040', 'important');
+                pointsLeaderboard.style.setProperty('background', '#404040', 'important');
+                pointsLeaderboard.style.setProperty('color', '#ffffff', 'important');
+            }
+            
+            // Force Week Points player cards
+            const playerCards = document.querySelectorAll('.player-points-card');
+            playerCards.forEach(card => {
+                card.style.setProperty('background-color', '#404040', 'important');
+                card.style.setProperty('background', '#404040', 'important');
+                card.style.setProperty('color', '#ffffff', 'important');
+                card.style.setProperty('border', '1px solid #555555', 'important');
+            });
+            
+            // Force section containers
+            const sectionContainers = document.querySelectorAll('.scores-main-container .section-container');
+            sectionContainers.forEach(section => {
+                section.style.setProperty('background-color', '#333333', 'important');
+                section.style.setProperty('background', '#333333', 'important');
+                section.style.setProperty('color', '#ffffff', 'important');
+            });
+            
+            // Force any remaining white elements
+            const whiteElements = document.querySelectorAll('.scores-main-container *');
+            whiteElements.forEach(el => {
+                const styles = window.getComputedStyle(el);
+                const rect = el.getBoundingClientRect();
+                
+                if (styles.backgroundColor === 'rgb(255, 255, 255)' && rect.width > 10 && rect.height > 10) {
+                    el.style.setProperty('background-color', '#404040', 'important');
+                    el.style.setProperty('background', '#404040', 'important');
+                    el.style.setProperty('color', '#ffffff', 'important');
+                    el.style.removeProperty('background-image');
+                    el.style.removeProperty('background-gradient');
+                }
+            });
+            
+            // Force collapsible elements
+            const collapsibleElements = document.querySelectorAll('.scores-main-container .collapse, .scores-main-container .show');
+            collapsibleElements.forEach(el => {
+                el.style.setProperty('background-color', '#404040', 'important');
+                el.style.setProperty('color', '#ffffff', 'important');
+            });
+        }
+    }
+    
+    // Run immediately and after any dynamic content loads
+    document.addEventListener('DOMContentLoaded', forceDarkModeScores);
+    setTimeout(forceDarkModeScores, 100);
+    setTimeout(forceDarkModeScores, 500);
+    setTimeout(forceDarkModeScores, 1000);
+    
+    // Override layout manager to apply dark mode after it runs
+    if (window.weekPointsLayoutManager) {
+        const originalApply = window.weekPointsLayoutManager.apply;
+        window.weekPointsLayoutManager.apply = function() {
+            originalApply.call(this);
+            setTimeout(forceDarkModeScores, 50);
+        };
+        
+        const originalRefresh = window.weekPointsLayoutManager.refresh;
+        window.weekPointsLayoutManager.refresh = function() {
+            originalRefresh.call(this);
+            setTimeout(forceDarkModeScores, 50);
+        };
+    }
+    
+    // Run when layout manager initializes
+    setTimeout(() => {
+        if (window.weekPointsLayoutManager) {
+            forceDarkModeScores();
+        }
+    }, 1500);
     
     </script>
 
