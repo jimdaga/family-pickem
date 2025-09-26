@@ -257,3 +257,13 @@ def week_lock_status(games):
             'sunday_cutoff_time': None,
             'individual_locks': {}
         }
+
+@register.filter
+def lookup(dictionary, key):
+    """Look up a value in a dictionary using a key"""
+    if dictionary is None:
+        return None
+    try:
+        return dictionary.get(key)
+    except (AttributeError, TypeError):
+        return None

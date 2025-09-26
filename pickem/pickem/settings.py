@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'bootstrap5',
+    # 'django_ratelimit',  # Disabled for now - enable later when ready
     'allauth',
     'storages',
     'allauth.account',
@@ -87,6 +88,31 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Cache configuration for rate limiting
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': '/tmp/django_cache',
+        'TIMEOUT': 300,  # 5 minutes
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+# Rate limiting configuration
+import os
+if DEBUG == 'True' or os.environ.get('DEBUG') == 'true':
+    # Development: Disable rate limiting to avoid cache backend issues
+    RATELIMIT_ENABLE = False
+else:
+    # Production: Enable rate limiting
+    RATELIMIT_ENABLE = True
+    # Use cache for rate limiting (default uses default cache)
+    RATELIMIT_USE_CACHE = 'default'
+    # View to show when rate limit is exceeded
+    RATELIMIT_VIEW = 'pickem_homepage.views.ratelimited'
 
 ROOT_URLCONF = 'pickem.urls'
 

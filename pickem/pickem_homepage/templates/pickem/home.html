@@ -221,6 +221,205 @@
             </div>
         </div>
 
+        <!-- Message Board Section -->
+        <div class="section-container mb-4">
+            <div class="section-header">
+                <h3 class="section-title">
+                    <i class="fas fa-comments me-2"></i>League Discussion
+                </h3>
+            </div>
+            
+            <!-- Chat Input (for authenticated users) -->
+            {% if user.is_authenticated %}
+            <div class="chat-input-form mb-4">
+                <form id="create-post-form" class="chat-form">
+                    {% csrf_token %}
+                    <div class="d-flex align-items-center">
+                        <img src="{{ user.socialaccount_set.all.0.get_avatar_url|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                             alt="Your avatar" class="chat-user-avatar me-2">
+                        <span class="chat-username me-3">{{ user.username }}</span>
+                        <div class="flex-grow-1">
+                            <input type="text" name="content" class="form-control chat-input" placeholder="Chat..." maxlength="500">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm ms-2">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+            
+            <!-- Message Board Posts -->
+            <div class="message-board-posts" id="message-board-posts">
+                {% for post in message_posts %}
+                <div class="message-post" data-post-id="{{ post.id }}">
+                    <!-- Chat Message Header -->
+                    <div class="chat-message-header">
+                        <div class="d-flex align-items-center">
+                            {% with post.user|lookupavatar as avatar %}
+                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                 alt="Profile picture for {{ post.user.username }}" 
+                                 class="post-avatar me-2">
+                            {% endwith %}
+                            <span class="post-author me-2">{{ post.user.username }}</span>
+                            <span class="post-time text-muted">{{ post.created_at|timesince }} ago</span>
+                            
+                            <!-- Achievement Badges -->
+                            <div class="achievement-badges ms-auto d-flex align-items-center gap-1">
+                                {% if user_rankings|lookup:post.user.id %}
+                                    {% with ranking=user_rankings|lookup:post.user.id %}
+                                        <!-- Current Rank Badge -->
+                                        {% if ranking.rank <= 3 %}
+                                            <span class="badge achievement-badge rank-badge rank-{{ ranking.rank }}" title="Current Season Rank #{{ ranking.rank }}">
+                                                <i class="fas fa-trophy"></i> #{{ ranking.rank }}
+                                            </span>
+                                        {% elif ranking.rank <= 10 %}
+                                            <span class="badge achievement-badge rank-badge rank-top10" title="Current Season Rank #{{ ranking.rank }}">
+                                                <i class="fas fa-medal"></i> #{{ ranking.rank }}
+                                            </span>
+                                        {% endif %}
+                                        
+                                        <!-- Season Winner Badge -->
+                                        {% if ranking.is_season_winner %}
+                                            <span class="badge achievement-badge season-winner-badge" title="Season Champion">
+                                                <i class="fas fa-crown"></i> Champion
+                                            </span>
+                                        {% endif %}
+                                        
+                                        <!-- Weekly Winner Badge -->
+                                        {% if ranking.weekly_wins %}
+                                            <span class="badge achievement-badge weekly-winner-badge" title="Won Week{{ ranking.weekly_wins|length|pluralize }} {{ ranking.weekly_wins|join:', ' }}">
+                                                <i class="fas fa-star"></i> Week Winner ({{ ranking.weekly_wins|length }})
+                                            </span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endif %}
+                                
+                                {% if user_achievements|lookup:post.user.id %}
+                                    {% with achievements=user_achievements|lookup:post.user.id %}
+                                        <!-- Perfect Week Badge -->
+                                        {% if achievements.perfect_weeks_season > 0 %}
+                                            <span class="badge achievement-badge perfect-week-badge" title="{{ achievements.perfect_weeks_season }} Perfect Week{{ achievements.perfect_weeks_season|pluralize }} This Season">
+                                                <i class="fas fa-bolt"></i> Perfect ({{ achievements.perfect_weeks_season }})
+                                            </span>
+                                        {% endif %}
+                                        
+                                        <!-- High Accuracy Badge -->
+                                        {% if achievements.pick_percent_season >= 70 %}
+                                            <span class="badge achievement-badge accuracy-badge" title="{{ achievements.pick_percent_season }}% Pick Accuracy This Season">
+                                                <i class="fas fa-bullseye"></i> {{ achievements.pick_percent_season }}%
+                                            </span>
+                                        {% endif %}
+                                        
+                                        <!-- Veteran Badge -->
+                                        {% if achievements.seasons_won > 0 %}
+                                            <span class="badge achievement-badge veteran-badge" title="Won {{ achievements.seasons_won }} Season{{ achievements.seasons_won|pluralize }}">
+                                                <i class="fas fa-gem"></i> Veteran ({{ achievements.seasons_won }})
+                                            </span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endif %}
+                                
+                                {% if post.is_pinned %}
+                                <div class="post-pinned-badge">
+                                    <i class="fas fa-thumbtack text-warning"></i>
+                                    <span class="badge bg-warning text-dark">Pinned</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chat Message Content -->
+                    <div class="chat-message-content">
+                        <div class="post-text">{{ post.content|linebreaksbr }}</div>
+                    </div>
+                    
+                    <!-- Post Actions -->
+                    <div class="post-actions">
+                        <div class="voting-controls">
+                            {% if user.is_authenticated %}
+                            <button class="vote-btn upvote-btn {% if user_votes|lookup:post.id == 1 %}active{% endif %}" 
+                                    data-post-id="{{ post.id }}" data-vote-type="1">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            {% endif %}
+                            <span class="vote-score" data-post-id="{{ post.id }}">{{ post.score }}</span>
+                            {% if user.is_authenticated %}
+                            <button class="vote-btn downvote-btn {% if user_votes|lookup:post.id == -1 %}active{% endif %}" 
+                                    data-post-id="{{ post.id }}" data-vote-type="-1">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="post-stats">
+                            <button class="comment-count-btn" data-post-id="{{ post.id }}">
+                                <i class="fas fa-comment me-1"></i>{{ post.comment_count }} comment{{ post.comment_count|pluralize }}
+                            </button>
+                        </div>
+                        
+                        {% if user.is_authenticated %}
+                        <div class="post-controls">
+                            <button class="btn btn-sm btn-outline-secondary toggle-comments-btn" 
+                                    data-post-id="{{ post.id }}">
+                                <i class="fas fa-reply me-1"></i>Reply
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Comments Section (initially hidden) -->
+                    <div class="comments-section" id="comments-{{ post.id }}" style="display: none;">
+                        {% if user.is_authenticated %}
+                        <!-- Quick Comment Form -->
+                        <div class="quick-comment-form">
+                            <form class="comment-form" data-post-id="{{ post.id }}">
+                                {% csrf_token %}
+                                <div class="d-flex">
+                                    <img src="{{ user.socialaccount_set.all.0.get_avatar_url|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                         alt="Your avatar" class="comment-avatar me-2">
+                                    <div class="flex-grow-1">
+                                        <textarea class="form-control comment-textarea" 
+                                                  placeholder="Write a comment..." 
+                                                  rows="2"></textarea>
+                                        <div class="comment-actions mt-2">
+                                            <button type="button" class="btn btn-sm btn-secondary cancel-comment-btn">
+                                                Cancel
+                                            </button>
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-paper-plane me-1"></i>Comment
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Comments List -->
+                        <div class="comments-list" data-post-id="{{ post.id }}">
+                            <!-- Comments will be loaded via AJAX -->
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="no-posts-message">
+                    <div class="text-center py-4">
+                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No discussions yet</h5>
+                        <p class="text-muted">Be the first to start a conversation!</p>
+                        {% if not user.is_authenticated %}
+                        <a href="{% provider_login_url 'google' %}" class="btn btn-primary">
+                            <i class="fab fa-google me-2"></i>Sign in to post
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
         <div class="row">
             <!-- Leaderboard Preview -->
             <div class="col-lg-6 mb-4">
@@ -382,5 +581,644 @@
             </p>
         </div>
     </div>
+
+    <!-- Message Board JavaScript -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set current user avatar for reply forms
+        window.currentUserAvatar = '{{ user.socialaccount_set.all.0.get_avatar_url|default:"https://www.wmata.com/systemimages/icons/menu-car-icon.png" }}';
+        
+        // Message Board functionality
+        const messageBoard = {
+            init: function() {
+                this.bindEvents();
+            },
+            
+            bindEvents: function() {
+                // Create post form submission
+                const createPostForm = document.getElementById('create-post-form');
+                if (createPostForm) {
+                    createPostForm.addEventListener('submit', this.handleCreatePost.bind(this));
+                }
+                
+                // Vote buttons
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.vote-btn')) {
+                        this.handleVote(e.target.closest('.vote-btn'));
+                    }
+                });
+                
+                // Toggle comments
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.toggle-comments-btn')) {
+                        this.toggleComments(e.target.closest('.toggle-comments-btn'));
+                    }
+                });
+                
+                // Comment count click to show comments
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.comment-count-btn')) {
+                        this.showComments(e.target.closest('.comment-count-btn'));
+                    }
+                });
+                
+                // Reply to comment
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.reply-btn')) {
+                        this.showReplyForm(e.target.closest('.reply-btn'));
+                    }
+                });
+                
+                // Comment form submission
+                document.addEventListener('submit', (e) => {
+                    if (e.target.classList.contains('comment-form')) {
+                        e.preventDefault();
+                        this.handleCreateComment(e.target);
+                    }
+                    if (e.target.classList.contains('reply-form')) {
+                        e.preventDefault();
+                        this.handleCreateComment(e.target);
+                    }
+                });
+                
+                // Cancel reply
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.cancel-reply-btn')) {
+                        this.cancelReply(e.target.closest('.cancel-reply-btn'));
+                    }
+                });
+                
+                // Cancel comment
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('cancel-comment-btn')) {
+                        this.cancelComment(e.target);
+                    }
+                });
+            },
+            
+            handleCreatePost: function(e) {
+                e.preventDefault();
+                const form = e.target;
+                const contentInput = form.querySelector('[name="content"]');
+                const content = contentInput.value.trim();
+                
+                if (!content) {
+                    alert('Please enter a message');
+                    return;
+                }
+                
+                // Create FormData with title and content (title will be auto-generated)
+                const formData = new FormData();
+                formData.append('title', content.substring(0, 50) + (content.length > 50 ? '...' : ''));
+                formData.append('content', content);
+                formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+                
+                fetch('/message-board/create-post/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reset form
+                        contentInput.value = '';
+                        // Reload page to show new message
+                        window.location.reload();
+                    } else {
+                        alert('Error sending message: ' + JSON.stringify(data.errors));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error sending message');
+                });
+            },
+            
+            handleVote: function(button) {
+                const postId = button.dataset.postId;
+                const commentId = button.dataset.commentId;
+                const voteType = parseInt(button.dataset.voteType);
+                
+                const url = commentId ? '/message-board/vote-comment/' : '/message-board/vote-post/';
+                const data = commentId ? 
+                    { comment_id: commentId, vote_type: voteType } :
+                    { post_id: postId, vote_type: voteType };
+                
+                fetch(url, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update vote display
+                        const scoreElement = document.querySelector(`.vote-score[data-${commentId ? 'comment' : 'post'}-id="${commentId || postId}"]`);
+                        if (scoreElement) {
+                            scoreElement.textContent = data.score;
+                        }
+                        
+                        // Update button states
+                        const container = button.closest('.voting-controls');
+                        const upBtn = container.querySelector('.upvote-btn');
+                        const downBtn = container.querySelector('.downvote-btn');
+                        
+                        // Remove active states
+                        upBtn.classList.remove('active');
+                        downBtn.classList.remove('active');
+                        
+                        // Add active state if vote wasn't removed
+                        if (data.action !== 'removed') {
+                            button.classList.add('active');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            },
+            
+            showComments: function(button) {
+                const postId = button.dataset.postId;
+                const commentsSection = document.getElementById(`comments-${postId}`);
+                const toggleBtn = document.querySelector(`[data-post-id="${postId}"].toggle-comments-btn`);
+                const commentForm = commentsSection.querySelector('.quick-comment-form');
+                
+                // Toggle comments section visibility
+                if (commentsSection.style.display === 'none') {
+                    // Show comments section
+                    commentsSection.style.display = 'block';
+                    
+                    // Hide the comment form initially when just viewing comments
+                    if (commentForm) {
+                        commentForm.style.display = 'none';
+                    }
+                    
+                    if (toggleBtn) {
+                        toggleBtn.innerHTML = '<i class="fas fa-edit me-1"></i>Write Comment';
+                    }
+                    
+                    // Load comments if not already loaded
+                    const commentsList = commentsSection.querySelector('.comments-list');
+                    if (!commentsList.hasAttribute('data-loaded')) {
+                        this.loadComments(postId);
+                    }
+                } else {
+                    // Hide comments section
+                    commentsSection.style.display = 'none';
+                    
+                    if (toggleBtn) {
+                        toggleBtn.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                    }
+                }
+            },
+            
+            toggleComments: function(button) {
+                const postId = button.dataset.postId;
+                const commentsSection = document.getElementById(`comments-${postId}`);
+                const commentForm = commentsSection.querySelector('.quick-comment-form');
+                
+                if (commentsSection.style.display === 'none') {
+                    // Show the entire comments section
+                    commentsSection.style.display = 'block';
+                    
+                    // Show the comment form
+                    if (commentForm) {
+                        commentForm.style.display = 'block';
+                        // Apply dark mode styles to the newly shown comment form
+                        setTimeout(forceDarkModeMessageBoard, 10);
+                    }
+                    
+                    button.innerHTML = '<i class="fas fa-times me-1"></i>Hide Comments';
+                    
+                    // Load comments if not already loaded
+                    const commentsList = commentsSection.querySelector('.comments-list');
+                    if (!commentsList.hasAttribute('data-loaded')) {
+                        this.loadComments(postId);
+                    }
+                } else {
+                    // Check if we should hide everything or just the form
+                    const buttonText = button.innerHTML;
+                    
+                    if (buttonText.includes('Write Comment')) {
+                        // Just show the comment form
+                        if (commentForm) {
+                            commentForm.style.display = 'block';
+                            // Apply dark mode styles to the newly shown comment form
+                            setTimeout(forceDarkModeMessageBoard, 10);
+                        }
+                        button.innerHTML = '<i class="fas fa-times me-1"></i>Hide Comments';
+                    } else {
+                        // Hide the entire comments section
+                        commentsSection.style.display = 'none';
+                        button.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                    }
+                }
+            },
+            
+            loadComments: function(postId) {
+                const commentsList = document.querySelector(`.comments-list[data-post-id="${postId}"]`);
+                
+                fetch(`/message-board/comments/${postId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        commentsList.innerHTML = this.renderComments(data.comments);
+                        commentsList.setAttribute('data-loaded', 'true');
+                        // Apply dark mode styles to new content
+                        setTimeout(forceDarkModeMessageBoard, 50);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading comments:', error);
+                });
+            },
+            
+            renderComments: function(comments) {
+                let html = '';
+                
+                comments.forEach(comment => {
+                    html += this.renderComment(comment);
+                });
+                
+                return html || '<div class="no-comments text-muted text-center py-3">No comments yet</div>';
+            },
+            
+            renderComment: function(comment, depth = 0) {
+                const indent = depth * 12;
+                let html = `
+                    <div class="comment-item" data-comment-id="${comment.id}" style="margin-left: ${indent}px;">
+                        <div class="comment-header">
+                            <img src="${comment.avatar}" alt="${comment.user}" class="comment-avatar">
+                            <div class="comment-meta">
+                                <span class="comment-author">${comment.user}</span>
+                                <span class="comment-time">${comment.created_at}</span>
+                            </div>
+                        </div>
+                        <div class="comment-content">
+                            <p>${comment.content.replace(/\n/g, '<br>')}</p>
+                        </div>
+                        <div class="comment-actions">
+                            <div class="voting-controls">
+                                <button class="vote-btn upvote-btn" data-comment-id="${comment.id}" data-vote-type="1">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                                <span class="vote-score" data-comment-id="${comment.id}">${comment.score}</span>
+                                <button class="vote-btn downvote-btn" data-comment-id="${comment.id}" data-vote-type="-1">
+                                    <i class="fas fa-arrow-down"></i>
+                                </button>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary reply-btn" data-comment-id="${comment.id}">
+                                <i class="fas fa-reply me-1"></i>Reply
+                            </button>
+                        </div>
+                        
+                        <!-- Reply form (initially hidden) -->
+                        <div class="comment-reply-form" id="reply-form-${comment.id}" style="display: none;">
+                            <form class="reply-form mt-2" data-parent-id="${comment.id}">
+                                <div class="d-flex">
+                                    <img src="${window.currentUserAvatar || 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'}" 
+                                         alt="Your avatar" class="comment-avatar me-2">
+                                    <div class="flex-grow-1">
+                                        <textarea class="form-control comment-textarea" 
+                                                  placeholder="Write a reply..." 
+                                                  rows="2"></textarea>
+                                        <div class="comment-actions mt-2">
+                                            <button type="button" class="btn btn-sm btn-secondary cancel-reply-btn" data-comment-id="${comment.id}">
+                                                Cancel
+                                            </button>
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-paper-plane me-1"></i>Reply
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                
+                // Add nested replies
+                if (comment.replies && comment.replies.length > 0) {
+                    comment.replies.forEach(reply => {
+                        html += this.renderComment(reply, depth + 1);
+                    });
+                }
+                
+                return html;
+            },
+            
+            handleCreateComment: function(form) {
+                let postId = form.dataset.postId;
+                
+                // If postId is not on the form, get it from the message post container
+                if (!postId) {
+                    const messagePost = form.closest('.message-post');
+                    if (messagePost) {
+                        postId = messagePost.dataset.postId;
+                    }
+                }
+                
+                const parentId = form.dataset.parentId || null;
+                const textarea = form.querySelector('.comment-textarea');
+                const content = textarea.value.trim();
+                
+                if (!content) {
+                    alert('Please enter a comment');
+                    return;
+                }
+                
+                if (!postId) {
+                    alert('Error: Could not determine which post to comment on');
+                    return;
+                }
+                
+                const data = {
+                    post_id: postId,
+                    parent_id: parentId,
+                    content: content
+                };
+                
+                fetch('/message-board/create-comment/', {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Clear textarea
+                        textarea.value = '';
+                        
+                        // Check if this is a reply or main comment
+                        const isReply = form.classList.contains('reply-form');
+                        
+                        if (isReply) {
+                            // Hide the reply form
+                            const replyForm = form.closest('.comment-reply-form');
+                            if (replyForm) {
+                                replyForm.style.display = 'none';
+                            }
+                            
+                            // Reset the reply button
+                            const replyButton = document.querySelector(`[data-comment-id="${parentId}"].reply-btn`);
+                            if (replyButton) {
+                                replyButton.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                            }
+                        } else {
+                            // Hide only the comment form, keep comments visible
+                            const commentForm = form.closest('.quick-comment-form');
+                            if (commentForm) {
+                                commentForm.style.display = 'none';
+                            }
+                            
+                            // Update the toggle button to show "Write Comment" instead of "Hide Comments"
+                            const toggleBtn = document.querySelector(`[data-post-id="${postId}"].toggle-comments-btn`);
+                            if (toggleBtn) {
+                                toggleBtn.innerHTML = '<i class="fas fa-edit me-1"></i>Write Comment';
+                            }
+                        }
+                        
+                        // Reload comments to show the new one
+                        const commentsList = document.querySelector(`.comments-list[data-post-id="${postId}"]`);
+                        commentsList.removeAttribute('data-loaded');
+                        this.loadComments(postId);
+                        
+                        // Update comment count
+                        const commentCountBtn = document.querySelector(`.message-post[data-post-id="${postId}"] .comment-count-btn`);
+                        if (commentCountBtn) {
+                            const currentCount = parseInt(commentCountBtn.textContent.match(/\d+/)[0]);
+                            const newCount = currentCount + 1;
+                            commentCountBtn.innerHTML = `<i class="fas fa-comment me-1"></i>${newCount} comment${newCount !== 1 ? 's' : ''}`;
+                        }
+                    } else {
+                        alert('Error creating comment: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error creating comment');
+                });
+            },
+            
+            showReplyForm: function(button) {
+                const commentId = button.dataset.commentId;
+                const replyForm = document.getElementById(`reply-form-${commentId}`);
+                
+                if (replyForm) {
+                    // Hide any other open reply forms first
+                    document.querySelectorAll('.comment-reply-form').forEach(form => {
+                        if (form.id !== `reply-form-${commentId}`) {
+                            form.style.display = 'none';
+                            // Reset the reply button text for other forms
+                            const otherCommentId = form.id.replace('reply-form-', '');
+                            const otherReplyBtn = document.querySelector(`[data-comment-id="${otherCommentId}"].reply-btn`);
+                            if (otherReplyBtn) {
+                                otherReplyBtn.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                            }
+                        }
+                    });
+                    
+                    // Toggle this reply form
+                    if (replyForm.style.display === 'none') {
+                        replyForm.style.display = 'block';
+                        button.innerHTML = '<i class="fas fa-times me-1"></i>Cancel';
+                        // Apply dark mode styles to the newly shown reply form
+                        setTimeout(forceDarkModeMessageBoard, 10);
+                    } else {
+                        replyForm.style.display = 'none';
+                        button.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                    }
+                }
+            },
+            
+            cancelReply: function(button) {
+                const commentId = button.dataset.commentId;
+                const replyForm = document.getElementById(`reply-form-${commentId}`);
+                const replyButton = document.querySelector(`[data-comment-id="${commentId}"].reply-btn`);
+                
+                if (replyForm) {
+                    replyForm.style.display = 'none';
+                    const textarea = replyForm.querySelector('.comment-textarea');
+                    if (textarea) {
+                        textarea.value = '';
+                    }
+                }
+                
+                if (replyButton) {
+                    replyButton.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                }
+            },
+            
+            cancelComment: function(button) {
+                const form = button.closest('form');
+                const textarea = form.querySelector('.comment-textarea');
+                textarea.value = '';
+                
+                // Hide comments section if no comments
+                const commentsSection = button.closest('.comments-section');
+                const commentsList = commentsSection.querySelector('.comments-list');
+                if (!commentsList.hasAttribute('data-loaded')) {
+                    commentsSection.style.display = 'none';
+                    const toggleBtn = document.querySelector(`[data-post-id="${form.dataset.postId}"].toggle-comments-btn`);
+                    if (toggleBtn) {
+                        toggleBtn.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                    }
+                }
+            }
+        };
+        
+        // Initialize message board
+        messageBoard.init();
+    });
+    
+    // Force dark mode styles for message board
+    function forceDarkModeMessageBoard() {
+        const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        if (!isDarkMode) return;
+        
+        console.log('Forcing dark mode styles for message board...');
+        
+        // Fix original post text visibility
+        document.querySelectorAll('.post-text').forEach(el => {
+            el.style.setProperty('color', '#ffffff', 'important');
+            el.style.setProperty('font-size', '0.95rem', 'important');
+            el.style.setProperty('font-weight', '400', 'important');
+        });
+        
+        // Fix post author visibility
+        document.querySelectorAll('.post-author').forEach(el => {
+            el.style.setProperty('color', '#ffffff', 'important');
+            el.style.setProperty('font-weight', '600', 'important');
+        });
+        
+        // Fix post time visibility
+        document.querySelectorAll('.post-time').forEach(el => {
+            el.style.setProperty('color', '#cccccc', 'important');
+        });
+        
+        // Fix vote buttons - Reddit style
+        document.querySelectorAll('.vote-btn').forEach(el => {
+            el.style.setProperty('background', 'transparent', 'important');
+            el.style.setProperty('border', 'none', 'important');
+            el.style.setProperty('color', '#818384', 'important');
+            el.style.setProperty('width', '24px', 'important');
+            el.style.setProperty('height', '24px', 'important');
+            el.style.setProperty('border-radius', '2px', 'important');
+            el.style.setProperty('display', 'flex', 'important');
+            el.style.setProperty('align-items', 'center', 'important');
+            el.style.setProperty('justify-content', 'center', 'important');
+        });
+        
+        // Fix upvote hover/active colors
+        document.querySelectorAll('.upvote-btn').forEach(el => {
+            if (el.classList.contains('active')) {
+                el.style.setProperty('color', '#ff4500', 'important');
+            }
+        });
+        
+        // Fix downvote hover/active colors
+        document.querySelectorAll('.downvote-btn').forEach(el => {
+            if (el.classList.contains('active')) {
+                el.style.setProperty('color', '#7193ff', 'important');
+            }
+        });
+        
+        // Fix vote score visibility
+        document.querySelectorAll('.vote-score').forEach(el => {
+            el.style.setProperty('color', '#d7dadc', 'important');
+            el.style.setProperty('font-weight', '700', 'important');
+            el.style.setProperty('font-size', '0.75rem', 'important');
+        });
+        
+        // Fix Write Comment and Reply buttons
+        document.querySelectorAll('.toggle-comments-btn, .reply-btn').forEach(el => {
+            el.style.setProperty('color', '#ffffff', 'important');
+            el.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.4)', 'important');
+            el.style.setProperty('background', 'rgba(255, 255, 255, 0.08)', 'important');
+            el.style.setProperty('border-radius', '6px', 'important');
+        });
+        
+        // Fix comment form backgrounds
+        document.querySelectorAll('.quick-comment-form').forEach(el => {
+            el.style.setProperty('background', 'rgba(255, 255, 255, 0.03)', 'important');
+            el.style.setProperty('border-radius', '8px', 'important');
+            el.style.setProperty('padding', '1rem', 'important');
+        });
+        
+        // Fix form controls in comment forms (including reply forms)
+        document.querySelectorAll('.quick-comment-form .form-control, .comment-reply-form .form-control, .reply-form .form-control').forEach(el => {
+            el.style.setProperty('background', 'rgba(255, 255, 255, 0.05)', 'important');
+            el.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.2)', 'important');
+            el.style.setProperty('color', '#ffffff', 'important');
+        });
+        
+        // Fix reply forms specifically
+        document.querySelectorAll('.comment-reply-form, .reply-form').forEach(el => {
+            el.style.setProperty('background', 'rgba(255, 255, 255, 0.03)', 'important');
+            el.style.setProperty('border-radius', '8px', 'important');
+            el.style.setProperty('padding', '1rem', 'important');
+        });
+        
+        // Fix all textareas in reply forms
+        document.querySelectorAll('.comment-textarea, .reply-form textarea').forEach(el => {
+            el.style.setProperty('background', 'rgba(255, 255, 255, 0.05)', 'important');
+            el.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.2)', 'important');
+            el.style.setProperty('color', '#ffffff', 'important');
+        });
+        
+        // Fix submit buttons in all forms
+        document.querySelectorAll('.btn-primary').forEach(el => {
+            // Only target buttons, not other elements with btn-primary
+            if (el.tagName.toLowerCase() === 'button' && el.type === 'submit') {
+                el.style.setProperty('background', '#0d6efd', 'important');
+                el.style.setProperty('border-color', '#0d6efd', 'important');
+                el.style.setProperty('color', '#ffffff', 'important');
+                el.style.setProperty('opacity', '1', 'important');
+                el.style.setProperty('visibility', 'visible', 'important');
+            }
+        });
+        
+        // Fix comment content visibility
+        document.querySelectorAll('.comment-content p').forEach(el => {
+            el.style.setProperty('color', '#ffffff', 'important');
+        });
+        
+        // Fix comment author/time visibility
+        document.querySelectorAll('.comment-author').forEach(el => {
+            el.style.setProperty('color', '#ffffff', 'important');
+            el.style.setProperty('font-weight', '600', 'important');
+        });
+        
+        document.querySelectorAll('.comment-time').forEach(el => {
+            el.style.setProperty('color', '#cccccc', 'important');
+        });
+        
+        console.log('Dark mode styles applied to message board');
+    }
+    
+    // Apply dark mode styles on page load and after dynamic content changes
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(forceDarkModeMessageBoard, 100);
+        setTimeout(forceDarkModeMessageBoard, 500);
+        setTimeout(forceDarkModeMessageBoard, 1000);
+    });
+    
+    // Re-apply styles after AJAX operations
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        return originalFetch.apply(this, args).then(response => {
+            setTimeout(forceDarkModeMessageBoard, 100);
+            return response;
+        });
+    };
+    
+    </script>
 
 {% endblock %}

@@ -978,6 +978,92 @@
     `;
     document.head.appendChild(scoresPageStyle);
 
+    // Add immediate dark mode CSS injection
+    const immediateDarkModeStyle = document.createElement('style');
+    immediateDarkModeStyle.textContent = `
+        /* Immediate dark mode fixes for scores page */
+        [data-bs-theme="dark"] .game-score-card {
+            background: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
+            background-color: #404040 !important;
+            color: #ffffff !important;
+            border: 1px solid #555555 !important;
+        }
+        [data-bs-theme="dark"] .game-status-header {
+            background: #2a2a2a !important;
+            background-color: #2a2a2a !important;
+            color: #ffffff !important;
+            border-bottom: 1px solid #555555 !important;
+        }
+        [data-bs-theme="dark"] .game-info-bar {
+            background: #2a2a2a !important;
+            background-color: #2a2a2a !important;
+            color: #ffffff !important;
+        }
+        [data-bs-theme="dark"] .game-info-item {
+            background: #333333 !important;
+            background-color: #333333 !important;
+            color: #ffffff !important;
+            border: 1px solid #555555 !important;
+        }
+        [data-bs-theme="dark"] .team-name {
+            color: #ffffff !important;
+        }
+        
+        /* Fix total-score class to have light text and strong contrast */
+        [data-bs-theme="dark"] .total-score {
+            color: #ffffff !important;
+            text-shadow: none !important;
+            opacity: 1 !important;
+            font-weight: 800 !important;
+        }
+        
+        /* Fix LIVE button background - make the container dark */
+        [data-bs-theme="dark"] .game-status-display {
+            background: #2a2a2a !important;
+            background-color: #2a2a2a !important;
+            border: 1px solid #555555 !important;
+            padding: 0.5rem !important;
+        }
+        
+        /* Force LIVE button itself to have proper styling */
+        [data-bs-theme="dark"] .game-status.live {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+            color: #ffffff !important;
+            border: 1px solid #1e7e34 !important;
+        }
+        
+        /* Make Player Picks and Your Pick sections match the main card */
+        [data-bs-theme="dark"] .picks-section,
+        [data-bs-theme="dark"] .user-pick-section {
+            background: #404040 !important;
+            background-color: #404040 !important;
+            border: 1px solid #555555 !important;
+            border-top: 2px solid #666666 !important;
+        }
+        
+        [data-bs-theme="dark"] .picks-header,
+        [data-bs-theme="dark"] .user-pick-header {
+            background: #333333 !important;
+            background-color: #333333 !important;
+            color: #ffffff !important;
+            border-bottom: 1px solid #555555 !important;
+        }
+        
+        [data-bs-theme="dark"] .missing-picks-section {
+            background: linear-gradient(135deg, #4a3a2a 0%, #5a4a3a 100%) !important;
+            background-color: #4a3a2a !important;
+            border: 1px solid #8a7a6a !important;
+            color: #ffffff !important;
+        }
+        [data-bs-theme="dark"] .missing-pick-badge {
+            background: #6a5a4a !important;
+            background-color: #6a5a4a !important;
+            color: #f0e0d0 !important;
+            border: 1px solid #8a7a6a !important;
+        }
+    `;
+    document.head.appendChild(immediateDarkModeStyle);
+
     // Live Score Updates
     let updateInterval;
     let lastUpdateTime = Date.now();
@@ -1253,9 +1339,11 @@
         }
     };
     
-    // Force dark mode styling - Clean version without debug logging
+    // Force dark mode styling - Focus on existing elements
     function forceDarkModeScores() {
         if (document.documentElement.getAttribute('data-bs-theme') === 'dark') {
+            console.log('Applying dark mode fixes to scores page...');
+            
             // Target Week Points leaderboard
             const pointsLeaderboard = document.querySelector('#week-points-leaderboard');
             if (pointsLeaderboard) {
@@ -1281,7 +1369,144 @@
                 section.style.setProperty('color', '#ffffff', 'important');
             });
             
-            // Force any remaining white elements
+            // 1. Fix ALL game score cards - the main issue
+            const gameScoreCards = document.querySelectorAll('.game-score-card');
+            console.log(`Found ${gameScoreCards.length} game score cards`);
+            gameScoreCards.forEach(card => {
+                card.style.setProperty('background', 'linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%)', 'important');
+                card.style.setProperty('background-color', '#404040', 'important');
+                card.style.setProperty('color', '#ffffff', 'important');
+                card.style.setProperty('border', '1px solid #555555', 'important');
+                card.style.removeProperty('background-image');
+            });
+            
+            // 2. Fix game status headers
+            const gameStatusHeaders = document.querySelectorAll('.game-status-header');
+            console.log(`Found ${gameStatusHeaders.length} game status headers`);
+            gameStatusHeaders.forEach(header => {
+                header.style.setProperty('background', '#2a2a2a', 'important');
+                header.style.setProperty('background-color', '#2a2a2a', 'important');
+                header.style.setProperty('color', '#ffffff', 'important');
+                header.style.setProperty('border-bottom', '1px solid #555555', 'important');
+            });
+            
+            // 3. Fix game info bars (spread, weather, etc.)
+            const gameInfoBars = document.querySelectorAll('.game-info-bar');
+            console.log(`Found ${gameInfoBars.length} game info bars`);
+            gameInfoBars.forEach(bar => {
+                bar.style.setProperty('background', '#2a2a2a', 'important');
+                bar.style.setProperty('background-color', '#2a2a2a', 'important');
+                bar.style.setProperty('color', '#ffffff', 'important');
+            });
+            
+            // 4. Fix game info items (buttons inside info bar)
+            const gameInfoItems = document.querySelectorAll('.game-info-item');
+            console.log(`Found ${gameInfoItems.length} game info items`);
+            gameInfoItems.forEach(item => {
+                item.style.setProperty('background', '#333333', 'important');
+                item.style.setProperty('background-color', '#333333', 'important');
+                item.style.setProperty('color', '#ffffff', 'important');
+                item.style.setProperty('border', '1px solid #555555', 'important');
+            });
+            
+            // 5. Fix team score rows
+            const teamScoreRows = document.querySelectorAll('.team-score-row');
+            console.log(`Found ${teamScoreRows.length} team score rows`);
+            teamScoreRows.forEach(row => {
+                row.style.setProperty('background', 'transparent', 'important');
+                row.style.setProperty('color', '#ffffff', 'important');
+            });
+            
+            // 6. Fix team names
+            const teamNames = document.querySelectorAll('.team-name');
+            console.log(`Found ${teamNames.length} team names`);
+            teamNames.forEach(name => {
+                name.style.setProperty('color', '#ffffff', 'important');
+            });
+            
+            // Fix total-score elements to have light text
+            const totalScoreElements = document.querySelectorAll('.total-score');
+            console.log(`Found ${totalScoreElements.length} total-score elements`);
+            totalScoreElements.forEach((score, index) => {
+                console.log(`Setting total-score ${index} to white`);
+                score.style.setProperty('color', '#ffffff', 'important');
+                score.style.setProperty('text-shadow', 'none', 'important');
+                score.style.setProperty('opacity', '1', 'important');
+                score.style.setProperty('font-weight', '800', 'important');
+            });
+            
+            // 7b. Fix LIVE button containers specifically
+            const gameStatusDisplays = document.querySelectorAll('.game-status-display');
+            console.log(`Found ${gameStatusDisplays.length} game status displays`);
+            gameStatusDisplays.forEach(display => {
+                display.style.setProperty('background', '#2a2a2a', 'important');
+                display.style.setProperty('background-color', '#2a2a2a', 'important');
+                display.style.setProperty('border', '1px solid #555555', 'important');
+                display.style.setProperty('padding', '0.5rem', 'important');
+            });
+            
+            // 8. Fix live status elements
+            const liveElements = document.querySelectorAll('.game-status.live, .status-live');
+            liveElements.forEach(el => {
+                el.style.setProperty('background', 'linear-gradient(135deg, #28a745 0%, #20c997 100%)', 'important');
+                el.style.setProperty('background-color', '#28a745', 'important');
+                el.style.setProperty('color', '#ffffff', 'important');
+            });
+            
+            // 9. Fix Player Picks sections - match main card background
+            const picksSections = document.querySelectorAll('.picks-section');
+            console.log(`Found ${picksSections.length} picks sections`);
+            picksSections.forEach(section => {
+                section.style.setProperty('background', '#404040', 'important');
+                section.style.setProperty('background-color', '#404040', 'important');
+                section.style.setProperty('border', '1px solid #555555', 'important');
+                section.style.setProperty('border-top', '2px solid #666666', 'important');
+            });
+            
+            const picksHeaders = document.querySelectorAll('.picks-header');
+            picksHeaders.forEach(header => {
+                header.style.setProperty('background', '#333333', 'important');
+                header.style.setProperty('background-color', '#333333', 'important');
+                header.style.setProperty('color', '#ffffff', 'important');
+                header.style.setProperty('border-bottom', '1px solid #555555', 'important');
+            });
+            
+            // 9b. Fix Your Pick sections - match main card background
+            const userPickSections = document.querySelectorAll('.user-pick-section');
+            console.log(`Found ${userPickSections.length} user pick sections`);
+            userPickSections.forEach(section => {
+                section.style.setProperty('background', '#404040', 'important');
+                section.style.setProperty('background-color', '#404040', 'important');
+                section.style.setProperty('border', '1px solid #555555', 'important');
+                section.style.setProperty('border-top', '2px solid #666666', 'important');
+            });
+            
+            const userPickHeaders = document.querySelectorAll('.user-pick-header');
+            userPickHeaders.forEach(header => {
+                header.style.setProperty('background', '#333333', 'important');
+                header.style.setProperty('background-color', '#333333', 'important');
+                header.style.setProperty('color', '#ffffff', 'important');
+                header.style.setProperty('border-bottom', '1px solid #555555', 'important');
+            });
+            
+            // 10. Fix Missing Picks sections - softer colors
+            const missingPicksSections = document.querySelectorAll('.missing-picks-section');
+            missingPicksSections.forEach(section => {
+                section.style.setProperty('background', 'linear-gradient(135deg, #4a3a2a 0%, #5a4a3a 100%)', 'important');
+                section.style.setProperty('background-color', '#4a3a2a', 'important');
+                section.style.setProperty('border', '1px solid #8a7a6a', 'important');
+                section.style.setProperty('color', '#ffffff', 'important');
+            });
+            
+            const missingPickBadges = document.querySelectorAll('.missing-pick-badge');
+            missingPickBadges.forEach(badge => {
+                badge.style.setProperty('background', '#6a5a4a', 'important');
+                badge.style.setProperty('background-color', '#6a5a4a', 'important');
+                badge.style.setProperty('color', '#f0e0d0', 'important');
+                badge.style.setProperty('border', '1px solid #8a7a6a', 'important');
+            });
+            
+            // 11. Force any remaining white elements
             const whiteElements = document.querySelectorAll('.scores-main-container *');
             whiteElements.forEach(el => {
                 const styles = window.getComputedStyle(el);
@@ -1296,12 +1521,7 @@
                 }
             });
             
-            // Force collapsible elements
-            const collapsibleElements = document.querySelectorAll('.scores-main-container .collapse, .scores-main-container .show');
-            collapsibleElements.forEach(el => {
-                el.style.setProperty('background-color', '#404040', 'important');
-                el.style.setProperty('color', '#ffffff', 'important');
-            });
+            console.log('Dark mode fixes applied to scores page');
         }
     }
     

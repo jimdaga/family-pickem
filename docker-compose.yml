@@ -1,6 +1,15 @@
 version: "3.8" 
 
 services:
+  # Redis cache for rate limiting (uncomment for production)
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - '6379:6379'
+  #   networks:
+  #     - django
+  #   restart: unless-stopped
+
   postgresql:
     image: docker.io/bitnami/postgresql:14
     ports:

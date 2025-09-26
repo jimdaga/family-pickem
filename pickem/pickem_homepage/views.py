@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from pickem_api.models import GamePicks
 from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile
-from .forms import GamePicksForm
+from .forms import GamePicksForm, MessageBoardPostForm, MessageBoardCommentForm, QuickCommentForm
+from .models import MessageBoardPost, MessageBoardComment, MessageBoardVote
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Sum
@@ -13,6 +14,7 @@ from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+# from django_ratelimit.decorators import ratelimit  # Disabled for now
 import json
 
 from datetime import date
@@ -23,6 +25,7 @@ from pickem.utils import get_season as get_season_from_api
 def get_season():
     return get_season_from_api()
 
+# @ratelimit(key='ip', rate='30/m', method='GET', block=True)  # Disabled for now
 def index(request):
     today = date.today()
     today_date = today.strftime("%Y-%m-%d")
@@ -115,6 +118,69 @@ def index(request):
     
     template = loader.get_template('pickem/home.html')
 
+    # Get message board posts for homepage (latest 13 - 3 visible + 10 more for scroll)
+    message_posts = MessageBoardPost.objects.filter(is_active=True).order_by('-is_pinned', '-created_at')[:13]
+    
+    # Get user votes for these posts if authenticated
+    user_votes = {}
+    if request.user.is_authenticated:
+        post_ids = [post.id for post in message_posts]
+        votes = MessageBoardVote.objects.filter(user=request.user, post_id__in=post_ids)
+        user_votes = {vote.post_id: vote.vote_type for vote in votes}
+    
+    # Message board forms
+    post_form = MessageBoardPostForm()
+    
+    # Get user achievements data for badges
+    user_achievements = {}
+    user_rankings = {}
+    
+    # Get all users who have posted messages
+    message_user_ids = set()
+    for post in message_posts:
+        message_user_ids.add(post.user.id)
+    
+    # Get current season standings for ranking badges
+    try:
+        current_season_points = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
+        for rank, player_points in enumerate(current_season_points, 1):
+            try:
+                user_id = int(player_points.userID)
+                if user_id in message_user_ids:
+                    user_rankings[user_id] = {
+                        'rank': rank,
+                        'total_points': player_points.total_points or 0,
+                        'is_season_winner': player_points.year_winner,
+                    }
+                    
+                    # Check if they won any weeks this season
+                    weekly_wins = []
+                    for week in range(1, 19):  # NFL has up to 18 weeks
+                        winner_field = f"week_{week}_winner"
+                        if hasattr(player_points, winner_field) and getattr(player_points, winner_field):
+                            weekly_wins.append(week)
+                    user_rankings[user_id]['weekly_wins'] = weekly_wins
+            except (ValueError, TypeError):
+                # Skip if userID can't be converted to int
+                continue
+    except Exception:
+        # If there's any error with season points, just skip rankings
+        pass
+    
+    # Get user stats for achievement badges  
+    for user_id in message_user_ids:
+        user_stats = userStats.objects.filter(userID=str(user_id)).first()
+        if user_stats:
+            user_achievements[user_id] = {
+                'perfect_weeks_season': user_stats.perfectWeeksSeason or 0,
+                'perfect_weeks_total': user_stats.perfectWeeksTotal or 0,
+                'seasons_won': user_stats.seasonsWon or 0,
+                'weeks_won_season': user_stats.weeksWonSeason or 0,
+                'weeks_won_total': user_stats.weeksWonTotal or 0,
+                'pick_percent_season': user_stats.pickPercentSeason or 0,
+                'pick_percent_total': user_stats.pickPercentTotal or 0,
+            }
+    
     context = {
         'season_winner': season_winner,
         'current_week': current_week,
@@ -130,7 +196,13 @@ def index(request):
         'user_has_picks': user_has_picks,
         'user_picks_count': user_picks_count,
         'user_pick_status': user_pick_status,
-        'gameseason': gameseason
+        'gameseason': gameseason,
+        # Message board data
+        'message_posts': message_posts,
+        'user_votes': user_votes,
+        'post_form': post_form,
+        'user_achievements': user_achievements,
+        'user_rankings': user_rankings,
     }
     return HttpResponse(template.render(context, request))
 
@@ -715,3 +787,298 @@ def toggle_theme(request):
             'success': False,
             'error': str(e)
         }, status=400)
+
+
+# =============================================================================
+# MESSAGE BOARD VIEWS
+# =============================================================================
+
+@login_required
+# @ratelimit(key='user', rate='10/m', method='POST', block=True)  # Disabled for now
+@require_http_methods(["POST"])
+def create_post(request):
+    """Create a new message board post (chat-style)"""
+    content = request.POST.get('content', '').strip()
+    title = request.POST.get('title', '').strip()
+    
+    # If no title provided, auto-generate from content
+    if not title and content:
+        title = content[:50] + ('...' if len(content) > 50 else '')
+    
+    # Validate content
+    if not content:
+        return JsonResponse({
+            'success': False,
+            'errors': {'content': ['This field is required.']}
+        }, status=400)
+    
+    if len(content) > 2000:  # Reasonable limit for chat messages
+        return JsonResponse({
+            'success': False,
+            'errors': {'content': ['Message too long. Please keep it under 2000 characters.']}
+        }, status=400)
+    
+    # Create the post
+    try:
+        post = MessageBoardPost.objects.create(
+            user=request.user,
+            title=title,
+            content=content
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'post_id': post.id,
+            'message': 'Message sent successfully!'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'errors': {'general': [str(e)]}
+        }, status=500)
+
+
+@login_required
+# @ratelimit(key='user', rate='15/m', method='POST', block=True)  # Disabled for now
+@require_http_methods(["POST"])
+def create_comment(request):
+    """Create a new comment on a post"""
+    try:
+        data = json.loads(request.body)
+        post_id = data.get('post_id')
+        parent_id = data.get('parent_id')  # For nested comments
+        content = data.get('content', '').strip()
+        
+        if not content:
+            return JsonResponse({
+                'success': False,
+                'error': 'Comment content is required'
+            }, status=400)
+        
+        # Get the post
+        post = get_object_or_404(MessageBoardPost, id=post_id, is_active=True)
+        
+        # Get parent comment if this is a reply
+        parent = None
+        if parent_id:
+            parent = get_object_or_404(MessageBoardComment, id=parent_id, is_active=True)
+        
+        # Create the comment
+        comment = MessageBoardComment.objects.create(
+            post=post,
+            user=request.user,
+            parent=parent,
+            content=content
+        )
+        
+        # Get user avatar for response
+        avatar_url = 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'
+        if hasattr(request.user, 'socialaccount_set') and request.user.socialaccount_set.exists():
+            avatar_url = request.user.socialaccount_set.first().get_avatar_url()
+        
+        return JsonResponse({
+            'success': True,
+            'comment': {
+                'id': comment.id,
+                'content': comment.content,
+                'user': request.user.username,
+                'avatar': avatar_url,
+                'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M'),
+                'score': comment.score,
+                'depth': comment.depth,
+                'parent_id': parent_id
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+# @ratelimit(key='user', rate='30/m', method='POST', block=True)  # Disabled for now
+@require_http_methods(["POST"])
+def vote_post(request):
+    """Vote on a post (upvote/downvote)"""
+    try:
+        data = json.loads(request.body)
+        post_id = data.get('post_id')
+        vote_type = data.get('vote_type')  # 1 for upvote, -1 for downvote
+        
+        if vote_type not in [1, -1]:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid vote type'
+            }, status=400)
+        
+        post = get_object_or_404(MessageBoardPost, id=post_id, is_active=True)
+        
+        # Check if user already voted
+        existing_vote = MessageBoardVote.objects.filter(user=request.user, post=post).first()
+        
+        if existing_vote:
+            if existing_vote.vote_type == vote_type:
+                # Remove vote if clicking same button
+                existing_vote.delete()
+                action = 'removed'
+            else:
+                # Change vote
+                existing_vote.vote_type = vote_type
+                existing_vote.save()
+                action = 'changed'
+        else:
+            # Create new vote
+            MessageBoardVote.objects.create(
+                user=request.user,
+                post=post,
+                vote_type=vote_type
+            )
+            action = 'added'
+        
+        # Refresh post to get updated vote counts
+        post.refresh_from_db()
+        
+        return JsonResponse({
+            'success': True,
+            'action': action,
+            'score': post.score,
+            'upvotes': post.upvotes,
+            'downvotes': post.downvotes
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+# @ratelimit(key='user', rate='30/m', method='POST', block=True)  # Disabled for now
+@require_http_methods(["POST"])
+def vote_comment(request):
+    """Vote on a comment (upvote/downvote)"""
+    try:
+        data = json.loads(request.body)
+        comment_id = data.get('comment_id')
+        vote_type = data.get('vote_type')  # 1 for upvote, -1 for downvote
+        
+        if vote_type not in [1, -1]:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid vote type'
+            }, status=400)
+        
+        comment = get_object_or_404(MessageBoardComment, id=comment_id, is_active=True)
+        
+        # Check if user already voted
+        existing_vote = MessageBoardVote.objects.filter(user=request.user, comment=comment).first()
+        
+        if existing_vote:
+            if existing_vote.vote_type == vote_type:
+                # Remove vote if clicking same button
+                existing_vote.delete()
+                action = 'removed'
+            else:
+                # Change vote
+                existing_vote.vote_type = vote_type
+                existing_vote.save()
+                action = 'changed'
+        else:
+            # Create new vote
+            MessageBoardVote.objects.create(
+                user=request.user,
+                comment=comment,
+                vote_type=vote_type
+            )
+            action = 'added'
+        
+        # Refresh comment to get updated vote counts
+        comment.refresh_from_db()
+        
+        return JsonResponse({
+            'success': True,
+            'action': action,
+            'score': comment.score,
+            'upvotes': comment.upvotes,
+            'downvotes': comment.downvotes
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# @ratelimit(key='ip', rate='60/m', method='GET', block=True)  # Disabled for now
+def get_post_comments(request, post_id):
+    """Get all comments for a post (AJAX endpoint)"""
+    try:
+        post = get_object_or_404(MessageBoardPost, id=post_id, is_active=True)
+        comments = post.get_top_level_comments()
+        
+        def serialize_comment(comment):
+            """Recursively serialize comment and its replies"""
+            avatar_url = 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'
+            if hasattr(comment.user, 'socialaccount_set') and comment.user.socialaccount_set.exists():
+                avatar_url = comment.user.socialaccount_set.first().get_avatar_url()
+            
+            data = {
+                'id': comment.id,
+                'content': comment.content,
+                'user': comment.user.username,
+                'avatar': avatar_url,
+                'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M'),
+                'score': comment.score,
+                'depth': comment.depth,
+                'replies': [serialize_comment(reply) for reply in comment.get_nested_replies()]
+            }
+            return data
+        
+        comments_data = [serialize_comment(comment) for comment in comments]
+        
+        return JsonResponse({
+            'success': True,
+            'comments': comments_data,
+            'total_comments': post.comment_count
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def ratelimited(request, exception):
+    """Custom view for when rate limit is exceeded"""
+    if request.headers.get('Content-Type') == 'application/json' or request.path.startswith('/api/'):
+        return JsonResponse({
+            'success': False,
+            'error': 'Rate limit exceeded. Please slow down and try again later.',
+            'code': 'RATE_LIMITED'
+        }, status=429)
+    
+    # For regular page requests, return a simple message
+    return HttpResponse(
+        'Rate limit exceeded. Please wait a moment before trying again.',
+        status=429
+    )

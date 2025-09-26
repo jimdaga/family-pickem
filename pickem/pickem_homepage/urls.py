@@ -20,4 +20,11 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('check-username/', views.check_username, name='check_username'),
     path('toggle-theme/', views.toggle_theme, name='toggle_theme'),
+    
+    # Message Board URLs
+    path('message-board/create-post/', views.create_post, name='create_post'),
+    path('message-board/create-comment/', views.create_comment, name='create_comment'),
+    path('message-board/vote-post/', views.vote_post, name='vote_post'),
+    path('message-board/vote-comment/', views.vote_comment, name='vote_comment'),
+    path('message-board/comments/<int:post_id>/', views.get_post_comments, name='get_post_comments'),
 ]

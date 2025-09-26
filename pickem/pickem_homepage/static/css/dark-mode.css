@@ -664,6 +664,1226 @@
   margin-bottom: 1rem !important;
 }
 
+/* ============================================ */
+/* MESSAGE BOARD DARK MODE STYLING */
+/* ============================================ */
+
+/* Main message board container */
+[data-bs-theme="dark"] .homepage-main-container .section-container {
+  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
+  background-color: #333333 !important;
+  color: #ffffff !important;
+  border: 1px solid var(--bs-border-color) !important;
+}
+
+/* Chat messages container with scroll (max 3 posts visible) */
+[data-bs-theme="dark"] .message-board-posts {
+  max-height: 800px !important; /* Approximately 3 posts */
+  overflow-y: auto !important;
+  padding-right: 0.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+/* Scrollbar styling for dark mode */
+[data-bs-theme="dark"] .message-board-posts::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+[data-bs-theme="dark"] .message-board-posts::-webkit-scrollbar-track {
+  background: var(--bs-secondary-bg) !important;
+  border-radius: 4px !important;
+}
+
+[data-bs-theme="dark"] .message-board-posts::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-radius: 4px !important;
+}
+
+[data-bs-theme="dark"] .message-board-posts::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Chat input form - Make it stand out! */
+[data-bs-theme="dark"] .chat-input-form {
+  background: linear-gradient(135deg, #495057 0%, #5a6268 100%) !important;
+  border: 2px solid #6c757d !important;
+  border-radius: 16px !important;
+  padding: 1.5rem !important;
+  margin-bottom: 2rem !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
+  position: relative !important;
+}
+
+[data-bs-theme="dark"] .chat-input-form::before {
+  content: '' !important;
+  position: absolute !important;
+  top: -2px !important;
+  left: -2px !important;
+  right: -2px !important;
+  bottom: -2px !important;
+  background: linear-gradient(45deg, #6c757d, #8a9296, #6c757d) !important;
+  border-radius: 18px !important;
+  z-index: -1 !important;
+  animation: borderGlow 3s ease-in-out infinite alternate !important;
+}
+
+@keyframes borderGlow {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+[data-bs-theme="dark"] .chat-user-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-bs-theme="dark"] .chat-username {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  white-space: nowrap !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-bs-theme="dark"] .chat-input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 2px solid rgba(255, 255, 255, 0.8) !important;
+  color: #212529 !important;
+  border-radius: 25px !important;
+  padding: 0.75rem 1.25rem !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s ease !important;
+}
+
+[data-bs-theme="dark"] .chat-input:focus {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+  transform: translateY(-1px) !important;
+}
+
+[data-bs-theme="dark"] .chat-input::placeholder {
+  color: #6c757d !important;
+  font-weight: 500 !important;
+}
+
+/* Send button styling for chat input */
+[data-bs-theme="dark"] .chat-input-form .btn-primary {
+  background: #ffffff !important;
+  border: 2px solid #ffffff !important;
+  color: var(--bs-primary) !important;
+  font-weight: 700 !important;
+  border-radius: 50% !important;
+  width: 45px !important;
+  height: 45px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s ease !important;
+}
+
+[data-bs-theme="dark"] .chat-input-form .btn-primary:hover {
+  background: #f8f9fa !important;
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
+
+/* Message posts */
+[data-bs-theme="dark"] .message-post {
+  background: linear-gradient(135deg, #3a3a3a 0%, #404040 50%, #4a4a4a 100%) !important;
+  background-color: #3a3a3a !important;
+  color: #ffffff !important;
+  border: 2px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 12px !important;
+  margin-bottom: 1.5rem !important;
+  padding: 1.5rem !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
+  transition: all 0.3s ease !important;
+  max-height: 600px !important;
+  overflow-y: auto !important;
+}
+
+[data-bs-theme="dark"] .message-post:hover {
+  background: linear-gradient(135deg, #4a4a4a 0%, #505050 50%, #555555 100%) !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
+}
+
+/* Achievement badges styling - Dark mode */
+[data-bs-theme="dark"] .achievement-badges {
+  flex-wrap: wrap !important;
+  gap: 0.25rem !important;
+}
+
+[data-bs-theme="dark"] .achievement-badge {
+  font-size: 0.7rem !important;
+  padding: 0.2rem 0.4rem !important;
+  border-radius: 12px !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  font-weight: 600 !important;
+}
+
+/* Rank badges */
+[data-bs-theme="dark"] .rank-badge.rank-1 {
+  background: linear-gradient(135deg, #ffd700, #ffed4e) !important;
+  color: #1a1a1a !important;
+  border: 1px solid #ffd700 !important;
+}
+
+[data-bs-theme="dark"] .rank-badge.rank-2 {
+  background: linear-gradient(135deg, #c0c0c0, #e5e5e5) !important;
+  color: #1a1a1a !important;
+  border: 1px solid #c0c0c0 !important;
+}
+
+[data-bs-theme="dark"] .rank-badge.rank-3 {
+  background: linear-gradient(135deg, #cd7f32, #daa520) !important;
+  color: #ffffff !important;
+  border: 1px solid #cd7f32 !important;
+}
+
+[data-bs-theme="dark"] .rank-badge.rank-top10 {
+  background: linear-gradient(135deg, #6c757d, #868e96) !important;
+  color: #ffffff !important;
+  border: 1px solid #6c757d !important;
+}
+
+/* Season winner badge */
+[data-bs-theme="dark"] .season-winner-badge {
+  background: linear-gradient(135deg, #dc3545, #e74c3c) !important;
+  color: #ffffff !important;
+  border: 1px solid #dc3545 !important;
+  animation: crown-glow 2s ease-in-out infinite alternate !important;
+}
+
+/* Weekly winner badge */
+[data-bs-theme="dark"] .weekly-winner-badge {
+  background: linear-gradient(135deg, #ffc107, #ffb300) !important;
+  color: #1a1a1a !important;
+  border: 1px solid #ffc107 !important;
+}
+
+/* Perfect week badge */
+[data-bs-theme="dark"] .perfect-week-badge {
+  background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+  color: #ffffff !important;
+  border: 1px solid #e74c3c !important;
+}
+
+/* Accuracy badge */
+[data-bs-theme="dark"] .accuracy-badge {
+  background: linear-gradient(135deg, #28a745, #20c997) !important;
+  color: #ffffff !important;
+  border: 1px solid #28a745 !important;
+}
+
+/* Veteran badge */
+[data-bs-theme="dark"] .veteran-badge {
+  background: linear-gradient(135deg, #6f42c1, #8e44ad) !important;
+  color: #ffffff !important;
+  border: 1px solid #6f42c1 !important;
+}
+
+/* Crown glow animation */
+@keyframes crown-glow {
+  from { box-shadow: 0 0 5px rgba(220, 53, 69, 0.5); }
+  to { box-shadow: 0 0 15px rgba(220, 53, 69, 0.8); }
+}
+
+/* Chat message header */
+[data-bs-theme="dark"] .chat-message-header {
+  margin-bottom: 0.75rem !important;
+}
+
+[data-bs-theme="dark"] .chat-message-header .d-flex {
+  align-items: center !important;
+}
+
+[data-bs-theme="dark"] .post-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  margin-right: 0.75rem !important;
+  flex-shrink: 0 !important;
+}
+
+[data-bs-theme="dark"] .post-author {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+}
+
+[data-bs-theme="dark"] .post-time {
+  color: #cccccc !important;
+  font-size: 0.8rem !important;
+}
+
+[data-bs-theme="dark"] .post-pinned-badge {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+/* Chat message content */
+[data-bs-theme="dark"] .chat-message-content {
+  margin-bottom: 1rem !important;
+}
+
+[data-bs-theme="dark"] .post-text {
+  color: #ffffff !important;
+  line-height: 1.5 !important;
+  margin: 0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 400 !important;
+}
+
+/* Original post author and metadata visibility */
+[data-bs-theme="dark"] .post-author {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+}
+
+[data-bs-theme="dark"] .post-time {
+  color: #cccccc !important;
+  font-size: 0.875rem !important;
+}
+
+/* Post actions */
+[data-bs-theme="dark"] .post-actions {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding-top: 0.75rem !important;
+  border-top: 1px solid var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .voting-controls {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+[data-bs-theme="dark"] .vote-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #818384 !important;
+  padding: 0.25rem !important;
+  border-radius: 2px !important;
+  font-size: 1rem !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-bs-theme="dark"] .vote-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #d7dadc !important;
+}
+
+[data-bs-theme="dark"] .upvote-btn:hover {
+  color: #ff4500 !important;
+}
+
+[data-bs-theme="dark"] .downvote-btn:hover {
+  color: #7193ff !important;
+}
+
+[data-bs-theme="dark"] .vote-btn.active.upvote-btn {
+  color: #ff4500 !important;
+  background: transparent !important;
+}
+
+[data-bs-theme="dark"] .vote-btn.active.downvote-btn {
+  color: #7193ff !important;
+  background: transparent !important;
+}
+
+[data-bs-theme="dark"] .vote-score {
+  color: #d7dadc !important;
+  font-weight: 700 !important;
+  min-width: 30px !important;
+  text-align: center !important;
+  font-size: 0.75rem !important;
+  margin: 0.125rem 0 !important;
+  line-height: 1 !important;
+}
+
+[data-bs-theme="dark"] .post-stats {
+  color: #cccccc !important;
+  font-size: 0.9rem !important;
+}
+
+[data-bs-theme="dark"] .comment-count {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+}
+
+/* Comments section */
+[data-bs-theme="dark"] .comments-section {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  margin-top: 1rem !important;
+  padding: 1rem !important;
+  max-height: 400px !important;
+  overflow-y: auto !important;
+}
+
+/* Make comment threads feel more connected */
+[data-bs-theme="dark"] .comments-list {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+[data-bs-theme="dark"] .quick-comment-form {
+  margin-bottom: 1rem !important;
+  padding: 1rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-radius: 8px !important;
+}
+
+/* Comment form textarea styling */
+[data-bs-theme="dark"] .quick-comment-form .form-control,
+[data-bs-theme="dark"] .comment-reply-form .form-control {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .quick-comment-form .form-control:focus,
+[data-bs-theme="dark"] .comment-reply-form .form-control:focus {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-bs-theme="dark"] .comment-avatar {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  flex-shrink: 0 !important;
+}
+
+[data-bs-theme="dark"] .comment-textarea {
+  background: var(--bs-quaternary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+  color: #ffffff !important;
+  resize: vertical !important;
+  border-radius: 8px !important;
+}
+
+[data-bs-theme="dark"] .comment-textarea:focus {
+  background: var(--bs-quaternary-bg) !important;
+  border-color: var(--bs-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25) !important;
+  border-radius: 8px !important;
+}
+
+[data-bs-theme="dark"] .comment-textarea::placeholder {
+  color: #cccccc !important;
+}
+
+[data-bs-theme="dark"] .comment-actions {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-top: 0.75rem !important;
+  gap: 0.5rem !important;
+}
+
+/* Individual comments - Reddit-style threading */
+[data-bs-theme="dark"] .comment-item {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0.75rem 0 !important;
+  margin-bottom: 0 !important;
+  border-left: 2px solid transparent !important;
+  position: relative !important;
+}
+
+/* Top-level comments have subtle background */
+[data-bs-theme="dark"] .comment-item[style*="margin-left: 0px"] {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  margin-bottom: 0.75rem !important;
+  border-left: 2px solid transparent !important;
+}
+
+/* Only deeply nested comments (level 2+) get threading lines */
+[data-bs-theme="dark"] .comment-item[style*="margin-left: 12px"],
+[data-bs-theme="dark"] .comment-item[style*="margin-left: 24px"],
+[data-bs-theme="dark"] .comment-item[style*="margin-left: 36px"],
+[data-bs-theme="dark"] .comment-item[style*="margin-left: 48px"],
+[data-bs-theme="dark"] .comment-item[style*="margin-left: 60px"] {
+  border-left: 2px solid rgba(255, 255, 255, 0.2) !important;
+  padding-left: 1rem !important;
+  margin-left: 0.5rem !important;
+}
+
+/* Reply form styling */
+[data-bs-theme="dark"] .comment-reply-form {
+  margin-top: 1rem !important;
+  padding-top: 1rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-bs-theme="dark"] .comment-reply-form .comment-textarea {
+  background: var(--bs-secondary-bg) !important;
+  border: 1px solid var(--bs-border-color) !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  resize: vertical !important;
+}
+
+[data-bs-theme="dark"] .comment-reply-form .comment-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+[data-bs-theme="dark"] .comment-header {
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 0.75rem !important;
+}
+
+[data-bs-theme="dark"] .comment-meta {
+  margin-left: 0.5rem !important;
+}
+
+[data-bs-theme="dark"] .comment-author {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+}
+
+[data-bs-theme="dark"] .comment-time {
+  color: #cccccc !important;
+  font-size: 0.75rem !important;
+}
+
+[data-bs-theme="dark"] .comment-content {
+  color: #ffffff !important;
+  line-height: 1.4 !important;
+  margin-bottom: 0.75rem !important;
+}
+
+[data-bs-theme="dark"] .comment-content p {
+  margin-bottom: 0.5rem !important;
+  color: #ffffff !important;
+}
+
+/* Voting controls styling for comments */
+[data-bs-theme="dark"] .voting-controls {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+}
+
+/* Ensure comment vote buttons are visible */
+[data-bs-theme="dark"] .comment-actions .vote-btn {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #cccccc !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.8rem !important;
+}
+
+[data-bs-theme="dark"] .comment-actions .vote-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+[data-bs-theme="dark"] .comment-actions .vote-score {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  min-width: 20px !important;
+  text-align: center !important;
+  font-size: 0.85rem !important;
+}
+
+/* Reply button and post controls styling */
+[data-bs-theme="dark"] .toggle-comments-btn,
+[data-bs-theme="dark"] .reply-btn {
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  font-size: 0.875rem !important;
+  padding: 0.375rem 0.75rem !important;
+  border-radius: 6px !important;
+}
+
+[data-bs-theme="dark"] .toggle-comments-btn:hover,
+[data-bs-theme="dark"] .reply-btn:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Comment count button styling */
+[data-bs-theme="dark"] .comment-count-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #cccccc !important;
+  font-size: 0.9rem !important;
+  padding: 0.25rem 0.5rem !important;
+  cursor: pointer !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-bs-theme="dark"] .comment-count-btn:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-bs-theme="dark"] .comment-count-btn:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Light mode comment count button */
+.comment-count-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #6c757d !important;
+  font-size: 0.9rem !important;
+  padding: 0.25rem 0.5rem !important;
+  cursor: pointer !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+.comment-count-btn:hover {
+  color: #495057 !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+.comment-count-btn:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;
+}
+
+/* No posts/comments messages */
+[data-bs-theme="dark"] .no-posts-message,
+[data-bs-theme="dark"] .no-comments {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  padding: 2rem !important;
+  text-align: center !important;
+  color: #cccccc !important;
+}
+
+[data-bs-theme="dark"] .no-posts-message i,
+[data-bs-theme="dark"] .no-comments i {
+  color: #666666 !important;
+}
+
+[data-bs-theme="dark"] .no-posts-message h5 {
+  color: #cccccc !important;
+}
+
+/* Nested comment indentation enhancement */
+[data-bs-theme="dark"] .comment-item[style*="margin-left"] {
+  border-left: 2px solid var(--bs-primary) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Loading states */
+[data-bs-theme="dark"] .loading-comments {
+  text-align: center !important;
+  padding: 2rem !important;
+  color: #cccccc !important;
+}
+
+[data-bs-theme="dark"] .loading-comments i {
+  animation: spin 1s linear infinite !important;
+  color: var(--bs-primary) !important;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ============================================ */
+/* MESSAGE BOARD LIGHT MODE STYLING */
+/* ============================================ */
+
+/* Chat messages container with scroll (max 3 posts visible) - Light Mode */
+.message-board-posts {
+  max-height: 800px !important; /* Approximately 3 posts */
+  overflow-y: auto !important;
+  padding-right: 0.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+/* Scrollbar styling for light mode */
+.message-board-posts::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+.message-board-posts::-webkit-scrollbar-track {
+  background: #f8f9fa !important;
+  border-radius: 4px !important;
+}
+
+.message-board-posts::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-radius: 4px !important;
+}
+
+.message-board-posts::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Fix avatar sizes and message box styling for light mode too */
+.post-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+.chat-user-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  border: 2px solid #dee2e6 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Chat input form - Light mode enhanced */
+.chat-input-form {
+  border-radius: 16px !important;
+  padding: 1.5rem !important;
+  background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%) !important;
+  border: 2px solid #ced4da !important;
+  margin-bottom: 2rem !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1) !important;
+  position: relative !important;
+}
+
+.chat-input-form::before {
+  content: '' !important;
+  position: absolute !important;
+  top: -2px !important;
+  left: -2px !important;
+  right: -2px !important;
+  bottom: -2px !important;
+  background: linear-gradient(45deg, #ced4da, #adb5bd, #ced4da) !important;
+  border-radius: 18px !important;
+  z-index: -1 !important;
+  animation: borderGlow 3s ease-in-out infinite alternate !important;
+}
+
+.chat-input {
+  background: #ffffff !important;
+  border: 2px solid #dee2e6 !important;
+  color: #212529 !important;
+  border-radius: 25px !important;
+  padding: 0.75rem 1.25rem !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.3s ease !important;
+}
+
+.chat-input:focus {
+  background: #ffffff !important;
+  border-color: #adb5bd !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-1px) !important;
+}
+
+.chat-input::placeholder {
+  color: #6c757d !important;
+  font-weight: 500 !important;
+}
+
+.chat-username {
+  color: #495057 !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  white-space: nowrap !important;
+  text-shadow: none !important;
+}
+
+/* Send button styling for light mode */
+.chat-input-form .btn-primary {
+  background: var(--bs-primary) !important;
+  border: 2px solid var(--bs-primary) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 50% !important;
+  width: 45px !important;
+  height: 45px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25) !important;
+  transition: all 0.3s ease !important;
+}
+
+.chat-input-form .btn-primary:hover {
+  background: #0056b3 !important;
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4) !important;
+}
+
+.chat-message-header {
+  margin-bottom: 0.75rem !important;
+}
+
+.chat-message-content {
+  margin-bottom: 1rem !important;
+}
+
+.comment-avatar {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+.message-post {
+  border-radius: 12px !important;
+  max-height: 600px !important;
+  overflow-y: auto !important;
+  background: #ffffff !important;
+  border: 2px solid #e9ecef !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  margin-bottom: 1.5rem !important;
+  padding: 1.5rem !important;
+  transition: all 0.3s ease !important;
+  color: #212529 !important;
+}
+
+.message-post:hover {
+  border-color: #ced4da !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Light mode text colors */
+.message-post .post-author {
+  color: #495057 !important;
+  font-weight: 600 !important;
+}
+
+.message-post .post-time {
+  color: #6c757d !important;
+}
+
+.message-post .post-text {
+  color: #212529 !important;
+  line-height: 1.5 !important;
+}
+
+.message-post .comment-count-btn {
+  color: #6c757d !important;
+}
+
+.message-post .comment-count-btn:hover {
+  color: #495057 !important;
+}
+
+/* Light mode post actions layout */
+.message-post .post-actions {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-top: 1rem !important;
+}
+
+.message-post .voting-controls {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+}
+
+.message-post .post-stats {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.message-post .post-controls {
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Light mode voting and interaction buttons */
+.message-post .vote-btn {
+  color: #6c757d !important;
+  border: 1px solid #dee2e6 !important;
+  background: transparent !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+.message-post .vote-btn:hover {
+  color: #495057 !important;
+  background: #f8f9fa !important;
+  border-color: #ced4da !important;
+}
+
+.message-post .vote-btn.active {
+  color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  background: rgba(13, 110, 253, 0.1) !important;
+}
+
+.message-post .vote-score {
+  color: #495057 !important;
+  font-weight: 600 !important;
+  min-width: 24px !important;
+  text-align: center !important;
+  font-size: 0.9rem !important;
+}
+
+.message-post .toggle-comments-btn,
+.message-post .reply-btn {
+  color: #6c757d !important;
+  border-color: #dee2e6 !important;
+  background: transparent !important;
+  font-size: 0.875rem !important;
+  padding: 0.375rem 0.75rem !important;
+}
+
+.message-post .toggle-comments-btn:hover,
+.message-post .reply-btn:hover {
+  color: #495057 !important;
+  background: #f8f9fa !important;
+  border-color: #ced4da !important;
+}
+
+.comments-section {
+  border-radius: 12px !important;
+  max-height: 400px !important;
+  overflow-y: auto !important;
+  background: #f8f9fa !important;
+  border: 1px solid #dee2e6 !important;
+  margin-top: 1rem !important;
+  padding: 1rem !important;
+}
+
+/* Make comment threads feel more connected - Light mode */
+.comments-list {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Light mode comment styling - Reddit-style threading */
+.comment-item {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0.75rem 0 !important;
+  margin-bottom: 0 !important;
+  color: #212529 !important;
+  border-left: 2px solid transparent !important;
+  position: relative !important;
+}
+
+/* Top-level comments have subtle background */
+.comment-item[style*="margin-left: 0px"] {
+  background: #f8f9fa !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  margin-bottom: 0.75rem !important;
+  border: 1px solid #e9ecef !important;
+  border-left: 2px solid transparent !important;
+}
+
+/* Only deeply nested comments (level 2+) get threading lines */
+.comment-item[style*="margin-left: 12px"],
+.comment-item[style*="margin-left: 24px"],
+.comment-item[style*="margin-left: 36px"],
+.comment-item[style*="margin-left: 48px"],
+.comment-item[style*="margin-left: 60px"] {
+  border-left: 2px solid #ced4da !important;
+  padding-left: 1rem !important;
+  margin-left: 0.5rem !important;
+}
+
+.comment-header {
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.comment-meta {
+  margin-left: 0.75rem !important;
+}
+
+.comment-author {
+  color: #495057 !important;
+  font-weight: 600 !important;
+  margin-right: 0.5rem !important;
+}
+
+.comment-time {
+  color: #6c757d !important;
+  font-size: 0.875rem !important;
+}
+
+.comment-content p {
+  color: #212529 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.comment-actions {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-top: 0.75rem !important;
+}
+
+/* Light mode voting controls */
+.voting-controls {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+}
+
+/* Ensure comment vote buttons are visible in light mode */
+.comment-actions .vote-btn {
+  background: transparent !important;
+  border: 1px solid #dee2e6 !important;
+  color: #6c757d !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.8rem !important;
+}
+
+.comment-actions .vote-btn:hover {
+  background: #f8f9fa !important;
+  color: #495057 !important;
+  border-color: #ced4da !important;
+}
+
+.comment-actions .vote-score {
+  color: #495057 !important;
+  font-weight: 600 !important;
+  min-width: 20px !important;
+  text-align: center !important;
+  font-size: 0.85rem !important;
+}
+
+/* Light mode comment form styling */
+.quick-comment-form,
+.comment-reply-form {
+  background: #f8f9fa !important;
+  border-top: 1px solid #dee2e6 !important;
+}
+
+.comment-textarea {
+  background: #ffffff !important;
+  border: 1px solid #ced4da !important;
+  color: #212529 !important;
+}
+
+.comment-textarea:focus {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+}
+
+.comment-textarea::placeholder {
+  color: #6c757d !important;
+}
+
+/* Light mode pinned badge */
+.post-pinned-badge .badge {
+  background: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.post-pinned-badge .fas {
+  color: #f57c00 !important;
+}
+
+/* Light mode chat message header alignment */
+.chat-message-header {
+  margin-bottom: 0.75rem !important;
+}
+
+.chat-message-header .d-flex {
+  align-items: center !important;
+}
+
+.chat-message-content {
+  margin-bottom: 1rem !important;
+}
+
+/* Light mode avatar styling */
+.post-avatar,
+.comment-avatar {
+  border: 1px solid #dee2e6 !important;
+}
+
+/* Ensure proper spacing and alignment for all interactive elements */
+.message-post .d-flex {
+  align-items: center !important;
+}
+
+.message-post .flex-grow-1 {
+  min-width: 0 !important;
+}
+
+/* Achievement badges styling - Light mode */
+.achievement-badges {
+  flex-wrap: wrap !important;
+  gap: 0.25rem !important;
+}
+
+.achievement-badge {
+  font-size: 0.7rem !important;
+  padding: 0.2rem 0.4rem !important;
+  border-radius: 12px !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  font-weight: 600 !important;
+}
+
+/* Rank badges - Light mode */
+.rank-badge.rank-1 {
+  background: linear-gradient(135deg, #ffd700, #ffed4e) !important;
+  color: #1a1a1a !important;
+  border: 1px solid #ffd700 !important;
+}
+
+.rank-badge.rank-2 {
+  background: linear-gradient(135deg, #c0c0c0, #e5e5e5) !important;
+  color: #1a1a1a !important;
+  border: 1px solid #c0c0c0 !important;
+}
+
+.rank-badge.rank-3 {
+  background: linear-gradient(135deg, #cd7f32, #daa520) !important;
+  color: #ffffff !important;
+  border: 1px solid #cd7f32 !important;
+}
+
+.rank-badge.rank-top10 {
+  background: linear-gradient(135deg, #6c757d, #868e96) !important;
+  color: #ffffff !important;
+  border: 1px solid #6c757d !important;
+}
+
+/* Season winner badge - Light mode */
+.season-winner-badge {
+  background: linear-gradient(135deg, #dc3545, #e74c3c) !important;
+  color: #ffffff !important;
+  border: 1px solid #dc3545 !important;
+  animation: crown-glow-light 2s ease-in-out infinite alternate !important;
+}
+
+/* Weekly winner badge - Light mode */
+.weekly-winner-badge {
+  background: linear-gradient(135deg, #ffc107, #ffb300) !important;
+  color: #1a1a1a !important;
+  border: 1px solid #ffc107 !important;
+}
+
+/* Perfect week badge - Light mode */
+.perfect-week-badge {
+  background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+  color: #ffffff !important;
+  border: 1px solid #e74c3c !important;
+}
+
+/* Accuracy badge - Light mode */
+.accuracy-badge {
+  background: linear-gradient(135deg, #28a745, #20c997) !important;
+  color: #ffffff !important;
+  border: 1px solid #28a745 !important;
+}
+
+/* Veteran badge - Light mode */
+.veteran-badge {
+  background: linear-gradient(135deg, #6f42c1, #8e44ad) !important;
+  color: #ffffff !important;
+  border: 1px solid #6f42c1 !important;
+}
+
+/* Crown glow animation - Light mode */
+@keyframes crown-glow-light {
+  from { box-shadow: 0 0 3px rgba(220, 53, 69, 0.4); }
+  to { box-shadow: 0 0 8px rgba(220, 53, 69, 0.6); }
+}
+
+/* Enhanced threading for better visual connection */
+[data-bs-theme="dark"] .comment-item[style*="margin-left"]:not([style*="margin-left: 0px"])::before {
+  content: '' !important;
+  position: absolute !important;
+  left: -1px !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 2px !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.comment-item[style*="margin-left"]:not([style*="margin-left: 0px"])::before {
+  content: '' !important;
+  position: absolute !important;
+  left: -1px !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 2px !important;
+  background: #adb5bd !important;
+}
+
+/* Reply form styling - Light Mode */
+.comment-reply-form {
+  margin-top: 1rem !important;
+  padding-top: 1rem !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.comment-reply-form .comment-textarea {
+  border-radius: 8px !important;
+  resize: vertical !important;
+}
+
 /* ===== STATS PAGE NESTED CARDS ===== */
 [data-bs-theme="dark"] .quick-stat-card,
 [data-bs-theme="dark"] .stats-player-card {
@@ -1460,12 +2680,102 @@ html[data-bs-theme="dark"] .scores-main-container .missing-picks-header {
   background: transparent !important;
 }
 
-/* Force missing pick badges to be more readable */
-html[data-bs-theme="dark"] .scores-main-container .missing-pick-badge {
-  background: #dc3545 !important;
+/* SCORES PAGE SPECIFIC FIXES */
+
+/* 1. Make team scores more visible */
+html[data-bs-theme="dark"] .scores-main-container .total-score {
+  background: #2a2a2a !important;
   color: #ffffff !important;
-  border: 1px solid #c82333 !important;
+  font-weight: 800 !important;
+  font-size: 1.4rem !important;
+  border: 2px solid #555555 !important;
+  padding: 0.3rem 0.6rem !important;
+  text-shadow: none !important;
+  opacity: 1 !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .quarter-score {
+  background: #2a2a2a !important;
+  color: #ffffff !important;
+  border: 1px solid #555555 !important;
   font-weight: 600 !important;
+}
+
+/* 2. Fix live button background */
+html[data-bs-theme="dark"] .scores-main-container .game-status.live,
+html[data-bs-theme="dark"] .scores-main-container .status-live {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #1e7e34 !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .status-live-dot {
+  color: #ffffff !important;
+}
+
+/* 3. Fix Player Picks section background */
+html[data-bs-theme="dark"] .scores-main-container .picks-section {
+  background: linear-gradient(135deg, #2a2a2a 0%, #333333 100%) !important;
+  border: 1px solid #555555 !important;
+  border-top: 2px solid #666666 !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .picks-header {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%) !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid #555555 !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .team-picks-group {
+  background: #2a2a2a !important;
+  border: 1px solid #555555 !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .team-picks-header {
+  background: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+/* 4. Fix Your Pick section background */
+html[data-bs-theme="dark"] .scores-main-container .user-pick-section {
+  background: linear-gradient(135deg, #1a4c2b 0%, #2d5a3d 100%) !important;
+  border: 2px solid #28a745 !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .user-pick-header {
+  background: linear-gradient(135deg, #0d2818 0%, #1a4c2b 100%) !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid #28a745 !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .user-pick-display {
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+/* 5. Soften Missing Picks section - remove harsh red */
+html[data-bs-theme="dark"] .scores-main-container .missing-picks-section {
+  background: linear-gradient(135deg, #4a3a2a 0%, #5a4a3a 100%) !important;
+  border: 1px solid #8a7a6a !important;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .missing-picks-header {
+  background: linear-gradient(135deg, #3a2a1a 0%, #4a3a2a 100%) !important;
+  color: #f0e0d0 !important;
+  border-bottom: 1px solid #8a7a6a !important;
+}
+
+html[data-bs-theme="dark"] .scores-main-container .missing-pick-badge {
+  background: #6a5a4a !important;
+  color: #f0e0d0 !important;
+  border: 1px solid #8a7a6a !important;
+}
+
+/* Additional fixes for game status elements */
+html[data-bs-theme="dark"] .scores-main-container .game-status-header.status-live {
+  background: linear-gradient(135deg, #1e7e34 0%, #28a745 100%) !important;
+  color: #ffffff !important;
 }
 
 /* FORCE override any remaining white sections in scores */
