@@ -222,6 +222,7 @@
         </div>
 
         <!-- Message Board Section -->
+        {% if user.is_authenticated %}
         <div class="section-container mb-4">
             <div class="section-header">
                 <h3 class="section-title">
@@ -419,6 +420,7 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
 
         <div class="row">
             <!-- Leaderboard Preview -->
