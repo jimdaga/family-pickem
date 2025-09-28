@@ -5841,6 +5841,14 @@ html, body {
     object-fit: contain;
 }
 
+.team-logo-chart {
+    width: 48px !important;
+    height: 48px !important;
+    max-width: 48px !important;
+    max-height: 48px !important;
+    object-fit: contain !important;
+}
+
 .edit-form {
     animation: fadeIn 0.3s ease-in-out;
 }

@@ -750,8 +750,12 @@ def user_profile(request, user_id):
     
     # Check if profile is private (only show to the owner)
     if user_profile.private_profile and request.user != profile_user:
+        # Get teams data for the private profile page
+        teams = Teams.objects.values('teamNameSlug', 'teamNameName', 'teamLogo').distinct().order_by('teamNameName')
         return render(request, 'pickem/user_profile_private.html', {
-            'profile_user': profile_user
+            'profile_user': profile_user,
+            'user_profile': user_profile,
+            'teams': teams
         })
     
     # Get user's season points data
@@ -856,6 +860,8 @@ def user_profile(request, user_id):
     team_chart_data = []
     team_chart_labels = []
     team_chart_colors = []
+    team_chart_slugs = []
+    team_chart_logos = []
     
     # Debug print
     print(f"DEBUG: User {user_id} has {total_picks} total picks")
@@ -982,8 +988,21 @@ def user_profile(request, user_id):
             # Get team abbreviation from mapping, fallback to cleaned name if not found
             display_name = team_abbreviations.get(team_slug, team_slug.replace('-', ' ').title())
             
+            # Get team logo URL and resize it
+            try:
+                team_obj = Teams.objects.get(teamNameSlug=team_slug)
+                if team_obj.teamLogo:
+                    # Convert ESPN 500px logos to smaller 64px versions for better performance
+                    logo_url = team_obj.teamLogo.replace('/500/', '/64/') if '/500/' in team_obj.teamLogo else team_obj.teamLogo
+                else:
+                    logo_url = '/static/images/nfl.svg'
+            except Teams.DoesNotExist:
+                logo_url = '/static/images/nfl.svg'
+            
             team_chart_data.append(percentage)
             team_chart_labels.append(display_name)
+            team_chart_slugs.append(team_slug)
+            team_chart_logos.append(logo_url)
             # Use modern colors cycling through the palette
             color_index = i % len(modern_colors)
             team_chart_colors.append(modern_colors[color_index])
@@ -992,6 +1011,8 @@ def user_profile(request, user_id):
         print(f"DEBUG: No picks found for user {user_id}, adding sample data")
         team_chart_data = [35.2, 18.7, 15.3, 12.8, 8.5, 9.5]
         team_chart_labels = ['NE', 'DAL', 'GB', 'KC', 'BUF', 'Other']
+        team_chart_slugs = ['new-england-patriots', 'dallas-cowboys', 'green-bay-packers', 'kansas-city-chiefs', 'buffalo-bills', 'other']
+        team_chart_logos = ['/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg']
         team_chart_colors = modern_colors[:6]  # Use first 6 modern colors
     
     # User stats data
@@ -1040,6 +1061,8 @@ def user_profile(request, user_id):
         'team_chart_data': team_chart_data,
         'team_chart_labels': team_chart_labels,
         'team_chart_colors': team_chart_colors,
+        'team_chart_slugs': team_chart_slugs,
+        'team_chart_logos': team_chart_logos,
     }
     
     return render(request, 'pickem/user_profile.html', context)
