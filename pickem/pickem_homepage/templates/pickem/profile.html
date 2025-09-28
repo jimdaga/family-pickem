@@ -51,7 +51,7 @@
                     <i class="fas fa-info-circle me-2"></i>Personal Information
                 </h5>
                 <button class="btn btn-primary btn-sm" id="editProfileBtn">
-                    <i class="fas fa-edit me-1"></i>Edit Profile
+                    <i class="fas fa-cog me-1"></i>Settings
                 </button>
             </div>
             <div class="profile-card-body">
@@ -440,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
     cancelBtn.addEventListener('click', function() {
         editMode.style.display = 'none';
         displayMode.style.display = 'grid';
-        editBtn.innerHTML = '<i class="fas fa-edit me-1"></i>Edit Profile';
+        editBtn.innerHTML = '<i class="fas fa-cog me-1"></i>Settings';
         editBtn.disabled = false;
         
         // Reset form to original values

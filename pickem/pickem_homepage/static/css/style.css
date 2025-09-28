@@ -2862,6 +2862,7 @@ body:has(.site-banner) .homepage-main-container {
     background: linear-gradient(135deg, #28a745, #20c997);
     color: white;
     padding: 0.4rem 0.8rem;
+    margin-right: 0.5rem;
     border-radius: 20px;
     font-size: 0.85rem;
     font-weight: 600;
