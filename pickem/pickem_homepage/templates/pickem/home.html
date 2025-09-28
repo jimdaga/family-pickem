@@ -3,30 +3,6 @@
 {% load socialaccount %}
 {% load pickem_homepage_extras %}
 
-{% block banner %}
-{% if active_banner %}
-<div class="site-banner banner-{{ active_banner.banner_type }}">
-    <div class="container">
-        <div class="banner-content">
-            <div class="banner-icon">
-                <i class="{{ active_banner.icon }}"></i>
-            </div>
-            <div class="banner-text">
-                {{ active_banner.title }}
-                {% if active_banner.description %}
-                    <div class="banner-description">{{ active_banner.description }}</div>
-                {% endif %}
-            </div>
-            {% if active_banner.show_close_button %}
-            <button type="button" class="banner-close" aria-label="Close banner">
-                <i class="fas fa-times"></i>
-            </button>
-            {% endif %}
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endblock %}
 
 {% block content %}
 
@@ -257,7 +233,7 @@
                     <!-- Chat Message Header -->
                     <div class="chat-message-header">
                         <div class="d-flex align-items-center">
-                            {% with post.user|lookupavatar as avatar %}
+                            {% with post.user.id|lookupavatar as avatar %}
                             <a href="{% url 'user_profile' post.user.id %}" class="post-avatar-link">
                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
                                      alt="Profile picture for {{ post.user.username }}" 

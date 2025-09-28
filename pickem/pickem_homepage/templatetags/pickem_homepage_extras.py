@@ -25,8 +25,15 @@ def lookupavatar(user_id):
         social_account = SocialAccount.objects.get(user_id=user_id)
         avatar_url = social_account.get_avatar_url()
     except SocialAccount.DoesNotExist:
-        # avatar_url = None
-        avatar_url = "https://www.wmata.com/systemimages/icons/menu-car-icon.png"
+        # Try to get user email for Gravatar fallback
+        try:
+            from django.contrib.auth.models import User
+            import hashlib
+            user = User.objects.get(id=user_id)
+            email_hash = hashlib.md5(user.email.lower().encode('utf-8')).hexdigest()
+            avatar_url = f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=64"
+        except User.DoesNotExist:
+            avatar_url = "https://www.wmata.com/systemimages/icons/menu-car-icon.png"
     
     return avatar_url
 

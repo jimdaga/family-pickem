@@ -66,8 +66,7 @@
                     <div class="achievement-badge champion-badge">
                         <i class="fas fa-crown"></i>
                         <div class="achievement-text">
-                            <div class="achievement-value">{{ stats.seasons_won }}</div>
-                            <div class="achievement-label">Season{{ stats.seasons_won|pluralize }} Won</div>
+                            <div class="achievement-label">{{ stats.seasons_won }} Season{{ stats.seasons_won|pluralize }} Won</div>
                         </div>
                     </div>
                     {% endif %}
@@ -76,8 +75,7 @@
                     <div class="achievement-badge weekly-winner-badge">
                         <i class="fas fa-calendar-check"></i>
                         <div class="achievement-text">
-                            <div class="achievement-value">{{ stats.weeks_won_current_season }}</div>
-                            <div class="achievement-label">Week{{ stats.weeks_won_current_season|pluralize }} Won This Season</div>
+                            <div class="achievement-label">{{ stats.weeks_won_current_season }} Week{{ stats.weeks_won_current_season|pluralize }} Won This Season</div>
                         </div>
                     </div>
                     {% endif %}
@@ -86,8 +84,7 @@
                     <div class="achievement-badge perfect-week-badge">
                         <i class="fas fa-bullseye"></i>
                         <div class="achievement-text">
-                            <div class="achievement-value">{{ stats.perfect_weeks }}</div>
-                            <div class="achievement-label">Perfect Week{{ stats.perfect_weeks|pluralize }}</div>
+                            <div class="achievement-label">{{ stats.perfect_weeks }} Perfect Week{{ stats.perfect_weeks|pluralize }}</div>
                         </div>
                     </div>
                     {% endif %}
@@ -99,7 +96,7 @@
             <div class="section-container mb-4">
                 <div class="section-header">
                     <h3 class="section-title">
-                        <i class="fas fa-chart-line me-2"></i>Season {{ gameseason_display }} Stats
+                        <i class="fas fa-chart-line me-2"></i>Season Statistics ({{ gameseason_display }})
                     </h3>
                 </div>
                 
@@ -151,39 +148,79 @@
             <div class="section-container mb-4">
                 <div class="section-header">
                     <h3 class="section-title">
-                        <i class="fas fa-history me-2"></i>Lifetime Stats
+                        <i class="fas fa-history me-2"></i>Lifetime Statistics
                     </h3>
                 </div>
                 
-                <div class="lifetime-stats-grid">
-                    <div class="lifetime-stat-item">
-                        <div class="lifetime-stat-label">Years Playing</div>
-                        <div class="lifetime-stat-value">{{ stats.years_playing }}</div>
+                <div class="stats-overview-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ stats.years_playing }}</div>
+                            <div class="stat-label">Years Playing</div>
+                        </div>
                     </div>
                     
-                    <div class="lifetime-stat-item">
-                        <div class="lifetime-stat-label">Total Points</div>
-                        <div class="lifetime-stat-value">{{ stats.total_lifetime_points|floatformat:0 }}</div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ stats.total_lifetime_points|floatformat:0 }}</div>
+                            <div class="stat-label">Total Points</div>
+                        </div>
                     </div>
                     
-                    <div class="lifetime-stat-item">
-                        <div class="lifetime-stat-label">Best Season</div>
-                        <div class="lifetime-stat-value">{{ stats.best_season_points }} pts</div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-medal"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ stats.best_season_points }}</div>
+                            <div class="stat-label">Best Season</div>
+                        </div>
                     </div>
                     
-                    <div class="lifetime-stat-item">
-                        <div class="lifetime-stat-label">Total Weeks Won</div>
-                        <div class="lifetime-stat-value">{{ stats.weeks_won_total }}</div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-award"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">#{{ stats.best_rank|default:"--" }}</div>
+                            <div class="stat-label">Best Rank</div>
+                        </div>
                     </div>
                     
-                    <div class="lifetime-stat-item">
-                        <div class="lifetime-stat-label">Lifetime Accuracy</div>
-                        <div class="lifetime-stat-value">{{ stats.pick_accuracy_lifetime }}%</div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ stats.weeks_won_total }}</div>
+                            <div class="stat-label">Weeks Won</div>
+                        </div>
                     </div>
                     
-                    <div class="lifetime-stat-item">
-                        <div class="lifetime-stat-label">Total Picks Made</div>
-                        <div class="lifetime-stat-value">{{ stats.total_picks_made|floatformat:0 }}</div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ stats.pick_accuracy_lifetime }}%</div>
+                            <div class="stat-label">Accuracy</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-list-ol"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ stats.total_picks_made|floatformat:0 }}</div>
+                            <div class="stat-label">Total Picks</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -197,24 +234,78 @@
                     </h3>
                 </div>
                 
-                <div class="activity-summary">
-                    <div class="activity-item">
-                        <i class="fas fa-comments"></i>
-                        <div class="activity-details">
-                            <div class="activity-value">{{ posts_count }}</div>
-                            <div class="activity-label">Message Board Post{{ posts_count|pluralize }}</div>
+                <div class="simple-activity-list">
+                    <div class="activity-row">
+                        <div class="activity-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div class="activity-stat">
+                            <span class="activity-number">{{ posts_count }}</span>
+                            <span class="activity-text">Message Board Post{{ posts_count|pluralize }}</span>
                         </div>
                     </div>
-                    
-                    <div class="activity-item">
-                        <i class="fas fa-check-circle"></i>
-                        <div class="activity-details">
-                            <div class="activity-value">{{ stats.correct_picks|floatformat:0 }}</div>
-                            <div class="activity-label">Correct Pick{{ stats.correct_picks|pluralize }}</div>
+                    <br>
+                    <div class="activity-row">
+                        <div class="activity-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="activity-stat">
+                            <span class="activity-number">{{ stats.correct_picks|floatformat:0 }}</span>
+                            <span class="activity-text">Correct Pick{{ stats.correct_picks|pluralize }}</span>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Team Pick Distribution Chart -->
+            <!-- Debug: Chart data check -->
+            <!-- Data available: {{ team_chart_data|length }} items, Labels: {{ team_chart_labels|length }} -->
+            {% if team_chart_data and team_chart_labels %}
+            <div class="section-container mb-4">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-chart-pie me-2"></i>Team Pick Distribution
+                    </h3>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="teamPickChart" width="400" height="400"></canvas>
+                </div>
+                
+                <div class="chart-stats-summary mt-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="stat-mini">
+                                <span class="stat-mini-label">Most Picked:</span>
+                                <span class="stat-mini-value">{{ team_chart_labels.0 }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-mini">
+                                <span class="stat-mini-label">Total Teams Picked:</span>
+                                <span class="stat-mini-value">{{ team_chart_labels|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Debug: No chart data -->
+            <div class="section-container mb-4">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-chart-pie me-2"></i>Team Pick Distribution (Debug)
+                    </h3>
+                </div>
+                <div class="alert alert-info">
+                    <strong>Debug Info:</strong><br>
+                    Team chart data count: {{ team_chart_data|length|default:"0" }}<br>
+                    Team chart labels count: {{ team_chart_labels|length|default:"0" }}<br>
+                    Raw data: {{ team_chart_data|slice:":5" }}<br>
+                    Raw labels: {{ team_chart_labels|slice:":5" }}
+                </div>
+            </div>
+            {% endif %}
 
             <!-- No Stats Message -->
             {% if stats.years_playing == 0 %}
@@ -226,6 +317,126 @@
             {% endif %}
         </div>
     </div>
+    
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+    {% if team_chart_data and team_chart_labels %}
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('teamPickChart').getContext('2d');
+        
+        // Check if dark mode is active
+        const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        
+        const teamPickChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ team_chart_labels|safe }},
+                datasets: [{
+                    data: {{ team_chart_data|safe }},
+                    backgroundColor: {{ team_chart_colors|safe }},
+                    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 3,
+                    hoverOffset: 8,
+                    cutout: '60%',
+                    radius: '85%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                elements: {
+                    arc: {
+                        borderJoinStyle: 'round'
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 25,
+                            font: {
+                                size: 13,
+                                weight: '600'
+                            },
+                            color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 8,
+                            boxHeight: 8
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                return ' ' + label + ': ' + value + '%';
+                            }
+                        },
+                        backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.95)',
+                        titleColor: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
+                        bodyColor: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                        borderWidth: 1,
+                        cornerRadius: 12,
+                        padding: 12,
+                        titleFont: {
+                            size: 14,
+                            weight: '600'
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        filter: function(tooltipItem) {
+                            return tooltipItem.parsed > 0;
+                        }
+                    }
+                },
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1500,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
+        
+        // Update chart when theme changes
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
+                    const newIsDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                    
+                    // Update legend colors
+                    teamPickChart.options.plugins.legend.labels.color = newIsDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)';
+                    
+                    // Update border colors
+                    teamPickChart.data.datasets[0].borderColor = newIsDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)';
+                    
+                    // Update tooltip colors
+                    teamPickChart.options.plugins.tooltip.backgroundColor = newIsDarkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.95)';
+                    teamPickChart.options.plugins.tooltip.titleColor = newIsDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)';
+                    teamPickChart.options.plugins.tooltip.bodyColor = newIsDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)';
+                    teamPickChart.options.plugins.tooltip.borderColor = newIsDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+                    
+                    teamPickChart.update('none');
+                }
+            });
+        });
+        
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-bs-theme']
+        });
+    });
+    {% endif %}
+    </script>
 {% endblock %}
 
 {% block extra_css %}
@@ -424,11 +635,6 @@
     margin: 0;
 }
 
-.lifetime-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1.25rem;
-}
 
 .lifetime-stat-item {
     text-align: center;
@@ -528,6 +734,442 @@
     letter-spacing: 0.5px;
 }
 
+/* Modern Stats Grid Styles */
+.modern-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.modern-stat-card {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--accent-gradient);
+}
+
+.modern-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.modern-stat-card .stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    background: var(--accent-gradient);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+}
+
+.modern-stat-card .stat-content {
+    flex: 1;
+}
+
+.modern-stat-card .stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.modern-stat-card .stat-unit {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #5a6c7d;
+}
+
+.modern-stat-card .stat-label {
+    color: #2c3e50;
+    font-weight: 600;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* Color Variants for Stat Cards */
+.modern-stat-card.highlight-card {
+    --accent-gradient: linear-gradient(135deg, #6f42c1, #9561e2);
+}
+
+.modern-stat-card.primary-card {
+    --accent-gradient: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.modern-stat-card.success-card {
+    --accent-gradient: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.modern-stat-card.warning-card {
+    --accent-gradient: linear-gradient(135deg, #ffc107, #f39c12);
+}
+
+.modern-stat-card.info-card {
+    --accent-gradient: linear-gradient(135deg, #17a2b8, #138496);
+}
+
+.modern-stat-card.neutral-card {
+    --accent-gradient: linear-gradient(135deg, #6c757d, #495057);
+}
+
+/* Modern Activity Grid Styles */
+.modern-activity-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.modern-activity-card {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    border-radius: 16px;
+    padding: 2.5rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    min-height: 120px;
+}
+
+.modern-activity-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--activity-gradient);
+}
+
+.modern-activity-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.modern-activity-card .activity-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    background: var(--activity-gradient);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+}
+
+.modern-activity-card .activity-content {
+    flex: 1;
+}
+
+.modern-activity-card .activity-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.modern-activity-card .activity-label {
+    color: #2c3e50;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.3px;
+}
+
+.modern-activity-card .activity-description {
+    color: #5a6c7d;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-style: normal;
+}
+
+.modern-activity-card .activity-trend {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--activity-gradient);
+    background: rgba(0, 0, 0, 0.05);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+/* Activity Card Color Variants */
+.modern-activity-card.social-card {
+    --activity-gradient: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.modern-activity-card.performance-card {
+    --activity-gradient: linear-gradient(135deg, #27ae60, #229954);
+}
+
+/* Simple Activity List Styles */
+.simple-activity-list {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* Simple Stats List Styles */
+.simple-stats-list {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.activity-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+    min-height: 60px;
+    margin-bottom: 2.5rem;
+}
+
+.activity-row:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.activity-row:last-child {
+    margin-bottom: 0;
+}
+
+.activity-row .activity-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.activity-row:nth-child(1) .activity-icon {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.activity-row:nth-child(2) .activity-icon {
+    background: linear-gradient(135deg, #27ae60, #229954);
+}
+
+.activity-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex: 1;
+    flex-wrap: nowrap;
+}
+
+.activity-number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.activity-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    letter-spacing: 0.3px;
+}
+
+.stat-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+    min-height: 60px;
+    margin-bottom: 2.5rem;
+}
+
+.stat-row:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.stat-row:last-child {
+    margin-bottom: 0;
+}
+
+.stat-row .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.stat-row:nth-child(1) .stat-icon {
+    background: linear-gradient(135deg, #6f42c1, #9561e2);
+}
+
+.stat-row:nth-child(2) .stat-icon {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.stat-row:nth-child(3) .stat-icon {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.stat-row:nth-child(4) .stat-icon {
+    background: linear-gradient(135deg, #ffc107, #f39c12);
+}
+
+.stat-row:nth-child(5) .stat-icon {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+}
+
+.stat-row:nth-child(6) .stat-icon {
+    background: linear-gradient(135deg, #6c757d, #495057);
+}
+
+.stat-info {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex: 1;
+    flex-wrap: nowrap;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.stat-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    letter-spacing: 0.3px;
+}
+
+/* Dark Mode Support */
+[data-bs-theme="dark"] .modern-stat-card,
+[data-bs-theme="dark"] .modern-activity-card,
+[data-bs-theme="dark"] .activity-row,
+[data-bs-theme="dark"] .stat-row {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+[data-bs-theme="dark"] .modern-stat-card .stat-value,
+[data-bs-theme="dark"] .modern-activity-card .activity-value {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+[data-bs-theme="dark"] .modern-stat-card .stat-label,
+[data-bs-theme="dark"] .modern-activity-card .activity-label {
+    color: #e0e0e0;
+    font-weight: 600;
+}
+
+[data-bs-theme="dark"] .modern-stat-card .stat-unit {
+    color: #b0b0b0;
+}
+
+[data-bs-theme="dark"] .modern-activity-card .activity-description {
+    color: #c0c0c0;
+    font-weight: 500;
+}
+
+[data-bs-theme="dark"] .modern-activity-card .activity-trend {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+[data-bs-theme="dark"] .activity-number {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+[data-bs-theme="dark"] .activity-text {
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .stat-number {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+[data-bs-theme="dark"] .stat-text {
+    color: #e0e0e0;
+}
+
+/* Enhanced hover effects for dark mode */
+[data-bs-theme="dark"] .modern-stat-card:hover,
+[data-bs-theme="dark"] .modern-activity-card:hover,
+[data-bs-theme="dark"] .activity-row:hover,
+[data-bs-theme="dark"] .stat-row:hover {
+    background: linear-gradient(135deg, #2a2a2a 0%, #3d3d3d 100%);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
 @media (max-width: 768px) {
     .profile-main-container {
         padding: 0 0.5rem;
@@ -579,10 +1221,6 @@
         font-size: 0.75rem;
     }
     
-    .lifetime-stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-    }
     
     .lifetime-stat-item {
         padding: 1rem 0.75rem;
@@ -608,6 +1246,190 @@
     
     .activity-value {
         font-size: 1.5rem;
+    }
+    
+    /* Modern components mobile styles */
+    .modern-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .modern-stat-card {
+        padding: 1.5rem;
+        gap: 1rem;
+    }
+    
+    .modern-stat-card .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+    
+    .modern-stat-card .stat-value {
+        font-size: 1.75rem;
+    }
+    
+    .modern-activity-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .modern-activity-card {
+        padding: 2rem;
+        gap: 1.5rem;
+        min-height: 100px;
+    }
+    
+    .modern-activity-card .activity-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+    
+    .modern-activity-card .activity-value {
+        font-size: 1.5rem;
+    }
+    
+    /* Simple activity list mobile styles */
+    .simple-activity-list {
+        gap: 1.5rem;
+    }
+    
+    .activity-row {
+        padding: 1.25rem 1.5rem;
+        gap: 1rem;
+    }
+    
+    .activity-row .activity-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .activity-number {
+        font-size: 1.5rem;
+    }
+    
+    .activity-text {
+        font-size: 1rem;
+    }
+    
+    /* Simple stats list mobile styles */
+    .simple-stats-list {
+        gap: 1.5rem;
+    }
+    
+    .stat-row {
+        padding: 1.25rem 1.5rem;
+        gap: 1rem;
+    }
+    
+    .stat-row .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .stat-text {
+        font-size: 1rem;
+    }
+}
+
+/* Chart Styles - Modern Glassmorphism */
+.chart-container {
+    position: relative;
+    height: 450px;
+    width: 100%;
+    max-width: 550px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 2rem;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.chart-stats-summary {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    margin-top: 2rem;
+}
+
+.stat-mini {
+    text-align: center;
+}
+
+.stat-mini-label {
+    display: block;
+    font-size: 0.95rem;
+    color: rgba(0, 0, 0, 0.7);
+    margin-bottom: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-mini-value {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: rgba(0, 0, 0, 0.9);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark Mode for Chart */
+[data-bs-theme="dark"] .chart-container {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="dark"] .chart-stats-summary {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="dark"] .stat-mini-label {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+[data-bs-theme="dark"] .stat-mini-value {
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        height: 350px;
+        padding: 1.5rem;
+        border-radius: 20px;
+    }
+    
+    .chart-stats-summary {
+        padding: 1.5rem;
+        border-radius: 16px;
+    }
+    
+    .stat-mini-value {
+        font-size: 1.3rem;
+    }
+    
+    .stat-mini-label {
+        font-size: 0.85rem;
     }
 }
 </style>

@@ -193,28 +193,49 @@
 
       <!-- Banner Section (Optional) -->
       {% block banner %}
-      {% if banner_message or banner_type %}
-     <div class="site-banner {% if banner_type %}banner-{{ banner_type }}{% else %}banner-info{% endif %}">
-         <div class="container">
-             <div class="banner-content">
-                 {% if banner_icon %}
-                 <div class="banner-icon">
-                     <i class="{{ banner_icon }}"></i>
-                 </div>
-                 {% endif %}
-                 <div class="banner-text">
-                     {{ banner_message|safe }}
-                 </div>
-                 {% if banner_dismissible %}
-                 <button type="button" class="banner-close" aria-label="Close banner">
-                     <i class="fas fa-times"></i>
-                 </button>
-                 {% endif %}
-             </div>
-         </div>
-     </div>
-     {% endif %}
-     {% endblock %}
+      {% if active_banner %}
+      <div class="site-banner banner-{{ active_banner.banner_type }}" id="site-banner">
+          <div class="container">
+              <div class="banner-content">
+                  <div class="banner-icon">
+                      <i class="{{ active_banner.icon }}"></i>
+                  </div>
+                  <div class="banner-text">
+                      {{ active_banner.title }}
+                      {% if active_banner.description %}
+                          <div class="banner-description">{{ active_banner.description }}</div>
+                      {% endif %}
+                  </div>
+                  {% if active_banner.show_close_button %}
+                  <button type="button" class="banner-close" aria-label="Close banner">
+                      <i class="fas fa-times"></i>
+                  </button>
+                  {% endif %}
+              </div>
+          </div>
+      </div>
+      {% elif banner_message or banner_type %}
+      <div class="site-banner {% if banner_type %}banner-{{ banner_type }}{% else %}banner-info{% endif %}" id="site-banner">
+          <div class="container">
+              <div class="banner-content">
+                  {% if banner_icon %}
+                  <div class="banner-icon">
+                      <i class="{{ banner_icon }}"></i>
+                  </div>
+                  {% endif %}
+                  <div class="banner-text">
+                      {{ banner_message|safe }}
+                  </div>
+                  {% if banner_dismissible %}
+                  <button type="button" class="banner-close" aria-label="Close banner">
+                      <i class="fas fa-times"></i>
+                  </button>
+                  {% endif %}
+              </div>
+          </div>
+      </div>
+      {% endif %}
+      {% endblock %}
 
      <!-- Main Content -->
      <main class="main-content" role="main">
@@ -260,34 +281,41 @@
         // Check if banner was dismissed this session
         const banner = document.querySelector('.site-banner');
         if (banner) {
-            // Create a simple banner key based on the page
-            const bannerKey = 'banner_dismissed_' + window.location.pathname;
+            // Create a global banner key - use banner ID or a global key for site-wide dismissal
+            const bannerId = banner.id || 'site-banner';
+            const bannerKey = 'banner_dismissed_' + bannerId;
             
             console.log('Banner found:', banner);
             console.log('Banner key:', bannerKey);
             console.log('Storage value:', sessionStorage.getItem(bannerKey));
             
-            // Hide banner if previously dismissed this session
-            if (sessionStorage.getItem(bannerKey) === 'true') {
+            // Choose storage type: sessionStorage (session-only) or localStorage (persistent)
+            // sessionStorage = banner reappears after browser restart (recommended for announcements)
+            // localStorage = banner stays dismissed permanently until manually cleared
+            const storage = sessionStorage; // Change to localStorage for permanent dismissal
+            
+            // Hide banner if previously dismissed (site-wide)
+            if (storage.getItem(bannerKey) === 'true') {
                 console.log('Banner hidden due to storage');
-                banner.style.display = 'none';
+                banner.classList.add('banner-hidden');
             } else {
                 console.log('Banner should be visible');
+                banner.classList.remove('banner-hidden');
             }
             
             // Handle banner dismissal
             const bannerCloseBtn = banner.querySelector('.banner-close');
             if (bannerCloseBtn) {
                 bannerCloseBtn.addEventListener('click', function() {
-                    // Save dismissal state
-                    sessionStorage.setItem(bannerKey, 'true');
-                    console.log('Banner dismissed and stored');
+                    // Save dismissal state globally (site-wide)
+                    storage.setItem(bannerKey, 'true');
+                    console.log('Banner dismissed and stored globally');
                     
-                    // Animate out
+                    // Add slide up animation
                     banner.style.animation = 'bannerSlideUp 0.3s ease-out forwards';
                     
                     setTimeout(() => {
-                        banner.style.display = 'none';
+                        banner.classList.add('banner-hidden');
                     }, 300);
                 });
             }
@@ -297,27 +325,41 @@
         window.showBanner = function() {
             const banner = document.querySelector('.site-banner');
             if (banner) {
-                const bannerKey = 'banner_dismissed_' + window.location.pathname;
-                sessionStorage.removeItem(bannerKey);
-                banner.style.display = 'block';
+                const bannerId = banner.id || 'site-banner';
+                const bannerKey = 'banner_dismissed_' + bannerId;
+                const storage = sessionStorage; // Match the storage type used above
+                storage.removeItem(bannerKey);
+                banner.classList.remove('banner-hidden');
                 banner.style.animation = 'bannerSlideDown 0.3s ease-out';
                 console.log('Banner manually shown');
             }
         };
     });
     
-    // CSS animation for closing
+    // CSS animation for closing - works with existing styles
     const style = document.createElement('style');
     style.textContent = `
         @keyframes bannerSlideUp {
             from {
-                top: 56px;
+                transform: translateY(0);
                 opacity: 1;
             }
             to {
-                top: -100px;
+                transform: translateY(-100%);
                 opacity: 0;
             }
+        }
+        
+        /* Ensure smooth transitions while respecting existing fixed positioning */
+        .site-banner {
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        }
+        
+        /* Override the existing display: none to use transform instead for smoother animation */
+        .site-banner.banner-hidden {
+            transform: translateY(-100%) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
     `;
     document.head.appendChild(style);

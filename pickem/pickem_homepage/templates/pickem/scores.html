@@ -37,6 +37,7 @@
             </p>
         </div>
 
+
         <!-- Your Weekly Performance Section (Compact) -->
         {% if user.is_authenticated and user_weekly_stats %}
         <div class="section-container mb-4 weekly-performance-compact">
@@ -496,11 +497,13 @@
                                 {% endif %}
 
                                 <!-- Player Picks Section -->
-                                {% if picks and game.statusType != 'notstarted' %}
+                                {% if picks %}
+                                    {% if game.statusType == 'finished' or game.statusType == 'inprogress' %}
                                 <div class="picks-section">
                                     <div class="picks-header">
                                         <i class="fas fa-users me-2"></i>Player Picks
                                     </div>
+                                    
                                     
                                     <!-- Away Team Picks -->
                                     <div class="team-picks-group away-team-picks" data-team="{{ game.awayTeamSlug }}">
@@ -515,24 +518,37 @@
                                         <div class="team-picks-list">
                                             {% for pick in picks %}
                                                 {% if pick.pick == game.awayTeamSlug %}
+                                                    {% with pick.uid|lookupname as username %}
+                                                    {% with pick.uid|lookupavatar as avatar %}
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
-                                                            <span class="player-pick-badge pick-win">
+                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                 alt="{{ username|default:'Unknown' }}" 
+                                                                 class="pick-avatar pick-correct" 
+                                                                 title="{{ username|default:'Unknown' }} - Correct Pick">
                                                         {% else %}
-                                                            <span class="player-pick-badge pick-loss">
+                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                 alt="{{ username|default:'Unknown' }}" 
+                                                                 class="pick-avatar pick-incorrect" 
+                                                                 title="{{ username|default:'Unknown' }} - Incorrect Pick">
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
-                                                        <span class="player-pick-badge pick-pending">
+                                                        <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                             alt="{{ username|default:'Unknown' }}" 
+                                                             class="pick-avatar pick-pending" 
+                                                             title="{{ username|default:'Unknown' }} - Game In Progress">
                                                     {% endif %}
-                                                        {% with pick.uid|lookupname as username %}
-                                                        {{ username|default:"Unknown" }}
-                                                        {% endwith %}
                                                         {% if pick.tieBreakerScore != None %}
                                                         <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
                                                         {% endif %}
-                                                    </span>
+                                                    {% endwith %}
+                                                    {% endwith %}
                                                 {% endif %}
+                                            {% empty %}
                                             {% endfor %}
+                                            {% if not picks %}
+                                                <span class="no-picks-message">No picks available</span>
+                                            {% endif %}
                                         </div>
                                     </div>
 
@@ -549,27 +565,41 @@
                                         <div class="team-picks-list">
                                             {% for pick in picks %}
                                                 {% if pick.pick == game.homeTeamSlug %}
+                                                    {% with pick.uid|lookupname as username %}
+                                                    {% with pick.uid|lookupavatar as avatar %}
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
-                                                            <span class="player-pick-badge pick-win">
+                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                 alt="{{ username|default:'Unknown' }}" 
+                                                                 class="pick-avatar pick-correct" 
+                                                                 title="{{ username|default:'Unknown' }} - Correct Pick">
                                                         {% else %}
-                                                            <span class="player-pick-badge pick-loss">
+                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                 alt="{{ username|default:'Unknown' }}" 
+                                                                 class="pick-avatar pick-incorrect" 
+                                                                 title="{{ username|default:'Unknown' }} - Incorrect Pick">
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
-                                                        <span class="player-pick-badge pick-pending">
+                                                        <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                             alt="{{ username|default:'Unknown' }}" 
+                                                             class="pick-avatar pick-pending" 
+                                                             title="{{ username|default:'Unknown' }} - Game In Progress">
                                                     {% endif %}
-                                                        {% with pick.uid|lookupname as username %}
-                                                        {{ username|default:"Unknown" }}
-                                                        {% endwith %}
                                                         {% if pick.tieBreakerScore != None %}
                                                         <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
                                                         {% endif %}
-                                                    </span>
+                                                    {% endwith %}
+                                                    {% endwith %}
                                                 {% endif %}
+                                            {% empty %}
                                             {% endfor %}
+                                            {% if not picks %}
+                                                <span class="no-picks-message">No picks available</span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
+                                    {% endif %}
                                 {% endif %}
 
                                 <!-- User's Pick Highlight -->
@@ -632,7 +662,12 @@
                                                 {% with gameid|lookuppick as count %}
                                                     {% if count == 0 %}
                                                         {% with player|lookupname as username %}
-                                                            <span class="missing-pick-badge">{{ username|default:"Unknown" }}</span>
+                                                        {% with player|lookupavatar as avatar %}
+                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                 alt="{{ username|default:'Unknown' }}" 
+                                                                 class="missing-pick-avatar" 
+                                                                 title="{{ username|default:'Unknown' }} - No Pick">
+                                                        {% endwith %}
                                                         {% endwith %}
                                                     {% endif %}
                                                 {% endwith %}
@@ -641,11 +676,11 @@
                                     </div>
                                 </div>
                                 <script>
-                                    // Show missing picks section only if there are missing pick badges
+                                    // Show missing picks section only if there are missing pick avatars
                                     (function() {
                                         var section = document.getElementById('missing-picks-{{ game.id }}');
-                                        var badges = section.querySelectorAll('.missing-pick-badge');
-                                        if (badges.length > 0) {
+                                        var avatars = section.querySelectorAll('.missing-pick-avatar');
+                                        if (avatars.length > 0) {
                                             section.style.display = 'block';
                                         }
                                     })();
@@ -953,6 +988,133 @@
     // Add fade-in animation CSS
     const scoresPageStyle = document.createElement('style');
     scoresPageStyle.textContent = `
+        /* Avatar styles for picks */
+        .pick-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 3px solid #dee2e6;
+            object-fit: cover;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 2px;
+            display: inline-block;
+        }
+        
+        /* Pick status border colors */
+        .pick-avatar.pick-correct {
+            border-color: #28a745;
+            box-shadow: 0 0 6px rgba(40, 167, 69, 0.4);
+        }
+        
+        .pick-avatar.pick-incorrect {
+            border-color: #dc3545;
+            box-shadow: 0 0 6px rgba(220, 53, 69, 0.4);
+        }
+        
+        .pick-avatar.pick-pending {
+            border-color: #ffc107;
+            box-shadow: 0 0 6px rgba(255, 193, 7, 0.4);
+        }
+        
+        .pick-avatar:hover {
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .pick-avatar.pick-correct:hover {
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.6);
+        }
+        
+        .pick-avatar.pick-incorrect:hover {
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.6);
+        }
+        
+        .pick-avatar.pick-pending:hover {
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.6);
+        }
+        
+        .missing-pick-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 3px solid #dc3545;
+            object-fit: cover;
+            opacity: 0.7;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 2px;
+            display: inline-block;
+        }
+        
+        .missing-pick-avatar:hover {
+            opacity: 1;
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.5);
+        }
+        
+        /* Team picks layout adjustments */
+        .team-picks-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            padding: 12px;
+            min-height: 60px;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 8px;
+            margin-top: 4px;
+        }
+        
+        .team-picks-section {
+            margin-bottom: 8px;
+        }
+        
+        .team-picks-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #495057;
+            margin-bottom: 4px;
+        }
+        
+        .tiebreaker-mini {
+            font-size: 0.7rem;
+            color: #6c757d;
+            margin-left: 4px;
+            font-weight: 500;
+        }
+        
+        /* Missing picks section improvements */
+        .missing-picks-section {
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 12px 12px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        
+        .missing-picks-header {
+            color: #495057;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .missing-picks-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        
+        .no-picks-message {
+            color: #6c757d;
+            font-style: italic;
+            font-size: 0.9rem;
+            padding: 8px;
+        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -1044,13 +1206,72 @@
             border: 1px solid #1e7e34 !important;
         }
         
-        /* REMOVED - Let pick sections use transparent background in dark mode */
-        [data-bs-theme="dark"] .missing-pick-badge {
-            background: #6a5a4a !important;
-            background-color: #6a5a4a !important;
-            color: #f0e0d0 !important;
-            border: 1px solid #8a7a6a !important;
+        /* Dark mode avatar styles */
+        [data-bs-theme="dark"] .pick-avatar {
+            border-color: #555555 !important;
         }
+        
+        [data-bs-theme="dark"] .pick-avatar.pick-correct {
+            border-color: #198754 !important;
+            box-shadow: 0 0 8px rgba(25, 135, 84, 0.5) !important;
+        }
+        
+        [data-bs-theme="dark"] .pick-avatar.pick-incorrect {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 8px rgba(220, 53, 69, 0.5) !important;
+        }
+        
+        [data-bs-theme="dark"] .pick-avatar.pick-pending {
+            border-color: #ffc107 !important;
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.5) !important;
+        }
+        
+        [data-bs-theme="dark"] .pick-avatar.pick-correct:hover {
+            box-shadow: 0 4px 16px rgba(25, 135, 84, 0.7) !important;
+        }
+        
+        [data-bs-theme="dark"] .pick-avatar.pick-incorrect:hover {
+            box-shadow: 0 4px 16px rgba(220, 53, 69, 0.7) !important;
+        }
+        
+        [data-bs-theme="dark"] .pick-avatar.pick-pending:hover {
+            box-shadow: 0 4px 16px rgba(255, 193, 7, 0.7) !important;
+        }
+        
+        [data-bs-theme="dark"] .missing-pick-avatar {
+            border-color: #dc3545 !important;
+        }
+        
+        [data-bs-theme="dark"] .missing-pick-avatar:hover {
+            box-shadow: 0 4px 16px rgba(220, 53, 69, 0.6) !important;
+        }
+        
+        [data-bs-theme="dark"] .tiebreaker-mini {
+            color: #adb5bd !important;
+        }
+        
+        /* Dark mode team picks and missing picks */
+        [data-bs-theme="dark"] .team-picks-list {
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+        
+        [data-bs-theme="dark"] .team-picks-name {
+            color: #e9ecef !important;
+        }
+        
+        [data-bs-theme="dark"] .missing-picks-section {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        [data-bs-theme="dark"] .missing-picks-header {
+            color: #e9ecef !important;
+        }
+        
+        [data-bs-theme="dark"] .no-picks-message {
+            color: #adb5bd !important;
+        }
+        
     `;
     document.head.appendChild(immediateDarkModeStyle);
 
@@ -1455,13 +1676,6 @@
             
             // REMOVED - Let Missing Picks sections use transparent background
             
-            const missingPickBadges = document.querySelectorAll('.missing-pick-badge');
-            missingPickBadges.forEach(badge => {
-                badge.style.setProperty('background', '#6a5a4a', 'important');
-                badge.style.setProperty('background-color', '#6a5a4a', 'important');
-                badge.style.setProperty('color', '#f0e0d0', 'important');
-                badge.style.setProperty('border', '1px solid #8a7a6a', 'important');
-            });
             
             // 11. Force any remaining white elements
             const whiteElements = document.querySelectorAll('.scores-main-container *');
@@ -1509,6 +1723,26 @@
             forceDarkModeScores();
         }
     }, 1500);
+    
+    // Handle hiding empty team pick sections with JavaScript (more reliable than CSS :has())
+    function hideEmptyTeamPickSections() {
+        const teamPickGroups = document.querySelectorAll('.team-picks-group');
+        teamPickGroups.forEach(group => {
+            const picksList = group.querySelector('.team-picks-list');
+            const pickAvatars = picksList ? picksList.querySelectorAll('.pick-avatar') : [];
+            
+            // Hide if no pick avatars found
+            if (pickAvatars.length === 0) {
+                group.style.display = 'none';
+            } else {
+                group.style.display = 'block';
+            }
+        });
+    }
+    
+    // Run after page load and after any updates
+    document.addEventListener('DOMContentLoaded', hideEmptyTeamPickSections);
+    setTimeout(hideEmptyTeamPickSections, 100);
     
     </script>
 

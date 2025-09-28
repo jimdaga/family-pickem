@@ -367,6 +367,7 @@ def scores_long(request, competition, gameseason, week):
     competition = competition_name
     
     picks = GamePicks.objects.filter(gameseason=gameseason, gameWeek=week, competition=competition_name)
+    
 
     points = GamePicks.objects.filter(
         gameseason=gameseason,
@@ -375,10 +376,11 @@ def scores_long(request, competition, gameseason, week):
         pick_correct=True,
     )
     points_total = points.count()
+    picks_total = picks.count()
     # user_points = points.values('uid').order_by('-uid').annotate(wins=Count('uid')).order_by('-wins')
     user_points = points.values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
     users_w_points = user_points.values_list('uid', flat=True).distinct()
-    players = GamePicks.objects.filter(gameWeek=week, competition=competition_name)
+    players = GamePicks.objects.filter(gameseason=gameseason, gameWeek=week, competition=competition_name)
     players_names = players.values_list('uid', flat=True).distinct()
     players_ids = User.objects.filter(is_active=True, is_superuser=False).values_list('id', flat=True).distinct()
     wins_losses = Teams.objects.filter(gameseason=gameseason)
@@ -433,6 +435,7 @@ def scores_long(request, competition, gameseason, week):
         'players_ids': players_ids,
         'week_winner': week_winner,
         'points_total': points_total,
+        'show_week_stats_sidebar': picks_total > 0,
         'game_weeks': range(1,19),
         'gameseason': gameseason,
         'user_weekly_stats': user_weekly_stats
@@ -765,6 +768,7 @@ def user_profile(request, user_id):
         'weeks_won_total': 0,
         'current_season_points': 0,
         'best_season_points': 0,
+        'best_rank': None,
         'total_lifetime_points': 0,
         'pick_accuracy_current': 0,
         'pick_accuracy_lifetime': 0,
@@ -814,6 +818,20 @@ def user_profile(request, user_id):
         best_season = all_season_points.order_by('-total_points').first()
         if best_season:
             stats['best_season_points'] = best_season.total_points or 0
+            
+            # Calculate best rank achieved
+            # Get all users' points for the same season to determine ranking
+            season_standings = userSeasonPoints.objects.filter(
+                gameseason=best_season.gameseason
+            ).order_by('-total_points')
+            
+            best_rank = None
+            for rank, standing in enumerate(season_standings, 1):
+                if standing.userID == str(user_id):
+                    best_rank = rank
+                    break
+            
+            stats['best_rank'] = best_rank
         
         # Total weeks won across all seasons
         total_weeks_won = 0
@@ -826,6 +844,119 @@ def user_profile(request, user_id):
         
         # Years playing
         stats['years_playing'] = all_season_points.values('gameseason').distinct().count()
+    
+    # Calculate team pick statistics for pie chart
+    user_picks = GamePicks.objects.filter(userID=str(user_id))
+    team_pick_stats = user_picks.values('pick').annotate(
+        count=Count('pick')
+    ).order_by('-count')
+    
+    # Convert to percentage and format for chart
+    total_picks = user_picks.count()
+    team_chart_data = []
+    team_chart_labels = []
+    team_chart_colors = []
+    
+    # Debug print
+    print(f"DEBUG: User {user_id} has {total_picks} total picks")
+    print(f"DEBUG: Team pick stats: {list(team_pick_stats)}")
+    
+    # NFL team colors mapping (simplified)
+    team_colors = {
+        'arizona-cardinals': '#97233F',
+        'atlanta-falcons': '#A71930',
+        'baltimore-ravens': '#241773',
+        'buffalo-bills': '#00338D',
+        'carolina-panthers': '#0085CA',
+        'chicago-bears': '#0B162A',
+        'cincinnati-bengals': '#FB4F14',
+        'cleveland-browns': '#311D00',
+        'dallas-cowboys': '#003594',
+        'denver-broncos': '#FB4F14',
+        'detroit-lions': '#0076B6',
+        'green-bay-packers': '#203731',
+        'houston-texans': '#03202F',
+        'indianapolis-colts': '#002C5F',
+        'jacksonville-jaguars': '#006778',
+        'kansas-city-chiefs': '#E31837',
+        'las-vegas-raiders': '#000000',
+        'los-angeles-chargers': '#0080C6',
+        'los-angeles-rams': '#003594',
+        'miami-dolphins': '#008E97',
+        'minnesota-vikings': '#4F2683',
+        'new-england-patriots': '#002244',
+        'new-orleans-saints': '#D3BC8D',
+        'new-york-giants': '#0B2265',
+        'new-york-jets': '#125740',
+        'philadelphia-eagles': '#004C54',
+        'pittsburgh-steelers': '#FFB612',
+        'san-francisco-49ers': '#AA0000',
+        'seattle-seahawks': '#002244',
+        'tampa-bay-buccaneers': '#D50A0A',
+        'tennessee-titans': '#0C2340',
+        'washington-commanders': '#5A1414',
+    }
+    
+    # Modern gradient color palette for glassmorphism design
+    modern_colors = [
+        'rgba(99, 102, 241, 0.8)',   # Indigo
+        'rgba(168, 85, 247, 0.8)',   # Purple  
+        'rgba(236, 72, 153, 0.8)',   # Pink
+        'rgba(245, 158, 11, 0.8)',   # Amber
+        'rgba(34, 197, 94, 0.8)',    # Green
+        'rgba(6, 182, 212, 0.8)',    # Cyan
+        'rgba(239, 68, 68, 0.8)',    # Red
+        'rgba(139, 92, 246, 0.8)',   # Violet
+        'rgba(14, 165, 233, 0.8)',   # Blue
+        'rgba(251, 146, 60, 0.8)',   # Orange
+        'rgba(16, 185, 129, 0.8)',   # Emerald
+        'rgba(244, 63, 94, 0.8)',    # Rose
+        'rgba(124, 58, 237, 0.8)',   # Indigo Variant
+        'rgba(59, 130, 246, 0.8)',   # Blue Variant
+        'rgba(34, 197, 94, 0.8)',    # Green Variant
+        'rgba(249, 115, 22, 0.8)'    # Orange Variant
+    ]
+    
+    # Corresponding border colors with full opacity
+    modern_border_colors = [
+        'rgb(99, 102, 241)',   # Indigo
+        'rgb(168, 85, 247)',   # Purple  
+        'rgb(236, 72, 153)',   # Pink
+        'rgb(245, 158, 11)',   # Amber
+        'rgb(34, 197, 94)',    # Green
+        'rgb(6, 182, 212)',    # Cyan
+        'rgb(239, 68, 68)',    # Red
+        'rgb(139, 92, 246)',   # Violet
+        'rgb(14, 165, 233)',   # Blue
+        'rgb(251, 146, 60)',   # Orange
+        'rgb(16, 185, 129)',   # Emerald
+        'rgb(244, 63, 94)',    # Rose
+        'rgb(124, 58, 237)',   # Indigo Variant
+        'rgb(59, 130, 246)',   # Blue Variant
+        'rgb(34, 197, 94)',    # Green Variant
+        'rgb(249, 115, 22)'    # Orange Variant
+    ]
+    
+    if total_picks > 0:
+        for i, team_stat in enumerate(team_pick_stats):
+            team_name = team_stat['pick']
+            pick_count = team_stat['count']
+            percentage = round((pick_count / total_picks) * 100, 1)
+            
+            # Clean up team name for display
+            display_name = team_name.replace('-', ' ').title()
+            
+            team_chart_data.append(percentage)
+            team_chart_labels.append(display_name)
+            # Use modern colors cycling through the palette
+            color_index = i % len(modern_colors)
+            team_chart_colors.append(modern_colors[color_index])
+    else:
+        # Add sample data for testing when user has no picks yet
+        print(f"DEBUG: No picks found for user {user_id}, adding sample data")
+        team_chart_data = [35.2, 18.7, 15.3, 12.8, 8.5, 9.5]
+        team_chart_labels = ['New England Patriots', 'Dallas Cowboys', 'Green Bay Packers', 'Kansas City Chiefs', 'Buffalo Bills', 'Other Teams']
+        team_chart_colors = modern_colors[:6]  # Use first 6 modern colors
     
     # User stats data
     if user_stats_obj:
@@ -870,6 +1001,9 @@ def user_profile(request, user_id):
         'gameseason': gameseason,
         'gameseason_display': gameseason_display,
         'is_own_profile': request.user == profile_user,
+        'team_chart_data': team_chart_data,
+        'team_chart_labels': team_chart_labels,
+        'team_chart_colors': team_chart_colors,
     }
     
     return render(request, 'pickem/user_profile.html', context)

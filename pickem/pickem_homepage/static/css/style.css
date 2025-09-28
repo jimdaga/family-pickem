@@ -3282,12 +3282,13 @@ body:has(.site-banner) .homepage-main-container {
     align-items: flex-start;
 }
 
-/* Hide team sections with no picks */
+/* Hide team sections with no picks - using JavaScript instead of CSS :has() for better browser support */
+/* These rules are commented out to fix Player Picks not showing issue */
+/*
 .team-picks-group:has(.team-picks-list:empty) {
     display: none;
 }
 
-/* Fallback for browsers that don't support :has() */
 .team-picks-list:empty {
     display: none;
 }
@@ -3296,9 +3297,10 @@ body:has(.site-banner) .homepage-main-container {
     display: none;
 }
 
-.team-picks-group:not(:has(.player-pick-badge)) {
+.team-picks-group:not(:has(.pick-avatar)) {
     display: none;
 }
+*/
 
 
 
