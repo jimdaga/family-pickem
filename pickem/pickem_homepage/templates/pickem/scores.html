@@ -527,27 +527,33 @@
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
                                                             <div class="pick-player">
-                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                     alt="{{ username|default:'Unknown' }}" 
-                                                                     class="pick-avatar pick-correct" 
-                                                                     title="{{ username|default:'Unknown' }} - Correct Pick">
+                                                                <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
+                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                         alt="{{ username|default:'Unknown' }}" 
+                                                                         class="pick-avatar pick-correct" 
+                                                                         title="{{ username|default:'Unknown' }} - Correct Pick">
+                                                                </a>
                                                                 <span class="pick-username">{{ username|default:'Unknown' }}</span>
                                                             </div>
                                                         {% else %}
                                                             <div class="pick-player">
-                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                     alt="{{ username|default:'Unknown' }}" 
-                                                                     class="pick-avatar pick-incorrect" 
-                                                                     title="{{ username|default:'Unknown' }} - Incorrect Pick">
+                                                                <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
+                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                         alt="{{ username|default:'Unknown' }}" 
+                                                                         class="pick-avatar pick-incorrect" 
+                                                                         title="{{ username|default:'Unknown' }} - Incorrect Pick">
+                                                                </a>
                                                                 <span class="pick-username">{{ username|default:'Unknown' }}</span>
                                                             </div>
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
                                                         <div class="pick-player">
-                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                 alt="{{ username|default:'Unknown' }}" 
-                                                                 class="pick-avatar pick-pending" 
-                                                                 title="{{ username|default:'Unknown' }} - Game In Progress">
+                                                            <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
+                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                     alt="{{ username|default:'Unknown' }}" 
+                                                                     class="pick-avatar pick-pending" 
+                                                                     title="{{ username|default:'Unknown' }} - Game In Progress">
+                                                            </a>
                                                             <span class="pick-username">{{ username|default:'Unknown' }}</span>
                                                         </div>
                                                     {% endif %}
@@ -583,27 +589,33 @@
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
                                                             <div class="pick-player">
-                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                     alt="{{ username|default:'Unknown' }}" 
-                                                                     class="pick-avatar pick-correct" 
-                                                                     title="{{ username|default:'Unknown' }} - Correct Pick">
+                                                                <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
+                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                         alt="{{ username|default:'Unknown' }}" 
+                                                                         class="pick-avatar pick-correct" 
+                                                                         title="{{ username|default:'Unknown' }} - Correct Pick">
+                                                                </a>
                                                                 <span class="pick-username">{{ username|default:'Unknown' }}</span>
                                                             </div>
                                                         {% else %}
                                                             <div class="pick-player">
-                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                     alt="{{ username|default:'Unknown' }}" 
-                                                                     class="pick-avatar pick-incorrect" 
-                                                                     title="{{ username|default:'Unknown' }} - Incorrect Pick">
+                                                                <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
+                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                         alt="{{ username|default:'Unknown' }}" 
+                                                                         class="pick-avatar pick-incorrect" 
+                                                                         title="{{ username|default:'Unknown' }} - Incorrect Pick">
+                                                                </a>
                                                                 <span class="pick-username">{{ username|default:'Unknown' }}</span>
                                                             </div>
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
                                                         <div class="pick-player">
-                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                 alt="{{ username|default:'Unknown' }}" 
-                                                                 class="pick-avatar pick-pending" 
-                                                                 title="{{ username|default:'Unknown' }} - Game In Progress">
+                                                            <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
+                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                     alt="{{ username|default:'Unknown' }}" 
+                                                                     class="pick-avatar pick-pending" 
+                                                                     title="{{ username|default:'Unknown' }} - Game In Progress">
+                                                            </a>
                                                             <span class="pick-username">{{ username|default:'Unknown' }}</span>
                                                         </div>
                                                     {% endif %}
@@ -1121,6 +1133,22 @@
             word-wrap: break-word;
             overflow-wrap: break-word;
             hyphens: auto;
+        }
+        
+        /* Pick avatar link styling */
+        .pick-avatar-link {
+            display: block;
+            transition: transform 0.2s ease;
+            border-radius: 50%;
+        }
+        
+        .pick-avatar-link:hover {
+            transform: scale(1.1);
+        }
+        
+        .pick-avatar-link:focus {
+            outline: 2px solid var(--bs-primary);
+            outline-offset: 2px;
         }
         
         .tiebreaker-mini {

@@ -3716,7 +3716,9 @@ body:has(.site-banner) .homepage-main-container {
     }
     
     .pick-result {
-        margin-left: 0;
+        margin-left: auto;
+        margin-right: 0;
+        align-self: flex-end;
     }
     
     .user-pick-logo {
