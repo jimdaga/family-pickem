@@ -331,6 +331,20 @@ class userStats(models.Model):
 
 class currentSeason(models.Model):
     season = models.IntegerField(blank=True, null=True)
+    display_name = models.CharField(max_length=20, blank=True, null=True, help_text="User-friendly season name (e.g., '2025-2026')")
 
-def __str__(self):
-    return self.slug
+    def __str__(self):
+        return self.display_name or str(self.season)
+
+    def get_display_season(self):
+        """Return the display name if available, otherwise format the season number"""
+        if self.display_name:
+            return self.display_name
+        if self.season:
+            # Convert season number like 2526 to "2025-2026"
+            season_str = str(self.season)
+            if len(season_str) == 4:
+                year1 = season_str[:2]
+                year2 = season_str[2:]
+                return f"20{year1}-20{year2}"
+        return str(self.season)

@@ -112,7 +112,9 @@
                          data-name="{{ username|default:'Unknown Player' }}">
                         <!-- Player Header -->
                         <div class="stats-card-header d-flex align-items-center">
-                            <img class="player-profile-img me-3" src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" alt="Profile picture for {{ username }}">
+                            <a href="{% url 'user_profile' stats.userID %}" class="player-profile-link">
+                                <img class="player-profile-img me-3" src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" alt="Profile picture for {{ username }}">
+                            </a>
                             <div class="flex-grow-1">
                                 <h5 class="mb-0 text-uppercase">{{ username|default:"Unknown Player" }}</h5>
                                 <small class="text-muted">{{ stats.userID|lookuptagline }}</small>

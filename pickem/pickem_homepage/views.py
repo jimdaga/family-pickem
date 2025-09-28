@@ -8,8 +8,7 @@ from .forms import GamePicksForm, MessageBoardPostForm, MessageBoardCommentForm,
 from .models import MessageBoardPost, MessageBoardComment, MessageBoardVote
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db.models import Sum
-from django.db.models import Count
+from django.db.models import Sum, Count, Q, Avg
 from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -22,8 +21,8 @@ from datetime import date
 from django.forms import formset_factory
 from pickem.utils import get_season as get_season_from_api
 
-def get_season():
-    return get_season_from_api()
+def get_season(display_name=False):
+    return get_season_from_api(display_name=display_name)
 
 # @ratelimit(key='ip', rate='30/m', method='GET', block=True)  # Disabled for now
 def index(request):
@@ -683,41 +682,197 @@ def profile(request):
             favorite_team = request.POST.get('favorite_team', '').strip()
             phone_number = request.POST.get('phone_number', '').strip()
             
-            # Validate and update username if changed
-            if username and username != request.user.username:
-                # Server-side username validation
-                if len(username) < 3 or len(username) > 20:
-                    messages.error(request, 'Username must be between 3 and 20 characters.')
-                elif not re.match(r'^[a-zA-Z0-9_]+$', username):
-                    messages.error(request, 'Username can only contain letters, numbers, and underscores.')
-                elif username.startswith('_') or username.endswith('_'):
-                    messages.error(request, 'Username cannot start or end with an underscore.')
-                elif '__' in username:
-                    messages.error(request, 'Username cannot contain consecutive underscores.')
-                elif User.objects.filter(username__iexact=username).exclude(id=request.user.id).exists():
-                    messages.error(request, 'This username is already taken.')
-                else:
-                    # Username is valid, update it
+            # Validation
+            errors = []
+            
+            # Username validation
+            if username:
+                if len(username) < 3:
+                    errors.append('Username must be at least 3 characters long.')
+                elif len(username) > 30:
+                    errors.append('Username must be less than 30 characters.')
+                elif not re.match(r'^[a-zA-Z0-9._-]+$', username):
+                    errors.append('Username can only contain letters, numbers, periods, underscores, and hyphens.')
+                elif User.objects.filter(username=username).exclude(id=request.user.id).exists():
+                    errors.append('This username is already taken.')
+            
+            # Tagline validation
+            if tagline and len(tagline) > 200:
+                errors.append('Tagline must be less than 200 characters.')
+            
+            # Phone number validation (basic)
+            if phone_number:
+                cleaned_phone = re.sub(r'[^\d]', '', phone_number)
+                if len(cleaned_phone) < 10:
+                    errors.append('Please enter a valid phone number.')
+            
+            if errors:
+                for error in errors:
+                    messages.error(request, error)
+            else:
+                # Update user fields
+                if username:
                     request.user.username = username
                     request.user.save()
-                    messages.success(request, 'Username updated successfully!')
-            
-            # Update profile fields
-            user_profile.tagline = tagline if tagline else None
-            user_profile.favorite_team = favorite_team if favorite_team else None
-            user_profile.phone_number = phone_number if phone_number else None
-            user_profile.save()
-            
-            # Success message for profile fields if no username errors
-            if not messages.get_messages(request):
+                
+                # Update profile fields
+                user_profile.tagline = tagline
+                user_profile.favorite_team = favorite_team if favorite_team else None
+                user_profile.phone_number = phone_number if phone_number else None
+                user_profile.save()
+                
                 messages.success(request, 'Profile updated successfully!')
-            
+                return redirect('profile')
+    
     context = {
-        'gameseason': gameseason,
         'user_profile': user_profile,
         'teams': teams,
+        'gameseason': gameseason,
     }
+    
     return render(request, 'pickem/profile.html', context)
+
+
+
+
+def user_profile(request, user_id):
+    """Public user profile page showing stats and achievements"""
+    # Get the user whose profile we're viewing
+    profile_user = get_object_or_404(User, id=user_id)
+    gameseason = get_season()
+    gameseason_display = get_season(display_name=True)
+    
+    # Get or create user profile
+    user_profile, created = UserProfile.objects.get_or_create(user=profile_user)
+    
+    # Check if profile is private (only show to the owner)
+    if user_profile.private_profile and request.user != profile_user:
+        return render(request, 'pickem/user_profile_private.html', {
+            'profile_user': profile_user
+        })
+    
+    # Get user's season points data
+    season_points = userSeasonPoints.objects.filter(userID=str(user_id), gameseason=gameseason).first()
+    all_season_points = userSeasonPoints.objects.filter(userID=str(user_id))
+    
+    # Get user stats
+    user_stats_obj = userStats.objects.filter(userID=str(user_id)).first()
+    
+    # Calculate fun stats
+    stats = {
+        'seasons_won': 0,
+        'weeks_won_current_season': 0,
+        'weeks_won_total': 0,
+        'current_season_points': 0,
+        'best_season_points': 0,
+        'total_lifetime_points': 0,
+        'pick_accuracy_current': 0,
+        'pick_accuracy_lifetime': 0,
+        'total_picks_made': 0,
+        'correct_picks': 0,
+        'favorite_team': None,
+        'favorite_team_logo': None,
+        'years_playing': 0,
+        'current_season_rank': 'N/A',
+        'perfect_weeks': 0,
+    }
+    
+    # Seasons won
+    seasons_won = userSeasonPoints.objects.filter(userID=str(user_id), year_winner=True).count()
+    stats['seasons_won'] = seasons_won
+    
+    # Current season data
+    if season_points:
+        stats['current_season_points'] = season_points.total_points or 0
+        
+        # Count weeks won this season
+        weeks_won_this_season = 0
+        for week in range(1, 19):  # NFL has up to 18 weeks
+            if hasattr(season_points, f'week_{week}_winner'):
+                if getattr(season_points, f'week_{week}_winner', False):
+                    weeks_won_this_season += 1
+        stats['weeks_won_current_season'] = weeks_won_this_season
+        
+        # Count perfect weeks (bonus points)
+        perfect_weeks = 0
+        for week in range(1, 19):
+            if hasattr(season_points, f'week_{week}_bonus'):
+                bonus = getattr(season_points, f'week_{week}_bonus', 0)
+                if bonus and bonus > 0:
+                    perfect_weeks += 1
+        stats['perfect_weeks'] = perfect_weeks
+    
+    # Lifetime stats
+    if all_season_points.exists():
+        # Total lifetime points
+        total_points = all_season_points.aggregate(
+            total=Coalesce(Sum('total_points'), 0)
+        )['total']
+        stats['total_lifetime_points'] = total_points
+        
+        # Best season
+        best_season = all_season_points.order_by('-total_points').first()
+        if best_season:
+            stats['best_season_points'] = best_season.total_points or 0
+        
+        # Total weeks won across all seasons
+        total_weeks_won = 0
+        for season in all_season_points:
+            for week in range(1, 19):
+                if hasattr(season, f'week_{week}_winner'):
+                    if getattr(season, f'week_{week}_winner', False):
+                        total_weeks_won += 1
+        stats['weeks_won_total'] = total_weeks_won
+        
+        # Years playing
+        stats['years_playing'] = all_season_points.values('gameseason').distinct().count()
+    
+    # User stats data
+    if user_stats_obj:
+        stats['pick_accuracy_current'] = user_stats_obj.pickPercentSeason or 0
+        stats['pick_accuracy_lifetime'] = user_stats_obj.pickPercentTotal or 0
+        stats['total_picks_made'] = user_stats_obj.totalPicksTotal or 0
+        stats['correct_picks'] = user_stats_obj.correctPickTotalTotal or 0
+    
+    # Favorite team info
+    if user_profile.favorite_team:
+        try:
+            favorite_team = Teams.objects.filter(teamNameSlug=user_profile.favorite_team).first()
+            if favorite_team:
+                stats['favorite_team'] = favorite_team.teamNameName
+                stats['favorite_team_logo'] = favorite_team.teamLogo
+        except Teams.DoesNotExist:
+            pass
+    
+    # Current season ranking
+    if season_points:
+        current_rank = userSeasonPoints.objects.filter(
+            gameseason=gameseason,
+            total_points__gt=season_points.total_points
+        ).count() + 1
+        stats['current_season_rank'] = current_rank
+    
+    # Recent activity - last 5 weeks of picks
+    recent_picks = GamePicks.objects.filter(
+        userID=str(user_id),
+        gameseason=gameseason
+    ).select_related().order_by('-gameWeek')[:5]
+    
+    # Get user's message board posts count
+    posts_count = MessageBoardPost.objects.filter(user_id=user_id).count()
+    
+    context = {
+        'profile_user': profile_user,
+        'user_profile': user_profile,
+        'stats': stats,
+        'recent_picks': recent_picks,
+        'posts_count': posts_count,
+        'gameseason': gameseason,
+        'gameseason_display': gameseason_display,
+        'is_own_profile': request.user == profile_user,
+    }
+    
+    return render(request, 'pickem/user_profile.html', context)
 
 
 @login_required
@@ -1066,19 +1221,3 @@ def get_post_comments(request, post_id):
             'success': False,
             'error': str(e)
         }, status=500)
-
-
-def ratelimited(request, exception):
-    """Custom view for when rate limit is exceeded"""
-    if request.headers.get('Content-Type') == 'application/json' or request.path.startswith('/api/'):
-        return JsonResponse({
-            'success': False,
-            'error': 'Rate limit exceeded. Please slow down and try again later.',
-            'code': 'RATE_LIMITED'
-        }, status=429)
-    
-    # For regular page requests, return a simple message
-    return HttpResponse(
-        'Rate limit exceeded. Please wait a moment before trying again.',
-        status=429
-    )

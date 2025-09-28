@@ -258,9 +258,11 @@
                     <div class="chat-message-header">
                         <div class="d-flex align-items-center">
                             {% with post.user|lookupavatar as avatar %}
-                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                 alt="Profile picture for {{ post.user.username }}" 
-                                 class="post-avatar me-2">
+                            <a href="{% url 'user_profile' post.user.id %}" class="post-avatar-link">
+                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                     alt="Profile picture for {{ post.user.username }}" 
+                                     class="post-avatar me-2">
+                            </a>
                             {% endwith %}
                             <span class="post-author me-2">{{ post.user.username }}</span>
                             <span class="post-time text-muted">{{ post.created_at|timesince }} ago</span>
@@ -442,9 +444,11 @@
                             <div class="player-preview-info">
                                 {% with player.userID|lookupavatar as avatar %}
                                 {% with player.userID|safe_username as username %}
-                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                     alt="Profile picture for {{ username }}" 
-                                     class="player-preview-avatar">
+                                <a href="{% url 'user_profile' player.userID %}" class="player-preview-link">
+                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                         alt="Profile picture for {{ username }}" 
+                                         class="player-preview-avatar">
+                                </a>
                                 <div class="player-preview-details">
                                     <div class="player-preview-name">{{ username|default:"Unknown Player" }}</div>
                                     <div class="player-preview-points">{{ player.total_points|default:0 }} points</div>
@@ -854,7 +858,9 @@
                 let html = `
                     <div class="comment-item" data-comment-id="${comment.id}" style="margin-left: ${indent}px;">
                         <div class="comment-header">
-                            <img src="${comment.avatar}" alt="${comment.user}" class="comment-avatar">
+                            <a href="/user/${comment.user_id}/" class="comment-avatar-link">
+                                <img src="${comment.avatar}" alt="${comment.user}" class="comment-avatar">
+                            </a>
                             <div class="comment-meta">
                                 <span class="comment-author">${comment.user}</span>
                                 <span class="comment-time">${comment.created_at}</span>

@@ -87,7 +87,13 @@ class userStatsAdmin(admin.ModelAdmin):
 
 @admin.register(currentSeason)
 class currentSeasonAdmin(admin.ModelAdmin):
-    list_display = ('season',)
+    list_display = ('season', 'display_name', 'get_display_season')
     list_filter = ('season',)
-    search_fields = ('season',)
+    search_fields = ('season', 'display_name')
     ordering = ('season',)
+    fields = ('season', 'display_name')
+    
+    def get_display_season(self, obj):
+        """Show the computed display season"""
+        return obj.get_display_season()
+    get_display_season.short_description = 'Computed Display Name'

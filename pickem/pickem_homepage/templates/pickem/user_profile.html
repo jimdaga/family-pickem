@@ -1,0 +1,614 @@
+{% extends 'pickem/base.html' %}
+{% load static %}
+
+{% block mobile_title %}
+    <div class="mobile-page-header">
+        <h2 class="mobile-title-text">
+            <i class="fas fa-user-circle me-2"></i>{{ profile_user.first_name|default:profile_user.username }}'s Profile
+        </h2>
+        {% if user_profile.tagline %}
+        <div class="mobile-subtitle">
+            {{ user_profile.tagline }}
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="container profile-main-container">
+        <div class="col">
+            <!-- Profile Header -->
+            <div class="section-container mb-4">
+                <div class="profile-header">
+                    <div class="profile-avatar-section">
+                        <img src="{{ profile_user.socialaccount_set.all.0.get_avatar_url }}" 
+                             alt="Profile picture" 
+                             class="profile-avatar">
+                        <div class="profile-basic-info">
+                            <h1 class="profile-name">
+                                {{ profile_user.first_name|default:profile_user.username }} 
+                                {{ profile_user.last_name }}
+                            </h1>
+                            {% if user_profile.tagline %}
+                            <p class="profile-tagline">{{ user_profile.tagline }}</p>
+                            {% endif %}
+                            {% if stats.favorite_team %}
+                            <div class="favorite-team">
+                                {% if stats.favorite_team_logo %}
+                                <img src="{{ stats.favorite_team_logo }}" alt="{{ stats.favorite_team }} logo" class="team-logo-small">
+                                {% endif %}
+                                <span>{{ stats.favorite_team }} Fan</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if is_own_profile %}
+                    <div class="profile-actions">
+                        <a href="{% url 'profile' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-edit me-1"></i>Edit Profile
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Season Achievement Highlights -->
+            {% if stats.seasons_won > 0 or stats.weeks_won_current_season > 0 %}
+            <div class="section-container mb-4">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-trophy me-2"></i>Achievements
+                    </h3>
+                </div>
+                <div class="achievements-grid">
+                    {% if stats.seasons_won > 0 %}
+                    <div class="achievement-badge champion-badge">
+                        <i class="fas fa-crown"></i>
+                        <div class="achievement-text">
+                            <div class="achievement-value">{{ stats.seasons_won }}</div>
+                            <div class="achievement-label">Season{{ stats.seasons_won|pluralize }} Won</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if stats.weeks_won_current_season > 0 %}
+                    <div class="achievement-badge weekly-winner-badge">
+                        <i class="fas fa-calendar-check"></i>
+                        <div class="achievement-text">
+                            <div class="achievement-value">{{ stats.weeks_won_current_season }}</div>
+                            <div class="achievement-label">Week{{ stats.weeks_won_current_season|pluralize }} Won This Season</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if stats.perfect_weeks > 0 %}
+                    <div class="achievement-badge perfect-week-badge">
+                        <i class="fas fa-bullseye"></i>
+                        <div class="achievement-text">
+                            <div class="achievement-value">{{ stats.perfect_weeks }}</div>
+                            <div class="achievement-label">Perfect Week{{ stats.perfect_weeks|pluralize }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Stats Overview -->
+            <div class="section-container mb-4">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-chart-line me-2"></i>Season {{ gameseason_display }} Stats
+                    </h3>
+                </div>
+                
+                <div class="stats-overview-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ stats.current_season_points }}</div>
+                            <div class="stat-label">Points</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">#{{ stats.current_season_rank }}</div>
+                            <div class="stat-label">Current Rank</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ stats.pick_accuracy_current }}%</div>
+                            <div class="stat-label">Pick Accuracy</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-week"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ stats.weeks_won_current_season }}</div>
+                            <div class="stat-label">Weeks Won</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lifetime Stats -->
+            {% if stats.years_playing > 1 %}
+            <div class="section-container mb-4">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-history me-2"></i>Lifetime Stats
+                    </h3>
+                </div>
+                
+                <div class="lifetime-stats-grid">
+                    <div class="lifetime-stat-item">
+                        <div class="lifetime-stat-label">Years Playing</div>
+                        <div class="lifetime-stat-value">{{ stats.years_playing }}</div>
+                    </div>
+                    
+                    <div class="lifetime-stat-item">
+                        <div class="lifetime-stat-label">Total Points</div>
+                        <div class="lifetime-stat-value">{{ stats.total_lifetime_points|floatformat:0 }}</div>
+                    </div>
+                    
+                    <div class="lifetime-stat-item">
+                        <div class="lifetime-stat-label">Best Season</div>
+                        <div class="lifetime-stat-value">{{ stats.best_season_points }} pts</div>
+                    </div>
+                    
+                    <div class="lifetime-stat-item">
+                        <div class="lifetime-stat-label">Total Weeks Won</div>
+                        <div class="lifetime-stat-value">{{ stats.weeks_won_total }}</div>
+                    </div>
+                    
+                    <div class="lifetime-stat-item">
+                        <div class="lifetime-stat-label">Lifetime Accuracy</div>
+                        <div class="lifetime-stat-value">{{ stats.pick_accuracy_lifetime }}%</div>
+                    </div>
+                    
+                    <div class="lifetime-stat-item">
+                        <div class="lifetime-stat-label">Total Picks Made</div>
+                        <div class="lifetime-stat-value">{{ stats.total_picks_made|floatformat:0 }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Activity Summary -->
+            <div class="section-container mb-4">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-chart-pie me-2"></i>Activity Summary
+                    </h3>
+                </div>
+                
+                <div class="activity-summary">
+                    <div class="activity-item">
+                        <i class="fas fa-comments"></i>
+                        <div class="activity-details">
+                            <div class="activity-value">{{ posts_count }}</div>
+                            <div class="activity-label">Message Board Post{{ posts_count|pluralize }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <i class="fas fa-check-circle"></i>
+                        <div class="activity-details">
+                            <div class="activity-value">{{ stats.correct_picks|floatformat:0 }}</div>
+                            <div class="activity-label">Correct Pick{{ stats.correct_picks|pluralize }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- No Stats Message -->
+            {% if stats.years_playing == 0 %}
+            <div class="section-container text-center">
+                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">{{ profile_user.first_name|default:profile_user.username }} hasn't started playing yet!</h4>
+                <p class="text-muted">Come back after they've submitted some picks to see their stats.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-main-container {
+    max-width: 1200px;
+    padding: 0 1rem;
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    padding: 2rem 1.5rem;
+}
+
+.profile-avatar-section {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid var(--bs-primary);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    transition: transform 0.3s ease;
+}
+
+.profile-avatar:hover {
+    transform: scale(1.05);
+}
+
+.profile-name {
+    margin: 0 0 0.5rem 0;
+    font-size: 2.2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.profile-tagline {
+    color: #6c757d;
+    font-style: italic;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.favorite-team {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #495057;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    background: rgba(var(--bs-primary-rgb), 0.1);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+}
+
+.favorite-team:hover {
+    background: rgba(var(--bs-primary-rgb), 0.15);
+    transform: translateY(-1px);
+}
+
+
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.achievement-badge {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.achievement-badge i {
+    font-size: 2rem;
+}
+
+.achievement-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.achievement-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.champion-badge {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #1a1a1a;
+}
+
+.weekly-winner-badge {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #1a1a1a;
+}
+
+.perfect-week-badge {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: #ffffff;
+}
+
+.stats-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem 1.75rem;
+    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+    border-radius: 16px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    min-height: 85px;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+.stat-card:hover::before {
+    opacity: 1;
+}
+
+.stat-icon {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, var(--bs-primary), var(--bs-info));
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.75rem;
+    box-shadow: 0 4px 15px rgba(var(--bs-primary-rgb), 0.3);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-icon {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(var(--bs-primary-rgb), 0.4);
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    flex-grow: 1;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #212529;
+    line-height: 1;
+    margin: 0;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.lifetime-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.25rem;
+}
+
+.lifetime-stat-item {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.lifetime-stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.lifetime-stat-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.lifetime-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #212529;
+    line-height: 1;
+}
+
+.activity-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.25rem;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+    border-radius: 16px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.activity-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--bs-primary), var(--bs-success));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.activity-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+.activity-item:hover::before {
+    opacity: 1;
+}
+
+.activity-item i {
+    font-size: 2.25rem;
+    color: var(--bs-primary);
+    transition: all 0.3s ease;
+}
+
+.activity-item:hover i {
+    transform: scale(1.1);
+    color: var(--bs-info);
+}
+
+.activity-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #212529;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.activity-label {
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+    .profile-main-container {
+        padding: 0 0.5rem;
+    }
+    
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem 1rem;
+        gap: 1.5rem;
+    }
+    
+    .profile-avatar-section {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .profile-name {
+        font-size: 1.8rem;
+    }
+    
+    .stats-overview-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .stat-card {
+        padding: 1.25rem 1.5rem;
+        min-height: 75px;
+    }
+    
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.6rem;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+    }
+    
+    .lifetime-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    
+    .lifetime-stat-item {
+        padding: 1rem 0.75rem;
+    }
+    
+    .lifetime-stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .activity-summary {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .activity-item {
+        padding: 1.25rem;
+        gap: 1rem;
+    }
+    
+    .activity-item i {
+        font-size: 2rem;
+    }
+    
+    .activity-value {
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %}

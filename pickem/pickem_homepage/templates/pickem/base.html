@@ -127,7 +127,7 @@
                             <a class="btn btn-gradient-primary btn-sm modern-btn" href="/picks" role="button">
                                 <i class="fas fa-edit me-1"></i>
                                 <span class="d-none d-md-inline">Submit Weekly Picks</span>
-                                <span class="d-inline d-md-none">Picks</span>
+                                <span class="d-inline d-md-none">Submit Weekly Picks</span>
                             </a>
                         </li>
 
@@ -148,7 +148,7 @@
                             
                             <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
                                 <li>
-                                    <a class="dropdown-item modern-dropdown-item" href="{% url 'profile' %}">
+                                    <a class="dropdown-item modern-dropdown-item" href="{% url 'user_profile' user.id %}">
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-user-circle me-2"></i>
                                             <div>
@@ -162,6 +162,11 @@
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item modern-dropdown-item" href="{% url 'profile' %}">
+                                        <i class="fas fa-edit me-2"></i>Edit Your Profile
+                                    </a>
+                                </li>
                                 <li>
                                     <a class="dropdown-item modern-dropdown-item" href="/logout">
                                         <i class="fas fa-sign-out-alt me-2"></i>Sign Out

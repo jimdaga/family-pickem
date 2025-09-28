@@ -97,9 +97,11 @@
                         {% with player.userID|lookupname as username %}
                         {% with player.userID|lookupavatar as avatar %}
                         <div class="winner-profile">
-                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                 alt="Profile picture for {{ username }}" 
-                                 class="winner-avatar">
+                            <a href="{% url 'user_profile' player.userID %}" class="winner-avatar-link">
+                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                     alt="Profile picture for {{ username }}" 
+                                     class="winner-avatar">
+                            </a>
                             <div class="winner-details">
                                 <h4 class="winner-name">{{ username|default:"Unknown Player" }}</h4>
                                 <div class="winner-badge">
@@ -136,9 +138,11 @@
                             {% with player.uid|lookupname as username %}
                             {% with player.uid|lookupavatar as avatar %}
                             <div class="player-info">
-                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                     alt="Profile picture for {{ username }}" 
-                                     class="player-mini-avatar">
+                                <a href="{% url 'user_profile' player.uid %}" class="player-mini-avatar-link">
+                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                         alt="Profile picture for {{ username }}" 
+                                         class="player-mini-avatar">
+                                </a>
                                 <div class="player-details">
                                     <div class="player-name">{{ username|default:"Unknown Player" }}</div>
                                 </div>
@@ -158,9 +162,11 @@
                             {% with player|lookupname as username %}
                             {% with player|lookupavatar as avatar %}
                             <div class="player-info">
-                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                     alt="Profile picture for {{ username }}" 
-                                     class="player-mini-avatar">
+                                <a href="{% url 'user_profile' player %}" class="player-mini-avatar-link">
+                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                         alt="Profile picture for {{ username }}" 
+                                         class="player-mini-avatar">
+                                </a>
                                 <div class="player-details">
                                     <div class="player-name">{{ username|default:"Unknown Player" }}</div>
                                 </div>
@@ -687,9 +693,11 @@
                         {% with player.userID|lookupname as username %}
                         {% with player.userID|lookupavatar as avatar %}
                         <div class="winner-profile">
-                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                 alt="Profile picture for {{ username }}" 
-                                 class="winner-avatar">
+                            <a href="{% url 'user_profile' player.userID %}" class="winner-avatar-link">
+                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                     alt="Profile picture for {{ username }}" 
+                                     class="winner-avatar">
+                            </a>
                             <div class="winner-details">
                                 <h4 class="winner-name">{{ username|default:"Unknown Player" }}</h4>
                                 <div class="winner-badge">
@@ -719,9 +727,11 @@
                             {% with player.uid|lookupname as username %}
                             {% with player.uid|lookupavatar as avatar %}
                             <div class="player-info">
-                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                     alt="Profile picture for {{ username }}" 
-                                     class="player-mini-avatar">
+                                <a href="{% url 'user_profile' player.uid %}" class="player-mini-avatar-link">
+                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                         alt="Profile picture for {{ username }}" 
+                                         class="player-mini-avatar">
+                                </a>
                                 <div class="player-details">
                                     <div class="player-name">{{ username|default:"Unknown Player" }}</div>
                                 </div>
@@ -741,9 +751,11 @@
                             {% with player|lookupname as username %}
                             {% with player|lookupavatar as avatar %}
                             <div class="player-info">
-                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                     alt="Profile picture for {{ username }}" 
-                                     class="player-mini-avatar">
+                                <a href="{% url 'user_profile' player %}" class="player-mini-avatar-link">
+                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                         alt="Profile picture for {{ username }}" 
+                                         class="player-mini-avatar">
+                                </a>
                                 <div class="player-details">
                                     <div class="player-name">{{ username|default:"Unknown Player" }}</div>
                                 </div>
@@ -1184,6 +1196,13 @@
                         currentGame.innerHTML = newGames[index].innerHTML;
                         currentGame.setAttribute('data-game-status', newStatus);
                         
+                        // Re-apply dark mode styles after content update
+                        setTimeout(() => {
+                            if (typeof forceDarkModeScores === 'function') {
+                                forceDarkModeScores();
+                            }
+                        }, 10);
+                        
                         // Add update animation
                         currentGame.style.animation = 'none';
                         currentGame.offsetHeight; // Trigger reflow
@@ -1424,15 +1443,18 @@
                 name.style.setProperty('color', '#ffffff', 'important');
             });
             
-            // Fix total-score elements to have light text
+            // Fix total-score elements with modern styling
             const totalScoreElements = document.querySelectorAll('.total-score');
             console.log(`Found ${totalScoreElements.length} total-score elements`);
             totalScoreElements.forEach((score, index) => {
-                console.log(`Setting total-score ${index} to white`);
-                score.style.setProperty('color', '#ffffff', 'important');
+                console.log(`Setting total-score ${index} to modern light gray`);
+                score.style.setProperty('color', '#e8e8e8', 'important');
                 score.style.setProperty('text-shadow', 'none', 'important');
                 score.style.setProperty('opacity', '1', 'important');
-                score.style.setProperty('font-weight', '800', 'important');
+                score.style.setProperty('font-weight', '700', 'important');
+                score.style.setProperty('background', 'transparent', 'important');
+                score.style.setProperty('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif', 'important');
+                score.style.setProperty('letter-spacing', '-0.5px', 'important');
             });
             
             // 7b. Fix LIVE button containers specifically

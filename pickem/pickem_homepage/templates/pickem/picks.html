@@ -81,14 +81,18 @@
             <div class="section-container mb-4">
                 <div class="section-header">
                     <h3 class="section-title">
-                        <i class="fas fa-football-ball me-2"></i>Make Your Picks
-                        <span class="games-remaining-badge">
-                            {% with game_list|length as total_games %}
-                            {% with pick_slugs|length as submitted_picks %}
-                            {{ total_games|sub:submitted_picks }} remaining
-                            {% endwith %}
-                            {% endwith %}
-                        </span>
+                        {% with game_list|length as total_games %}
+                        {% with pick_slugs|length as submitted_picks %}
+                        {% if total_games == submitted_picks and total_games > 0 %}
+                            <i class="fas fa-check-circle me-2"></i>You've submitted all your picks!
+                        {% else %}
+                            <i class="fas fa-football-ball me-2"></i>Make Your Picks
+                            <span class="games-remaining-badge">
+                                {{ total_games|sub:submitted_picks }} remaining
+                            </span>
+                        {% endif %}
+                        {% endwith %}
+                        {% endwith %}
                     </h3>
                 </div>
                 

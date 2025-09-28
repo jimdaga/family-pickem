@@ -18,6 +18,7 @@ urlpatterns = [
     path('picks/', views.submit_game_picks, name='game_picks'),
     path('picks/edit/', views.edit_game_pick, name='edit_game_pick'),
     path('profile/', views.profile, name='profile'),
+    path('user/<int:user_id>/', views.user_profile, name='user_profile'),
     path('check-username/', views.check_username, name='check_username'),
     path('toggle-theme/', views.toggle_theme, name='toggle_theme'),
     

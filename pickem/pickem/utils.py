@@ -2,11 +2,23 @@ from datetime import date, datetime, time
 import pytz
 from pickem_api.models import currentSeason
 
-def get_season():
-    """Get the current season from the database"""
+def get_season(display_name=False):
+    """Get the current season from the database
+    
+    Args:
+        display_name (bool): If True, return the user-friendly display name instead of the season number
+    
+    Returns:
+        int or str: Season number (int) or display name (str) depending on display_name parameter
+    """
     try:
-        return currentSeason.objects.first().season
+        season_obj = currentSeason.objects.first()
+        if display_name:
+            return season_obj.get_display_season()
+        return season_obj.season
     except (currentSeason.DoesNotExist, AttributeError):
+        if display_name:
+            return "2024-2025"  # Default display season if none found
         return 2024  # Default season if none found
 
 def get_sunday_1pm_est_cutoff(week_games):

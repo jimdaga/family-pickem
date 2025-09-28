@@ -25,9 +25,6 @@
                 <h2 class="page-title">
                     <i class="fas fa-trophy me-3"></i>League Standings
                 </h2>
-                <p class="page-subtitle">
-                    Track your picks, celebrate your wins
-                </p>
             </div>
 
             <!-- Season Champion Section (if exists) -->
@@ -42,9 +39,11 @@
                         {% with season_winner.userID|safe_username as champion_name %}
                         {% with season_winner.userID|lookupavatar as champion_avatar %}
                         <div class="champion-info">
-                            <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                 alt="Profile picture for {{ champion_name }}" 
-                                 class="champion-avatar">
+                            <a href="{% url 'user_profile' season_winner.userID %}" class="champion-avatar-link">
+                                <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                     alt="Profile picture for {{ champion_name }}" 
+                                     class="champion-avatar">
+                            </a>
                             <div class="champion-details">
                                 <h4 class="champion-name">{{ champion_name|default:"Unknown Champion" }}</h4>
                                 <p class="champion-subtitle">Congratulations on your victory!</p>
@@ -87,30 +86,35 @@
                 
                 <div class="leaderboard-container">
                     {% for player in player_points %}
-                    <div class="leaderboard-card position-relative">
-                        {% with player.userID|safe_username as username %}
-                        {% with player.userID|lookupavatar as avatar %}
-                        
-                        <!-- Rank Badge -->
-                        <div class="rank-badge {% if forloop.counter == 1 %}rank-first{% elif forloop.counter == 2 %}rank-second{% elif forloop.counter == 3 %}rank-third{% endif %}">
-                            <span class="rank-number">{{ forloop.counter }}</span>
-                        </div>
-                        
-                        <div class="player-info d-flex align-items-center">
-                            <img class="player-avatar me-3" src="{{ avatar }}" alt="Profile picture for {{ username }}">
-                            <div class="player-details flex-grow-1">
-                                <h5 class="player-name mb-1">{{ username }}</h5>
-                                <small class="text-muted">{{ player.userID|lookuptagline }}</small>
+                    <a href="{% url 'user_profile' player.userID %}" class="leaderboard-card-link">
+                        <div class="leaderboard-card d-flex align-items-center">
+                            {% with player.userID|safe_username as username %}
+                            {% with player.userID|lookupavatar as avatar %}
+                            
+                            <!-- Rank Number (Left) -->
+                            <div class="rank-number-left">
+                                {{ forloop.counter }}
                             </div>
-                            <div class="points-display">
+                            
+                            <!-- Player Info (Center) -->
+                            <div class="player-info-center d-flex align-items-center flex-grow-1">
+                                <img class="player-avatar me-3" src="{{ avatar }}" alt="Profile picture for {{ username }}">
+                                <div class="player-details">
+                                    <h5 class="player-name mb-1">{{ username }}</h5>
+                                    <small class="text-muted">{{ player.userID|lookuptagline }}</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Points (Right) -->
+                            <div class="points-display-right">
                                 <div class="points-number">{{ player.total_points|default:0 }}</div>
-                                <small class="points-label">points</small>
+                                <small class="points-label">POINTS</small>
                             </div>
+                            
+                            {% endwith %}
+                            {% endwith %}
                         </div>
-                        
-                        {% endwith %}
-                        {% endwith %}
-                    </div>
+                    </a>
                     {% empty %}
                     <div class="empty-state">
                         <i class="fas fa-users text-muted mb-3"></i>
@@ -138,7 +142,9 @@
                                     {% with x.userID|safe_username as username %}
                                     {% with x.userID|lookupavatar as avatar %}
                                     <div class="winner-display">
-                                        <img class="winner-avatar mb-2" src="{{ avatar }}" alt="Profile picture for {{ username }}">
+                                        <a href="{% url 'user_profile' x.userID %}" class="winner-avatar-link">
+                                            <img class="winner-avatar mb-2" src="{{ avatar }}" alt="Profile picture for {{ username }}">
+                                        </a>
                                         <div class="winner-details">
                                             <div class="winner-name">
                                                 <i class="fas fa-trophy text-warning me-1"></i>
@@ -179,7 +185,9 @@
                         {% with player.userID|safe_username as username %}
                         <div class="player-card-header d-flex align-items-center mb-3">
                             {% with player.userID|lookupavatar as avatar %}
-                            <img class="player-profile-img me-3" src="{{ avatar }}" alt="Profile picture for {{ username }}">
+                            <a href="{% url 'user_profile' player.userID %}" class="player-profile-link">
+                                <img class="player-profile-img me-3" src="{{ avatar }}" alt="Profile picture for {{ username }}">
+                            </a>
                             {% endwith %}
                             <div class="flex-grow-1">
                                 <h5 class="mb-0 text-uppercase">{{ username }}</h5>
