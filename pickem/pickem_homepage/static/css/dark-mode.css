@@ -391,12 +391,20 @@
 [data-bs-theme="dark"] .game-info-bar,
 [data-bs-theme="dark"] .teams-matchup,
 [data-bs-theme="dark"] .team-score-row,
-[data-bs-theme="dark"] .picks-section,
-[data-bs-theme="dark"] .team-picks-group,
-[data-bs-theme="dark"] .user-pick-section,
-[data-bs-theme="dark"] .missing-picks-section {
-  background-color: var(--bs-quaternary-bg) !important;
+[data-bs-theme="dark"] .picks-section {
+  background: transparent !important;
+  background-color: transparent !important;
   border: 1px solid var(--bs-border-color) !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .user-pick-section,
+[data-bs-theme="dark"] .missing-picks-section,
+[data-bs-theme="dark"] .team-picks-group {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 1px solid var(--bs-border-color) !important;
+  color: #ffffff !important;
 }
 
 /* ============================================ */
@@ -2396,7 +2404,7 @@ html[data-bs-theme="dark"] body .time-group-full-width {
 
 [data-bs-theme="dark"] .picks-header {
   color: #ffffff !important;
-  background: var(--bs-quaternary-bg) !important;
+  background: transparent !important;
 }
 
 [data-bs-theme="dark"] .team-picks-group {
@@ -2405,7 +2413,7 @@ html[data-bs-theme="dark"] body .time-group-full-width {
 }
 
 [data-bs-theme="dark"] .team-picks-header {
-  background: var(--bs-quaternary-bg) !important;
+  background: transparent !important;
   color: #ffffff !important;
 }
 
@@ -2435,15 +2443,17 @@ html[data-bs-theme="dark"] body .time-group-full-width {
   color: #000000 !important;
 }
 
-/* User pick section */
+/* User pick section - transparent background but keep dark mode text styling */
 [data-bs-theme="dark"] .user-pick-section {
-  background: var(--bs-secondary-bg) !important;
+  background: transparent !important;
+  background-color: transparent !important;
   border: 1px solid var(--bs-border-color) !important;
+  color: #ffffff !important;
 }
 
 [data-bs-theme="dark"] .user-pick-header {
   color: #ffffff !important;
-  background: var(--bs-quaternary-bg) !important;
+  background: transparent !important;
 }
 
 [data-bs-theme="dark"] .user-pick-team {
@@ -2583,15 +2593,17 @@ html[data-bs-theme="dark"] body .time-group-full-width {
   padding: 0 0.5rem !important;
 }
 
-/* Missing picks section */
+/* Missing picks section - transparent background but keep dark mode text styling */
 [data-bs-theme="dark"] .missing-picks-section {
-  background: var(--bs-secondary-bg) !important;
+  background: transparent !important;
+  background-color: transparent !important;
   border: 1px solid var(--bs-border-color) !important;
+  color: #ffffff !important;
 }
 
 [data-bs-theme="dark"] .missing-picks-header {
   color: #ffffff !important;
-  background: var(--bs-quaternary-bg) !important;
+  background: transparent !important;
 }
 
 [data-bs-theme="dark"] .missing-pick-badge {
@@ -2724,14 +2736,7 @@ html[data-bs-theme="dark"] .scores-main-container .score-label {
   color: #ffffff !important;
 }
 
-/* FORCE override YOUR PICK section */
-html[data-bs-theme="dark"] .scores-main-container .user-pick-section,
-html[data-bs-theme="dark"] body .scores-main-container .user-pick-section {
-  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
-  background-color: #333333 !important;
-  color: #ffffff !important;
-  border: 1px solid var(--bs-border-color) !important;
-}
+/* REMOVED - Let YOUR PICK section use transparent background */
 
 html[data-bs-theme="dark"] .scores-main-container .user-pick-header,
 html[data-bs-theme="dark"] .scores-main-container .user-pick-team {
@@ -2739,14 +2744,7 @@ html[data-bs-theme="dark"] .scores-main-container .user-pick-team {
   background: transparent !important;
 }
 
-/* FORCE override MISSING PICKS section */
-html[data-bs-theme="dark"] .scores-main-container .missing-picks-section,
-html[data-bs-theme="dark"] body .scores-main-container .missing-picks-section {
-  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
-  background-color: #333333 !important;
-  color: #ffffff !important;
-  border: 1px solid var(--bs-border-color) !important;
-}
+/* REMOVED - Let MISSING PICKS section use transparent background */
 
 html[data-bs-theme="dark"] .scores-main-container .missing-picks-header {
   color: #ffffff !important;
@@ -2756,17 +2754,7 @@ html[data-bs-theme="dark"] .scores-main-container .missing-picks-header {
 /* SCORES PAGE SPECIFIC FIXES */
 
 /* 1. Make team scores more visible */
-html[data-bs-theme="dark"] .scores-main-container .total-score {
-  background: transparent !important;
-  color: #e8e8e8 !important;
-  font-weight: 700 !important;
-  font-size: 2rem !important;
-  text-shadow: none !important;
-  opacity: 1 !important;
-  filter: none !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
-  letter-spacing: -0.5px !important;
-}
+/* REMOVED - Let total-score use default light mode colors */
 
 html[data-bs-theme="dark"] .scores-main-container .quarter-score {
   background: #2a2a2a !important;
@@ -2795,7 +2783,7 @@ html[data-bs-theme="dark"] .scores-main-container .picks-section {
 }
 
 html[data-bs-theme="dark"] .scores-main-container .picks-header {
-  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%) !important;
+  background: transparent !important;
   color: #ffffff !important;
   border-bottom: 1px solid #555555 !important;
 }
@@ -2806,18 +2794,14 @@ html[data-bs-theme="dark"] .scores-main-container .team-picks-group {
 }
 
 html[data-bs-theme="dark"] .scores-main-container .team-picks-header {
-  background: #1a1a1a !important;
+  background: transparent !important;
   color: #ffffff !important;
 }
 
-/* 4. Fix Your Pick section background */
-html[data-bs-theme="dark"] .scores-main-container .user-pick-section {
-  background: linear-gradient(135deg, #1a4c2b 0%, #2d5a3d 100%) !important;
-  border: 2px solid #28a745 !important;
-}
+/* REMOVED - Let Your Pick section use transparent background */
 
 html[data-bs-theme="dark"] .scores-main-container .user-pick-header {
-  background: linear-gradient(135deg, #0d2818 0%, #1a4c2b 100%) !important;
+  background: transparent !important;
   color: #ffffff !important;
   border-bottom: 1px solid #28a745 !important;
 }
@@ -2827,16 +2811,11 @@ html[data-bs-theme="dark"] .scores-main-container .user-pick-display {
   color: #ffffff !important;
 }
 
-/* 5. Soften Missing Picks section - remove harsh red */
-html[data-bs-theme="dark"] .scores-main-container .missing-picks-section {
-  background: linear-gradient(135deg, #4a3a2a 0%, #5a4a3a 100%) !important;
-  border: 1px solid #8a7a6a !important;
-  color: #ffffff !important;
-}
+/* REMOVED - Let Missing Picks section use transparent background */
 
 html[data-bs-theme="dark"] .scores-main-container .missing-picks-header {
-  background: linear-gradient(135deg, #3a2a1a 0%, #4a3a2a 100%) !important;
-  color: #f0e0d0 !important;
+  background: transparent !important;
+  color: #ffffff !important;
   border-bottom: 1px solid #8a7a6a !important;
 }
 
@@ -3641,20 +3620,7 @@ html[data-bs-theme="dark"] body .scores-main-container .stat-value {
   color: var(--bs-secondary-color);
 }
 
-/* Modern total score styling for dark mode */
-html[data-bs-theme="dark"] .game-score-card .score-breakdown .total-score {
-  color: #e8e8e8 !important;
-  text-shadow: none !important;
-  opacity: 1 !important;
-  font-weight: 700 !important;
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  filter: none !important;
-  font-size: 2rem !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
-  letter-spacing: -0.5px !important;
-}
+/* REMOVED - Let total-score use default light mode colors */
 
 /* Fix quarter scores too for consistency */
 [data-bs-theme="dark"] .quarter-score {

@@ -1044,29 +1044,7 @@
             border: 1px solid #1e7e34 !important;
         }
         
-        /* Make Player Picks and Your Pick sections match the main card */
-        [data-bs-theme="dark"] .picks-section,
-        [data-bs-theme="dark"] .user-pick-section {
-            background: #404040 !important;
-            background-color: #404040 !important;
-            border: 1px solid #555555 !important;
-            border-top: 2px solid #666666 !important;
-        }
-        
-        [data-bs-theme="dark"] .picks-header,
-        [data-bs-theme="dark"] .user-pick-header {
-            background: #333333 !important;
-            background-color: #333333 !important;
-            color: #ffffff !important;
-            border-bottom: 1px solid #555555 !important;
-        }
-        
-        [data-bs-theme="dark"] .missing-picks-section {
-            background: linear-gradient(135deg, #4a3a2a 0%, #5a4a3a 100%) !important;
-            background-color: #4a3a2a !important;
-            border: 1px solid #8a7a6a !important;
-            color: #ffffff !important;
-        }
+        /* REMOVED - Let pick sections use transparent background in dark mode */
         [data-bs-theme="dark"] .missing-pick-badge {
             background: #6a5a4a !important;
             background-color: #6a5a4a !important;
@@ -1443,18 +1421,14 @@
                 name.style.setProperty('color', '#ffffff', 'important');
             });
             
-            // Fix total-score elements with modern styling
+            // Remove any dark mode styling from total-score elements to let them use default light mode colors
             const totalScoreElements = document.querySelectorAll('.total-score');
-            console.log(`Found ${totalScoreElements.length} total-score elements`);
-            totalScoreElements.forEach((score, index) => {
-                console.log(`Setting total-score ${index} to modern light gray`);
-                score.style.setProperty('color', '#e8e8e8', 'important');
-                score.style.setProperty('text-shadow', 'none', 'important');
-                score.style.setProperty('opacity', '1', 'important');
-                score.style.setProperty('font-weight', '700', 'important');
-                score.style.setProperty('background', 'transparent', 'important');
-                score.style.setProperty('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif', 'important');
-                score.style.setProperty('letter-spacing', '-0.5px', 'important');
+            totalScoreElements.forEach((score) => {
+                // Remove any inline styles that might be interfering
+                score.removeAttribute('style');
+                
+                // Remove any dark mode classes
+                score.classList.remove('dark-mode-override');
             });
             
             // 7b. Fix LIVE button containers specifically
@@ -1475,50 +1449,11 @@
                 el.style.setProperty('color', '#ffffff', 'important');
             });
             
-            // 9. Fix Player Picks sections - match main card background
-            const picksSections = document.querySelectorAll('.picks-section');
-            console.log(`Found ${picksSections.length} picks sections`);
-            picksSections.forEach(section => {
-                section.style.setProperty('background', '#404040', 'important');
-                section.style.setProperty('background-color', '#404040', 'important');
-                section.style.setProperty('border', '1px solid #555555', 'important');
-                section.style.setProperty('border-top', '2px solid #666666', 'important');
-            });
+            // REMOVED - Let Player Picks sections use transparent background
             
-            const picksHeaders = document.querySelectorAll('.picks-header');
-            picksHeaders.forEach(header => {
-                header.style.setProperty('background', '#333333', 'important');
-                header.style.setProperty('background-color', '#333333', 'important');
-                header.style.setProperty('color', '#ffffff', 'important');
-                header.style.setProperty('border-bottom', '1px solid #555555', 'important');
-            });
+            // REMOVED - Let Your Pick sections use transparent background
             
-            // 9b. Fix Your Pick sections - match main card background
-            const userPickSections = document.querySelectorAll('.user-pick-section');
-            console.log(`Found ${userPickSections.length} user pick sections`);
-            userPickSections.forEach(section => {
-                section.style.setProperty('background', '#404040', 'important');
-                section.style.setProperty('background-color', '#404040', 'important');
-                section.style.setProperty('border', '1px solid #555555', 'important');
-                section.style.setProperty('border-top', '2px solid #666666', 'important');
-            });
-            
-            const userPickHeaders = document.querySelectorAll('.user-pick-header');
-            userPickHeaders.forEach(header => {
-                header.style.setProperty('background', '#333333', 'important');
-                header.style.setProperty('background-color', '#333333', 'important');
-                header.style.setProperty('color', '#ffffff', 'important');
-                header.style.setProperty('border-bottom', '1px solid #555555', 'important');
-            });
-            
-            // 10. Fix Missing Picks sections - softer colors
-            const missingPicksSections = document.querySelectorAll('.missing-picks-section');
-            missingPicksSections.forEach(section => {
-                section.style.setProperty('background', 'linear-gradient(135deg, #4a3a2a 0%, #5a4a3a 100%)', 'important');
-                section.style.setProperty('background-color', '#4a3a2a', 'important');
-                section.style.setProperty('border', '1px solid #8a7a6a', 'important');
-                section.style.setProperty('color', '#ffffff', 'important');
-            });
+            // REMOVED - Let Missing Picks sections use transparent background
             
             const missingPickBadges = document.querySelectorAll('.missing-pick-badge');
             missingPickBadges.forEach(badge => {
