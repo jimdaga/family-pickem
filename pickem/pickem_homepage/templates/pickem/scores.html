@@ -526,21 +526,30 @@
                                                     {% with pick.uid|lookupavatar as avatar %}
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
-                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                 alt="{{ username|default:'Unknown' }}" 
-                                                                 class="pick-avatar pick-correct" 
-                                                                 title="{{ username|default:'Unknown' }} - Correct Pick">
+                                                            <div class="pick-player">
+                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                     alt="{{ username|default:'Unknown' }}" 
+                                                                     class="pick-avatar pick-correct" 
+                                                                     title="{{ username|default:'Unknown' }} - Correct Pick">
+                                                                <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                            </div>
                                                         {% else %}
-                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                 alt="{{ username|default:'Unknown' }}" 
-                                                                 class="pick-avatar pick-incorrect" 
-                                                                 title="{{ username|default:'Unknown' }} - Incorrect Pick">
+                                                            <div class="pick-player">
+                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                     alt="{{ username|default:'Unknown' }}" 
+                                                                     class="pick-avatar pick-incorrect" 
+                                                                     title="{{ username|default:'Unknown' }} - Incorrect Pick">
+                                                                <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                            </div>
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
-                                                        <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                             alt="{{ username|default:'Unknown' }}" 
-                                                             class="pick-avatar pick-pending" 
-                                                             title="{{ username|default:'Unknown' }} - Game In Progress">
+                                                        <div class="pick-player">
+                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                 alt="{{ username|default:'Unknown' }}" 
+                                                                 class="pick-avatar pick-pending" 
+                                                                 title="{{ username|default:'Unknown' }} - Game In Progress">
+                                                            <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                        </div>
                                                     {% endif %}
                                                         {% if pick.tieBreakerScore != None %}
                                                         <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
@@ -573,21 +582,30 @@
                                                     {% with pick.uid|lookupavatar as avatar %}
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
-                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                 alt="{{ username|default:'Unknown' }}" 
-                                                                 class="pick-avatar pick-correct" 
-                                                                 title="{{ username|default:'Unknown' }} - Correct Pick">
+                                                            <div class="pick-player">
+                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                     alt="{{ username|default:'Unknown' }}" 
+                                                                     class="pick-avatar pick-correct" 
+                                                                     title="{{ username|default:'Unknown' }} - Correct Pick">
+                                                                <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                            </div>
                                                         {% else %}
-                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                 alt="{{ username|default:'Unknown' }}" 
-                                                                 class="pick-avatar pick-incorrect" 
-                                                                 title="{{ username|default:'Unknown' }} - Incorrect Pick">
+                                                            <div class="pick-player">
+                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                     alt="{{ username|default:'Unknown' }}" 
+                                                                     class="pick-avatar pick-incorrect" 
+                                                                     title="{{ username|default:'Unknown' }} - Incorrect Pick">
+                                                                <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                            </div>
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
-                                                        <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                             alt="{{ username|default:'Unknown' }}" 
-                                                             class="pick-avatar pick-pending" 
-                                                             title="{{ username|default:'Unknown' }} - Game In Progress">
+                                                        <div class="pick-player">
+                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                 alt="{{ username|default:'Unknown' }}" 
+                                                                 class="pick-avatar pick-pending" 
+                                                                 title="{{ username|default:'Unknown' }} - Game In Progress">
+                                                            <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                        </div>
                                                     {% endif %}
                                                         {% if pick.tieBreakerScore != None %}
                                                         <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
@@ -1077,8 +1095,32 @@
         .team-picks-name {
             font-weight: 600;
             font-size: 0.9rem;
-            color: #495057;
+            color: #ffffff;
             margin-bottom: 4px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Pick player container and username styling */
+        .pick-player {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            margin: 0.25rem;
+            min-width: 60px;
+        }
+        
+        .pick-username {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #2c3e50;
+            text-align: center;
+            text-transform: uppercase;
+            line-height: 1.1;
+            max-width: 60px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
         }
         
         .tiebreaker-mini {
@@ -1260,6 +1302,11 @@
         }
         
         [data-bs-theme="dark"] .team-picks-name {
+            color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+        }
+        
+        [data-bs-theme="dark"] .pick-username {
             color: #e9ecef !important;
         }
         
@@ -1274,6 +1321,25 @@
         
         [data-bs-theme="dark"] .no-picks-message {
             color: #adb5bd !important;
+        }
+        
+        /* Mobile responsive styles for pick usernames */
+        @media (max-width: 768px) {
+            .pick-player {
+                min-width: 50px;
+                gap: 0.2rem;
+                margin: 0.2rem;
+            }
+            
+            .pick-username {
+                font-size: 0.7rem;
+                max-width: 50px;
+            }
+            
+            .pick-avatar {
+                width: 40px;
+                height: 40px;
+            }
         }
         
     `;
