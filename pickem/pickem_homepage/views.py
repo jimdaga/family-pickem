@@ -801,14 +801,11 @@ def user_profile(request, user_id):
                     weeks_won_this_season += 1
         stats['weeks_won_current_season'] = weeks_won_this_season
         
-        # Count perfect weeks (bonus points)
-        perfect_weeks = 0
-        for week in range(1, 19):
-            if hasattr(season_points, f'week_{week}_bonus'):
-                bonus = getattr(season_points, f'week_{week}_bonus', 0)
-                if bonus and bonus > 0:
-                    perfect_weeks += 1
-        stats['perfect_weeks'] = perfect_weeks
+        # Get perfect weeks from userStats (authoritative source)
+        if user_stats_obj:
+            stats['perfect_weeks'] = user_stats_obj.perfectWeeksSeason or 0
+        else:
+            stats['perfect_weeks'] = 0
     
     # Lifetime stats
     if all_season_points.exists():
@@ -1015,6 +1012,20 @@ def user_profile(request, user_id):
         team_chart_logos = ['/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg']
         team_chart_colors = modern_colors[:6]  # Use first 6 modern colors
     
+    # Find teams tied for most picked (same percentage)
+    most_picked_teams = []
+    if team_chart_data:
+        max_percentage = team_chart_data[0]  # Highest percentage (first in sorted list)
+        for i, percentage in enumerate(team_chart_data):
+            if percentage == max_percentage:
+                most_picked_teams.append({
+                    'slug': team_chart_slugs[i],
+                    'label': team_chart_labels[i],
+                    'percentage': percentage
+                })
+            else:
+                break  # Since it's sorted, we can stop at first lower percentage
+    
     # User stats data
     if user_stats_obj:
         stats['pick_accuracy_current'] = user_stats_obj.pickPercentSeason or 0
@@ -1063,6 +1074,7 @@ def user_profile(request, user_id):
         'team_chart_colors': team_chart_colors,
         'team_chart_slugs': team_chart_slugs,
         'team_chart_logos': team_chart_logos,
+        'most_picked_teams': most_picked_teams,
     }
     
     return render(request, 'pickem/user_profile.html', context)

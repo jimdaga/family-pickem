@@ -33,10 +33,9 @@
             <div class="online-indicator"></div>
         </div>
         <h2 class="profile-name">
-            {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} 
-            {{ user.socialaccount_set.all.0.extra_data.family_name }}
+            {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} {{ user.socialaccount_set.all.0.extra_data.family_name }}
         </h2>
-        <p class="profile-email text-muted">{{ user.email }}</p>
+        <h3 class="profile-email text-muted">{{ user.email }}</h3>
     </div>
 
     <!-- Profile Content Grid -->
