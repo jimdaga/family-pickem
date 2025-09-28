@@ -845,8 +845,8 @@ def user_profile(request, user_id):
         # Years playing
         stats['years_playing'] = all_season_points.values('gameseason').distinct().count()
     
-    # Calculate team pick statistics for pie chart
-    user_picks = GamePicks.objects.filter(userID=str(user_id))
+    # Calculate team pick statistics for pie chart (current season only to match stats page)
+    user_picks = GamePicks.objects.filter(userID=str(user_id), gameseason=gameseason)
     team_pick_stats = user_picks.values('pick').annotate(
         count=Count('pick')
     ).order_by('-count')
@@ -860,6 +860,42 @@ def user_profile(request, user_id):
     # Debug print
     print(f"DEBUG: User {user_id} has {total_picks} total picks")
     print(f"DEBUG: Team pick stats: {list(team_pick_stats)}")
+    
+    # NFL team slug to abbreviation mapping
+    team_abbreviations = {
+        'arizona-cardinals': 'ARI',
+        'atlanta-falcons': 'ATL',
+        'baltimore-ravens': 'BAL',
+        'buffalo-bills': 'BUF',
+        'carolina-panthers': 'CAR',
+        'chicago-bears': 'CHI',
+        'cincinnati-bengals': 'CIN',
+        'cleveland-browns': 'CLE',
+        'dallas-cowboys': 'DAL',
+        'denver-broncos': 'DEN',
+        'detroit-lions': 'DET',
+        'green-bay-packers': 'GB',
+        'houston-texans': 'HOU',
+        'indianapolis-colts': 'IND',
+        'jacksonville-jaguars': 'JAX',
+        'kansas-city-chiefs': 'KC',
+        'las-vegas-raiders': 'LV',
+        'los-angeles-chargers': 'LAC',
+        'los-angeles-rams': 'LAR',
+        'miami-dolphins': 'MIA',
+        'minnesota-vikings': 'MIN',
+        'new-england-patriots': 'NE',
+        'new-orleans-saints': 'NO',
+        'new-york-giants': 'NYG',
+        'new-york-jets': 'NYJ',
+        'philadelphia-eagles': 'PHI',
+        'pittsburgh-steelers': 'PIT',
+        'san-francisco-49ers': 'SF',
+        'seattle-seahawks': 'SEA',
+        'tampa-bay-buccaneers': 'TB',
+        'tennessee-titans': 'TEN',
+        'washington-commanders': 'WAS',
+    }
     
     # NFL team colors mapping (simplified)
     team_colors = {
@@ -939,12 +975,12 @@ def user_profile(request, user_id):
     
     if total_picks > 0:
         for i, team_stat in enumerate(team_pick_stats):
-            team_name = team_stat['pick']
+            team_slug = team_stat['pick']
             pick_count = team_stat['count']
             percentage = round((pick_count / total_picks) * 100, 1)
             
-            # Clean up team name for display
-            display_name = team_name.replace('-', ' ').title()
+            # Get team abbreviation from mapping, fallback to cleaned name if not found
+            display_name = team_abbreviations.get(team_slug, team_slug.replace('-', ' ').title())
             
             team_chart_data.append(percentage)
             team_chart_labels.append(display_name)
@@ -955,7 +991,7 @@ def user_profile(request, user_id):
         # Add sample data for testing when user has no picks yet
         print(f"DEBUG: No picks found for user {user_id}, adding sample data")
         team_chart_data = [35.2, 18.7, 15.3, 12.8, 8.5, 9.5]
-        team_chart_labels = ['New England Patriots', 'Dallas Cowboys', 'Green Bay Packers', 'Kansas City Chiefs', 'Buffalo Bills', 'Other Teams']
+        team_chart_labels = ['NE', 'DAL', 'GB', 'KC', 'BUF', 'Other']
         team_chart_colors = modern_colors[:6]  # Use first 6 modern colors
     
     # User stats data

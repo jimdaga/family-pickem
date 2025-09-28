@@ -42,15 +42,17 @@
                             {% endif %}
                         </div>
                     </div>
-                    
-                    {% if is_own_profile %}
-                    <div class="profile-actions">
+                </div>
+                
+                {% if is_own_profile %}
+                <div class="profile-actions-row">
+                    <div class="d-flex justify-content-center w-100">
                         <a href="{% url 'profile' %}" class="btn btn-outline-primary">
                             <i class="fas fa-cog me-1"></i>Settings
                         </a>
                     </div>
-                    {% endif %}
                 </div>
+                {% endif %}
             </div>
 
             <!-- Season Achievement Highlights -->
@@ -264,7 +266,7 @@
             <div class="section-container mb-4">
                 <div class="section-header">
                     <h3 class="section-title">
-                        <i class="fas fa-chart-pie me-2"></i>Team Pick Distribution
+                        <i class="fas fa-chart-pie me-2"></i>Team Pick Distribution ({{ gameseason_display }})
                     </h3>
                 </div>
                 
@@ -278,12 +280,6 @@
                             <div class="stat-mini">
                                 <span class="stat-mini-label">Most Picked:</span>
                                 <span class="stat-mini-value">{{ team_chart_labels.0 }}</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="stat-mini">
-                                <span class="stat-mini-label">Total Teams Picked:</span>
-                                <span class="stat-mini-value">{{ team_chart_labels|length }}</span>
                             </div>
                         </div>
                     </div>
@@ -320,6 +316,7 @@
     
     <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
     <script>
     {% if team_chart_data and team_chart_labels %}
@@ -343,6 +340,7 @@
                     radius: '85%'
                 }]
             },
+            plugins: [ChartDataLabels],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -370,6 +368,25 @@
                             boxWidth: 8,
                             boxHeight: 8
                         }
+                    },
+                    datalabels: {
+                        color: '#ffffff',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        formatter: function(value, context) {
+                            // Only show label if percentage is above 5% to avoid clutter
+                            if (value >= 5) {
+                                return context.chart.data.labels[context.dataIndex];
+                            }
+                            return '';
+                        },
+                        textAlign: 'center',
+                        anchor: 'center',
+                        align: 'center',
+                        textStrokeColor: 'rgba(0, 0, 0, 0.8)',
+                        textStrokeWidth: 2
                     },
                     tooltip: {
                         callbacks: {
@@ -448,10 +465,9 @@
 
 .profile-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: flex-start;
-    gap: 2rem;
-    padding: 2rem 1.5rem;
+    padding: 2rem 1.5rem 1rem 1.5rem;
 }
 
 .profile-avatar-section {
@@ -503,6 +519,15 @@
 .favorite-team:hover {
     background: rgba(var(--bs-primary-rgb), 0.15);
     transform: translateY(-1px);
+}
+
+.profile-actions-row {
+    padding: 0 1.5rem 1rem 1.5rem;
+    width: 100%;
+}
+
+.profile-actions-row .btn {
+    min-width: 120px;
 }
 
 
@@ -1178,8 +1203,11 @@
     .profile-header {
         flex-direction: column;
         text-align: center;
-        padding: 1.5rem 1rem;
-        gap: 1.5rem;
+        padding: 1.5rem 1rem 1rem 1rem;
+    }
+    
+    .profile-actions-row {
+        padding: 0 1rem 1rem 1rem;
     }
     
     .profile-avatar-section {
@@ -1379,7 +1407,7 @@
     font-size: 0.95rem;
     color: rgba(0, 0, 0, 0.7);
     margin-bottom: 0.8rem;
-    font-weight: 600;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
 }

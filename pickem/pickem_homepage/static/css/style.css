@@ -3011,14 +3011,14 @@ body:has(.site-banner) .homepage-main-container {
     grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
     gap: 1.5rem;
     max-width: 100%;
-    align-items: stretch; /* Cards will have equal heights */
+    align-items: start; /* Align cards at start instead of stretch */
 }
 
 @media (min-width: 992px) {
     .games-grid {
         grid-template-columns: repeat(2, 1fr);
         max-width: none;
-        align-items: stretch; /* Ensure cards have equal heights in 2-column layout */
+        align-items: start; /* Align cards at start for consistent top alignment */
     }
 }
 
@@ -3031,12 +3031,37 @@ body:has(.site-banner) .homepage-main-container {
     border: 1px solid #e9ecef;
     display: flex;
     flex-direction: column;
-    height: 100%; /* Use full height available in grid */
+    /* Removed height: 100% to allow natural sizing */
 }
 
 .game-score-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+/* Ensure consistent structure for main game content */
+.game-main-content {
+    flex-grow: 0; /* Don't grow to fill space */
+    flex-shrink: 0; /* Don't shrink */
+}
+
+/* Player Picks section should handle variable spacing */
+.picks-section {
+    flex-grow: 1; /* Allow this section to grow if needed */
+    margin-top: auto; /* Push to bottom if card needs to be taller */
+    min-height: 0; /* Allow natural sizing */
+}
+
+/* Ensure main game content has consistent minimum height */
+.game-main-content {
+    min-height: auto; /* Let content determine height naturally */
+}
+
+/* User pick section and missing picks should also be in variable area */
+.user-pick-section,
+.missing-picks-section {
+    flex-grow: 0;
+    flex-shrink: 0;
 }
 
 /* Game Status Header */

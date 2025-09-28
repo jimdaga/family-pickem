@@ -299,18 +299,20 @@
                 <div class="games-grid collapse show" id="games-{{ time_group.grouper|date:'Y-m-d-Hi' }}">
                             {% for game in time_group.list %}
                             <div class="game-score-card" data-game-status="{{ game.statusType|lower }}">
-                                <!-- Game Status Header -->
-                                <div class="game-status-header {% if game.statusType == 'inprogress' %}status-live{% else %}status-standard{% endif %}">
-                                    <div class="status-info">
-                                        <i class="fas {% if game.statusType == 'inprogress' %}fa-circle status-live-dot{% elif game.statusType == 'finished' %}fa-check-circle{% else %}fa-clock{% endif %} me-2"></i>
-                                        {{ game.statusTitle }}
+                                <!-- Main Game Content (consistent height) -->
+                                <div class="game-main-content">
+                                    <!-- Game Status Header -->
+                                    <div class="game-status-header {% if game.statusType == 'inprogress' %}status-live{% else %}status-standard{% endif %}">
+                                        <div class="status-info">
+                                            <i class="fas {% if game.statusType == 'inprogress' %}fa-circle status-live-dot{% elif game.statusType == 'finished' %}fa-check-circle{% else %}fa-clock{% endif %} me-2"></i>
+                                            {{ game.statusTitle }}
+                                        </div>
+                                        <div class="game-time">
+                                            {{ game.startTimestamp|date:"g:i A" }}
+                                        </div>
                                     </div>
-                                    <div class="game-time">
-                                        {{ game.startTimestamp|date:"g:i A" }}
-                                    </div>
-                                </div>
 
-                                <!-- Game Info (Spread, Weather, etc.) -->
+                                    <!-- Game Info (Spread, Weather, etc.) -->
                                 {% if game.spread or game.overUnder or game.temperature or game.weatherCondition %}
                                 <div class="game-info-bar">
                                     {% if game.spread %}
@@ -495,6 +497,8 @@
                                     {% endif %}
                                 </div>
                                 {% endif %}
+                                </div>
+                                <!-- End Main Game Content -->
 
                                 <!-- Player Picks Section -->
                                 {% if picks %}
