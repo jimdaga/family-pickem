@@ -14,6 +14,10 @@
         <div class="row">
             <div class="col-12">
                 <div class="page-header-content">
+                    <h1 class="page-title">Commissioners Dashboard</h1>
+                    <p class="page-subtitle">Classified operations center - authorized personnel only</p>
+
+                    <img src="{% static 'images/comish.png' %}" alt="Commissioner's Badge" class="page-header-icon commissioner-badge">
                     {% if user.is_authenticated %}
                         <div class="welcome-section mb-4">
                             <h2 class="welcome-message">
@@ -25,9 +29,6 @@
                             </p>
                         </div>
                     {% endif %}
-                    <i class="fas fa-crown page-header-icon"></i>
-                    <h1 class="page-title">Commissioners Dashboard</h1>
-                    <p class="page-subtitle">Classified operations center - authorized personnel only</p>
                 </div>
             </div>
         </div>
@@ -53,7 +54,7 @@
                 <div class="card-header">
                     <h3 class="card-title">
                         <i class="fas fa-trophy me-2"></i>
-                        Week {{ current_week }} Winner Selection
+                        Winner Selection: Week {{ current_week }}
                     </h3>
                 </div>
                 <div class="card-body">
@@ -290,7 +291,7 @@
     </div>
 
     <!-- Additional Commissioner Features (Future) -->
-    <div class="row g-4 mt-2">
+    {% comment %} <div class="row g-4 mt-2">
         <div class="col-12">
             <div class="card commissioner-card">
                 <div class="card-header">
@@ -314,7 +315,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> {% endcomment %}
 </div>
 
 <!-- Scripts -->
@@ -414,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
     border-radius: 1rem;
     padding: 3rem 2rem;
     margin-bottom: 2rem;
-    border: 2px solid var(--bs-border-color);
+    border: 3px solid #D4AF37;
     background: var(--bs-body-bg);
     position: relative;
     overflow: hidden;
@@ -442,6 +443,14 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-bottom: 1rem;
     color: var(--bs-warning);
     opacity: 0.9;
+}
+
+.commissioner-badge {
+    width: 250px;
+    height: 250px;
+    margin-bottom: 1rem;
+    opacity: 0.95;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
 
 .welcome-message {
@@ -556,7 +565,7 @@ document.addEventListener('DOMContentLoaded', function() {
 /* Dark mode adjustments */
 [data-bs-theme="dark"] .page-header-section {
     background: var(--bs-dark);
-    border-color: var(--bs-gray-600);
+    border-color: #D4AF37;
 }
 
 [data-bs-theme="dark"] .page-header-section::before {
@@ -584,6 +593,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 [data-bs-theme="dark"] .page-header-icon {
     color: var(--bs-warning);
+}
+
+[data-bs-theme="dark"] .commissioner-badge {
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+    opacity: 1;
 }
 
 [data-bs-theme="dark"] .commissioner-card {
