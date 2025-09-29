@@ -20,6 +20,9 @@ class UserProfile(models.Model):
     dark_mode = models.BooleanField(default=False, help_text="Use dark mode theme")
     private_profile = models.BooleanField(default=False, help_text="Make profile private to other users")
     
+    # Role Settings
+    is_commissioner = models.BooleanField(default=False, help_text="User has commissioner privileges")
+    
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

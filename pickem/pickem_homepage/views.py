@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from pickem_api.models import GamePicks
 from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile
 from .forms import GamePicksForm, MessageBoardPostForm, MessageBoardCommentForm, QuickCommentForm
-from .models import MessageBoardPost, MessageBoardComment, MessageBoardVote
+from .models import MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Sum, Count, Q, Avg
@@ -13,6 +13,10 @@ from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.contrib import messages
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
+from functools import wraps
 # from django_ratelimit.decorators import ratelimit  # Disabled for now
 import json
 
@@ -23,6 +27,31 @@ from pickem.utils import get_season as get_season_from_api
 
 def get_season(display_name=False):
     return get_season_from_api(display_name=display_name)
+
+def is_commissioner(user):
+    """Check if user is a commissioner or admin"""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    try:
+        profile = user.profile
+        return profile.is_commissioner
+    except UserProfile.DoesNotExist:
+        return False
+
+def commissioner_required(view_func):
+    """Decorator that ensures only commissioners and admins can access a view"""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.error(request, "You must be logged in to access this page.")
+            return redirect('/')
+        if not is_commissioner(request.user):
+            messages.error(request, "You don't have permission to access this page. Commissioner privileges required.")
+            return redirect('/')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
 # @ratelimit(key='ip', rate='30/m', method='GET', block=True)  # Disabled for now
 def index(request):
@@ -1426,3 +1455,220 @@ def get_post_comments(request, post_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# Commissioner Views
+@commissioner_required
+@never_cache
+def commissioners(request):
+    """Main commissioners dashboard"""
+    from .forms import WeekWinnerForm, SiteBannerForm
+    
+    today = date.today()
+    gameseason = get_season()
+    
+    # Get current week info
+    try:
+        week_obj = GameWeeks.objects.get(date=today.strftime("%Y-%m-%d"))
+        current_week = week_obj.weekNumber
+        current_competition = week_obj.competition
+    except GameWeeks.DoesNotExist:
+        current_week = '1'
+        current_competition = 'nfl'
+    
+    # Get current week candidates for week winner selection
+    week_candidates = get_week_candidates(gameseason, current_week, current_competition)
+    
+    # Check if current week already has a winner
+    winner_field = f"week_{current_week}_winner"
+    current_week_winner = userSeasonPoints.objects.filter(
+        gameseason=gameseason, 
+        **{winner_field: True}
+    ).first()
+    
+    # Get active banner info
+    active_banner = SiteBanner.get_active_banner()
+    
+    # Initialize forms
+    week_winner_form = WeekWinnerForm(week_candidates) if week_candidates else None
+    banner_form = SiteBannerForm(instance=active_banner) if active_banner else SiteBannerForm()
+    
+    context = {
+        'current_week': current_week,
+        'gameseason': gameseason,
+        'current_competition': current_competition,
+        'week_candidates': week_candidates,
+        'current_week_winner': current_week_winner,
+        'active_banner': active_banner,
+        'week_winner_form': week_winner_form,
+        'banner_form': banner_form,
+    }
+    
+    return render(request, 'pickem/commissioners.html', context)
+
+
+@commissioner_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def set_week_winner(request):
+    """Set the winner for a specific week"""
+    from .forms import WeekWinnerForm
+    
+    try:
+        data = json.loads(request.body)
+        week_number = data.get('week_number')
+        winner_uid = data.get('winner_uid')
+        gameseason = data.get('gameseason')
+        
+        if not all([week_number, winner_uid, gameseason]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required fields'
+            }, status=400)
+        
+        # Clear any existing winners for this week
+        winner_field = f"week_{week_number}_winner"
+        userSeasonPoints.objects.filter(gameseason=gameseason).update(**{winner_field: False})
+        
+        # Set the new winner
+        winner_record = userSeasonPoints.objects.filter(
+            userEmail=User.objects.get(id=winner_uid).email,
+            gameseason=gameseason
+        ).first()
+        
+        if not winner_record:
+            return JsonResponse({
+                'success': False,
+                'error': 'User season record not found'
+            }, status=404)
+        
+        # Set winner and add bonus points
+        setattr(winner_record, winner_field, True)
+        bonus_field = f"week_{week_number}_bonus"
+        setattr(winner_record, bonus_field, 2)  # 2 bonus points for winning
+        
+        # Recalculate total points
+        total_points = 0
+        for week in range(1, 19):  # Weeks 1-18
+            points_field = f"week_{week}_points"
+            bonus_field = f"week_{week}_bonus"
+            week_points = getattr(winner_record, points_field, 0) or 0
+            week_bonus = getattr(winner_record, bonus_field, 0) or 0
+            total_points += week_points + week_bonus
+        
+        winner_record.total_points = total_points
+        winner_record.save()
+        
+        winner_user = User.objects.get(id=winner_uid)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Successfully set {winner_user.username} as Week {week_number} winner with 2 bonus points!'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@commissioner_required
+@require_http_methods(["POST"])
+def manage_banner(request):
+    """Create or update a site banner"""
+    from .forms import SiteBannerForm
+    
+    # Deactivate all current banners first (only one active at a time)
+    SiteBanner.objects.filter(is_active=True).update(is_active=False)
+    
+    # Get existing banner if editing
+    banner_id = request.POST.get('banner_id')
+    if banner_id:
+        banner = get_object_or_404(SiteBanner, id=banner_id)
+        form = SiteBannerForm(request.POST, instance=banner)
+    else:
+        form = SiteBannerForm(request.POST)
+    
+    if form.is_valid():
+        banner = form.save(commit=False)
+        banner.is_active = True  # Make this the active banner
+        banner.save()
+        
+        messages.success(request, f'Successfully {"updated" if banner_id else "created"} site banner!')
+        return redirect('commissioners')
+    else:
+        messages.error(request, 'Please correct the errors below.')
+        
+        # Re-render the commissioners page with form errors
+        return commissioners(request)
+
+
+@commissioner_required
+@require_http_methods(["POST"])
+def deactivate_banner(request):
+    """Deactivate the current site banner"""
+    try:
+        active_banner = SiteBanner.get_active_banner()
+        if active_banner:
+            active_banner.is_active = False
+            active_banner.save()
+            messages.success(request, 'Site banner has been deactivated.')
+        else:
+            messages.info(request, 'No active banner to deactivate.')
+    except Exception as e:
+        messages.error(request, f'Error deactivating banner: {str(e)}')
+    
+    return redirect('commissioners')
+
+
+def get_week_candidates(gameseason, week, competition):
+    """Get candidates for week winner selection with tiebreaker info"""
+    from django.db.models import Count, Max
+    
+    # Get all picks for the week
+    week_picks = GamePicks.objects.filter(
+        gameseason=gameseason,
+        gameWeek=week,
+        competition=competition,
+        pick_correct=True
+    )
+    
+    # Get user points for the week
+    user_points = week_picks.values('uid').annotate(
+        wins=Count('uid')
+    ).order_by('-wins')
+    
+    if not user_points:
+        return []
+    
+    # Get the highest score
+    max_wins = user_points.first()['wins']
+    
+    # Get all users tied for the highest score
+    candidates = []
+    for user_data in user_points:
+        if user_data['wins'] == max_wins:  # Only include top scorers
+            # Get tiebreaker info
+            tiebreaker_pick = GamePicks.objects.filter(
+                uid=user_data['uid'],
+                gameWeek=week,
+                gameseason=gameseason,
+                competition=competition,
+                tieBreakerScore__isnull=False
+            ).first()
+            
+            candidate = {
+                'uid': user_data['uid'],
+                'wins': user_data['wins'],
+                'tiebreaker_score': tiebreaker_pick.tieBreakerScore if tiebreaker_pick else None,
+                'tiebreaker_yards': tiebreaker_pick.tieBreakerYards if tiebreaker_pick else None
+            }
+            candidates.append(candidate)
+    
+    return candidates

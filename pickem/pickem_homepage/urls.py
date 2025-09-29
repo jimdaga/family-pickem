@@ -28,4 +28,10 @@ urlpatterns = [
     path('message-board/vote-post/', views.vote_post, name='vote_post'),
     path('message-board/vote-comment/', views.vote_comment, name='vote_comment'),
     path('message-board/comments/<int:post_id>/', views.get_post_comments, name='get_post_comments'),
+    
+    # Commissioner URLs
+    path('commissioners/', views.commissioners, name='commissioners'),
+    path('commissioners/set-week-winner/', views.set_week_winner, name='set_week_winner'),
+    path('commissioners/manage-banner/', views.manage_banner, name='manage_banner'),
+    path('commissioners/deactivate-banner/', views.deactivate_banner, name='deactivate_banner'),
 ]

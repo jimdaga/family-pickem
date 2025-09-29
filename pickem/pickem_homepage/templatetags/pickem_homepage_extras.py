@@ -274,3 +274,16 @@ def lookup(dictionary, key):
         return dictionary.get(key)
     except (AttributeError, TypeError):
         return None
+
+
+@register.filter
+def message_icon(tag):
+    """Return Font Awesome icon for message tags"""
+    icon_map = {
+        'success': 'check-circle',
+        'info': 'info-circle', 
+        'warning': 'exclamation-triangle',
+        'error': 'times-circle',
+        'danger': 'times-circle',
+    }
+    return icon_map.get(tag, 'info-circle')

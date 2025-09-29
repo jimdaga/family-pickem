@@ -22,6 +22,7 @@ def theme_context(request):
         'user_authenticated': request.user.is_authenticated,
         'user_dark_mode': None,
         'user_theme_preference': None,
+        'user_is_commissioner': False,
     }
     
     if request.user.is_authenticated:
@@ -30,10 +31,12 @@ def theme_context(request):
             user_profile, created = UserProfile.objects.get_or_create(user=request.user)
             context['user_dark_mode'] = user_profile.dark_mode
             context['user_theme_preference'] = 'dark' if user_profile.dark_mode else 'light'
+            context['user_is_commissioner'] = user_profile.is_commissioner or request.user.is_superuser
         except Exception as e:
             # Fallback to default values if there's any issue
             context['user_dark_mode'] = False
             context['user_theme_preference'] = 'light'
+            context['user_is_commissioner'] = request.user.is_superuser if request.user.is_authenticated else False
     
     return context
 

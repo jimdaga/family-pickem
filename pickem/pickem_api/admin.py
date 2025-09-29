@@ -4,8 +4,8 @@ from .models import GamePicks, GamesAndScores, GameWeeks, Teams, userPoints, use
 # Register your models here.
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'tagline', 'favorite_team', 'phone_number', 'email_notifications', 'dark_mode', 'private_profile', 'created_at', 'updated_at')
-    list_filter = ('email_notifications', 'dark_mode', 'private_profile', 'favorite_team', 'created_at')
+    list_display = ('user', 'tagline', 'favorite_team', 'phone_number', 'email_notifications', 'dark_mode', 'private_profile', 'is_commissioner', 'created_at', 'updated_at')
+    list_filter = ('email_notifications', 'dark_mode', 'private_profile', 'is_commissioner', 'favorite_team', 'created_at')
     search_fields = ('user__username', 'user__email', 'user__first_name', 'user__last_name', 'tagline', 'phone_number')
     date_hierarchy = 'created_at'
     ordering = ('user__username',)
@@ -20,6 +20,9 @@ class UserProfileAdmin(admin.ModelAdmin):
         }),
         ('Site Settings', {
             'fields': ('email_notifications', 'dark_mode', 'private_profile')
+        }),
+        ('Role Settings', {
+            'fields': ('is_commissioner',)
         }),
         ('Metadata', {
             'fields': ('created_at', 'updated_at'),

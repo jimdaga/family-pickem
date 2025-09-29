@@ -112,12 +112,20 @@
                          </a>
                      </li>
 
-                     <li class="nav-item">
-                         <a class="nav-link" href="/rules/" aria-label="Rules">
-                             <i class="fas fa-gavel"></i>
-                         </a>
-                     </li>
-                 </ul>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/rules/" aria-label="Rules">
+                            <i class="fas fa-gavel"></i>
+                        </a>
+                    </li>
+                    
+                    {% if user_is_commissioner %}
+                    <li class="nav-item">
+                        <a class="nav-link commissioner-link" href="{% url 'commissioners' %}" aria-label="Commissioners Dashboard">
+                            <i class="fas fa-crown"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
 
                  <!-- Right Side Navigation -->
                  <ul class="navbar-nav ms-auto nav-right-mobile-center">
