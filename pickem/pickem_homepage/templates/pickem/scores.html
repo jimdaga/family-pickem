@@ -534,6 +534,9 @@
                                                                          title="{{ username|default:'Unknown' }} - Correct Pick">
                                                                 </a>
                                                                 <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                                {% if pick.tieBreakerScore != None %}
+                                                                <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                                {% endif %}
                                                             </div>
                                                         {% else %}
                                                             <div class="pick-player">
@@ -544,6 +547,9 @@
                                                                          title="{{ username|default:'Unknown' }} - Incorrect Pick">
                                                                 </a>
                                                                 <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                                {% if pick.tieBreakerScore != None %}
+                                                                <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                                {% endif %}
                                                             </div>
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
@@ -555,11 +561,11 @@
                                                                      title="{{ username|default:'Unknown' }} - Game In Progress">
                                                             </a>
                                                             <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                            {% if pick.tieBreakerScore != None %}
+                                                            <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                            {% endif %}
                                                         </div>
                                                     {% endif %}
-                                                        {% if pick.tieBreakerScore != None %}
-                                                        <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
-                                                        {% endif %}
                                                     {% endwith %}
                                                     {% endwith %}
                                                 {% endif %}
@@ -596,6 +602,9 @@
                                                                          title="{{ username|default:'Unknown' }} - Correct Pick">
                                                                 </a>
                                                                 <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                                {% if pick.tieBreakerScore != None %}
+                                                                <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                                {% endif %}
                                                             </div>
                                                         {% else %}
                                                             <div class="pick-player">
@@ -606,6 +615,9 @@
                                                                          title="{{ username|default:'Unknown' }} - Incorrect Pick">
                                                                 </a>
                                                                 <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                                {% if pick.tieBreakerScore != None %}
+                                                                <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                                {% endif %}
                                                             </div>
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
@@ -617,11 +629,11 @@
                                                                      title="{{ username|default:'Unknown' }} - Game In Progress">
                                                             </a>
                                                             <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                            {% if pick.tieBreakerScore != None %}
+                                                            <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                            {% endif %}
                                                         </div>
                                                     {% endif %}
-                                                        {% if pick.tieBreakerScore != None %}
-                                                        <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
-                                                        {% endif %}
                                                     {% endwith %}
                                                     {% endwith %}
                                                 {% endif %}
