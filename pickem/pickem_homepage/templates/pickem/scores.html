@@ -697,10 +697,13 @@
                                                     {% if count == 0 %}
                                                         {% with player|lookupname as username %}
                                                         {% with player|lookupavatar as avatar %}
-                                                            <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                 alt="{{ username|default:'Unknown' }}" 
-                                                                 class="missing-pick-avatar" 
-                                                                 title="{{ username|default:'Unknown' }} - No Pick">
+                                                            <div class="missing-pick-user">
+                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                     alt="{{ username|default:'Unknown' }}" 
+                                                                     class="missing-pick-avatar" 
+                                                                     title="{{ username|default:'Unknown' }} - No Pick">
+                                                                <div class="missing-pick-username">{{ username|default:'Unknown' }}</div>
+                                                            </div>
                                                         {% endwith %}
                                                         {% endwith %}
                                                     {% endif %}

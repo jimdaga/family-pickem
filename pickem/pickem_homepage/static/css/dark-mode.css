@@ -2611,6 +2611,18 @@ html[data-bs-theme="dark"] body .time-group-full-width {
   color: #ffffff !important;
 }
 
+[data-bs-theme="dark"] .missing-pick-username {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .tiebreaker-mini {
+  color: #adb5bd !important;
+}
+
+[data-bs-theme="dark"] .pick-username {
+  color: #ffffff !important;
+}
+
 /* Game status displays */
 [data-bs-theme="dark"] .game-status {
   color: #ffffff !important;
