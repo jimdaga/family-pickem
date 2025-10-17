@@ -34,4 +34,6 @@ urlpatterns = [
     path('commissioners/set-week-winner/', views.set_week_winner, name='set_week_winner'),
     path('commissioners/manage-banner/', views.manage_banner, name='manage_banner'),
     path('commissioners/deactivate-banner/', views.deactivate_banner, name='deactivate_banner'),
+    path('commissioners/submit-manual-pick/', views.submit_manual_pick, name='submit_manual_pick'),
+    path('commissioners/get-user-picks/', views.get_user_picks, name='get_user_picks'),
 ]

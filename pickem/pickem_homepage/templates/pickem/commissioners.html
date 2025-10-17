@@ -288,6 +288,215 @@
                 </div>
             </div>
         </div>
+
+        <!-- Manual Pick Submission -->
+        <div class="col-12">
+            <div class="card commissioner-card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-user-edit me-2"></i>
+                        Manual Pick Submission
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="manual-picks-section">
+                        <p class="section-description">
+                            Submit picks on behalf of users who missed the deadline or can't get online. 
+                            Commissioners can submit picks even for locked games.
+                        </p>
+                        
+                        <!-- User Selection -->
+                        <div class="user-selection-section mb-4">
+                            <label for="userSelect" class="form-label">
+                                <i class="fas fa-user me-1"></i>
+                                Select User:
+                            </label>
+                            <select id="userSelect" class="form-select">
+                                <option value="">Choose a user...</option>
+                                {% for user in active_users %}
+                                    <option value="{{ user.id }}" data-username="{{ user.username }}" data-email="{{ user.email }}">
+                                        {{ user.username }}
+                                        {% if user.first_name or user.last_name %}
+                                            ({{ user.first_name }} {{ user.last_name }})
+                                        {% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Current User Info -->
+                        <div id="currentUserInfo" class="current-user-info mb-4" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Submitting picks for:</strong> <span id="selectedUserName"></span>
+                                <br><small>Week {{ current_week }} - {{ current_competition|title }}</small>
+                            </div>
+                        </div>
+
+                        <!-- Games List -->
+                        <div id="gamesList" class="games-list" style="display: none;">
+                            <h5 class="mb-3">Week {{ current_week }} Games:</h5>
+                            
+                            {% if current_week_games %}
+                                <div class="games-grid-manual">
+                                    {% for game in current_week_games %}
+                                    <div class="manual-game-card" data-game-id="{{ game.id }}">
+                                        <div class="game-header-manual">
+                                            <div class="game-time-manual">
+                                                {{ game.startTimestamp|date:"M d @ g:i A" }}
+                                            </div>
+                                            {% if game.statusType != 'notstarted' %}
+                                            <div class="game-status-locked">
+                                                <i class="fas fa-lock me-1"></i>
+                                                Started
+                                            </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="teams-selection-manual">
+                                            <!-- Away Team -->
+                                            <div class="team-option-manual" data-team="{{ game.awayTeamSlug }}" data-team-name="{{ game.awayTeamName }}">
+                                                <div class="team-info-manual">
+                                                    {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                         alt="{{ game.awayTeamName }} logo" 
+                                                         class="team-logo-manual">
+                                                    {% endwith %}
+                                                    <div class="team-details-manual">
+                                                        <div class="team-name-manual">{{ game.awayTeamName }}</div>
+                                                        <div class="team-record-manual">
+                                                            {% for team in team_records %}
+                                                                {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                                    {% if team.teamTies > 0 %}
+                                                                        ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                                    {% else %}
+                                                                        ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                                    {% endif %}
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="pick-indicator-manual">
+                                                    <i class="fas fa-check"></i>
+                                                </div>
+                                            </div>
+
+                                            <div class="vs-divider-manual">@</div>
+
+                                            <!-- Home Team -->
+                                            <div class="team-option-manual" data-team="{{ game.homeTeamSlug }}" data-team-name="{{ game.homeTeamName }}">
+                                                <div class="team-info-manual">
+                                                    {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
+                                                         alt="{{ game.homeTeamName }} logo" 
+                                                         class="team-logo-manual">
+                                                    {% endwith %}
+                                                    <div class="team-details-manual">
+                                                        <div class="team-name-manual">{{ game.homeTeamName }}</div>
+                                                        <div class="team-record-manual">
+                                                            {% for team in team_records %}
+                                                                {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                                    {% if team.teamTies > 0 %}
+                                                                        ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                                    {% else %}
+                                                                        ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                                    {% endif %}
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="pick-indicator-manual">
+                                                    <i class="fas fa-check"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tiebreaker Section -->
+                                        {% if game.tieBreakerGame %}
+                                        <div class="tiebreaker-section-manual">
+                                            <div class="tiebreaker-header-manual">
+                                                <i class="fas fa-balance-scale me-2"></i>
+                                                Tiebreakers Required
+                                            </div>
+                                            <div class="tiebreaker-inputs-manual">
+                                                <div class="tiebreaker-input-group-manual">
+                                                    <label>Total Points:</label>
+                                                    <input type="number" 
+                                                           class="form-control form-control-sm tiebreaker-score" 
+                                                           placeholder="e.g. 45"
+                                                           min="0" 
+                                                           max="200">
+                                                </div>
+                                                <div class="tiebreaker-input-group-manual">
+                                                    <label>Total Yards:</label>
+                                                    <input type="number" 
+                                                           class="form-control form-control-sm tiebreaker-yards" 
+                                                           placeholder="e.g. 750"
+                                                           min="0" 
+                                                           max="2000">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Pick Status -->
+                                        <div class="pick-status-manual">
+                                            <span class="no-pick-indicator">No pick selected</span>
+                                            <span class="pick-saved-indicator" style="display: none;">
+                                                <i class="fas fa-check-circle me-1"></i>
+                                                Pick saved
+                                            </span>
+                                        </div>
+
+                                        <!-- Hidden data -->
+                                        <input type="hidden" class="game-slug" value="{{ game.slug }}">
+                                        <input type="hidden" class="game-competition" value="{{ game.competition }}">
+                                        <input type="hidden" class="game-week" value="{{ game.gameWeek }}">
+                                        <input type="hidden" class="game-year" value="{{ game.gameyear }}">
+                                        <input type="hidden" class="game-season" value="{{ game.gameseason }}">
+                                        <input type="hidden" class="is-tiebreaker" value="{{ game.tieBreakerGame|yesno:'true,false' }}">
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <!-- Submit All Button -->
+                                <div class="submit-section mt-4">
+                                    <button type="button" id="submitAllPicks" class="btn btn-success" disabled>
+                                        <i class="fas fa-save me-2"></i>
+                                        Submit All Picks
+                                    </button>
+                                    <button type="button" id="clearAllPicks" class="btn btn-outline-secondary ms-2" disabled>
+                                        <i class="fas fa-times me-2"></i>
+                                        Clear All
+                                    </button>
+                                    <div class="submission-status ms-3" style="display: none;">
+                                        <span class="submitting-indicator">
+                                            <i class="fas fa-spinner fa-spin me-1"></i>
+                                            Submitting picks...
+                                        </span>
+                                        <span class="success-indicator text-success">
+                                            <i class="fas fa-check-circle me-1"></i>
+                                            All picks submitted successfully!
+                                        </span>
+                                        <span class="error-indicator text-danger">
+                                            <i class="fas fa-exclamation-circle me-1"></i>
+                                            Error submitting picks
+                                        </span>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No games available for Week {{ current_week }}.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Additional Commissioner Features (Future) -->
@@ -401,6 +610,285 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+    // Manual Pick Submission Functionality
+    const userSelect = document.getElementById('userSelect');
+    const currentUserInfo = document.getElementById('currentUserInfo');
+    const selectedUserName = document.getElementById('selectedUserName');
+    const gamesList = document.getElementById('gamesList');
+    const submitAllPicks = document.getElementById('submitAllPicks');
+    const clearAllPicks = document.getElementById('clearAllPicks');
+    const submissionStatus = document.querySelector('.submission-status');
+
+    let selectedUserId = null;
+    let selectedUserData = null;
+    let userPicks = {};
+
+    // User selection handler
+    if (userSelect) {
+        userSelect.addEventListener('change', function() {
+            selectedUserId = this.value;
+            
+            if (selectedUserId) {
+                const selectedOption = this.options[this.selectedIndex];
+                selectedUserData = {
+                    id: selectedUserId,
+                    username: selectedOption.dataset.username,
+                    email: selectedOption.dataset.email
+                };
+                
+                selectedUserName.textContent = selectedUserData.username;
+                currentUserInfo.style.display = 'block';
+                gamesList.style.display = 'block';
+                
+                // Load existing picks for this user
+                loadUserPicks(selectedUserId);
+            } else {
+                currentUserInfo.style.display = 'none';
+                gamesList.style.display = 'none';
+                clearAllSelections();
+            }
+        });
+    }
+
+    // Load existing picks for a user
+    function loadUserPicks(userId) {
+        fetch(`{% url 'get_user_picks' %}?user_id=${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    userPicks = data.picks;
+                    updateGameCardsWithPicks();
+                } else {
+                    console.error('Error loading user picks:', data.error);
+                    userPicks = {};
+                }
+            })
+            .catch(error => {
+                console.error('Error loading user picks:', error);
+                userPicks = {};
+            });
+    }
+
+    // Update game cards with existing picks
+    function updateGameCardsWithPicks() {
+        document.querySelectorAll('.manual-game-card').forEach(card => {
+            const gameId = card.dataset.gameId;
+            const existingPick = userPicks[gameId];
+            
+            // Clear previous selections
+            card.querySelectorAll('.team-option-manual').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            if (existingPick) {
+                // Select the team that was picked
+                const teamOption = card.querySelector(`[data-team="${existingPick.pick}"]`);
+                if (teamOption) {
+                    teamOption.classList.add('selected');
+                }
+                
+                // Fill in tiebreaker values if they exist
+                const tiebreakerScore = card.querySelector('.tiebreaker-score');
+                const tiebreakerYards = card.querySelector('.tiebreaker-yards');
+                
+                if (tiebreakerScore && existingPick.tiebreaker_score) {
+                    tiebreakerScore.value = existingPick.tiebreaker_score;
+                }
+                if (tiebreakerYards && existingPick.tiebreaker_yards) {
+                    tiebreakerYards.value = existingPick.tiebreaker_yards;
+                }
+                
+                updatePickStatus(card, true);
+            } else {
+                updatePickStatus(card, false);
+            }
+        });
+        
+        updateSubmitButtonState();
+    }
+
+    // Team selection handlers
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.team-option-manual') && selectedUserId) {
+            const teamOption = e.target.closest('.team-option-manual');
+            const gameCard = teamOption.closest('.manual-game-card');
+            
+            // Clear selection from other teams in this game
+            gameCard.querySelectorAll('.team-option-manual').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Select this team
+            teamOption.classList.add('selected');
+            
+            // Update pick status
+            updatePickStatus(gameCard, true);
+            updateSubmitButtonState();
+        }
+    });
+
+    // Tiebreaker input handlers
+    document.addEventListener('input', function(e) {
+        if (e.target.matches('.tiebreaker-score, .tiebreaker-yards')) {
+            const gameCard = e.target.closest('.manual-game-card');
+            const selectedTeam = gameCard.querySelector('.team-option-manual.selected');
+            
+            if (selectedTeam) {
+                updatePickStatus(gameCard, true);
+                updateSubmitButtonState();
+            }
+        }
+    });
+
+    // Update pick status indicator
+    function updatePickStatus(gameCard, hasPick) {
+        const noPick = gameCard.querySelector('.no-pick-indicator');
+        const pickSaved = gameCard.querySelector('.pick-saved-indicator');
+        
+        if (hasPick) {
+            noPick.style.display = 'none';
+            pickSaved.style.display = 'inline';
+        } else {
+            noPick.style.display = 'inline';
+            pickSaved.style.display = 'none';
+        }
+    }
+
+    // Update submit button state
+    function updateSubmitButtonState() {
+        const hasSelections = document.querySelectorAll('.team-option-manual.selected').length > 0;
+        submitAllPicks.disabled = !hasSelections;
+        clearAllPicks.disabled = !hasSelections;
+    }
+
+    // Clear all selections
+    function clearAllSelections() {
+        document.querySelectorAll('.team-option-manual').forEach(option => {
+            option.classList.remove('selected');
+        });
+        document.querySelectorAll('.tiebreaker-score, .tiebreaker-yards').forEach(input => {
+            input.value = '';
+        });
+        document.querySelectorAll('.manual-game-card').forEach(card => {
+            updatePickStatus(card, false);
+        });
+        updateSubmitButtonState();
+    }
+
+    // Clear all picks button
+    if (clearAllPicks) {
+        clearAllPicks.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all selections?')) {
+                clearAllSelections();
+            }
+        });
+    }
+
+    // Submit all picks
+    if (submitAllPicks) {
+        submitAllPicks.addEventListener('click', function() {
+            if (!selectedUserId) {
+                alert('Please select a user first.');
+                return;
+            }
+
+            const selectedGames = document.querySelectorAll('.team-option-manual.selected');
+            if (selectedGames.length === 0) {
+                alert('Please make at least one pick.');
+                return;
+            }
+
+            const picks = [];
+            selectedGames.forEach(teamOption => {
+                const gameCard = teamOption.closest('.manual-game-card');
+                const gameId = gameCard.dataset.gameId;
+                const pick = teamOption.dataset.team;
+                const tiebreakerScore = gameCard.querySelector('.tiebreaker-score')?.value || '';
+                const tiebreakerYards = gameCard.querySelector('.tiebreaker-yards')?.value || '';
+                const isTiebreaker = gameCard.querySelector('.is-tiebreaker').value === 'true';
+
+                // Validate tiebreaker if required
+                if (isTiebreaker && (!tiebreakerScore || !tiebreakerYards)) {
+                    alert(`Please fill in both tiebreaker fields for the ${teamOption.dataset.teamName} game.`);
+                    return;
+                }
+
+                picks.push({
+                    game_id: gameId,
+                    pick: pick,
+                    tiebreaker_score: tiebreakerScore,
+                    tiebreaker_yards: tiebreakerYards
+                });
+            });
+
+            if (picks.length === 0) return;
+
+            // Show submitting status
+            submissionStatus.style.display = 'inline-block';
+            submissionStatus.querySelector('.submitting-indicator').style.display = 'inline';
+            submissionStatus.querySelector('.success-indicator').style.display = 'none';
+            submissionStatus.querySelector('.error-indicator').style.display = 'none';
+            
+            submitAllPicks.disabled = true;
+
+            // Submit picks one by one
+            submitPicksSequentially(picks, 0);
+        });
+    }
+
+    // Submit picks sequentially
+    function submitPicksSequentially(picks, index) {
+        if (index >= picks.length) {
+            // All picks submitted successfully
+            submissionStatus.querySelector('.submitting-indicator').style.display = 'none';
+            submissionStatus.querySelector('.success-indicator').style.display = 'inline';
+            
+            setTimeout(() => {
+                submissionStatus.style.display = 'none';
+                submitAllPicks.disabled = false;
+            }, 3000);
+            
+            return;
+        }
+
+        const pick = picks[index];
+        const pickData = {
+            user_id: selectedUserId,
+            game_id: pick.game_id,
+            pick: pick.pick,
+            tiebreaker_score: pick.tiebreaker_score,
+            tiebreaker_yards: pick.tiebreaker_yards
+        };
+
+        fetch('{% url "submit_manual_pick" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(pickData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Continue with next pick
+                submitPicksSequentially(picks, index + 1);
+            } else {
+                throw new Error(data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error submitting pick:', error);
+            submissionStatus.querySelector('.submitting-indicator').style.display = 'none';
+            submissionStatus.querySelector('.error-indicator').style.display = 'inline';
+            
+            setTimeout(() => {
+                submissionStatus.style.display = 'none';
+                submitAllPicks.disabled = false;
+            }, 3000);
+        });
+    }
 });
 </script>
 
@@ -677,6 +1165,237 @@ document.addEventListener('DOMContentLoaded', function() {
     color: white !important;
 }
 
+/* Manual Pick Submission Styles */
+.manual-picks-section {
+    padding: 0;
+}
+
+.games-grid-manual {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.manual-game-card {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background: var(--bs-body-bg);
+    transition: all 0.2s ease;
+}
+
+.manual-game-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.game-header-manual {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.game-time-manual {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--bs-secondary);
+}
+
+.game-status-locked {
+    font-size: 0.8rem;
+    color: var(--bs-warning);
+    background: rgba(255, 193, 7, 0.1);
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.teams-selection-manual {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.team-option-manual {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border: 2px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.team-option-manual:hover {
+    border-color: var(--bs-primary);
+    background: rgba(13, 110, 253, 0.05);
+}
+
+.team-option-manual.selected {
+    border-color: var(--bs-success);
+    background: rgba(25, 135, 84, 0.1);
+}
+
+.team-info-manual {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.team-logo-manual {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.team-details-manual {
+    flex: 1;
+}
+
+.team-name-manual {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--bs-body-color);
+    line-height: 1.2;
+}
+
+.team-record-manual {
+    font-size: 0.8rem;
+    color: var(--bs-secondary);
+}
+
+.pick-indicator-manual {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    background: var(--bs-success);
+    color: white;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+}
+
+.team-option-manual.selected .pick-indicator-manual {
+    display: flex;
+}
+
+.vs-divider-manual {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--bs-secondary);
+    text-align: center;
+    min-width: 20px;
+}
+
+.tiebreaker-section-manual {
+    background: var(--bs-light);
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.tiebreaker-header-manual {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--bs-primary);
+    margin-bottom: 0.5rem;
+}
+
+.tiebreaker-inputs-manual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.tiebreaker-input-group-manual label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--bs-body-color);
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.pick-status-manual {
+    text-align: center;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+}
+
+.no-pick-indicator {
+    color: var(--bs-secondary);
+}
+
+.pick-saved-indicator {
+    color: var(--bs-success);
+    font-weight: 500;
+}
+
+.submit-section {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.submission-status {
+    font-size: 0.9rem;
+}
+
+.submitting-indicator {
+    color: var(--bs-primary);
+}
+
+.success-indicator {
+    color: var(--bs-success);
+}
+
+.error-indicator {
+    color: var(--bs-danger);
+}
+
+/* Dark mode adjustments for manual picks */
+[data-bs-theme="dark"] .manual-game-card {
+    background: var(--bs-dark);
+    border-color: var(--bs-gray-600);
+}
+
+[data-bs-theme="dark"] .game-header-manual {
+    border-bottom-color: var(--bs-gray-600);
+}
+
+[data-bs-theme="dark"] .team-option-manual {
+    border-color: var(--bs-gray-600);
+    background: var(--bs-dark);
+}
+
+[data-bs-theme="dark"] .team-option-manual:hover {
+    background: rgba(13, 110, 253, 0.1);
+}
+
+[data-bs-theme="dark"] .team-option-manual.selected {
+    background: rgba(25, 135, 84, 0.2);
+}
+
+[data-bs-theme="dark"] .tiebreaker-section-manual {
+    background: var(--bs-gray-800);
+}
+
+[data-bs-theme="dark"] .submit-section {
+    border-top-color: var(--bs-gray-600);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .page-title {
@@ -698,6 +1417,33 @@ document.addEventListener('DOMContentLoaded', function() {
     .commissioners-main-container {
         padding-top: 1rem;
         padding-bottom: 1rem;
+    }
+    
+    .games-grid-manual {
+        grid-template-columns: 1fr;
+    }
+    
+    .teams-selection-manual {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .vs-divider-manual {
+        order: -1;
+        margin: 0.25rem 0;
+    }
+    
+    .tiebreaker-inputs-manual {
+        grid-template-columns: 1fr;
+    }
+    
+    .submit-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .submit-section .btn {
+        width: 100%;
     }
 }
 </style>

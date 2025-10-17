@@ -260,7 +260,7 @@ def standings(request):
             })
     
     User = get_user_model()
-    players = User.objects.all()
+    players = User.objects.filter(is_active=True)
 
     context = {
         'players': players,
@@ -478,7 +478,7 @@ def stats(request):
     User = get_user_model()
 
     # Get list of players and their rankings
-    players = User.objects.all()
+    players = User.objects.filter(is_active=True)
     player_points = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
     
     # Get players with stats entries for Player Performance Analysis
@@ -725,7 +725,7 @@ def profile(request):
                     errors.append('Username must be less than 30 characters.')
                 elif not re.match(r'^[a-zA-Z0-9._-]+$', username):
                     errors.append('Username can only contain letters, numbers, periods, underscores, and hyphens.')
-                elif User.objects.filter(username=username).exclude(id=request.user.id).exists():
+                elif User.objects.filter(username=username, is_active=True).exclude(id=request.user.id).exists():
                     errors.append('This username is already taken.')
             
             # Tagline validation
@@ -1128,7 +1128,7 @@ def check_username(request):
             })
         
         # Check if username is taken by another user
-        if User.objects.filter(username__iexact=username).exclude(id=request.user.id).exists():
+        if User.objects.filter(username__iexact=username, is_active=True).exclude(id=request.user.id).exists():
             return JsonResponse({
                 'available': False,
                 'message': 'This username is already taken'
@@ -1489,6 +1489,21 @@ def commissioners(request):
     # Get active banner info
     active_banner = SiteBanner.get_active_banner()
     
+    # Get data for manual pick submission
+    # Get all active users for the dropdown
+    User = get_user_model()
+    active_users = User.objects.filter(is_active=True).order_by('username')
+    
+    # Get current week games
+    current_week_games = GamesAndScores.objects.filter(
+        gameseason=gameseason, 
+        gameWeek=current_week, 
+        competition=current_competition
+    ).order_by('startTimestamp')
+    
+    # Get team records for display
+    team_records = Teams.objects.filter(gameseason=gameseason)
+    
     # Initialize forms
     week_winner_form = WeekWinnerForm(week_candidates) if week_candidates else None
     banner_form = SiteBannerForm(instance=active_banner) if active_banner else SiteBannerForm()
@@ -1502,6 +1517,9 @@ def commissioners(request):
         'active_banner': active_banner,
         'week_winner_form': week_winner_form,
         'banner_form': banner_form,
+        'active_users': active_users,
+        'current_week_games': current_week_games,
+        'team_records': team_records,
     }
     
     return render(request, 'pickem/commissioners.html', context)
@@ -1672,3 +1690,132 @@ def get_week_candidates(gameseason, week, competition):
             candidates.append(candidate)
     
     return candidates
+
+
+@commissioner_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def submit_manual_pick(request):
+    """Submit a pick on behalf of a user"""
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        game_id = data.get('game_id')
+        pick = data.get('pick')
+        tiebreaker_score = data.get('tiebreaker_score', '')
+        tiebreaker_yards = data.get('tiebreaker_yards', '')
+        
+        if not all([user_id, game_id, pick]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required fields'
+            }, status=400)
+        
+        # Get the user and game
+        try:
+            User = get_user_model()
+            user = User.objects.get(id=user_id)
+            game = GamesAndScores.objects.get(id=game_id)
+        except (User.DoesNotExist, GamesAndScores.DoesNotExist):
+            return JsonResponse({
+                'success': False,
+                'error': 'User or game not found'
+            }, status=404)
+        
+        # Create the pick ID (same format as regular picks)
+        pick_id = f"{user.id}-{game.id}"
+        
+        # Check if pick already exists and update or create
+        pick_obj, created = GamePicks.objects.update_or_create(
+            id=pick_id,
+            defaults={
+                'userEmail': user.email,
+                'uid': user.id,
+                'userID': str(user.id),
+                'slug': game.slug,
+                'competition': game.competition,
+                'gameWeek': game.gameWeek,
+                'gameyear': game.gameyear,
+                'gameseason': game.gameseason,
+                'pick_game_id': game.id,
+                'pick': pick,
+                'tieBreakerScore': int(tiebreaker_score) if tiebreaker_score else None,
+                'tieBreakerYards': int(tiebreaker_yards) if tiebreaker_yards else None,
+            }
+        )
+        
+        action = "created" if created else "updated"
+        return JsonResponse({
+            'success': True,
+            'message': f'Successfully {action} pick for {user.username}: {pick}',
+            'pick_id': pick_id
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Invalid data: {str(e)}'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@commissioner_required
+@require_http_methods(["GET"])
+def get_user_picks(request):
+    """Get existing picks for a user for the current week"""
+    user_id = request.GET.get('user_id')
+    if not user_id:
+        return JsonResponse({'error': 'User ID required'}, status=400)
+    
+    try:
+        User = get_user_model()
+        user = User.objects.get(id=user_id)
+        
+        # Get current week info
+        today = date.today()
+        gameseason = get_season()
+        
+        try:
+            week_obj = GameWeeks.objects.get(date=today.strftime("%Y-%m-%d"))
+            current_week = week_obj.weekNumber
+            current_competition = week_obj.competition
+        except GameWeeks.DoesNotExist:
+            current_week = '1'
+            current_competition = 'nfl'
+        
+        # Get user's picks for current week
+        picks = GamePicks.objects.filter(
+            userEmail=user.email,
+            gameWeek=current_week,
+            gameseason=gameseason,
+            competition=current_competition
+        )
+        
+        picks_data = {}
+        for pick in picks:
+            picks_data[str(pick.pick_game_id)] = {
+                'pick': pick.pick,
+                'tiebreaker_score': pick.tieBreakerScore,
+                'tiebreaker_yards': pick.tieBreakerYards,
+                'pick_id': pick.id
+            }
+        
+        return JsonResponse({
+            'success': True,
+            'picks': picks_data,
+            'username': user.username
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
