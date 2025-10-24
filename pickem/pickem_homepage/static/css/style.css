@@ -2722,12 +2722,22 @@ body:has(.site-banner) .main-content {
 
 /* Homepage hero section spacing */
 .homepage-main-container {
-    margin-top: -5.5rem;
+    margin-top: 1rem; /* Default spacing for no banner */
+    padding-top: 1rem; /* Additional padding to ensure content is visible */
 }
 
-/* When banner is present, reduce top margin */
+/* When banner is present, adjust spacing */
 body:has(.site-banner) .homepage-main-container {
     margin-top: 1rem;
+    padding-top: 0.5rem; /* Less padding when banner is present */
+}
+
+/* Fallback for browsers that don't support :has() - assume no banner */
+@supports not (selector(:has(*))) {
+    .homepage-main-container {
+        margin-top: 1rem;
+        padding-top: 1rem;
+    }
 }
 
 /* Week Winner Names - Make Uppercase */

@@ -62,7 +62,7 @@
                         <div class="alert alert-success" role="alert">
                             <i class="fas fa-check-circle me-2"></i>
                             <strong>Week {{ current_week }} Winner Already Set:</strong>
-                            {% with current_week_winner.userEmail|lookupname as winner_name %}
+                            {% with current_week_winner.userID|safe_username as winner_name %}
                                 {{ winner_name }}
                             {% endwith %}
                         </div>
