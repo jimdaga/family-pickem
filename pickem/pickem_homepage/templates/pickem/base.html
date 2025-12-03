@@ -43,8 +43,8 @@
             <div class="flex items-center justify-between h-16">
                 <!-- Brand Logo -->
                 <a class="flex items-center space-x-2 hover:opacity-80 transition-opacity" href="/" aria-label="Family Pickem Home">
-                    <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="h-10 w-10">
-                    <span class="hidden sm:inline text-lg font-semibold text-text-dark dark:text-white">Family Pickem</span>
+                    <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="h-12 w-12">
+                    <span class="hidden sm:inline text-lg font-semibold text-white">Family Pickem</span>
                 </a>
 
                 <!-- Mobile Page Title -->
@@ -67,12 +67,12 @@
                     </a>
 
                     <!-- Scores Dropdown -->
-                    <div class="relative group">
-                        <button class="nav-link-base flex items-center" aria-label="Scores menu">
+                    <div class="relative dropdown-container">
+                        <button class="nav-link-base flex items-center dropdown-trigger" aria-label="Scores menu" onclick="toggleDropdown(event, this)">
                             <i class="fas fa-chart-line"></i>
                             <i class="fas fa-chevron-down ml-1 text-xs"></i>
                         </button>
-                        <div class="absolute left-0 mt-2 w-48 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
+                        <div class="nav-dropdown absolute left-0 mt-2 w-48 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle hidden z-50 py-2">
                             <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores">Current Week</a>
                             <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
                             <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/1">Week 1</a>
@@ -125,9 +125,9 @@
                         </a>
 
                         <!-- User Profile Dropdown -->
-                        <div class="relative group">
-                            <button class="flex items-center space-x-2 px-3 py-2 rounded-xl border border-border-light dark:border-border-subtle hover:bg-surface-light dark:hover:bg-surface-hover transition-colors"
-                                    aria-label="User menu">
+                        <div class="relative dropdown-container">
+                            <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-border-light dark:border-border-subtle hover:bg-surface-light dark:hover:bg-surface-hover transition-colors"
+                                    aria-label="User menu" onclick="toggleDropdown(event, this)">
                                 <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
                                      alt="Profile picture"
                                      class="w-8 h-8 rounded-full">
@@ -137,7 +137,7 @@
                                 <i class="fas fa-chevron-down text-xs text-text-dark dark:text-white"></i>
                             </button>
 
-                            <div class="absolute right-0 mt-2 w-64 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
+                            <div class="nav-dropdown absolute right-0 mt-2 w-64 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle hidden z-50 py-2">
                                 <a class="flex items-center px-4 py-3 hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% url 'user_profile' user.id %}">
                                     <i class="fas fa-user-circle text-xl mr-3 text-text-dark dark:text-white"></i>
                                     <div>
@@ -281,8 +281,42 @@
             integrity="sha384-Atwg2Pkwv9vp0ygtn1JAojH0nYbwNJLPhwyoVbhoPwBhjQPR5VtM2+xf0Uwh9KtT"
             crossorigin="anonymous"></script>
 
-    <!-- Mobile Menu Toggle -->
+    <!-- Dropdown and Mobile Menu Toggle -->
     <script>
+    // Dropdown toggle function
+    function toggleDropdown(event, button) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const container = button.closest('.dropdown-container');
+        const dropdown = container.querySelector('.nav-dropdown');
+        const isHidden = dropdown.classList.contains('hidden');
+
+        // Close all other dropdowns first
+        document.querySelectorAll('.nav-dropdown').forEach(menu => {
+            if (menu !== dropdown) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Toggle this dropdown
+        if (isHidden) {
+            dropdown.classList.remove('hidden');
+        } else {
+            dropdown.classList.add('hidden');
+        }
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.dropdown-container')) {
+            document.querySelectorAll('.nav-dropdown').forEach(menu => {
+                menu.classList.add('hidden');
+            });
+        }
+    });
+
+    // Mobile menu toggle
     document.addEventListener('DOMContentLoaded', function() {
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
         const mobileMenu = document.getElementById('mobile-menu');

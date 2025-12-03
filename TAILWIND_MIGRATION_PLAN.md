@@ -4,6 +4,9 @@
 
 This document outlines a comprehensive, phased approach to migrate the Family Pickem Django application from Bootstrap 5 to Tailwind CSS, implementing a modern dark-mode-first design system.
 
+**Production Site Reference:** https://family-pickem.com/
+Use this as the source of truth for visual design and functionality during migration.
+
 ---
 
 ## Current State Analysis
