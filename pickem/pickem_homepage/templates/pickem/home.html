@@ -6,96 +6,89 @@
 
 {% block content %}
 
-    <div class="container homepage-main-container">
-        
+    <div class="max-w-7xl mx-auto px-4">
+
         <!-- Hero Welcome Section -->
-        <div class="hero-section text-center mb-5">
-            <div class="hero-content">
-                <div class="hero-logo mb-3">
-                    <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="hero-logo-img">
-                </div>
-                <h1 class="hero-title">Welcome to Family Pickem</h1>
-                <p class="hero-subtitle">Your ultimate NFL pick 'em league experience</p>
-                
+        <div class="relative text-center mb-6 rounded-2xl p-6 overflow-hidden bg-gradient-to-br from-blue-600/10 via-surface-light to-red-600/10 dark:from-blue-600/20 dark:via-surface dark:to-red-600/20 border border-blue-600/30 dark:border-blue-500/40 shadow-lg">
+            <!-- Content -->
+            <div class="relative z-10">
+                <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="max-w-[120px] h-auto mx-auto mb-3 filter drop-shadow-lg">
+                <h1 class="text-3xl md:text-4xl font-black bg-gradient-to-r from-blue-600 via-red-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                    Welcome to Family Pickem
+                </h1>
+                <p class="text-base text-text-secondary-light dark:text-text-secondary mb-4">
+                    Your ultimate NFL pick 'em league experience
+                </p>
+
                 {% if user.is_authenticated %}
-                    <div class="welcome-user-info">
-                        <div class="user-avatar-container">
-                            <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}" 
-                                 alt="Your profile picture" 
-                                 class="welcome-avatar">
+                    <div class="flex items-center justify-center gap-3">
+                        <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                             alt="Your profile picture"
+                             class="w-12 h-12 rounded-full border-2 border-blue-600">
+                        <div class="text-left">
+                            <h4 class="text-lg font-bold text-text-dark dark:text-white">
+                                Welcome back, <span class="text-blue-600 dark:text-blue-400">{{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}</span>!
+                            </h4>
+                            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Ready to make your Week {{ current_week }} picks?</p>
                         </div>
-                        <h4 class="welcome-message">
-                            Welcome back, {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}!
-                        </h4>
-                        <p class="text-muted">Ready to make your Week {{ current_week }} picks?</p>
                     </div>
                 {% else %}
-                    <div class="guest-welcome">
-                        <h4>Join the Family League</h4>
-                        <p class="text-muted">Sign in to start making picks and compete with friends!</p>
+                    <div class="mt-4">
+                        <h4 class="text-xl font-bold text-text-dark dark:text-white mb-2">Join the Family League</h4>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">Sign in to start making picks and compete with friends!</p>
                     </div>
                 {% endif %}
             </div>
         </div>
 
         <!-- Current Week Status -->
-        <div class="section-container mb-4">
-            <div class="section-header">
-                <h3 class="section-title">
-                    <i class="fas fa-calendar-week me-2"></i>Week {{ current_week }} Status
-                </h3>
-            </div>
-            
-            <div class="week-status-grid">
+        <div class="section-container">
+            <h3 class="section-title">
+                <i class="fas fa-calendar-week mr-2"></i>Week {{ current_week }} Status
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div class="status-card">
-                    <div class="status-icon">
+                    <div class="text-4xl text-primary mb-2">
                         <i class="fas fa-football-ball"></i>
                     </div>
-                    <div class="status-info">
-                        <div class="status-value">{{ current_games }}</div>
-                        <div class="status-label">Games This Week</div>
-                    </div>
+                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">{{ current_games }}</div>
+                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Games This Week</div>
                 </div>
-                
+
                 <div class="status-card">
-                    <div class="status-icon">
+                    <div class="text-4xl text-secondary-light dark:text-secondary mb-2">
                         <i class="fas fa-users"></i>
                     </div>
-                    <div class="status-info">
-                        <div class="status-value">{{ total_players }}</div>
-                        <div class="status-label">Active Players</div>
-                    </div>
+                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">{{ total_players }}</div>
+                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Active Players</div>
                 </div>
-                
+
                 {% if current_week_winner %}
-                <div class="status-card winner-card">
-                    <div class="status-icon">
+                <div class="status-card">
+                    <div class="text-4xl text-yellow-500 mb-2">
                         <i class="fas fa-trophy"></i>
                     </div>
-                    <div class="status-info">
-                        <div class="status-value">
-                            {% with current_week_winner.userID|safe_username as winner_name %}
-                                {{ winner_name|truncatechars:12 }}
-                            {% endwith %}
-                        </div>
-                        <div class="status-label">Week Winner</div>
+                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">
+                        {% with current_week_winner.userID|safe_username as winner_name %}
+                            {{ winner_name|truncatechars:12 }}
+                        {% endwith %}
                     </div>
+                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Week Winner</div>
                 </div>
                 {% else %}
-                <div class="status-card pending-card">
-                    <div class="status-icon">
+                <div class="status-card">
+                    <div class="text-4xl text-muted mb-2">
                         <i class="fas fa-clock"></i>
                     </div>
-                    <div class="status-info">
-                        <div class="status-value">TBD</div>
-                        <div class="status-label">Week Winner</div>
-                    </div>
+                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">TBD</div>
+                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Week Winner</div>
                 </div>
                 {% endif %}
-                
+
                 {% if user.is_authenticated %}
-                <div class="status-card {% if user_pick_status == 'complete' %}picks-submitted{% elif user_pick_status == 'partial' %}picks-partial{% else %}picks-pending{% endif %}">
-                    <div class="status-icon">
+                <div class="status-card">
+                    <div class="text-4xl mb-2 {% if user_pick_status == 'complete' %}text-secondary-light dark:text-secondary{% elif user_pick_status == 'partial' %}text-yellow-500{% else %}text-red-500{% endif %}">
                         {% if user_pick_status == 'complete' %}
                             <i class="fas fa-check-circle"></i>
                         {% elif user_pick_status == 'partial' %}
@@ -104,95 +97,79 @@
                             <i class="fas fa-exclamation-circle"></i>
                         {% endif %}
                     </div>
-                    <div class="status-info">
-                        <div class="status-value">
-                            {% if user_pick_status == 'complete' %}
-                                Complete
-                            {% elif user_pick_status == 'partial' %}
-                                {{ user_picks_count }}/{{ current_games }}
-                            {% else %}
-                                Pending
-                            {% endif %}
-                        </div>
-                        <div class="status-label">Your Picks</div>
+                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">
+                        {% if user_pick_status == 'complete' %}
+                            Complete
+                        {% elif user_pick_status == 'partial' %}
+                            {{ user_picks_count }}/{{ current_games }}
+                        {% else %}
+                            Pending
+                        {% endif %}
                     </div>
+                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Your Picks</div>
                 </div>
                 {% endif %}
             </div>
         </div>
 
         <!-- Quick Navigation -->
-        <div class="section-container mb-4">
-            <div class="section-header">
-                <h3 class="section-title">
-                    <i class="fas fa-compass me-2"></i>Quick Actions
-                </h3>
-            </div>
-            
-            <div class="quick-nav-grid">
+        <div class="section-container">
+            <h3 class="section-title">
+                <i class="fas fa-compass mr-2"></i>Quick Actions
+            </h3>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {% if user.is_authenticated %}
-                <a href="/picks/" class="nav-card picks-card">
-                    <div class="nav-card-icon">
+                <a href="/picks/" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary transition-all hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-red-600 dark:text-red-500 mb-2">
                         <i class="fas fa-edit"></i>
                     </div>
-                    <div class="nav-card-content">
-                        <h5 class="nav-card-title">Submit Picks</h5>
-                        <p class="nav-card-subtitle">Make your Week {{ current_week }} predictions</p>
-                        {% if user_pick_status != 'complete' %}
-                            <span class="nav-card-badge">Action Required</span>
-                        {% endif %}
-                    </div>
+                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Submit Picks</h5>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Make your Week {{ current_week }} predictions</p>
+                    {% if user_pick_status != 'complete' %}
+                        <span class="absolute top-2 right-2 px-2 py-1 text-xs font-semibold bg-red-600 text-white rounded-full">!</span>
+                    {% endif %}
                 </a>
                 {% else %}
-                <a href="{% provider_login_url 'google' %}" class="nav-card login-card">
-                    <div class="nav-card-icon">
+                <a href="{% provider_login_url 'google' %}" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary transition-all hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-red-600 dark:text-red-500 mb-2">
                         <i class="fab fa-google"></i>
                     </div>
-                    <div class="nav-card-content">
-                        <h5 class="nav-card-title">Sign In</h5>
-                        <p class="nav-card-subtitle">Join the league with Google</p>
-                    </div>
+                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Sign In</h5>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Join the league with Google</p>
                 </a>
                 {% endif %}
-                
-                <a href="/scores/" class="nav-card scores-card">
-                    <div class="nav-card-icon">
+
+                <a href="/scores/" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-blue-600 dark:hover:border-blue-500 transition-all hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-blue-600 dark:text-blue-500 mb-2">
                         <i class="fas fa-chart-line"></i>
                     </div>
-                    <div class="nav-card-content">
-                        <h5 class="nav-card-title">Live Scores</h5>
-                        <p class="nav-card-subtitle">Track current week results</p>
-                    </div>
+                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Live Scores</h5>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Track current week results</p>
                 </a>
-                
-                <a href="/standings/" class="nav-card standings-card">
-                    <div class="nav-card-icon">
+
+                <a href="/standings/" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-yellow-500 dark:hover:border-yellow-400 transition-all hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-yellow-600 dark:text-yellow-500 mb-2">
                         <i class="fas fa-medal"></i>
                     </div>
-                    <div class="nav-card-content">
-                        <h5 class="nav-card-title">Standings</h5>
-                        <p class="nav-card-subtitle">View league leaderboard</p>
-                    </div>
+                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Standings</h5>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">View league leaderboard</p>
                 </a>
-                
-                <a href="/stats/" class="nav-card stats-card">
-                    <div class="nav-card-icon">
+
+                <a href="/stats/" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-secondary-light dark:hover:border-secondary transition-all hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-secondary-light dark:text-secondary mb-2">
                         <i class="fas fa-chart-bar"></i>
                     </div>
-                    <div class="nav-card-content">
-                        <h5 class="nav-card-title">Statistics</h5>
-                        <p class="nav-card-subtitle">Player performance data</p>
-                    </div>
+                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Statistics</h5>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Player performance data</p>
                 </a>
-                
-                <a href="/rules/" class="nav-card rules-card">
-                    <div class="nav-card-icon">
+
+                <a href="/rules/" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-purple-600 dark:hover:border-purple-500 transition-all hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-purple-600 dark:text-purple-500 mb-2">
                         <i class="fas fa-gavel"></i>
                     </div>
-                    <div class="nav-card-content">
-                        <h5 class="nav-card-title">Rules</h5>
-                        <p class="nav-card-subtitle">League guidelines</p>
-                    </div>
+                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Rules</h5>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">League guidelines</p>
                 </a>
             </div>
         </div>
@@ -400,165 +377,168 @@
         </div>
         {% endif %}
 
-        <div class="row">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <!-- Leaderboard Preview -->
-            <div class="col-lg-6 mb-4">
-                <div class="section-container">
-                    <div class="section-header">
-                        <h3 class="section-title">
-                            <i class="fas fa-trophy me-2"></i>Top Players
-                        </h3>
-                        <a href="/standings/" class="section-link">View All</a>
-                    </div>
-                    
-                    <div class="leaderboard-preview">
-                        {% for player in top_players %}
-                        <div class="player-preview-card">
-                            <div class="player-rank-badge position-{{ forloop.counter }}">
+            <div class="section-container">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="section-title mb-0">
+                        <i class="fas fa-trophy mr-2"></i>Top Players
+                    </h3>
+                    <a href="/standings/" class="text-sm text-primary hover:text-primary/80 font-semibold transition-colors">View All →</a>
+                </div>
+
+                <div class="space-y-3">
+                    {% for player in top_players %}
+                    <div class="leaderboard-card group">
+                        <div class="flex items-center gap-3">
+                            <div class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg
+                                {% if forloop.counter == 1 %}bg-yellow-500 text-white
+                                {% elif forloop.counter == 2 %}bg-gray-400 text-white
+                                {% elif forloop.counter == 3 %}bg-amber-700 text-white
+                                {% else %}bg-surface-light dark:bg-surface-hover text-text-secondary-light dark:text-text-secondary{% endif %}">
                                 {{ forloop.counter }}
                             </div>
-                            <div class="player-preview-info">
-                                {% with player.userID|lookupavatar as avatar %}
-                                {% with player.userID|safe_username as username %}
-                                <a href="{% url 'user_profile' player.userID %}" class="player-preview-link">
-                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                         alt="Profile picture for {{ username }}" 
-                                         class="player-preview-avatar">
-                                </a>
-                                <div class="player-preview-details">
-                                    <div class="player-preview-name">{{ username|default:"Unknown Player" }}</div>
-                                    <div class="player-preview-points">{{ player.total_points|default:0 }} points</div>
-                                </div>
-                                {% endwith %}
-                                {% endwith %}
+                            {% with player.userID|lookupavatar as avatar %}
+                            {% with player.userID|safe_username as username %}
+                            <a href="{% url 'user_profile' player.userID %}" class="flex-shrink-0">
+                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                     alt="Profile picture for {{ username }}"
+                                     class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:border-primary transition-colors">
+                            </a>
+                            <div class="flex-grow min-w-0">
+                                <div class="font-semibold text-text-dark dark:text-white truncate">{{ username|default:"Unknown Player" }}</div>
+                                <div class="text-sm text-text-secondary-light dark:text-text-secondary">{{ player.total_points|default:0 }} points</div>
                             </div>
+                            {% endwith %}
+                            {% endwith %}
                         </div>
-                        {% empty %}
-                        <div class="no-data-message">
-                            <p class="text-muted">No standings data available yet.</p>
-                        </div>
-                        {% endfor %}
                     </div>
+                    {% empty %}
+                    <div class="text-center py-8">
+                        <p class="text-text-secondary-light dark:text-text-secondary">No standings data available yet.</p>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
 
             <!-- League Statistics & Recent Activity -->
-            <div class="col-lg-6 mb-4">
-                <div class="section-container">
-                    <div class="section-header">
-                        <h3 class="section-title">
-                            <i class="fas fa-chart-pie me-2"></i>League Stats
-                        </h3>
-                    </div>
-                    
-                    <div class="stats-summary">
-                        <div class="stat-summary-item">
-                            <div class="stat-summary-icon">
-                                <i class="fas fa-percentage"></i>
-                            </div>
-                            <div class="stat-summary-content">
-                                <div class="stat-summary-value">{{ league_accuracy }}%</div>
-                                <div class="stat-summary-label">League Accuracy</div>
-                            </div>
+            <div class="section-container">
+                <h3 class="section-title">
+                    <i class="fas fa-chart-pie mr-2"></i>League Stats
+                </h3>
+
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="text-center p-4 bg-surface-light dark:bg-surface-hover rounded-xl">
+                        <div class="text-3xl text-blue-600 dark:text-blue-500 mb-2">
+                            <i class="fas fa-percentage"></i>
                         </div>
-                        
-                        <div class="stat-summary-item">
-                            <div class="stat-summary-icon">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <div class="stat-summary-content">
-                                <div class="stat-summary-value">{{ total_correct_picks|default:0 }}</div>
-                                <div class="stat-summary-label">Correct Picks</div>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-summary-item">
-                            <div class="stat-summary-icon">
-                                <i class="fas fa-list-ol"></i>
-                            </div>
-                            <div class="stat-summary-content">
-                                <div class="stat-summary-value">{{ total_picks|default:0 }}</div>
-                                <div class="stat-summary-label">Total Picks</div>
-                            </div>
-                        </div>
+                        <div class="text-2xl font-bold text-text-dark dark:text-white">{{ league_accuracy }}%</div>
+                        <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">League Accuracy</div>
                     </div>
 
-                    <!-- Recent Winners -->
-                    {% if recent_winners %}
-                    <div class="recent-activity mt-4">
-                        <h6 class="activity-title">
-                            <i class="fas fa-history me-2"></i>Recent Week Winners
-                        </h6>
-                        <div class="recent-winners-list">
-                            {% for winner_data in recent_winners %}
-                            <div class="recent-winner-item">
-                                <div class="winner-week-badge">W{{ winner_data.week }}</div>
-                                <div class="winner-info">
-                                    {% with winner_data.winner.userID|safe_username as winner_name %}
-                                    {% with winner_data.winner.userID|lookupavatar as winner_avatar %}
-                                    <img src="{{ winner_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                         alt="Profile picture for {{ winner_name }}" 
-                                         class="winner-mini-avatar">
-                                    <span class="winner-name">{{ winner_name|default:"Unknown Player" }}</span>
-                                    {% endwith %}
-                                    {% endwith %}
-                                </div>
-                                <div class="winner-trophy">
-                                    <i class="fas fa-trophy text-warning"></i>
-                                </div>
-                            </div>
-                            {% endfor %}
+                    <div class="text-center p-4 bg-surface-light dark:bg-surface-hover rounded-xl">
+                        <div class="text-3xl text-secondary-light dark:text-secondary mb-2">
+                            <i class="fas fa-check-circle"></i>
                         </div>
+                        <div class="text-2xl font-bold text-text-dark dark:text-white">{{ total_correct_picks|default:0 }}</div>
+                        <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Correct Picks</div>
                     </div>
-                    {% endif %}
+
+                    <div class="text-center p-4 bg-surface-light dark:bg-surface-hover rounded-xl">
+                        <div class="text-3xl text-purple-600 dark:text-purple-500 mb-2">
+                            <i class="fas fa-list-ol"></i>
+                        </div>
+                        <div class="text-2xl font-bold text-text-dark dark:text-white">{{ total_picks|default:0 }}</div>
+                        <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Total Picks</div>
+                    </div>
                 </div>
+
+                <!-- Recent Winners -->
+                {% if recent_winners %}
+                <div class="mt-4">
+                    <h6 class="text-lg font-semibold text-text-dark dark:text-white mb-3 flex items-center">
+                        <i class="fas fa-history mr-2"></i>Recent Week Winners
+                    </h6>
+                    <div class="space-y-2">
+                        {% for winner_data in recent_winners %}
+                        <div class="flex items-center justify-between p-3 bg-surface-light dark:bg-surface-hover rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <div class="px-3 py-1 bg-blue-600 text-white text-sm font-bold rounded-full">W{{ winner_data.week }}</div>
+                                {% with winner_data.winner.userID|safe_username as winner_name %}
+                                {% with winner_data.winner.userID|lookupavatar as winner_avatar %}
+                                <img src="{{ winner_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                     alt="Profile picture for {{ winner_name }}"
+                                     class="w-8 h-8 rounded-full">
+                                <span class="font-medium text-text-dark dark:text-white">{{ winner_name|default:"Unknown Player" }}</span>
+                                {% endwith %}
+                                {% endwith %}
+                            </div>
+                            <i class="fas fa-trophy text-yellow-500"></i>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
 
         <!-- Season Champion Section (if exists) -->
         {% if season_winner %}
-        <div class="section-container mb-4">
-            <div class="champion-spotlight">
-                <div class="champion-content">
-                    <div class="champion-crown">
-                        <i class="fas fa-crown"></i>
-                    </div>
-                    <h3 class="champion-title">Season Champion</h3>
-                    {% with season_winner.userID|safe_username as champion_name %}
-                    {% with season_winner.userID|lookupavatar as champion_avatar %}
-                    <div class="champion-info">
-                        <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                             alt="Profile picture for {{ champion_name }}" 
-                             class="champion-avatar">
-                        <div class="champion-details">
-                            <h4 class="champion-name">{{ champion_name|default:"Unknown Champion" }}</h4>
-                            <p class="champion-subtitle">Congratulations on your victory!</p>
-                        </div>
-                    </div>
-                    {% endwith %}
-                    {% endwith %}
+        <div class="section-container">
+            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500/20 via-surface-light to-yellow-600/10 dark:from-yellow-500/30 dark:via-surface dark:to-yellow-600/20 border-2 border-yellow-500/50 dark:border-yellow-400/60 p-8 text-center">
+                <!-- Crown Icon -->
+                <div class="text-6xl text-yellow-500 mb-3">
+                    <i class="fas fa-crown"></i>
                 </div>
+
+                <h3 class="text-2xl font-black text-text-dark dark:text-white mb-4">
+                    🏆 Season Champion 🏆
+                </h3>
+
+                {% with season_winner.userID|safe_username as champion_name %}
+                {% with season_winner.userID|lookupavatar as champion_avatar %}
+                <div class="flex flex-col items-center gap-4">
+                    <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                         alt="Profile picture for {{ champion_name }}"
+                         class="w-24 h-24 rounded-full border-4 border-yellow-500 shadow-xl">
+                    <div>
+                        <h4 class="text-2xl font-bold text-text-dark dark:text-white mb-1">
+                            {{ champion_name|default:"Unknown Champion" }}
+                        </h4>
+                        <p class="text-base text-text-secondary-light dark:text-text-secondary">
+                            Congratulations on your victory!
+                        </p>
+                    </div>
+                </div>
+                {% endwith %}
+                {% endwith %}
             </div>
         </div>
         {% endif %}
 
         <!-- Footer Information -->
-        <div class="homepage-footer text-center">
-            <div class="footer-features">
-                <div class="feature-item">
-                    <i class="fas fa-mobile-alt"></i>
-                    <span>Mobile Friendly</span>
+        <div class="section-container text-center">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div class="flex flex-col items-center gap-2 p-4">
+                    <div class="text-3xl text-blue-600 dark:text-blue-500">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <span class="text-sm font-semibold text-text-dark dark:text-white">Mobile Friendly</span>
                 </div>
-                <div class="feature-item">
-                    <i class="fas fa-sync"></i>
-                    <span>Real-time Updates</span>
+                <div class="flex flex-col items-center gap-2 p-4">
+                    <div class="text-3xl text-secondary-light dark:text-secondary">
+                        <i class="fas fa-sync"></i>
+                    </div>
+                    <span class="text-sm font-semibold text-text-dark dark:text-white">Real-time Updates</span>
                 </div>
-                <div class="feature-item">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>Secure Login</span>
+                <div class="flex flex-col items-center gap-2 p-4">
+                    <div class="text-3xl text-yellow-600 dark:text-yellow-500">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <span class="text-sm font-semibold text-text-dark dark:text-white">Secure Login</span>
                 </div>
             </div>
-            <p class="footer-text text-muted mt-3">
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary">
                 Join the excitement • Make your picks • Win prizes • Have fun!
             </p>
         </div>
