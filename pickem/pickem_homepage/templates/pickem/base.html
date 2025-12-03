@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="{% if user_theme_preference %}{{ user_theme_preference }}{% else %}light{% endif %}">
+<html lang="en" class="{% if user_theme_preference == 'dark' %}dark{% endif %}" data-bs-theme="{% if user_theme_preference %}{{ user_theme_preference }}{% else %}light{% endif %}">
 <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-LJ2FN8G22Z"></script>
@@ -21,180 +21,199 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Heebo:300,400,500,600,700&display=swap">
+    <!-- Google Fonts - Inter & Urbanist -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Urbanist:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     
     {% load static %}
     <link rel="shortcut icon" type="image/png" href="{% static 'images/windowlogo.png' %}">
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}">
 </head>
 
-<body>
+<body class="bg-bg-light dark:bg-bg-dark transition-colors duration-200">
     {% load socialaccount %}
     
     <!-- Main Navigation -->
-    <nav class="navbar navbar-expand-lg fixed-top modern-navbar" role="navigation" aria-label="Main navigation">
-        <div class="container">
-            <!-- Brand Logo -->
-            <a class="navbar-brand d-flex align-items-center modern-brand" href="/" aria-label="Family Pickem Home">
-                <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="navbar-logo">
-                <span class="brand-text d-none d-sm-inline ms-2">Family Pickem</span>
-            </a>
+    <nav class="fixed top-0 w-full bg-surface/80 dark:bg-surface/80 backdrop-blur-lg border-b border-border-light dark:border-border-subtle z-50 transition-colors duration-200" role="navigation" aria-label="Main navigation">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo -->
+                <a class="flex items-center space-x-2 hover:opacity-80 transition-opacity" href="/" aria-label="Family Pickem Home">
+                    <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="h-10 w-10">
+                    <span class="hidden sm:inline text-lg font-semibold text-text-dark dark:text-white">Family Pickem</span>
+                </a>
 
-            <!-- Mobile Page Title -->
-            <div class="navbar-mobile-title d-lg-none">
-                {% block mobile_title %}{% endblock %}
-            </div>
+                <!-- Mobile Page Title -->
+                <div class="lg:hidden text-text-dark dark:text-white font-medium">
+                    {% block mobile_title %}{% endblock %}
+                </div>
 
-            <!-- Mobile Toggle Button -->
-            <button class="navbar-toggler modern-toggler" type="button" 
-                    data-bs-toggle="collapse" 
-                    data-bs-target="#navbarContent" 
-                    aria-controls="navbarContent" 
-                    aria-expanded="false" 
-                    aria-label="Toggle navigation">
-                <i class="fas fa-bars"></i>
-            </button>
+                <!-- Mobile Toggle Button -->
+                <button id="mobile-menu-btn" class="lg:hidden p-2 text-text-dark dark:text-white hover:bg-surface-light dark:hover:bg-surface-hover rounded-lg transition-colors" type="button"
+                        aria-controls="navbarContent"
+                        aria-expanded="false"
+                        aria-label="Toggle navigation">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
 
-                         <!-- Collapsible Content -->
-             <div class="collapse navbar-collapse" id="navbarContent">
-                 <!-- Left spacer for centering -->
-                 <div class="navbar-nav me-auto"></div>
-                 
-                 <!-- Centered Main Navigation Links -->
-                 <ul class="navbar-nav navbar-nav-center">
-                     <li class="nav-item">
-                         <a class="nav-link" href="/" aria-label="Home">
-                             <i class="fas fa-home"></i>
-                         </a>
-                     </li>
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex items-center space-x-1 absolute left-1/2 transform -translate-x-1/2">
+                    <a class="nav-link-base" href="/" aria-label="Home">
+                        <i class="fas fa-home"></i>
+                    </a>
 
-                     <!-- Scores Dropdown -->
-                     <li class="nav-item dropdown">
-                         <a class="nav-link dropdown-toggle" href="#" role="button" 
-                            data-bs-toggle="dropdown" aria-expanded="false" aria-label="Scores menu">
-                             <i class="fas fa-chart-line"></i>
-                         </a>
-                         <ul class="dropdown-menu">
-                             <li><a class="dropdown-item" href="/scores">Current Week</a></li>
-                             <li><hr class="dropdown-divider"></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/1">Week 1</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/2">Week 2</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/3">Week 3</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/4">Week 4</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/5">Week 5</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/6">Week 6</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/7">Week 7</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/8">Week 8</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/9">Week 9</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/10">Week 10</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/11">Week 11</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/12">Week 12</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/13">Week 13</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/14">Week 14</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/15">Week 15</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/16">Week 16</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/17">Week 17</a></li>
-                             <li><a class="dropdown-item" href="/scores/competition/1/season/{{ gameseason }}/week/18">Week 18</a></li>
-                         </ul>
-                     </li>
+                    <!-- Scores Dropdown -->
+                    <div class="relative group">
+                        <button class="nav-link-base flex items-center" aria-label="Scores menu">
+                            <i class="fas fa-chart-line"></i>
+                            <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                        </button>
+                        <div class="absolute left-0 mt-2 w-48 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores">Current Week</a>
+                            <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/1">Week 1</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/2">Week 2</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/3">Week 3</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/4">Week 4</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/5">Week 5</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/6">Week 6</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/7">Week 7</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/8">Week 8</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/9">Week 9</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/10">Week 10</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/11">Week 11</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/12">Week 12</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/13">Week 13</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/14">Week 14</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/15">Week 15</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/16">Week 16</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/17">Week 17</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/18">Week 18</a>
+                        </div>
+                    </div>
 
-                     <li class="nav-item">
-                         <a class="nav-link" href="/standings/" aria-label="Standings">
-                             <i class="fas fa-medal"></i>
-                         </a>
-                     </li>
+                    <a class="nav-link-base" href="/standings/" aria-label="Standings">
+                        <i class="fas fa-medal"></i>
+                    </a>
 
-                     <li class="nav-item">
-                         <a class="nav-link" href="/stats/" aria-label="Statistics">
-                             <i class="fas fa-chart-bar"></i>
-                         </a>
-                     </li>
+                    <a class="nav-link-base" href="/stats/" aria-label="Statistics">
+                        <i class="fas fa-chart-bar"></i>
+                    </a>
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="/rules/" aria-label="Rules">
-                            <i class="fas fa-gavel"></i>
-                        </a>
-                    </li>
-                    
+                    <a class="nav-link-base" href="/rules/" aria-label="Rules">
+                        <i class="fas fa-gavel"></i>
+                    </a>
+
                     {% if user_is_commissioner %}
-                    <li class="nav-item">
-                        <a class="nav-link commissioner-link" href="{% url 'commissioners' %}" aria-label="Commissioners Dashboard">
-                            <i class="fas fa-crown"></i>
-                        </a>
-                    </li>
+                    <a class="nav-link-base text-yellow-500 dark:text-yellow-400" href="{% url 'commissioners' %}" aria-label="Commissioners Dashboard">
+                        <i class="fas fa-crown"></i>
+                    </a>
                     {% endif %}
-                </ul>
+                </div>
 
-                 <!-- Right Side Navigation -->
-                 <ul class="navbar-nav ms-auto nav-right-mobile-center">
+                <!-- Right Side Navigation -->
+                <div class="hidden lg:flex items-center space-x-4">
                     {% if user.is_authenticated %}
                         <!-- Submit Picks Button -->
-                        <li class="nav-item me-3">
-                            <a class="btn btn-gradient-primary btn-sm modern-btn" href="/picks" role="button">
-                                <i class="fas fa-edit me-1"></i>
-                                <span class="d-none d-md-inline">Submit Weekly Picks</span>
-                                <span class="d-inline d-md-none">Submit Weekly Picks</span>
-                            </a>
-                        </li>
+                        <a class="btn-gradient px-4 py-2" href="/picks">
+                            <i class="fas fa-edit mr-2"></i>
+                            Submit Weekly Picks
+                        </a>
 
                         <!-- User Profile Dropdown -->
-                        <li class="nav-item dropdown">
-                            <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center modern-user-btn" 
-                                    type="button" 
-                                    data-bs-toggle="dropdown" 
-                                    aria-expanded="false"
+                        <div class="relative group">
+                            <button class="flex items-center space-x-2 px-3 py-2 rounded-xl border border-border-light dark:border-border-subtle hover:bg-surface-light dark:hover:bg-surface-hover transition-colors"
                                     aria-label="User menu">
-                                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}" 
-                                     alt="Profile picture" 
-                                     class="user-avatar me-2">
-                                <span class="d-none d-lg-inline user-name-text">
+                                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                                     alt="Profile picture"
+                                     class="w-8 h-8 rounded-full">
+                                <span class="text-text-dark dark:text-white font-medium">
                                     {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
                                 </span>
+                                <i class="fas fa-chevron-down text-xs text-text-dark dark:text-white"></i>
                             </button>
-                            
-                            <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
-                                <li>
-                                    <a class="dropdown-item modern-dropdown-item" href="{% url 'user_profile' user.id %}">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-user-circle me-2"></i>
-                                            <div>
-                                                <div class="fw-bold">
-                                                    {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} 
-                                                    {{ user.socialaccount_set.all.0.extra_data.family_name }}
-                                                </div>
-                                                <small class="text-muted">{{ user.email }}</small>
-                                            </div>
+
+                            <div class="absolute right-0 mt-2 w-64 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
+                                <a class="flex items-center px-4 py-3 hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% url 'user_profile' user.id %}">
+                                    <i class="fas fa-user-circle text-xl mr-3 text-text-dark dark:text-white"></i>
+                                    <div>
+                                        <div class="font-bold text-text-dark dark:text-white">
+                                            {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
+                                            {{ user.socialaccount_set.all.0.extra_data.family_name }}
                                         </div>
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item modern-dropdown-item" href="{% url 'profile' %}">
-                                        <i class="fas fa-edit me-2"></i>Settings
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item modern-dropdown-item" href="/logout">
-                                        <i class="fas fa-sign-out-alt me-2"></i>Sign Out
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
+                                        <div class="text-sm text-text-secondary-light dark:text-text-secondary">{{ user.email }}</div>
+                                    </div>
+                                </a>
+                                <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
+                                <a class="flex items-center px-4 py-2 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% url 'profile' %}">
+                                    <i class="fas fa-edit mr-3"></i>Settings
+                                </a>
+                                <a class="flex items-center px-4 py-2 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/logout">
+                                    <i class="fas fa-sign-out-alt mr-3"></i>Sign Out
+                                </a>
+                            </div>
+                        </div>
                     {% else %}
                         <!-- Login Button -->
-                        <li class="nav-item">
-                            <a class="btn btn-gradient-primary btn-sm modern-btn" 
-                               href="{% provider_login_url 'google' %}" 
-                               role="button">
-                                <i class="fab fa-google me-1"></i>
-                                <span class="d-none d-sm-inline">Sign In with Google</span>
-                                <span class="d-inline d-sm-none">Sign In</span>
-                            </a>
-                        </li>
+                        <a class="btn-gradient px-4 py-2" href="{% provider_login_url 'google' %}">
+                            <i class="fab fa-google mr-2"></i>
+                            Sign In with Google
+                        </a>
                     {% endif %}
-                </ul>
+                </div>
+            </div>
+
+            <!-- Mobile Menu (Hidden by default) -->
+            <div id="mobile-menu" class="hidden lg:hidden absolute top-16 left-0 right-0 bg-surface-light dark:bg-surface border-b border-border-light dark:border-border-subtle shadow-lg">
+                <div class="px-4 py-4 space-y-2">
+                    <!-- Mobile Navigation Links -->
+                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="/">
+                        <i class="fas fa-home mr-3"></i>Home
+                    </a>
+                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="/scores">
+                        <i class="fas fa-chart-line mr-3"></i>Scores
+                    </a>
+                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="/standings/">
+                        <i class="fas fa-medal mr-3"></i>Standings
+                    </a>
+                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="/stats/">
+                        <i class="fas fa-chart-bar mr-3"></i>Statistics
+                    </a>
+                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="/rules/">
+                        <i class="fas fa-gavel mr-3"></i>Rules
+                    </a>
+
+                    {% if user_is_commissioner %}
+                    <a class="block px-4 py-3 text-yellow-500 dark:text-yellow-400 hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="{% url 'commissioners' %}">
+                        <i class="fas fa-crown mr-3"></i>Commissioners Dashboard
+                    </a>
+                    {% endif %}
+
+                    {% if user.is_authenticated %}
+                    <div class="border-t border-border-light dark:border-border-subtle my-2"></div>
+                    <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="/picks">
+                        <i class="fas fa-edit mr-2"></i>Submit Weekly Picks
+                    </a>
+                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="{% url 'user_profile' user.id %}">
+                        <i class="fas fa-user-circle mr-3"></i>My Profile
+                    </a>
+                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="{% url 'profile' %}">
+                        <i class="fas fa-edit mr-3"></i>Settings
+                    </a>
+                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="/logout">
+                        <i class="fas fa-sign-out-alt mr-3"></i>Sign Out
+                    </a>
+                    {% else %}
+                    <div class="border-t border-border-light dark:border-border-subtle my-2"></div>
+                    <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="{% provider_login_url 'google' %}">
+                        <i class="fab fa-google mr-2"></i>Sign In with Google
+                    </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>
@@ -246,38 +265,50 @@
       {% endblock %}
 
      <!-- Main Content -->
-     <main class="main-content" role="main">
+     <main class="pt-20 min-h-screen" role="main">
         {% block content %}
-            <div class="container">
-                <div class="text-center py-5">
-                    <p class="text-muted">No content available</p>
+            <div class="max-w-7xl mx-auto px-4 py-8">
+                <div class="text-center">
+                    <p class="text-text-secondary-light dark:text-text-secondary">No content available</p>
                 </div>
             </div>
         {% endblock %}
     </main>
 
-    <!-- Bottom Navigation Bar -->
-    <nav class="navbar navbar-expand-sm bg-dark navbar-dark fixed-bottom justify-content-center">
-    </nav>
-
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap JS (Keep temporarily for other components) -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.min.js" 
-            integrity="sha384-Atwg2Pkwv9vp0ygtn1JAojH0nYbwNJLPhwyoVbhoPwBhjQPR5VtM2+xf0Uwh9KtT" 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.min.js"
+            integrity="sha384-Atwg2Pkwv9vp0ygtn1JAojH0nYbwNJLPhwyoVbhoPwBhjQPR5VtM2+xf0Uwh9KtT"
             crossorigin="anonymous"></script>
-    
-    <!-- Custom script for navbar behavior -->
+
+    <!-- Mobile Menu Toggle -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const navbar = document.querySelector('.navbar.fixed-top');
-        const navbarCollapse = document.getElementById('navbarContent');
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
 
-        if (navbar && navbarCollapse) {
-            navbarCollapse.addEventListener('show.bs.collapse', function () {
-                navbar.classList.add('navbar-menu-expanded');
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', function() {
+                const isHidden = mobileMenu.classList.contains('hidden');
+
+                if (isHidden) {
+                    mobileMenu.classList.remove('hidden');
+                    mobileMenuBtn.setAttribute('aria-expanded', 'true');
+                } else {
+                    mobileMenu.classList.add('hidden');
+                    mobileMenuBtn.setAttribute('aria-expanded', 'false');
+                }
             });
-            navbarCollapse.addEventListener('hide.bs.collapse', function () {
-                navbar.classList.remove('navbar-menu-expanded');
+
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', function(event) {
+                const isClickInsideMenu = mobileMenu.contains(event.target);
+                const isClickOnButton = mobileMenuBtn.contains(event.target);
+
+                if (!isClickInsideMenu && !isClickOnButton && !mobileMenu.classList.contains('hidden')) {
+                    mobileMenu.classList.add('hidden');
+                    mobileMenuBtn.setAttribute('aria-expanded', 'false');
+                }
             });
         }
     });
@@ -373,15 +404,81 @@
     document.head.appendChild(style);
     </script>
 
-    <!-- Dark Mode JavaScript - Load early for FOUC prevention -->
-    <script src="{% static 'css/dark-mode.js' %}"></script>
-    
-    <!-- Initialize theme from Django backend for authenticated users -->
-    {% if user_authenticated %}
+    <!-- Tailwind Dark Mode Management -->
     <script>
-        // Initialize dark mode from Django backend
-        window.DarkMode.init({{ user_dark_mode|yesno:"true,false,null" }});
+    // Theme Manager for Tailwind CSS
+    const ThemeManager = {
+        init() {
+            const html = document.documentElement;
+
+            // Priority: Backend preference > localStorage > default (light)
+            {% if user_authenticated %}
+            const backendTheme = {{ user_dark_mode|yesno:"'dark','light','light'" }};
+            const currentTheme = backendTheme;
+            {% else %}
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            {% endif %}
+
+            if (currentTheme === 'dark') {
+                html.classList.add('dark');
+            } else {
+                html.classList.remove('dark');
+            }
+
+            // Also keep Bootstrap theme in sync (temporary during migration)
+            html.setAttribute('data-bs-theme', currentTheme);
+        },
+
+        toggle() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
+
+            if (isDark) {
+                html.classList.remove('dark');
+            } else {
+                html.classList.add('dark');
+            }
+
+            // Update Bootstrap theme (temporary)
+            html.setAttribute('data-bs-theme', newTheme);
+
+            // Save to localStorage
+            localStorage.setItem('theme', newTheme);
+
+            // Sync with backend for authenticated users
+            {% if user_authenticated %}
+            this.syncWithBackend(newTheme);
+            {% endif %}
+        },
+
+        {% if user_authenticated %}
+        syncWithBackend(theme) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                            document.querySelector('meta[name="csrf-token"]')?.content;
+
+            if (csrfToken) {
+                fetch('/api/update-theme/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ theme: theme === 'dark' })
+                }).catch(err => console.error('Theme sync failed:', err));
+            }
+        }
+        {% endif %}
+    };
+
+    // Initialize theme immediately to prevent FOUC
+    ThemeManager.init();
+
+    // Make ThemeManager globally available for theme toggle buttons
+    window.ThemeManager = ThemeManager;
     </script>
-    {% endif %}
+
+    <!-- Legacy dark mode support (keep for compatibility) -->
+    <script src="{% static 'css/dark-mode.js' %}"></script>
 </body>
 </html>

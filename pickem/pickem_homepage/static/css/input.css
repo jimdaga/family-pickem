@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   Custom Component Classes
+   ======================================== */
+
+@layer components {
+  /* Cards */
+  .card-base {
+    @apply rounded-2xl p-6 bg-surface dark:bg-surface shadow-xl border border-border-subtle transition-all;
+  }
+
+  .card-hover {
+    @apply hover:shadow-card-hover hover:-translate-y-1;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:bg-primary/80 transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 border border-border-subtle text-white rounded-xl hover:bg-surface-hover transition-all;
+  }
+
+  .btn-gradient {
+    @apply bg-gradient-to-r from-primary to-orange-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-glow-primary transition-all;
+  }
+
+  /* Status Cards */
+  .status-card {
+    @apply bg-surface dark:bg-surface rounded-2xl p-4 border border-border-subtle space-y-2;
+  }
+
+  /* Game Cards */
+  .game-card {
+    @apply bg-surface dark:bg-surface rounded-2xl p-5 border border-border-subtle shadow-lg hover:bg-surface-hover transition-all space-y-4;
+  }
+
+  /* Leaderboard Items */
+  .leaderboard-card {
+    @apply bg-surface dark:bg-surface rounded-2xl p-4 border border-border-subtle flex items-center justify-between hover:shadow-card-hover hover:-translate-y-1 transition-all;
+  }
+
+  /* Section Container */
+  .section-container {
+    @apply bg-surface dark:bg-surface rounded-2xl p-6 shadow-xl border border-border-subtle mb-4;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold text-white flex items-center mb-4;
+  }
+
+  /* Navigation */
+  .nav-link-base {
+    @apply px-4 py-2 rounded-xl text-text-secondary hover:text-white hover:bg-surface-hover transition-all duration-200;
+  }
+
+  /* Form Elements */
+  .input-base {
+    @apply w-full px-4 py-2 bg-surface border border-border-subtle rounded-xl text-white placeholder-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all;
+  }
+
+  .textarea-base {
+    @apply w-full px-4 py-2 bg-surface border border-border-subtle rounded-xl text-white placeholder-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none;
+  }
+}
+
+/* ========================================
+   Custom Utilities
+   ======================================== */
+
+@layer utilities {
+  /* Hover glow effect */
+  .hover-glow {
+    @apply transition-all duration-200 hover:shadow-glow-primary;
+  }
+
+  /* Backdrop blur for navbar */
+  .nav-blur {
+    @apply bg-bg-dark/80 backdrop-blur-lg;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-orange-600 bg-clip-text text-transparent;
+  }
+
+  /* Scrollbar styling for dark mode */
+  .scrollbar-dark::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-track {
+    @apply bg-surface;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-thumb {
+    @apply bg-surface-hover rounded-full;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-thumb:hover {
+    @apply bg-border-subtle;
+  }
+}
+
+/* ========================================
+   Animations
+   ======================================== */
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 26, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 10px rgba(255, 107, 26, 0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ========================================
+   Base Styles Override
+   ======================================== */
+
+@layer base {
+  /* Dark mode by default */
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-bg-dark text-white font-sans antialiased;
+  }
+
+  /* Light mode adjustments */
+  html:not(.dark) body {
+    @apply bg-bg-light text-text-dark;
+  }
+
+  /* Links */
+  a {
+    @apply transition-colors duration-200;
+  }
+
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold leading-tight;
+  }
+
+  /* Focus visible for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-bg-dark;
+  }
+}
