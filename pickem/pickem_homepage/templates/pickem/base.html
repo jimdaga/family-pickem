@@ -43,7 +43,7 @@
             <div class="flex items-center justify-between h-16">
                 <!-- Brand Logo -->
                 <a class="flex items-center space-x-2 hover:opacity-80 transition-opacity" href="/" aria-label="Family Pickem Home">
-                    <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="h-12 w-12">
+                    <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="h-10 w-auto">
                     <span class="hidden sm:inline text-lg font-semibold text-white">Family Pickem</span>
                 </a>
 
@@ -109,7 +109,7 @@
                     </a>
 
                     {% if user_is_commissioner %}
-                    <a class="nav-link-base text-yellow-500 dark:text-yellow-400" href="{% url 'commissioners' %}" aria-label="Commissioners Dashboard">
+                    <a class="nav-link-base" href="{% url 'commissioners' %}" aria-label="Commissioners Dashboard">
                         <i class="fas fa-crown"></i>
                     </a>
                     {% endif %}
@@ -188,7 +188,7 @@
                     </a>
 
                     {% if user_is_commissioner %}
-                    <a class="block px-4 py-3 text-yellow-500 dark:text-yellow-400 hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="{% url 'commissioners' %}">
+                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="{% url 'commissioners' %}">
                         <i class="fas fa-crown mr-3"></i>Commissioners Dashboard
                     </a>
                     {% endif %}
