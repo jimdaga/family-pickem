@@ -10,72 +10,78 @@
 {% endblock %}
 
 {% block content %}
-<div class="container profile-main-container">
+<div class="max-w-7xl mx-auto px-6 py-6">
     <!-- Messages -->
     {% if messages %}
-        <div class="messages-container mb-4">
+        <div class="mb-6 space-y-3">
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="relative px-4 py-3 rounded-xl border {% if message.tags == 'success' %}bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200{% elif message.tags == 'error' %}bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200{% else %}bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200{% endif %}" role="alert">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                        <span class="flex-1">{{ message }}</span>
+                        <button type="button" class="text-current opacity-50 hover:opacity-100 transition-opacity" onclick="this.closest('[role=alert]').remove()" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
             {% endfor %}
         </div>
     {% endif %}
 
     <!-- Profile Header -->
-    <div class="profile-header text-center">
-        <div class="profile-avatar-container">
-            <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}" 
-                 alt="Your profile picture" 
-                 class="profile-avatar">
-            <div class="online-indicator"></div>
+    <div class="text-center mb-8">
+        <div class="relative inline-block mb-4">
+            <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                 alt="Your profile picture"
+                 class="w-32 h-32 rounded-full border-4 border-primary shadow-lg">
+            <div class="absolute bottom-2 right-2 w-4 h-4 bg-green-500 border-2 border-white dark:border-surface rounded-full"></div>
         </div>
-        <h2 class="profile-name">
+        <h2 class="text-3xl font-bold text-text-dark dark:text-white mb-2">
             {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} {{ user.socialaccount_set.all.0.extra_data.family_name }}
         </h2>
-        <h3 class="profile-email text-muted">{{ user.email }}</h3>
+        <h3 class="text-lg text-text-secondary-light dark:text-text-secondary">{{ user.email }}</h3>
     </div>
 
     <!-- Profile Content Grid -->
-    <div class="profile-grid">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- User Information Card -->
-        <div class="profile-card">
-            <div class="profile-card-header d-flex justify-content-between align-items-center">
-                <h5 class="profile-card-title mb-0">
-                    <i class="fas fa-info-circle me-2"></i>Personal Information
+        <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-subtle">
+                <h5 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
+                    <i class="fas fa-info-circle text-primary"></i>
+                    Personal Information
                 </h5>
-                <button class="btn btn-primary btn-sm" id="editProfileBtn">
-                    <i class="fas fa-cog me-1"></i>Edit
+                <button class="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-lg font-semibold text-sm transition-colors flex items-center gap-2" id="editProfileBtn">
+                    <i class="fas fa-cog"></i>
+                    Edit
                 </button>
             </div>
-            <div class="profile-card-body">
+            <div class="p-6">
                 <!-- Display Mode -->
-                <div id="profileDisplayMode" class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Full Name</span>
-                        <span class="info-value">{{ user.get_full_name|default:"Not set" }}</span>
+                <div id="profileDisplayMode" class="space-y-4">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Full Name</span>
+                        <span class="text-base text-text-dark dark:text-white">{{ user.get_full_name|default:"Not set" }}</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Username</span>
-                        <span class="info-value">{{ user.username }}</span>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Username</span>
+                        <span class="text-base text-text-dark dark:text-white">{{ user.username }}</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Email Address</span>
-                        <span class="info-value">{{ user.email }}</span>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Email Address</span>
+                        <span class="text-base text-text-dark dark:text-white">{{ user.email }}</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Tagline</span>
-                        <span class="info-value">{{ user_profile.tagline|default:"Not set" }}</span>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Tagline</span>
+                        <span class="text-base text-text-dark dark:text-white">{{ user_profile.tagline|default:"Not set" }}</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Favorite Team</span>
-                        <span class="info-value">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Favorite Team</span>
+                        <span class="text-base text-text-dark dark:text-white flex items-center gap-2">
                             {% if user_profile.favorite_team %}
                                 {% for team in teams %}
                                     {% if team.teamNameSlug == user_profile.favorite_team %}
-                                        <img src="{{ team.teamLogo }}" alt="{{ team.teamNameName }}" class="team-logo-sm me-2">
+                                        <img src="{{ team.teamLogo }}" alt="{{ team.teamNameName }}" class="w-6 h-6 object-contain">
                                         {{ team.teamNameName }}
                                     {% endif %}
                                 {% endfor %}
@@ -84,66 +90,71 @@
                             {% endif %}
                         </span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Phone Number</span>
-                        <span class="info-value">{{ user_profile.phone_number|default:"Not set" }}</span>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Phone Number</span>
+                        <span class="text-base text-text-dark dark:text-white">{{ user_profile.phone_number|default:"Not set" }}</span>
                     </div>
-                    <div class="info-item">
-                        <small class="text-muted">Member Since</small>
-                        <span class="info-value">{{ user.date_joined|date:"M d, Y" }}</span>
-                        
+                    <div class="flex flex-col gap-1">
+                        <span class="text-sm text-text-secondary-light dark:text-text-secondary">Member Since</span>
+                        <span class="text-base text-text-dark dark:text-white">{{ user.date_joined|date:"M d, Y" }}</span>
                     </div>
                 </div>
 
                 <!-- Edit Mode -->
-                <div id="profileEditMode" class="edit-form" style="display: none;">
-                    <form id="profileEditForm" method="post">
+                <div id="profileEditMode" class="space-y-4" style="display: none;">
+                    <form id="profileEditForm" method="post" class="space-y-4">
                         {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" name="username" 
-                                   value="{{ user.username }}" 
-                                   placeholder="Your unique username" 
+                        <div>
+                            <label for="username" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">Username</label>
+                            <input type="text" class="w-full px-4 py-2.5 bg-white dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                   id="username" name="username"
+                                   value="{{ user.username }}"
+                                   placeholder="Your unique username"
                                    minlength="3" maxlength="20" required>
-                            <div class="form-text">
+                            <div class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
                                 3-20 characters, letters, numbers, and underscores only. Must be unique.
                             </div>
-                            <div class="invalid-feedback" id="usernameError"></div>
+                            <div class="hidden mt-1 text-sm text-red-600 dark:text-red-400" id="usernameError"></div>
                         </div>
-                        <div class="mb-3">
-                            <label for="tagline" class="form-label">Tagline</label>
-                            <input type="text" class="form-control" id="tagline" name="tagline" 
-                                   value="{{ user_profile.tagline|default:'' }}" 
+                        <div>
+                            <label for="tagline" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">Tagline</label>
+                            <input type="text" class="w-full px-4 py-2.5 bg-white dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                   id="tagline" name="tagline"
+                                   value="{{ user_profile.tagline|default:'' }}"
                                    placeholder="Your personal tagline or motto" maxlength="200">
-                            <div class="form-text">A short phrase that represents you (max 200 characters)</div>
+                            <div class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">A short phrase that represents you (max 200 characters)</div>
                         </div>
-                        <div class="mb-3">
-                            <label for="favorite_team" class="form-label">Favorite Team</label>
-                            <select class="form-select" id="favorite_team" name="favorite_team">
+                        <div>
+                            <label for="favorite_team" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">Favorite Team</label>
+                            <select class="w-full px-4 py-2.5 bg-white dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    id="favorite_team" name="favorite_team">
                                 <option value="">Select your favorite team</option>
                                 {% for team in teams %}
-                                    <option value="{{ team.teamNameSlug }}" 
+                                    <option value="{{ team.teamNameSlug }}"
                                             {% if team.teamNameSlug == user_profile.favorite_team %}selected{% endif %}>
                                         {{ team.teamNameName }}
                                     </option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label for="phone_number" class="form-label">Phone Number</label>
-                            <input type="tel" class="form-control" id="phone_number" name="phone_number" 
-                                   value="{{ user_profile.phone_number|default:'' }}" 
+                        <div>
+                            <label for="phone_number" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">Phone Number</label>
+                            <input type="tel" class="w-full px-4 py-2.5 bg-white dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                   id="phone_number" name="phone_number"
+                                   value="{{ user_profile.phone_number|default:'' }}"
                                    placeholder="(555) 123-4567"
                                    pattern="[0-9\s\(\)\-\+\.]+"
                                    maxlength="20">
-                            <div class="form-text">Optional contact number (e.g., (555) 123-4567)</div>
+                            <div class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Optional contact number (e.g., (555) 123-4567)</div>
                         </div>
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save me-1"></i>Save Changes
+                        <div class="flex gap-3 pt-2">
+                            <button type="submit" class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors flex items-center gap-2">
+                                <i class="fas fa-save"></i>
+                                Save Changes
                             </button>
-                            <button type="button" class="btn btn-secondary" id="cancelEditBtn">
-                                <i class="fas fa-times me-1"></i>Cancel
+                            <button type="button" class="px-6 py-2.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors flex items-center gap-2" id="cancelEditBtn">
+                                <i class="fas fa-times"></i>
+                                Cancel
                             </button>
                         </div>
                     </form>
@@ -152,52 +163,46 @@
         </div>
 
         <!-- Site Settings Card -->
-        <div class="profile-card">
-            <div class="profile-card-header">
-                <h5 class="profile-card-title">
-                    <i class="fas fa-sliders-h me-2"></i>Site Settings
+        <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden">
+            <div class="px-6 py-4 border-b border-border-light dark:border-border-subtle">
+                <h5 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
+                    <i class="fas fa-sliders-h text-primary"></i>
+                    Site Settings
                 </h5>
             </div>
-            <div class="profile-card-body">
-                <div class="settings-grid">
-                    <div class="setting-item">
-                        <div class="setting-label">
-                            <i class="fas fa-moon me-2"></i>Dark Mode
-                            <small class="text-muted d-block">Use dark theme for the site</small>
+            <div class="p-6">
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <i class="fas fa-moon text-text-dark dark:text-white"></i>
+                                <span class="font-semibold text-text-dark dark:text-white">Dark Mode</span>
+                            </div>
+                            <small class="text-text-secondary-light dark:text-text-secondary">Use dark theme for the site</small>
                         </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input setting-toggle" type="checkbox"
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer setting-toggle"
                                    id="darkMode" data-setting="dark_mode"
                                    {% if user_profile.dark_mode %}checked{% endif %}>
-                            <label class="form-check-label" for="darkMode"></label>
-                        </div>
+                            <div class="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                        </label>
                     </div>
-                    <div class="setting-item">
-                        <div class="setting-label">
-                            <i class="fas fa-bell me-2"></i>Email Notifications
-                            {% comment %} <small class="text-muted d-block">Receive updates about picks and results</small> {% endcomment %}
-                            <small class="text-muted d-block">This feature is coming soon</small>
+                    <div class="flex items-center justify-between opacity-50">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <i class="fas fa-bell text-text-dark dark:text-white"></i>
+                                <span class="font-semibold text-text-dark dark:text-white">Email Notifications</span>
+                            </div>
+                            <small class="text-text-secondary-light dark:text-text-secondary">This feature is coming soon</small>
                         </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input setting-toggle" type="checkbox"
+                        <label class="relative inline-flex items-center cursor-not-allowed">
+                            <input type="checkbox" class="sr-only peer setting-toggle" disabled
                                    id="emailNotifications" data-setting="email_notifications"
                                    {% if user_profile.email_notifications %}checked{% endif %}>
-                            <label class="form-check-label" for="emailNotifications"></label>
-                        </div>
+                            <div class="w-11 h-6 bg-gray-300 dark:bg-gray-600 rounded-full peer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        </label>
                     </div>
-                    {% comment %} <div class="setting-item">
-                        <div class="setting-label">
-                            <i class="fas fa-eye-slash me-2"></i>Private Profile
-                            <small class="text-muted d-block">Hide your profile from other users</small>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input setting-toggle" type="checkbox" 
-                                   id="privateProfile" data-setting="private_profile"
-                                   {% if user_profile.private_profile %}checked{% endif %}>
-                            <label class="form-check-label" for="privateProfile"></label>
-                        </div>
-                    </div>
-                </div> {% endcomment %}
+                </div>
             </div>
         </div>
     </div>
@@ -205,39 +210,32 @@
 
 <!-- CSS for Username Validation -->
 <style>
+.is-valid {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}
+
+.is-invalid {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
 .is-info {
-    border-color: #17a2b8 !important;
-    box-shadow: 0 0 0 0.25rem rgba(23, 162, 184, 0.25) !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
 }
 
-.form-text.text-info {
-    color: #17a2b8 !important;
+.valid-feedback {
+    color: #10b981 !important;
+    display: block !important;
 }
 
-#username {
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.username-checking {
-    position: relative;
-}
-
-.username-checking::after {
-    content: '';
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
-    border: 2px solid #17a2b8;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.invalid-feedback {
+    display: block !important;
 }
 
 @keyframes spin {
-    to { transform: translateY(-50%) rotate(360deg); }
+    to { transform: rotate(360deg); }
 }
 </style>
 
@@ -347,21 +345,21 @@ document.addEventListener('DOMContentLoaded', function() {
     function setUsernameValidation(isValid, message, isChecking = false) {
         const input = usernameInput;
         const errorDiv = usernameError;
-        
-        input.classList.remove('is-valid', 'is-invalid');
+
+        input.classList.remove('is-valid', 'is-invalid', 'is-info');
         errorDiv.textContent = message;
-        
+
         if (isChecking) {
             input.classList.add('is-info');
             errorDiv.textContent = 'Checking availability...';
-            errorDiv.className = 'form-text text-info';
+            errorDiv.className = 'mt-1 text-sm text-blue-600 dark:text-blue-400';
         } else if (isValid) {
             input.classList.add('is-valid');
-            errorDiv.className = 'valid-feedback';
+            errorDiv.className = 'mt-1 text-sm text-green-600 dark:text-green-400 valid-feedback';
             if (message) errorDiv.textContent = message;
         } else {
             input.classList.add('is-invalid');
-            errorDiv.className = 'invalid-feedback';
+            errorDiv.className = 'mt-1 text-sm text-red-600 dark:text-red-400 invalid-feedback';
         }
     }
 
@@ -428,17 +426,17 @@ document.addEventListener('DOMContentLoaded', function() {
     editBtn.addEventListener('click', function() {
         displayMode.style.display = 'none';
         editMode.style.display = 'block';
-        editBtn.textContent = 'Editing...';
+        editBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Editing...';
         editBtn.disabled = true;
     });
 
     // Cancel Edit Button
     cancelBtn.addEventListener('click', function() {
         editMode.style.display = 'none';
-        displayMode.style.display = 'grid';
-        editBtn.innerHTML = '<i class="fas fa-cog me-1"></i>Settings';
+        displayMode.style.display = 'block';
+        editBtn.innerHTML = '<i class="fas fa-cog"></i> Edit';
         editBtn.disabled = false;
-        
+
         // Reset form to original values
         form.reset();
     });
