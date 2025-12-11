@@ -162,27 +162,27 @@
                 <div class="settings-grid">
                     <div class="setting-item">
                         <div class="setting-label">
-                            <i class="fas fa-bell me-2"></i>Email Notifications 
-                            {% comment %} <small class="text-muted d-block">Receive updates about picks and results</small> {% endcomment %}
-                            <small class="text-muted d-block">This feature is coming soon</small>
+                            <i class="fas fa-moon me-2"></i>Dark Mode
+                            <small class="text-muted d-block">Use dark theme for the site</small>
                         </div>
                         <div class="form-check form-switch">
-                            <input class="form-check-input setting-toggle" type="checkbox" 
-                                   id="emailNotifications" data-setting="email_notifications"
-                                   {% if user_profile.email_notifications %}checked{% endif %}>
-                            <label class="form-check-label" for="emailNotifications"></label>
+                            <input class="form-check-input setting-toggle" type="checkbox"
+                                   id="darkMode" data-setting="dark_mode"
+                                   {% if user_profile.dark_mode %}checked{% endif %}>
+                            <label class="form-check-label" for="darkMode"></label>
                         </div>
                     </div>
                     <div class="setting-item">
                         <div class="setting-label">
-                            <i class="fas fa-moon me-2"></i>Dark Mode
-                            <small class="text-muted d-block">Use dark theme for better night viewing</small>
+                            <i class="fas fa-bell me-2"></i>Email Notifications
+                            {% comment %} <small class="text-muted d-block">Receive updates about picks and results</small> {% endcomment %}
+                            <small class="text-muted d-block">This feature is coming soon</small>
                         </div>
                         <div class="form-check form-switch">
-                            <input class="form-check-input setting-toggle" type="checkbox" 
-                                   id="darkMode" data-setting="dark_mode"
-                                   {% if user_profile.dark_mode %}checked{% endif %}>
-                            <label class="form-check-label" for="darkMode"></label>
+                            <input class="form-check-input setting-toggle" type="checkbox"
+                                   id="emailNotifications" data-setting="email_notifications"
+                                   {% if user_profile.email_notifications %}checked{% endif %}>
+                            <label class="form-check-label" for="emailNotifications"></label>
                         </div>
                     </div>
                     {% comment %} <div class="setting-item">
@@ -514,12 +514,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Handle dark mode toggle specially
             if (settingName === 'dark_mode') {
-                // Update theme immediately using dark mode manager
+                // Update theme immediately using ThemeManager
                 const theme = settingValue ? 'dark' : 'light';
-                if (window.DarkMode && window.DarkMode.manager) {
-                    window.DarkMode.manager.setTheme(theme);
+                if (window.ThemeManager) {
+                    // Toggle the theme if it doesn't match current state
+                    const html = document.documentElement;
+                    const isDark = html.classList.contains('dark');
+                    if ((theme === 'dark' && !isDark) || (theme === 'light' && isDark)) {
+                        window.ThemeManager.toggle();
+                    }
                 }
-                
+
                 // Save to backend
                 fetch('/toggle-theme/', {
                     method: 'POST',

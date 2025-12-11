@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="{% if user_theme_preference == 'dark' %}dark{% endif %}" data-bs-theme="{% if user_theme_preference %}{{ user_theme_preference }}{% else %}light{% endif %}">
+<html lang="en" class="{% if user_theme_preference == 'dark' %}dark{% endif %}">
 <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-LJ2FN8G22Z"></script>
@@ -10,15 +10,17 @@
         gtag('config', 'G-LJ2FN8G22Z');
     </script>
 
-    <title>{% block title %}Family Pickem{% endblock %}</title>
+    <title>{% block title %}Family Pick'em{% endblock %}</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="user-authenticated" content="{% if user_authenticated %}true{% else %}false{% endif %}">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <meta name="description" content="Family Pickem - Your ultimate NFL pick 'em league experience">
+    <meta name="description" content="Family Pick'em - Your ultimate NFL pick 'em league experience">
     
     <!-- Bootstrap CSS -->
+    <!-- TEMPORARILY DISABLED FOR TESTING
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    -->
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Google Fonts - Inter & Urbanist -->
@@ -30,25 +32,26 @@
     <link rel="shortcut icon" type="image/png" href="{% static 'images/windowlogo.png' %}">
     <!-- Tailwind CSS -->
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}">
+    <!-- OLD CSS FILES REMOVED - Tailwind migration in progress -->
+    <!-- <link rel="stylesheet" href="{% static 'css/style.css' %}"> -->
+    <!-- <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}"> -->
 </head>
 
-<body class="bg-bg-light dark:bg-bg-dark transition-colors duration-200">
+<body class="bg-slate-200 dark:bg-bg-dark transition-colors duration-200">
     {% load socialaccount %}
     
     <!-- Main Navigation -->
     <nav class="fixed top-0 w-full bg-surface/80 dark:bg-surface/80 backdrop-blur-lg border-b border-border-light dark:border-border-subtle z-50 transition-colors duration-200" role="navigation" aria-label="Main navigation">
-        <div class="max-w-7xl mx-auto px-4">
+        <div class="max-w-7xl mx-auto px-6">
             <div class="flex items-center justify-between h-16">
                 <!-- Brand Logo -->
-                <a class="flex items-center space-x-2 hover:opacity-80 transition-opacity" href="/" aria-label="Family Pickem Home">
-                    <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="h-10 w-auto">
-                    <span class="hidden lg:inline text-lg font-semibold text-white">Family Pickem</span>
+                <a class="flex items-center space-x-2 hover:opacity-80 transition-opacity" href="/" aria-label="Family Pick'em Home">
+                    <img src="{% static 'images/logo.png' %}" alt="Family Pick'em Logo" class="h-10 w-auto">
+                    <span class="hidden lg:inline text-lg font-semibold text-white">Family Pick'em</span>
                 </a>
 
-                <!-- Mobile Page Title -->
-                <div class="lg:hidden text-white font-medium">
+                <!-- Mobile Page Title - HIDDEN (using fancy banner instead) -->
+                <div class="hidden">
                     {% block mobile_title %}{% endblock %}
                 </div>
 
@@ -118,12 +121,6 @@
                 <!-- Right Side Navigation -->
                 <div class="hidden lg:flex items-center space-x-4">
                     {% if user.is_authenticated %}
-                        <!-- Submit Picks Button -->
-                        <a class="btn-gradient px-4 py-2" href="/picks">
-                            <i class="fas fa-edit mr-2"></i>
-                            Submit Weekly Picks
-                        </a>
-
                         <!-- User Profile Dropdown -->
                         <div class="relative dropdown-container">
                             <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-border-light dark:border-border-subtle hover:bg-surface-light dark:hover:bg-surface-hover transition-colors"
@@ -159,9 +156,8 @@
                         </div>
                     {% else %}
                         <!-- Login Button -->
-                        <a class="btn-gradient px-4 py-2" href="{% provider_login_url 'google' %}">
-                            <i class="fab fa-google mr-2"></i>
-                            Sign In with Google
+                        <a class="btn-gradient p-2.5" href="{% provider_login_url 'google' %}" aria-label="Sign in with Google">
+                            <i class="fab fa-google"></i>
                         </a>
                     {% endif %}
                 </div>
@@ -265,9 +261,9 @@
       {% endblock %}
 
      <!-- Main Content -->
-     <main class="pt-20 min-h-screen" role="main">
+     <main class="pt-16 min-h-screen" role="main">
         {% block content %}
-            <div class="max-w-7xl mx-auto px-4 py-8">
+            <div class="max-w-7xl mx-auto px-6 py-8">
                 <div class="text-center">
                     <p class="text-text-secondary-light dark:text-text-secondary">No content available</p>
                 </div>
@@ -275,11 +271,52 @@
         {% endblock %}
     </main>
 
+    <!-- Fixed Bottom Status Bar (for authenticated users) -->
+    {% if user.is_authenticated %}
+    <div class="fixed bottom-0 left-0 right-0 bg-surface/80 dark:bg-surface/80 backdrop-blur-lg border-t border-border-light dark:border-border-subtle z-40 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4 grid grid-cols-3 items-center gap-4 text-base">
+            <!-- Left: User Info -->
+            <div class="flex items-center gap-3">
+                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                     alt="Your avatar"
+                     class="w-8 h-8 rounded-full border-2 border-border-light dark:border-border-subtle">
+                <span class="text-text-dark dark:text-white font-semibold truncate">
+                    {{ user.first_name|default:user.username }}
+                </span>
+            </div>
+
+            <!-- Center: Week & Rank -->
+            <div class="flex items-center justify-center gap-4">
+                <span class="text-text-dark dark:text-white font-semibold">
+                    <i class="fas fa-calendar-week mr-1.5 text-primary"></i>
+                    Week {{ current_week|default:"--" }}
+                </span>
+                {% if user_current_rank %}
+                <span class="text-text-dark dark:text-white font-semibold">
+                    <i class="fas fa-trophy mr-1.5 text-yellow-500"></i>
+                    Rank #{{ user_current_rank }}
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Right: Submit Picks Button -->
+            <div class="flex justify-end">
+                <a href="/picks/" class="px-4 py-1.5 bg-primary hover:bg-primary/80 text-white rounded-lg font-semibold transition-colors flex items-center gap-2">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Submit Picks</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Bootstrap JS (Keep temporarily for other components) -->
+    <!-- TEMPORARILY DISABLED FOR TESTING
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.min.js"
             integrity="sha384-Atwg2Pkwv9vp0ygtn1JAojH0nYbwNJLPhwyoVbhoPwBhjQPR5VtM2+xf0Uwh9KtT"
             crossorigin="anonymous"></script>
+    -->
 
     <!-- Dropdown and Mobile Menu Toggle -->
     <script>
@@ -445,12 +482,16 @@
         init() {
             const html = document.documentElement;
 
-            // Priority: Backend preference > localStorage > default (light)
-            {% if user_authenticated %}
-            const backendTheme = {{ user_dark_mode|yesno:"'dark','light','light'" }};
-            const currentTheme = backendTheme;
+            // Get system preference
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const systemTheme = systemPrefersDark ? 'dark' : 'light';
+
+            // Priority: Backend preference > localStorage > system preference
+            {% if user.is_authenticated %}
+            const backendTheme = '{{ user_theme_preference }}';  // From context processor
+            const currentTheme = backendTheme || systemTheme;
             {% else %}
-            const currentTheme = localStorage.getItem('theme') || 'light';
+            const currentTheme = localStorage.getItem('theme') || systemTheme;
             {% endif %}
 
             if (currentTheme === 'dark') {
@@ -458,9 +499,6 @@
             } else {
                 html.classList.remove('dark');
             }
-
-            // Also keep Bootstrap theme in sync (temporary during migration)
-            html.setAttribute('data-bs-theme', currentTheme);
         },
 
         toggle() {
@@ -474,31 +512,29 @@
                 html.classList.add('dark');
             }
 
-            // Update Bootstrap theme (temporary)
-            html.setAttribute('data-bs-theme', newTheme);
-
             // Save to localStorage
             localStorage.setItem('theme', newTheme);
 
             // Sync with backend for authenticated users
-            {% if user_authenticated %}
+            {% if user.is_authenticated %}
             this.syncWithBackend(newTheme);
             {% endif %}
         },
 
-        {% if user_authenticated %}
+        {% if user.is_authenticated %}
         syncWithBackend(theme) {
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
                             document.querySelector('meta[name="csrf-token"]')?.content;
 
             if (csrfToken) {
-                fetch('/api/update-theme/', {
+                fetch('/toggle-theme/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({ theme: theme === 'dark' })
+                    body: JSON.stringify({ theme: theme })
                 }).catch(err => console.error('Theme sync failed:', err));
             }
         }
@@ -508,11 +544,11 @@
     // Initialize theme immediately to prevent FOUC
     ThemeManager.init();
 
-    // Make ThemeManager globally available for theme toggle buttons
+    // Make ThemeManager globally available for theme toggle
     window.ThemeManager = ThemeManager;
     </script>
 
-    <!-- Legacy dark mode support (keep for compatibility) -->
-    <script src="{% static 'css/dark-mode.js' %}"></script>
+    <!-- Legacy dark mode JS removed - now using Tailwind ThemeManager -->
+    <!-- <script src="{% static 'css/dark-mode.js' %}"></script> -->
 </body>
 </html>
