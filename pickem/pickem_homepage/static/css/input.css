@@ -492,6 +492,15 @@
   .team-details-manual {
     @apply flex-1;
   }
+
+  /* Filter Buttons */
+  .filter-btn.active {
+    @apply bg-blue-600 border-blue-600 text-white;
+  }
+
+  .filter-btn.active:hover {
+    @apply bg-blue-700;
+  }
 }
 
 /* ========================================
