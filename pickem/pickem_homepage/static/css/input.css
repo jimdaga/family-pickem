@@ -57,7 +57,7 @@
 
   /* Section Container */
   .section-container {
-    @apply bg-bg-light dark:bg-slate-800 rounded-2xl p-2 sm:p-4 lg:p-6 shadow-xl border border-border-light dark:border-border-subtle mb-4;
+    @apply bg-bg-light dark:bg-slate-900 rounded-2xl p-2 sm:p-4 lg:p-6 shadow-xl border border-border-light dark:border-border-subtle mb-4;
   }
 
   .section-title {
