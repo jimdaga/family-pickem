@@ -134,7 +134,7 @@
                  class="points-leaderboard points-leaderboard-multi-column bg-transparent px-1 sm:px-2 lg:px-4 pb-4"
                  id="week-points-leaderboard">
                         {% for player in user_points %}
-                        <div data-player-card class="w-full flex items-center justify-between p-3 bg-bg-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-2">
+                        <div data-player-card class="w-full flex items-center justify-between p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-2">
                             {% with player.uid|lookupname as username %}
                             {% with player.uid|lookupavatar as avatar %}
                             <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -158,7 +158,7 @@
 
                         {% for player in players_names %}
                         {% if player not in users_w_points %}
-                        <div data-player-card class="w-full flex items-center justify-between p-3 bg-bg-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-2">
+                        <div data-player-card class="w-full flex items-center justify-between p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-2">
                             {% with player|lookupname as username %}
                             {% with player|lookupavatar as avatar %}
                             <div class="flex items-center gap-3 min-w-0 flex-1">
