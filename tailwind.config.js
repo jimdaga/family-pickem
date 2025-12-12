@@ -19,13 +19,13 @@ module.exports = {
         'text-secondary': '#A9B4C4',
         'muted': '#6B7280',
 
-        // Light Mode
-        'bg-light': '#F8FAFC',
-        'surface-light': '#FFFFFF',
-        'border-light': '#E2E8F0',
-        'secondary-light': '#3CA455',
-        'text-dark': '#0F172A',
-        'text-secondary-light': '#475569',
+        // Light Mode (ESPN-inspired neutral grays)
+        'bg-light': '#EDEEF0',        // Very light neutral gray (ESPN body bg)
+        'surface-light': '#FFFFFF',   // Pure white for cards
+        'border-light': '#DCDCDD',    // Light neutral gray for borders
+        'secondary-light': '#3CA455', // Keep green accent
+        'text-dark': '#1D1E1F',       // Almost black for headlines (ESPN)
+        'text-secondary-light': '#6C6D6F', // Medium gray for body text (ESPN)
       },
       fontFamily: {
         sans: ['Inter', 'Urbanist', 'system-ui', 'sans-serif'],
