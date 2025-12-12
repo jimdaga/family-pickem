@@ -627,7 +627,7 @@
 
   /* Light mode adjustments */
   html:not(.dark) body {
-    @apply bg-bg-light text-text-dark;
+    @apply bg-gray-50 text-text-dark;
   }
 
   /* Links */
