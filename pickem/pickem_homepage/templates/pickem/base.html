@@ -41,7 +41,7 @@
     {% load socialaccount %}
     
     <!-- Main Navigation -->
-    <nav class="fixed top-0 w-full bg-white/95 dark:bg-surface/80 backdrop-blur-lg border-b border-border-light dark:border-border-subtle z-50 transition-colors duration-200" role="navigation" aria-label="Main navigation">
+    <nav class="fixed top-0 w-full bg-slate-800/95 dark:bg-surface/80 backdrop-blur-lg border-b border-border-light dark:border-border-subtle z-50 transition-colors duration-200" role="navigation" aria-label="Main navigation">
         <div class="max-w-7xl mx-auto px-6">
             <div class="flex items-center justify-between h-16">
                 <!-- Brand Logo -->
@@ -56,7 +56,7 @@
                 </div>
 
                 <!-- Mobile Toggle Button -->
-                <button id="mobile-menu-btn" class="lg:hidden p-2 text-text-dark dark:text-white hover:bg-surface-light dark:hover:bg-surface-hover rounded-lg transition-colors" type="button"
+                <button id="mobile-menu-btn" class="lg:hidden p-2 text-white hover:bg-slate-700 dark:hover:bg-surface-hover rounded-lg transition-colors" type="button"
                         aria-controls="navbarContent"
                         aria-expanded="false"
                         aria-label="Toggle navigation">
@@ -273,7 +273,7 @@
 
     <!-- Fixed Bottom Status Bar (for authenticated users) -->
     {% if user.is_authenticated %}
-    <div class="fixed bottom-0 left-0 right-0 bg-surface/80 dark:bg-surface/80 backdrop-blur-lg border-t border-border-light dark:border-border-subtle z-40 shadow-lg">
+    <div class="fixed bottom-0 left-0 right-0 bg-slate-800/95 dark:bg-surface/80 backdrop-blur-lg border-t border-border-light dark:border-border-subtle z-40 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-4 grid grid-cols-3 items-center gap-4 text-base">
             <!-- Left: User Info -->
             <div class="flex items-center gap-3">
