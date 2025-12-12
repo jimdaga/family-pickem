@@ -9,7 +9,6 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-6">
     <!-- Page Header (Hero Section) -->
     <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 shadow-xl animate-fade-in">
         <!-- Subtle background pattern -->
@@ -34,8 +33,9 @@
         </div>
     </div>
 
-            <!-- Rules Content -->
-            <div class="section-container">
+<div class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Rules Content -->
+    <div class="section-container">
                 <div class="section-header">
                     <h3 class="section-title">
                         <i class="fas fa-book me-2"></i>Official League Regulations
@@ -260,9 +260,10 @@
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Accordion JavaScript -->
-    <script>
+<!-- Accordion JavaScript -->
+<script>
     function toggleRule(button) {
         const isExpanded = button.getAttribute('aria-expanded') === 'true';
         const targetId = button.getAttribute('aria-controls');
