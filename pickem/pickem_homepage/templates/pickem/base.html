@@ -280,19 +280,19 @@
                 <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
                      alt="Your avatar"
                      class="w-8 h-8 rounded-full border-2 border-border-light dark:border-border-subtle">
-                <span class="text-text-dark dark:text-white font-semibold truncate">
+                <span class="text-white font-semibold truncate">
                     {{ user.first_name|default:user.username }}
                 </span>
             </div>
 
             <!-- Center: Week & Rank -->
             <div class="flex items-center justify-center gap-4">
-                <span class="text-text-dark dark:text-white font-semibold">
+                <span class="text-white font-semibold">
                     <i class="fas fa-calendar-week mr-1.5 text-primary"></i>
                     Week {{ current_week|default:"--" }}
                 </span>
                 {% if user_current_rank %}
-                <span class="text-text-dark dark:text-white font-semibold">
+                <span class="text-white font-semibold">
                     <i class="fas fa-trophy mr-1.5 text-yellow-500"></i>
                     Rank #{{ user_current_rank }}
                 </span>
