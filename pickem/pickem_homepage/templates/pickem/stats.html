@@ -4,346 +4,370 @@
 {% load pickem_homepage_extras %}
 
 {% block mobile_title %}
-    <div class="mobile-page-header">
-        <h2 class="mobile-title-text">
-            <i class="fas fa-chart-bar me-2"></i>Player Statistics
-        </h2>
+    <div class="flex items-center gap-2">
+        <i class="fas fa-chart-bar"></i>
+        <span>Player Statistics</span>
     </div>
 {% endblock %}
 
 {% block content %}
-    <div class="container stats-main-container">
-        <div class="col">  
-            <!-- Page Header -->
-            <div class="page-header-clean text-center d-none d-lg-block mb-4">
-                <h2 class="page-title">
-                    <i class="fas fa-chart-bar me-3"></i>Player Statistics
-                </h2>
-                <p class="page-subtitle">
-                    Detailed performance analytics and season insights
-                </p>
+    <!-- Hero Section -->
+    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 overflow-hidden shadow-xl">
+        <!-- Subtle background pattern -->
+        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjQ2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
+
+        <div class="relative z-10">
+            <!-- Icon -->
+            <div class="flex items-center justify-center mb-3 lg:mb-4">
+                <i class="fas fa-chart-bar text-4xl lg:text-6xl text-primary"></i>
             </div>
 
-            <!-- Quick Stats Summary -->
-            <div class="section-container mb-4">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-tachometer-alt me-2"></i>League Overview
-                    </h3>
-                </div>
-                
-                <div class="quick-stats-grid">
-                    {% with player_stats|length as total_players %}
-                    <div class="quick-stat-card">
-                        <div class="quick-stat-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="quick-stat-value">{{ total_players }}</div>
-                        <div class="quick-stat-label">Players with Stats</div>
-                    </div>
-                    
-                    <!-- Calculate league averages -->
-                    {% with player_points|first as leader %}
-                    <div class="quick-stat-card">
-                        <div class="quick-stat-icon">
-                            <i class="fas fa-crown"></i>
-                        </div>
-                        <div class="quick-stat-value">{{ leader.total_points|default:0 }}</div>
-                        <div class="quick-stat-label">Leading Score</div>
-                    </div>
-                    {% endwith %}
-                    
-                    <div class="quick-stat-card">
-                        <div class="quick-stat-icon">
-                            <i class="fas fa-calendar-week"></i>
-                        </div>
-                        <div class="quick-stat-value">18</div>
-                        <div class="quick-stat-label">Total Weeks</div>
-                    </div>
-                    
-                    <div class="quick-stat-card">
-                        <div class="quick-stat-icon">
-                            <i class="fas fa-football-ball"></i>
-                        </div>
-                        <div class="quick-stat-value">32</div>
-                        <div class="quick-stat-label">NFL Teams</div>
-                    </div>
-                    {% endwith %}
-                </div>
-            </div>
+            <!-- Title -->
+            <h2 class="text-3xl lg:text-5xl font-black tracking-tight mb-2 lg:mb-3"
+                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
+                Player Statistics
+            </h2>
 
-            <!-- Player Sort Controls -->
-            <div class="section-container mb-4">
-                <div class="sort-controls d-flex flex-wrap gap-2 justify-content-center">
-                    <button class="btn btn-outline-primary btn-sm sort-btn active" data-sort="position">
-                        <i class="fas fa-sort-numeric-down me-1"></i>By Position
-                    </button>
-                    <button class="btn btn-outline-primary btn-sm sort-btn" data-sort="accuracy">
-                        <i class="fas fa-percentage me-1"></i>By Accuracy
-                    </button>
-                    <button class="btn btn-outline-primary btn-sm sort-btn" data-sort="wins">
-                        <i class="fas fa-trophy me-1"></i>By Weeks Won
-                    </button>
-                    <button class="btn btn-outline-primary btn-sm sort-btn" data-sort="name">
-                        <i class="fas fa-sort-alpha-down me-1"></i>By Name
-                    </button>
-                </div>
-            </div>
+            <!-- Subtitle -->
+            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium">
+                Detailed performance analytics and season insights
+            </p>
+        </div>
+    </div>
 
-            <!-- Stats Cards Section -->
-            <div class="section-container">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-users me-2"></i>Player Performance Analysis
-                    </h3>
+    <div class="max-w-7xl mx-auto px-6 py-6">
+
+        <!-- Quick Stats Summary -->
+        <div class="section-container mb-6">
+            <h3 class="section-title">
+                <i class="fas fa-tachometer-alt mr-2"></i>League Overview
+            </h3>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {% with player_stats|length as total_players %}
+                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle">
+                    <div class="text-4xl text-blue-600 dark:text-blue-400 mb-2">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">{{ total_players }}</div>
+                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Players with Stats</div>
                 </div>
-                
-                <div class="stats-cards-container" id="statsContainer">
-                    {% for stats in player_stats %}
-                    {% with stats.userID|lookupavatar as avatar %}
-                    {% with stats.userID|lookupname as username %}
-                    <div class="stats-player-card" 
-                         data-position="{{ forloop.counter }}" 
-                         data-accuracy="{{ stats.pickPercentSeason|default:0 }}"
-                         data-wins="{{ stats.weeksWonSeason|default:0 }}"
-                         data-name="{{ username|default:'Unknown Player' }}">
-                        <!-- Player Header -->
-                        <div class="stats-card-header d-flex align-items-center">
-                            <a href="{% url 'user_profile' stats.userID %}" class="player-profile-link">
-                                <img class="player-profile-img me-3" src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" alt="Profile picture for {{ username }}">
-                            </a>
-                            <div class="flex-grow-1">
-                                <h5 class="mb-0 text-uppercase">{{ username|default:"Unknown Player" }}</h5>
-                                <small class="text-muted">{{ stats.userID|lookuptagline }}</small>
+
+                <!-- Calculate league averages -->
+                {% with player_points|first as leader %}
+                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle">
+                    <div class="text-4xl text-yellow-500 mb-2">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">{{ leader.total_points|default:0 }}</div>
+                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Leading Score</div>
+                </div>
+                {% endwith %}
+
+                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle">
+                    <div class="text-4xl text-secondary-light dark:text-secondary mb-2">
+                        <i class="fas fa-calendar-week"></i>
+                    </div>
+                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">18</div>
+                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Total Weeks</div>
+                </div>
+
+                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle">
+                    <div class="text-4xl text-primary mb-2">
+                        <i class="fas fa-football-ball"></i>
+                    </div>
+                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">32</div>
+                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">NFL Teams</div>
+                </div>
+                {% endwith %}
+            </div>
+        </div>
+
+        <!-- Player Sort Controls -->
+        <div class="section-container mb-6">
+            <div class="flex flex-wrap gap-2 justify-center">
+                <button class="sort-btn px-4 py-2 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all flex items-center gap-2 active" data-sort="position">
+                    <i class="fas fa-sort-numeric-down"></i>
+                    <span>By Position</span>
+                </button>
+                <button class="sort-btn px-4 py-2 border-2 border-border-light dark:border-border-subtle text-text-dark dark:text-white hover:border-primary hover:text-primary dark:hover:text-primary rounded-xl font-semibold transition-all flex items-center gap-2" data-sort="accuracy">
+                    <i class="fas fa-percentage"></i>
+                    <span>By Accuracy</span>
+                </button>
+                <button class="sort-btn px-4 py-2 border-2 border-border-light dark:border-border-subtle text-text-dark dark:text-white hover:border-primary hover:text-primary dark:hover:text-primary rounded-xl font-semibold transition-all flex items-center gap-2" data-sort="wins">
+                    <i class="fas fa-trophy"></i>
+                    <span>By Weeks Won</span>
+                </button>
+                <button class="sort-btn px-4 py-2 border-2 border-border-light dark:border-border-subtle text-text-dark dark:text-white hover:border-primary hover:text-primary dark:hover:text-primary rounded-xl font-semibold transition-all flex items-center gap-2" data-sort="name">
+                    <i class="fas fa-sort-alpha-down"></i>
+                    <span>By Name</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards Section -->
+        <div class="section-container">
+            <h3 class="section-title">
+                <i class="fas fa-users mr-2"></i>Player Performance Analysis
+            </h3>
+
+            <div class="space-y-6" id="statsContainer">
+                {% for stats in player_stats %}
+                {% with stats.userID|lookupavatar as avatar %}
+                {% with stats.userID|lookupname as username %}
+                <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200"
+                     data-position="{{ forloop.counter }}"
+                     data-accuracy="{{ stats.pickPercentSeason|default:0 }}"
+                     data-wins="{{ stats.weeksWonSeason|default:0 }}"
+                     data-name="{{ username|default:'Unknown Player' }}">
+                    <!-- Player Header -->
+                    <div class="flex items-center mb-4">
+                        <a href="{% url 'user_profile' stats.userID %}" class="flex-shrink-0">
+                            <img class="w-16 h-16 rounded-full border-2 border-border-light dark:border-border-subtle hover:border-primary transition-colors mr-4"
+                                 src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                 alt="Profile picture for {{ username }}">
+                        </a>
+                        <div class="flex-grow min-w-0">
+                            <h5 class="text-lg font-semibold text-text-dark dark:text-white uppercase truncate">{{ username|default:"Unknown Player" }}</h5>
+                            <p class="text-sm text-text-secondary-light dark:text-text-secondary">{{ stats.userID|lookuptagline }}</p>
+                        </div>
+                        <div class="flex-shrink-0 ml-3 text-center px-4 py-2 {% if forloop.counter == 1 %}bg-yellow-500/20 border-yellow-500{% elif forloop.counter == 2 %}bg-gray-400/20 border-gray-400{% elif forloop.counter == 3 %}bg-amber-700/20 border-amber-700{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border-2">
+                            <div class="text-2xl font-black {% if forloop.counter == 1 %}text-yellow-600 dark:text-yellow-400{% elif forloop.counter == 2 %}text-gray-600 dark:text-gray-300{% elif forloop.counter == 3 %}text-amber-800 dark:text-amber-500{% else %}text-text-dark dark:text-white{% endif %}">{{ forloop.counter }}</div>
+                            <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase">Position</div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Summary -->
+                    <div class="space-y-3 mb-6">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium text-text-dark dark:text-white">Season Accuracy</span>
+                                <span class="text-sm font-bold text-primary">{{ stats.pickPercentSeason|default:0 }}%</span>
                             </div>
-                            <div class="position-badge position-{{ forloop.counter }}">
-                                <span class="position-number">{{ forloop.counter }}</span>
-                                <small class="position-label">Position</small>
-                            </div>
-                        </div>
-
-                        <!-- Performance Summary -->
-                        <div class="performance-summary mb-3">
-                            <div class="performance-item">
-                                <span class="performance-label">Season Accuracy</span>
-                                <div class="progress-container">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: {{ stats.pickPercentSeason|default:0 }}%"></div>
-                                    </div>
-                                    <span class="progress-text">{{ stats.pickPercentSeason|default:0 }}%</span>
+                            <div class="w-full bg-surface-light dark:bg-surface-hover rounded-full h-3 overflow-hidden border border-border-light dark:border-border-subtle">
+                                <div class="h-full bg-gradient-to-r from-primary to-orange-600 rounded-full transition-all duration-500"
+                                     style="width: {{ stats.pickPercentSeason|default:0 }}%">
                                 </div>
                             </div>
-                            <div class="performance-item">
-                                <span class="performance-label">Lifetime Accuracy</span>
-                                <div class="progress-container">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill lifetime" style="width: {{ stats.pickPercentTotal|default:0 }}%"></div>
-                                    </div>
-                                    <span class="progress-text">{{ stats.pickPercentTotal|default:0 }}%</span>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium text-text-dark dark:text-white">Lifetime Accuracy</span>
+                                <span class="text-sm font-bold text-secondary-light dark:text-secondary">{{ stats.pickPercentTotal|default:0 }}%</span>
+                            </div>
+                            <div class="w-full bg-surface-light dark:bg-surface-hover rounded-full h-3 overflow-hidden border border-border-light dark:border-border-subtle">
+                                <div class="h-full bg-gradient-to-r from-secondary-light to-green-600 dark:from-secondary dark:to-green-500 rounded-full transition-all duration-500"
+                                     style="width: {{ stats.pickPercentTotal|default:0 }}%">
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Stats Content -->
-                        <div class="stats-content">
-                            <!-- Current Season Stats -->
-                            <div class="stats-section">
-                                <h6 class="stats-section-title">
-                                    <i class="fas fa-calendar-alt me-2"></i>Current Season
-                                    {% if stats.pickPercentSeason >= 70 %}
-                                        <span class="trend-badge trend-up">
-                                            <i class="fas fa-arrow-up"></i> Hot Streak
-                                        </span>
-                                    {% elif stats.pickPercentSeason >= 50 %}
-                                        <span class="trend-badge trend-stable">
-                                            <i class="fas fa-equals"></i> Steady
-                                        </span>
-                                    {% else %}
-                                        <span class="trend-badge trend-down">
-                                            <i class="fas fa-arrow-down"></i> Improving
-                                        </span>
-                                    {% endif %}
+                    <!-- Stats Content -->
+                    <div class="space-y-6">
+                        <!-- Current Season Stats -->
+                        <div>
+                            <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                                <h6 class="text-lg font-semibold text-text-dark dark:text-white flex items-center gap-2">
+                                    <i class="fas fa-calendar-alt text-primary"></i>Current Season
                                 </h6>
-                                <div class="stats-grid">
-                                    <div class="stat-item highlight-stat">
-                                        <div class="stat-label">Pick Accuracy</div>
-                                        <div class="stat-value">{{ stats.pickPercentSeason|default:0 }}%</div>
-                                        <div class="stat-trend">
+                                {% if stats.pickPercentSeason >= 70 %}
+                                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg text-sm font-semibold">
+                                        <i class="fas fa-arrow-up"></i> Hot Streak
+                                    </span>
+                                {% elif stats.pickPercentSeason >= 50 %}
+                                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-semibold">
+                                        <i class="fas fa-equals"></i> Steady
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-lg text-sm font-semibold">
+                                        <i class="fas fa-arrow-down"></i> Improving
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                <div class="p-4 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/30">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Pick Accuracy</div>
+                                    <div class="flex items-baseline justify-between">
+                                        <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.pickPercentSeason|default:0 }}%</div>
+                                        <div class="text-lg">
                                             {% if stats.pickPercentSeason >= stats.pickPercentTotal %}
-                                                <i class="fas fa-arrow-up text-success"></i>
+                                                <i class="fas fa-arrow-up text-secondary-light dark:text-secondary"></i>
                                             {% else %}
-                                                <i class="fas fa-arrow-down text-danger"></i>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="stat-label">Correct Picks</div>
-                                        <div class="stat-value">{{ stats.correctPickTotalSeason|default:0 }}</div>
-                                    </div>
-                                    <div class="stat-item {% if stats.missedPicksSeason > 0 %}missed-picks-highlight{% endif %}">
-                                        <div class="stat-label">Missed Picks</div>
-                                        <div class="stat-value">
-                                            {{ stats.missedPicksSeason|default:0 }}
-                                            {% if stats.missedPicksSeason > 0 %}
-                                                <i class="fas fa-exclamation-triangle text-warning ms-1"></i>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="stat-item {% if stats.weeksWonSeason > 0 %}winner-highlight{% endif %}">
-                                        <div class="stat-label">Weeks Won</div>
-                                        <div class="stat-value">
-                                            {{ stats.weeksWonSeason|default:0 }}
-                                            {% if stats.weeksWonSeason > 0 %}
-                                                <i class="fas fa-trophy text-warning ms-1"></i>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="stat-item {% if stats.perfectWeeksSeason > 0 %}perfect-week-highlight{% endif %}">
-                                        <div class="stat-label">Perfect Weeks</div>
-                                        <div class="stat-value">
-                                            {{ stats.perfectWeeksSeason|default:0 }}
-                                            {% if stats.perfectWeeksSeason > 0 %}
-                                                <i class="fas fa-star text-success ms-1"></i>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="stat-label">Most Picked</div>
-                                        <div class="stat-value">
-                                            {% if stats.mostPickedSeason %}
-                                                {% with stats.mostPickedSeason|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo }}" alt="{{ stats.mostPickedSeason }} team logo" class="team-logo-sm">
-                                                    {% if stats.mostPickedSeason|has_multiple_teams %}
-                                                        <span class="tie-indicator" title="{{ stats.mostPickedSeason|count_teams }} teams tied: {{ stats.mostPickedSeason|get_team_names }}">
-                                                            <i class="fas fa-plus-circle text-info ms-1"></i>
-                                                        </span>
-                                                    {% endif %}
-                                                {% endwith %}
-                                            {% else %}
-                                                <span class="text-muted">N/A</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="stat-label">Least Picked</div>
-                                        <div class="stat-value">
-                                            {% if stats.leastPickedSeason %}
-                                                {% with stats.leastPickedSeason|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo }}" alt="{{ stats.leastPickedSeason }} team logo" class="team-logo-sm">
-                                                    {% if stats.leastPickedSeason|has_multiple_teams %}
-                                                        <span class="tie-indicator" title="{{ stats.leastPickedSeason|count_teams }} teams tied: {{ stats.leastPickedSeason|get_team_names }}">
-                                                            <i class="fas fa-plus-circle text-info ms-1"></i>
-                                                        </span>
-                                                    {% endif %}
-                                                {% endwith %}
-                                            {% else %}
-                                                <span class="text-muted">N/A</span>
+                                                <i class="fas fa-arrow-down text-red-600 dark:text-red-400"></i>
                                             {% endif %}
                                         </div>
                                     </div>
                                 </div>
+                                <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Correct Picks</div>
+                                    <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.correctPickTotalSeason|default:0 }}</div>
+                                </div>
+                                <div class="p-4 {% if stats.missedPicksSeason > 0 %}bg-red-500/10 dark:bg-red-600/20 border-red-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Missed Picks</div>
+                                    <div class="text-2xl font-black {% if stats.missedPicksSeason > 0 %}text-red-600 dark:text-red-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                                        {{ stats.missedPicksSeason|default:0 }}
+                                        {% if stats.missedPicksSeason > 0 %}
+                                            <i class="fas fa-exclamation-triangle text-base"></i>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="p-4 {% if stats.weeksWonSeason > 0 %}bg-yellow-500/20 border-yellow-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Weeks Won</div>
+                                    <div class="text-2xl font-black {% if stats.weeksWonSeason > 0 %}text-yellow-600 dark:text-yellow-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                                        {{ stats.weeksWonSeason|default:0 }}
+                                        {% if stats.weeksWonSeason > 0 %}
+                                            <i class="fas fa-trophy text-base"></i>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="p-4 {% if stats.perfectWeeksSeason > 0 %}bg-secondary-light/20 dark:bg-secondary/20 border-secondary-light/30 dark:border-secondary/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Perfect Weeks</div>
+                                    <div class="text-2xl font-black {% if stats.perfectWeeksSeason > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                                        {{ stats.perfectWeeksSeason|default:0 }}
+                                        {% if stats.perfectWeeksSeason > 0 %}
+                                            <i class="fas fa-star text-base"></i>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Most Picked</div>
+                                    <div class="flex items-center justify-center h-10">
+                                        {% if stats.mostPickedSeason %}
+                                            {% with stats.mostPickedSeason|lookuplogo as logo_url %}
+                                                <img src="{{ logo_url.teamLogo }}" alt="{{ stats.mostPickedSeason }} team logo" class="w-12 h-12 object-contain">
+                                                {% if stats.mostPickedSeason|has_multiple_teams %}
+                                                    <span class="inline-flex items-center gap-1 ml-1 text-blue-600 dark:text-blue-400 cursor-help hover:text-blue-700 dark:hover:text-blue-300 transition-colors" title="{{ stats.mostPickedSeason|count_teams }} teams tied: {{ stats.mostPickedSeason|get_team_names }}">
+                                                        <i class="fas fa-plus-circle text-lg"></i>
+                                                    </span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <span class="text-text-secondary-light dark:text-text-secondary">N/A</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Least Picked</div>
+                                    <div class="flex items-center justify-center h-10">
+                                        {% if stats.leastPickedSeason %}
+                                            {% with stats.leastPickedSeason|lookuplogo as logo_url %}
+                                                <img src="{{ logo_url.teamLogo }}" alt="{{ stats.leastPickedSeason }} team logo" class="w-12 h-12 object-contain">
+                                                {% if stats.leastPickedSeason|has_multiple_teams %}
+                                                    <span class="inline-flex items-center gap-1 ml-1 text-blue-600 dark:text-blue-400 cursor-help hover:text-blue-700 dark:hover:text-blue-300 transition-colors" title="{{ stats.leastPickedSeason|count_teams }} teams tied: {{ stats.leastPickedSeason|get_team_names }}">
+                                                        <i class="fas fa-plus-circle text-lg"></i>
+                                                    </span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <span class="text-text-secondary-light dark:text-text-secondary">N/A</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </div>
+                        </div>
 
-                            <!-- Lifetime Stats -->
-                            <div class="stats-section">
-                                <h6 class="stats-section-title">
-                                    <i class="fas fa-history me-2"></i>Lifetime Performance
-                                    {% if stats.seasonsWon > 0 %}
-                                        <span class="champion-badge">
-                                            <i class="fas fa-crown"></i> Champion
-                                        </span>
-                                    {% endif %}
+                        <!-- Lifetime Stats -->
+                        <div>
+                            <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                                <h6 class="text-lg font-semibold text-text-dark dark:text-white flex items-center gap-2">
+                                    <i class="fas fa-history text-secondary-light dark:text-secondary"></i>Lifetime Performance
                                 </h6>
-                                <div class="stats-grid">
-                                    <div class="stat-item">
-                                        <div class="stat-label">Pick Accuracy</div>
-                                        <div class="stat-value">{{ stats.pickPercentTotal|default:0 }}%</div>
+                                {% if stats.seasonsWon > 0 %}
+                                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-purple-600/20 text-purple-700 dark:text-purple-400 rounded-lg text-sm font-semibold">
+                                        <i class="fas fa-crown"></i> Champion
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Pick Accuracy</div>
+                                    <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.pickPercentTotal|default:0 }}%</div>
+                                </div>
+                                <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Total Correct</div>
+                                    <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.correctPickTotalTotal|default:0 }}</div>
+                                </div>
+                                <div class="p-4 {% if stats.missedPicksTotal > 0 %}bg-red-500/10 dark:bg-red-600/20 border-red-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Total Missed</div>
+                                    <div class="text-2xl font-black {% if stats.missedPicksTotal > 0 %}text-red-600 dark:text-red-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                                        {{ stats.missedPicksTotal|default:0 }}
+                                        {% if stats.missedPicksTotal > 0 %}
+                                            <i class="fas fa-exclamation-triangle text-base"></i>
+                                        {% endif %}
                                     </div>
-                                    <div class="stat-item">
-                                        <div class="stat-label">Total Correct</div>
-                                        <div class="stat-value">{{ stats.correctPickTotalTotal|default:0 }}</div>
+                                </div>
+                                <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Weeks Won</div>
+                                    <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.weeksWonTotal|default:0 }}</div>
+                                </div>
+                                <div class="p-4 {% if stats.perfectWeeksTotal > 0 %}bg-secondary-light/20 dark:bg-secondary/20 border-secondary-light/30 dark:border-secondary/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Perfect Weeks</div>
+                                    <div class="text-2xl font-black {% if stats.perfectWeeksTotal > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                                        {{ stats.perfectWeeksTotal|default:0 }}
+                                        {% if stats.perfectWeeksTotal > 0 %}
+                                            <i class="fas fa-star text-base"></i>
+                                        {% endif %}
                                     </div>
-                                    <div class="stat-item {% if stats.missedPicksTotal > 0 %}missed-picks-highlight{% endif %}">
-                                        <div class="stat-label">Total Missed</div>
-                                        <div class="stat-value">
-                                            {{ stats.missedPicksTotal|default:0 }}
-                                            {% if stats.missedPicksTotal > 0 %}
-                                                <i class="fas fa-exclamation-triangle text-warning ms-1"></i>
-                                            {% endif %}
-                                        </div>
+                                </div>
+                                <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Most Picked</div>
+                                    <div class="flex items-center justify-center h-10">
+                                        {% if stats.mostPickedTotal %}
+                                            {% with stats.mostPickedTotal|lookuplogo as logo_url %}
+                                                <img src="{{ logo_url.teamLogo }}" alt="{{ stats.mostPickedTotal }} team logo" class="w-12 h-12 object-contain">
+                                                {% if stats.mostPickedTotal|has_multiple_teams %}
+                                                    <span class="inline-flex items-center gap-1 ml-1 text-blue-600 dark:text-blue-400 cursor-help hover:text-blue-700 dark:hover:text-blue-300 transition-colors" title="{{ stats.mostPickedTotal|count_teams }} teams tied: {{ stats.mostPickedTotal|get_team_names }}">
+                                                        <i class="fas fa-plus-circle text-lg"></i>
+                                                    </span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <span class="text-text-secondary-light dark:text-text-secondary">N/A</span>
+                                        {% endif %}
                                     </div>
-                                    <div class="stat-item">
-                                        <div class="stat-label">Weeks Won</div>
-                                        <div class="stat-value">{{ stats.weeksWonTotal|default:0 }}</div>
+                                </div>
+                                <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Least Picked</div>
+                                    <div class="flex items-center justify-center h-10">
+                                        {% if stats.leastPickedTotal %}
+                                            {% with stats.leastPickedTotal|lookuplogo as logo_url %}
+                                                <img src="{{ logo_url.teamLogo }}" alt="{{ stats.leastPickedTotal }} team logo" class="w-12 h-12 object-contain">
+                                                {% if stats.leastPickedTotal|has_multiple_teams %}
+                                                    <span class="inline-flex items-center gap-1 ml-1 text-blue-600 dark:text-blue-400 cursor-help hover:text-blue-700 dark:hover:text-blue-300 transition-colors" title="{{ stats.leastPickedTotal|count_teams }} teams tied: {{ stats.leastPickedTotal|get_team_names }}">
+                                                        <i class="fas fa-plus-circle text-lg"></i>
+                                                    </span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <span class="text-text-secondary-light dark:text-text-secondary">N/A</span>
+                                        {% endif %}
                                     </div>
-                                    <div class="stat-item {% if stats.perfectWeeksTotal > 0 %}perfect-week-highlight{% endif %}">
-                                        <div class="stat-label">Perfect Weeks</div>
-                                        <div class="stat-value">
-                                            {{ stats.perfectWeeksTotal|default:0 }}
-                                            {% if stats.perfectWeeksTotal > 0 %}
-                                                <i class="fas fa-star text-success ms-1"></i>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="stat-label">Most Picked</div>
-                                        <div class="stat-value">
-                                            {% if stats.mostPickedTotal %}
-                                                {% with stats.mostPickedTotal|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo }}" alt="{{ stats.mostPickedTotal }} team logo" class="team-logo-sm">
-                                                    {% if stats.mostPickedTotal|has_multiple_teams %}
-                                                        <span class="tie-indicator" title="{{ stats.mostPickedTotal|count_teams }} teams tied: {{ stats.mostPickedTotal|get_team_names }}">
-                                                            <i class="fas fa-plus-circle text-info ms-1"></i>
-                                                        </span>
-                                                    {% endif %}
-                                                {% endwith %}
-                                            {% else %}
-                                                <span class="text-muted">N/A</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="stat-item">
-                                        <div class="stat-label">Least Picked</div>
-                                        <div class="stat-value">
-                                            {% if stats.leastPickedTotal %}
-                                                {% with stats.leastPickedTotal|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo }}" alt="{{ stats.leastPickedTotal }} team logo" class="team-logo-sm">
-                                                    {% if stats.leastPickedTotal|has_multiple_teams %}
-                                                        <span class="tie-indicator" title="{{ stats.leastPickedTotal|count_teams }} teams tied: {{ stats.leastPickedTotal|get_team_names }}">
-                                                            <i class="fas fa-plus-circle text-info ms-1"></i>
-                                                        </span>
-                                                    {% endif %}
-                                                {% endwith %}
-                                            {% else %}
-                                                <span class="text-muted">N/A</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="stat-item {% if stats.seasonsWon > 0 %}championship-highlight{% endif %}">
-                                        <div class="stat-label">Seasons Won</div>
-                                        <div class="stat-value">
-                                            {% if stats.seasonsWon and stats.seasonsWon > 0 %}
-                                                <span class="championship-badge">
-                                                    <i class="fas fa-trophy text-dark me-1"></i>{{ stats.seasonsWon }}
-                                                </span>
-                                            {% else %}
-                                                <span class="text-muted">0</span>
-                                            {% endif %}
-                                        </div>
+                                </div>
+                                <div class="p-4 {% if stats.seasonsWon > 0 %}bg-purple-600/20 border-purple-600/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                                    <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Seasons Won</div>
+                                    <div class="text-2xl font-black {% if stats.seasonsWon > 0 %}text-purple-700 dark:text-purple-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                                        {% if stats.seasonsWon and stats.seasonsWon > 0 %}
+                                            <i class="fas fa-trophy"></i>
+                                            {{ stats.seasonsWon }}
+                                        {% else %}
+                                            0
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    {% endwith %}
-                    {% endwith %}
-                    {% empty %}
-                    <div class="no-data-message">
-                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No player statistics available.</p>
-                    </div>
-                    {% endfor %}
                 </div>
+                {% endwith %}
+                {% endwith %}
+                {% empty %}
+                <div class="flex flex-col items-center justify-center py-12 text-center">
+                    <i class="fas fa-chart-bar text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
+                    <h4 class="text-xl font-semibold text-text-dark dark:text-white mb-2">No Statistics Available</h4>
+                    <p class="text-text-secondary-light dark:text-text-secondary">Player statistics will appear here once data is available.</p>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
@@ -353,21 +377,28 @@
     document.addEventListener('DOMContentLoaded', function() {
         const sortButtons = document.querySelectorAll('.sort-btn');
         const container = document.getElementById('statsContainer');
-        
+
         sortButtons.forEach(button => {
             button.addEventListener('click', function() {
-                // Update active button
-                sortButtons.forEach(btn => btn.classList.remove('active'));
+                // Update active button state
+                sortButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.classList.remove('bg-primary', 'text-white');
+                    btn.classList.add('border-border-light', 'dark:border-border-subtle', 'text-text-dark', 'dark:text-white', 'hover:border-primary', 'hover:text-primary', 'dark:hover:text-primary');
+                });
+
                 this.classList.add('active');
-                
+                this.classList.remove('border-border-light', 'dark:border-border-subtle', 'text-text-dark', 'dark:text-white', 'hover:border-primary', 'hover:text-primary', 'dark:hover:text-primary');
+                this.classList.add('bg-primary', 'text-white', 'border-primary');
+
                 // Get sort criteria
                 const sortBy = this.getAttribute('data-sort');
-                const cards = Array.from(container.children);
-                
+                const cards = Array.from(container.children).filter(child => child.hasAttribute('data-position'));
+
                 // Sort cards
                 cards.sort((a, b) => {
                     let aValue, bValue;
-                    
+
                     switch(sortBy) {
                         case 'position':
                             aValue = parseInt(a.getAttribute('data-position'));
@@ -389,7 +420,7 @@
                             return 0;
                     }
                 });
-                
+
                 // Reorder DOM elements
                 cards.forEach(card => container.appendChild(card));
             });
