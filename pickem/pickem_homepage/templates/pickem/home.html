@@ -6,49 +6,198 @@
 
 {% block content %}
 
-    <div class="max-w-7xl mx-auto px-4">
+    <!-- Hero Welcome Section -->
+    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 shadow-xl animate-fade-in">
+        <!-- Subtle background pattern -->
+        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjQ2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
+        <!-- Content -->
+        <div class="relative z-10">
+            <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="max-w-[120px] h-auto mx-auto mb-3 filter drop-shadow-lg">
+            <h1 class="text-3xl lg:text-5xl font-black tracking-tight mb-2"
+                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
+                Family Pickem
+            </h1>
+            <p class="text-base text-white/90 dark:text-text-secondary mb-4">
+                Your ultimate NFL pick 'em league experience
+            </p>
 
-        <!-- Hero Welcome Section -->
-        <div class="relative text-center mb-6 rounded-2xl p-6 overflow-hidden bg-gradient-to-br from-blue-600/10 via-surface-light to-red-600/10 dark:from-blue-600/20 dark:via-surface dark:to-red-600/20 border border-blue-600/30 dark:border-blue-500/40 shadow-lg">
-            <!-- Content -->
-            <div class="relative z-10">
-                <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="max-w-[120px] h-auto mx-auto mb-3 filter drop-shadow-lg">
-                <h1 class="text-3xl md:text-4xl font-black bg-gradient-to-r from-blue-600 via-red-600 to-blue-600 bg-clip-text text-transparent mb-2">
-                    Welcome to Family Pickem
-                </h1>
-                <p class="text-base text-text-secondary-light dark:text-text-secondary mb-4">
-                    Your ultimate NFL pick 'em league experience
-                </p>
+            {% if user.is_authenticated %}
+                <div class="flex items-center justify-center gap-3">
+                    <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                         alt="Your profile picture"
+                         class="w-12 h-12 rounded-full border-2 border-blue-600">
+                    <div class="text-left">
+                        <h4 class="text-lg font-bold text-white dark:text-white">
+                            Welcome back, <span class="text-yellow-300 dark:text-blue-400">{{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}</span>!
+                        </h4>
+                        <p class="text-sm text-white/80 dark:text-text-secondary">Ready to make your Week {{ current_week }} picks?</p>
+                    </div>
+                </div>
+            {% else %}
+                <div class="mt-4">
+                    <h4 class="text-xl font-bold text-white dark:text-white mb-2">Join the Family League</h4>
+                    <p class="text-sm text-white/80 dark:text-text-secondary">Sign in to start making picks and compete with friends!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 
-                {% if user.is_authenticated %}
-                    <div class="flex items-center justify-center gap-3">
-                        <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
-                             alt="Your profile picture"
-                             class="w-12 h-12 rounded-full border-2 border-blue-600">
-                        <div class="text-left">
-                            <h4 class="text-lg font-bold text-text-dark dark:text-white">
-                                Welcome back, <span class="text-blue-600 dark:text-blue-400">{{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}</span>!
-                            </h4>
-                            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Ready to make your Week {{ current_week }} picks?</p>
+    <div class="max-w-7xl mx-auto px-6 py-6">
+        <!-- Today's Games Section -->
+        {% if today_games %}
+        <div class="section-container mb-6">
+            <h3 class="section-title">
+                <i class="fas fa-calendar-day mr-2"></i>Today's Games
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for game in today_games %}
+                <div class="bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle overflow-hidden hover:shadow-card-hover transition-all duration-200 animate-fade-in-up" style="animation-delay: {{ forloop.counter0|add:1|floatformat:1|stringformat:'0.1' }}s">
+                    <!-- Game Status Header -->
+                    <div class="px-4 py-2 {% if game.statusType == 'inprogress' %}bg-gradient-to-r from-green-500/20 to-teal-500/20 dark:from-green-600/30 dark:to-teal-600/30{% elif game.statusType == 'finished' %}bg-gradient-to-r from-gray-500/20 to-gray-600/20 dark:from-gray-600/30 dark:to-gray-700/30{% else %}bg-gradient-to-r from-blue-500/20 to-indigo-500/20 dark:from-blue-600/30 dark:to-indigo-600/30{% endif %} border-b border-border-light dark:border-border-subtle">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-2 font-semibold">
+                                {% if game.statusType == 'inprogress' %}
+                                    <span class="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+                                        <span class="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></span>
+                                        LIVE
+                                    </span>
+                                {% elif game.statusType == 'finished' %}
+                                    <span class="text-gray-600 dark:text-gray-400">
+                                        <i class="fas fa-check-circle mr-1"></i>FINAL
+                                    </span>
+                                {% else %}
+                                    <span class="text-blue-600 dark:text-blue-400">
+                                        <i class="fas fa-clock mr-1"></i>{{ game.statusTitle }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="text-text-secondary-light dark:text-text-secondary">
+                                {{ game.startTimestamp|date:"g:i A" }}
+                            </div>
                         </div>
                     </div>
-                {% else %}
-                    <div class="mt-4">
-                        <h4 class="text-xl font-bold text-text-dark dark:text-white mb-2">Join the Family League</h4>
-                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">Sign in to start making picks and compete with friends!</p>
+
+                    <!-- Teams Matchup -->
+                    <div class="p-4">
+                        <!-- Away Team -->
+                        <div class="flex items-center justify-between mb-3 pb-3 border-b border-border-light dark:border-border-subtle">
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                     alt="{{ game.awayTeamName }}"
+                                     class="w-10 h-10 object-contain flex-shrink-0">
+                                {% endwith %}
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-text-dark dark:text-white truncate {% if game.statusType == 'finished' and game.gameWinner != game.awayTeamSlug %}opacity-60{% endif %}">
+                                        {{ game.awayTeamName }}
+                                    </div>
+                                    <div class="text-xs text-text-secondary-light dark:text-text-secondary">
+                                        {% for team in wins_losses %}
+                                            {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                ({{ team.teamWins }}-{{ team.teamLosses }}{% if team.teamTies > 0 %}-{{ team.teamTies }}{% endif %})
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% if game.statusType != 'notstarted' %}
+                            <div class="text-2xl font-black text-text-dark dark:text-white ml-3 {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}text-primary{% endif %}">
+                                {{ game.awayTeamScore|default:"0" }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Home Team -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                     alt="{{ game.homeTeamName }}"
+                                     class="w-10 h-10 object-contain flex-shrink-0">
+                                {% endwith %}
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-text-dark dark:text-white truncate {% if game.statusType == 'finished' and game.gameWinner != game.homeTeamSlug %}opacity-60{% endif %}">
+                                        {{ game.homeTeamName }}
+                                    </div>
+                                    <div class="text-xs text-text-secondary-light dark:text-text-secondary">
+                                        {% for team in wins_losses %}
+                                            {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                ({{ team.teamWins }}-{{ team.teamLosses }}{% if team.teamTies > 0 %}-{{ team.teamTies }}{% endif %})
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% if game.statusType != 'notstarted' %}
+                            <div class="text-2xl font-black text-text-dark dark:text-white ml-3 {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}text-primary{% endif %}">
+                                {{ game.homeTeamScore|default:"0" }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Game Info (Spread, Weather, etc.) -->
+                        {% if game.spread or game.overUnder or game.temperature %}
+                        <div class="mt-3 pt-3 border-t border-border-light dark:border-border-subtle flex flex-wrap gap-2 text-xs">
+                            {% if game.spread %}
+                            <div class="flex items-center gap-1 px-2 py-1 bg-surface-light dark:bg-surface-hover rounded-lg">
+                                <i class="fas fa-chart-line text-text-secondary-light dark:text-text-secondary"></i>
+                                <span class="text-text-dark dark:text-white font-semibold">
+                                    {% if game.spread > 0 %}
+                                        {{ game.homeTeamName|truncatewords:1 }} -{{ game.spread|floatformat:1 }}
+                                    {% else %}
+                                        {{ game.awayTeamName|truncatewords:1 }} -{{ game.spread|floatformat:1|cut:"-" }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% endif %}
+                            {% if game.overUnder %}
+                            <div class="flex items-center gap-1 px-2 py-1 bg-surface-light dark:bg-surface-hover rounded-lg">
+                                <i class="fas fa-calculator text-text-secondary-light dark:text-text-secondary"></i>
+                                <span class="text-text-dark dark:text-white font-semibold">O/U {{ game.overUnder|floatformat:1 }}</span>
+                            </div>
+                            {% endif %}
+                            {% if game.temperature and game.weatherCondition %}
+                            <div class="flex items-center gap-1 px-2 py-1 bg-surface-light dark:bg-surface-hover rounded-lg">
+                                {% if 'Sun' in game.weatherCondition or 'Clear' in game.weatherCondition %}
+                                    <i class="fas fa-sun text-yellow-500"></i>
+                                {% elif 'Cloud' in game.weatherCondition %}
+                                    <i class="fas fa-cloud text-gray-500"></i>
+                                {% elif 'Rain' in game.weatherCondition or 'Shower' in game.weatherCondition %}
+                                    <i class="fas fa-cloud-rain text-blue-500"></i>
+                                {% elif 'Snow' in game.weatherCondition %}
+                                    <i class="fas fa-snowflake text-blue-300"></i>
+                                {% else %}
+                                    <i class="fas fa-thermometer-half text-text-secondary-light dark:text-text-secondary"></i>
+                                {% endif %}
+                                <span class="text-text-dark dark:text-white font-semibold">{{ game.temperature }}°F</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
                     </div>
-                {% endif %}
+
+                    <!-- Action Footer -->
+                    <div class="px-4 py-2 bg-surface-light/50 dark:bg-surface/50 border-t border-border-light dark:border-border-subtle">
+                        <a href="/scores/" class="text-xs text-primary hover:text-primary/80 font-semibold transition-colors flex items-center justify-center gap-1">
+                            <span>View Details</span>
+                            <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
+        {% endif %}
 
         <!-- Current Week Status -->
-        <div class="section-container">
+        <div class="section-container mb-6">
             <h3 class="section-title">
                 <i class="fas fa-calendar-week mr-2"></i>Week {{ current_week }} Status
             </h3>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="status-card">
+            <div class="grid grid-cols-1 sm:grid-cols-2 {% if user.is_authenticated %}lg:grid-cols-4{% else %}lg:grid-cols-3{% endif %} gap-4">
+                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle animate-fade-in-up" style="animation-delay: 0.1s">
                     <div class="text-4xl text-primary mb-2">
                         <i class="fas fa-football-ball"></i>
                     </div>
@@ -56,7 +205,7 @@
                     <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Games This Week</div>
                 </div>
 
-                <div class="status-card">
+                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle animate-fade-in-up" style="animation-delay: 0.2s">
                     <div class="text-4xl text-secondary-light dark:text-secondary mb-2">
                         <i class="fas fa-users"></i>
                     </div>
@@ -65,19 +214,22 @@
                 </div>
 
                 {% if current_week_winner %}
-                <div class="status-card">
-                    <div class="text-4xl text-yellow-500 mb-2">
-                        <i class="fas fa-trophy"></i>
+                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.3s">
+                    <div class="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-transparent animate-pulse"></div>
+                    <div class="relative">
+                        <div class="text-4xl text-yellow-500 mb-2">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">
+                            {% with current_week_winner.userID|safe_username as winner_name %}
+                                {{ winner_name|truncatechars:12 }}
+                            {% endwith %}
+                        </div>
+                        <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Week Winner</div>
                     </div>
-                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">
-                        {% with current_week_winner.userID|safe_username as winner_name %}
-                            {{ winner_name|truncatechars:12 }}
-                        {% endwith %}
-                    </div>
-                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Week Winner</div>
                 </div>
                 {% else %}
-                <div class="status-card">
+                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle animate-fade-in-up" style="animation-delay: 0.3s">
                     <div class="text-4xl text-muted mb-2">
                         <i class="fas fa-clock"></i>
                     </div>
@@ -87,7 +239,7 @@
                 {% endif %}
 
                 {% if user.is_authenticated %}
-                <div class="status-card">
+                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle animate-fade-in-up" style="animation-delay: 0.4s">
                     <div class="text-4xl mb-2 {% if user_pick_status == 'complete' %}text-secondary-light dark:text-secondary{% elif user_pick_status == 'partial' %}text-yellow-500{% else %}text-red-500{% endif %}">
                         {% if user_pick_status == 'complete' %}
                             <i class="fas fa-check-circle"></i>
@@ -107,32 +259,44 @@
                         {% endif %}
                     </div>
                     <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Your Picks</div>
+
+                    <!-- Progress bar for partial completion -->
+                    {% if user_pick_status == 'partial' %}
+                    <div class="mt-3 w-full bg-surface-light dark:bg-surface-hover rounded-full h-2 overflow-hidden border border-border-light dark:border-border-subtle">
+                        <div class="h-full bg-gradient-to-r from-primary to-orange-600 rounded-full transition-all duration-500"
+                             style="width: {% widthratio user_picks_count current_games 100 %}%">
+                        </div>
+                    </div>
+                    <div class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary mt-1">
+                        {% widthratio user_picks_count current_games 100 %}% Complete
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
         </div>
 
         <!-- Quick Navigation -->
-        <div class="section-container">
+        <div class="section-container mb-6">
             <h3 class="section-title">
                 <i class="fas fa-compass mr-2"></i>Quick Actions
             </h3>
 
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {% if user.is_authenticated %}
-                <a href="/picks/" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary transition-all hover:shadow-card-hover hover:-translate-y-1">
-                    <div class="text-3xl text-red-600 dark:text-red-500 mb-2">
+                <a href="/picks/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-red-600 dark:text-red-500 mb-2 group-hover:scale-110 transition-transform">
                         <i class="fas fa-edit"></i>
                     </div>
                     <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Submit Picks</h5>
                     <p class="text-xs text-text-secondary-light dark:text-text-secondary">Make your Week {{ current_week }} predictions</p>
                     {% if user_pick_status != 'complete' %}
-                        <span class="absolute top-2 right-2 px-2 py-1 text-xs font-semibold bg-red-600 text-white rounded-full">!</span>
+                        <span class="absolute top-2 right-2 px-2 py-1 text-xs font-semibold bg-red-600 text-white rounded-full animate-pulse">!</span>
                     {% endif %}
                 </a>
                 {% else %}
-                <a href="{% provider_login_url 'google' %}" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary transition-all hover:shadow-card-hover hover:-translate-y-1">
-                    <div class="text-3xl text-red-600 dark:text-red-500 mb-2">
+                <a href="{% provider_login_url 'google' %}" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-red-600 dark:text-red-500 mb-2 group-hover:scale-110 transition-transform">
                         <i class="fab fa-google"></i>
                     </div>
                     <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Sign In</h5>
@@ -140,32 +304,32 @@
                 </a>
                 {% endif %}
 
-                <a href="/scores/" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-blue-600 dark:hover:border-blue-500 transition-all hover:shadow-card-hover hover:-translate-y-1">
-                    <div class="text-3xl text-blue-600 dark:text-blue-500 mb-2">
+                <a href="/scores/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-blue-600 dark:hover:border-blue-500 transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-blue-600 dark:text-blue-500 mb-2 group-hover:scale-110 transition-transform">
                         <i class="fas fa-chart-line"></i>
                     </div>
                     <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Live Scores</h5>
                     <p class="text-xs text-text-secondary-light dark:text-text-secondary">Track current week results</p>
                 </a>
 
-                <a href="/standings/" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-yellow-500 dark:hover:border-yellow-400 transition-all hover:shadow-card-hover hover:-translate-y-1">
-                    <div class="text-3xl text-yellow-600 dark:text-yellow-500 mb-2">
+                <a href="/standings/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-yellow-500 dark:hover:border-yellow-400 transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-yellow-600 dark:text-yellow-500 mb-2 group-hover:scale-110 transition-transform">
                         <i class="fas fa-medal"></i>
                     </div>
                     <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Standings</h5>
                     <p class="text-xs text-text-secondary-light dark:text-text-secondary">View league leaderboard</p>
                 </a>
 
-                <a href="/stats/" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-secondary-light dark:hover:border-secondary transition-all hover:shadow-card-hover hover:-translate-y-1">
-                    <div class="text-3xl text-secondary-light dark:text-secondary mb-2">
+                <a href="/stats/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-secondary-light dark:hover:border-secondary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-secondary-light dark:text-secondary mb-2 group-hover:scale-110 transition-transform">
                         <i class="fas fa-chart-bar"></i>
                     </div>
                     <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Statistics</h5>
                     <p class="text-xs text-text-secondary-light dark:text-text-secondary">Player performance data</p>
                 </a>
 
-                <a href="/rules/" class="group relative block p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-purple-600 dark:hover:border-purple-500 transition-all hover:shadow-card-hover hover:-translate-y-1">
-                    <div class="text-3xl text-purple-600 dark:text-purple-500 mb-2">
+                <a href="/rules/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-purple-600 dark:hover:border-purple-500 transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
+                    <div class="text-3xl text-purple-600 dark:text-purple-500 mb-2 group-hover:scale-110 transition-transform">
                         <i class="fas fa-gavel"></i>
                     </div>
                     <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Rules</h5>
@@ -174,212 +338,9 @@
             </div>
         </div>
 
-        <!-- Message Board Section -->
-        {% if user.is_authenticated %}
-        <div class="section-container mb-4">
-            <div class="section-header">
-                <h3 class="section-title">
-                    <i class="fas fa-comments me-2"></i>League Discussion
-                </h3>
-            </div>
-            
-            <!-- Chat Input (for authenticated users) -->
-            {% if user.is_authenticated %}
-            <div class="chat-input-form mb-4">
-                <form id="create-post-form" class="chat-form">
-                    {% csrf_token %}
-                    <div class="d-flex align-items-center">
-                        <img src="{{ user.socialaccount_set.all.0.get_avatar_url|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                             alt="Your avatar" class="chat-user-avatar me-2">
-                        <span class="chat-username me-3">{{ user.username }}</span>
-                        <div class="flex-grow-1">
-                            <input type="text" name="content" class="form-control chat-input" placeholder="Chat..." maxlength="500">
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-sm ms-2">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </form>
-            </div>
-            {% endif %}
-            
-            <!-- Message Board Posts -->
-            <div class="message-board-posts" id="message-board-posts">
-                {% for post in message_posts %}
-                <div class="message-post" data-post-id="{{ post.id }}">
-                    <!-- Chat Message Header -->
-                    <div class="chat-message-header">
-                        <div class="d-flex align-items-center">
-                            {% with post.user.id|lookupavatar as avatar %}
-                            <a href="{% url 'user_profile' post.user.id %}" class="post-avatar-link">
-                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                     alt="Profile picture for {{ post.user.username }}" 
-                                     class="post-avatar me-2">
-                            </a>
-                            {% endwith %}
-                            <span class="post-author me-2">{{ post.user.username }}</span>
-                            <span class="post-time text-muted">{{ post.created_at|timesince }} ago</span>
-                            
-                            <!-- Achievement Badges -->
-                            <div class="achievement-badges ms-auto d-flex align-items-center gap-1">
-                                {% if user_rankings|lookup:post.user.id %}
-                                    {% with ranking=user_rankings|lookup:post.user.id %}
-                                        <!-- Current Rank Badge -->
-                                        {% if ranking.rank <= 3 %}
-                                            <span class="badge achievement-badge rank-badge rank-{{ ranking.rank }}" title="Current Season Rank #{{ ranking.rank }}">
-                                                <i class="fas fa-trophy"></i> #{{ ranking.rank }}
-                                            </span>
-                                        {% elif ranking.rank <= 10 %}
-                                            <span class="badge achievement-badge rank-badge rank-top10" title="Current Season Rank #{{ ranking.rank }}">
-                                                <i class="fas fa-medal"></i> #{{ ranking.rank }}
-                                            </span>
-                                        {% endif %}
-                                        
-                                        <!-- Season Winner Badge -->
-                                        {% if ranking.is_season_winner %}
-                                            <span class="badge achievement-badge season-winner-badge" title="Season Champion">
-                                                <i class="fas fa-crown"></i> Champion
-                                            </span>
-                                        {% endif %}
-                                        
-                                        <!-- Weekly Winner Badge -->
-                                        {% if ranking.weekly_wins %}
-                                            <span class="badge achievement-badge weekly-winner-badge" title="Won Week{{ ranking.weekly_wins|length|pluralize }} {{ ranking.weekly_wins|join:', ' }}">
-                                                <i class="fas fa-star"></i> Week Winner ({{ ranking.weekly_wins|length }})
-                                            </span>
-                                        {% endif %}
-                                    {% endwith %}
-                                {% endif %}
-                                
-                                {% if user_achievements|lookup:post.user.id %}
-                                    {% with achievements=user_achievements|lookup:post.user.id %}
-                                        <!-- Perfect Week Badge -->
-                                        {% if achievements.perfect_weeks_season > 0 %}
-                                            <span class="badge achievement-badge perfect-week-badge" title="{{ achievements.perfect_weeks_season }} Perfect Week{{ achievements.perfect_weeks_season|pluralize }} This Season">
-                                                <i class="fas fa-bolt"></i> Perfect ({{ achievements.perfect_weeks_season }})
-                                            </span>
-                                        {% endif %}
-                                        
-                                        <!-- High Accuracy Badge -->
-                                        {% if achievements.pick_percent_season >= 70 %}
-                                            <span class="badge achievement-badge accuracy-badge" title="{{ achievements.pick_percent_season }}% Pick Accuracy This Season">
-                                                <i class="fas fa-bullseye"></i> {{ achievements.pick_percent_season }}%
-                                            </span>
-                                        {% endif %}
-                                        
-                                        <!-- Veteran Badge -->
-                                        {% if achievements.seasons_won > 0 %}
-                                            <span class="badge achievement-badge veteran-badge" title="Won {{ achievements.seasons_won }} Season{{ achievements.seasons_won|pluralize }}">
-                                                <i class="fas fa-gem"></i> Veteran ({{ achievements.seasons_won }})
-                                            </span>
-                                        {% endif %}
-                                    {% endwith %}
-                                {% endif %}
-                                
-                                {% if post.is_pinned %}
-                                <div class="post-pinned-badge">
-                                    <i class="fas fa-thumbtack text-warning"></i>
-                                    <span class="badge bg-warning text-dark">Pinned</span>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Chat Message Content -->
-                    <div class="chat-message-content">
-                        <div class="post-text">{{ post.content|linebreaksbr }}</div>
-                    </div>
-                    
-                    <!-- Post Actions -->
-                    <div class="post-actions">
-                        <div class="voting-controls">
-                            {% if user.is_authenticated %}
-                            <button class="vote-btn upvote-btn {% if user_votes|lookup:post.id == 1 %}active{% endif %}" 
-                                    data-post-id="{{ post.id }}" data-vote-type="1">
-                                <i class="fas fa-arrow-up"></i>
-                            </button>
-                            {% endif %}
-                            <span class="vote-score" data-post-id="{{ post.id }}">{{ post.score }}</span>
-                            {% if user.is_authenticated %}
-                            <button class="vote-btn downvote-btn {% if user_votes|lookup:post.id == -1 %}active{% endif %}" 
-                                    data-post-id="{{ post.id }}" data-vote-type="-1">
-                                <i class="fas fa-arrow-down"></i>
-                            </button>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="post-stats">
-                            <button class="comment-count-btn" data-post-id="{{ post.id }}">
-                                <i class="fas fa-comment me-1"></i>{{ post.comment_count }} comment{{ post.comment_count|pluralize }}
-                            </button>
-                        </div>
-                        
-                        {% if user.is_authenticated %}
-                        <div class="post-controls">
-                            <button class="btn btn-sm btn-outline-secondary toggle-comments-btn" 
-                                    data-post-id="{{ post.id }}">
-                                <i class="fas fa-reply me-1"></i>Reply
-                            </button>
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Comments Section (initially hidden) -->
-                    <div class="comments-section" id="comments-{{ post.id }}" style="display: none;">
-                        {% if user.is_authenticated %}
-                        <!-- Quick Comment Form -->
-                        <div class="quick-comment-form">
-                            <form class="comment-form" data-post-id="{{ post.id }}">
-                                {% csrf_token %}
-                                <div class="d-flex">
-                                    <img src="{{ user.socialaccount_set.all.0.get_avatar_url|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                         alt="Your avatar" class="comment-avatar me-2">
-                                    <div class="flex-grow-1">
-                                        <textarea class="form-control comment-textarea" 
-                                                  placeholder="Write a comment..." 
-                                                  rows="2"></textarea>
-                                        <div class="comment-actions mt-2">
-                                            <button type="button" class="btn btn-sm btn-secondary cancel-comment-btn">
-                                                Cancel
-                                            </button>
-                                            <button type="submit" class="btn btn-sm btn-primary">
-                                                <i class="fas fa-paper-plane me-1"></i>Comment
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Comments List -->
-                        <div class="comments-list" data-post-id="{{ post.id }}">
-                            <!-- Comments will be loaded via AJAX -->
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="no-posts-message">
-                    <div class="text-center py-4">
-                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No discussions yet</h5>
-                        <p class="text-muted">Be the first to start a conversation!</p>
-                        {% if not user.is_authenticated %}
-                        <a href="{% provider_login_url 'google' %}" class="btn btn-primary">
-                            <i class="fab fa-google me-2"></i>Sign in to post
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Leaderboard Preview -->
-            <div class="section-container">
+            <div class="section-container mb-0">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="section-title mb-0">
                         <i class="fas fa-trophy mr-2"></i>Top Players
@@ -422,7 +383,7 @@
             </div>
 
             <!-- League Statistics & Recent Activity -->
-            <div class="section-container">
+            <div class="section-container mb-0">
                 <h3 class="section-title">
                     <i class="fas fa-chart-pie mr-2"></i>League Stats
                 </h3>
@@ -482,9 +443,228 @@
             </div>
         </div>
 
+        <!-- Message Board Section -->
+        {% if user.is_authenticated %}
+        <div class="section-container mb-6 mt-6">
+            <h3 class="section-title">
+                <i class="fas fa-comments mr-2"></i>League Discussion
+            </h3>
+
+            <!-- Chat Input (for authenticated users) -->
+            <div class="mb-6 bg-surface-light dark:bg-surface-hover rounded-xl p-4 border border-border-light dark:border-border-subtle">
+                <form id="create-post-form">
+                    {% csrf_token %}
+                    <div class="flex items-center gap-3">
+                        <img src="{{ user.socialaccount_set.all.0.get_avatar_url|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                             alt="Your avatar"
+                             class="w-10 h-10 rounded-full border-2 border-border-light dark:border-border-subtle">
+                        <span class="font-semibold text-text-dark dark:text-white hidden sm:inline">{{ user.username }}</span>
+                        <input type="text"
+                               name="content"
+                               class="flex-grow bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-xl px-4 py-2 text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-primary dark:focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                               placeholder="Share your thoughts..."
+                               maxlength="500">
+                        <button type="submit"
+                                class="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-2">
+                            <i class="fas fa-paper-plane"></i>
+                            <span class="hidden sm:inline">Post</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Message Board Posts -->
+            <div class="space-y-4" id="message-board-posts">
+                {% for post in message_posts %}
+                <div class="group bg-surface-light dark:bg-surface rounded-xl p-4 border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200" data-post-id="{{ post.id }}">
+                    <!-- Post Header -->
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            {% with post.user.id|lookupavatar as avatar %}
+                            <a href="{% url 'user_profile' post.user.id %}" class="flex-shrink-0">
+                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                     alt="Profile picture for {{ post.user.username }}"
+                                     class="w-10 h-10 rounded-full border-2 border-border-light dark:border-border-subtle hover:border-primary transition-colors">
+                            </a>
+                            {% endwith %}
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                <span class="font-semibold text-text-dark dark:text-white">{{ post.user.username }}</span>
+                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">{{ post.created_at|timesince }} ago</span>
+                            </div>
+
+                        </div>
+
+                        <!-- Achievement Badges -->
+                        <div class="flex items-center gap-1 flex-wrap ml-auto">
+                            {% if user_rankings|lookup:post.user.id %}
+                                {% with ranking=user_rankings|lookup:post.user.id %}
+                                    <!-- Current Rank Badge -->
+                                    {% if ranking.rank <= 3 %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg
+                                                     {% if ranking.rank == 1 %}bg-yellow-500/20 text-yellow-700 dark:text-yellow-400
+                                                     {% elif ranking.rank == 2 %}bg-gray-400/20 text-gray-700 dark:text-gray-300
+                                                     {% else %}bg-amber-700/20 text-amber-800 dark:text-amber-500{% endif %}"
+                                              title="Current Season Rank #{{ ranking.rank }}">
+                                            <i class="fas fa-trophy"></i> #{{ ranking.rank }}
+                                        </span>
+                                    {% elif ranking.rank <= 10 %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-blue-600/20 text-blue-700 dark:text-blue-400 rounded-lg"
+                                              title="Current Season Rank #{{ ranking.rank }}">
+                                            <i class="fas fa-medal"></i> #{{ ranking.rank }}
+                                        </span>
+                                    {% endif %}
+
+                                    <!-- Season Winner Badge -->
+                                    {% if ranking.is_season_winner %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-purple-600/20 text-purple-700 dark:text-purple-400 rounded-lg"
+                                              title="Season Champion">
+                                            <i class="fas fa-crown"></i> <span class="hidden sm:inline">Champion</span>
+                                        </span>
+                                    {% endif %}
+
+                                    <!-- Weekly Winner Badge -->
+                                    {% if ranking.weekly_wins %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg"
+                                              title="Won Week{{ ranking.weekly_wins|length|pluralize }} {{ ranking.weekly_wins|join:', ' }}">
+                                            <i class="fas fa-star"></i> <span class="hidden sm:inline">Week Winner ({{ ranking.weekly_wins|length }})</span>
+                                        </span>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+
+                            {% if user_achievements|lookup:post.user.id %}
+                                {% with achievements=user_achievements|lookup:post.user.id %}
+                                    <!-- Perfect Week Badge -->
+                                    {% if achievements.perfect_weeks_season > 0 %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-yellow-600/20 text-yellow-700 dark:text-yellow-400 rounded-lg"
+                                              title="{{ achievements.perfect_weeks_season }} Perfect Week{{ achievements.perfect_weeks_season|pluralize }} This Season">
+                                            <i class="fas fa-bolt"></i> <span class="hidden sm:inline">Perfect ({{ achievements.perfect_weeks_season }})</span>
+                                        </span>
+                                    {% endif %}
+
+                                    <!-- High Accuracy Badge -->
+                                    {% if achievements.pick_percent_season >= 70 %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-red-600/20 text-red-700 dark:text-red-400 rounded-lg"
+                                              title="{{ achievements.pick_percent_season }}% Pick Accuracy This Season">
+                                            <i class="fas fa-bullseye"></i> {{ achievements.pick_percent_season }}%
+                                        </span>
+                                    {% endif %}
+
+                                    <!-- Veteran Badge -->
+                                    {% if achievements.seasons_won > 0 %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-indigo-600/20 text-indigo-700 dark:text-indigo-400 rounded-lg"
+                                              title="Won {{ achievements.seasons_won }} Season{{ achievements.seasons_won|pluralize }}">
+                                            <i class="fas fa-gem"></i> <span class="hidden sm:inline">Veteran ({{ achievements.seasons_won }})</span>
+                                        </span>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+
+                            {% if post.is_pinned %}
+                                <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 rounded-lg">
+                                    <i class="fas fa-thumbtack"></i> Pinned
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Post Content -->
+                    <div class="mb-4">
+                        <div class="text-base text-text-dark dark:text-white leading-relaxed">{{ post.content|linebreaksbr }}</div>
+                    </div>
+
+                    <!-- Post Actions -->
+                    <div class="flex items-center gap-4 text-sm">
+                        <!-- Voting Controls -->
+                        <div class="flex items-center gap-1">
+                            {% if user.is_authenticated %}
+                            <button class="vote-btn upvote-btn p-2 rounded-lg hover:bg-red-500/10 text-text-secondary-light dark:text-text-secondary hover:text-red-500 dark:hover:text-red-400 transition-colors {% if user_votes|lookup:post.id == 1 %}!text-red-500 dark:!text-red-400{% endif %}"
+                                    data-post-id="{{ post.id }}" data-vote-type="1">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            {% endif %}
+                            <span class="vote-score font-bold text-sm min-w-[2rem] text-center text-text-dark dark:text-white" data-post-id="{{ post.id }}">{{ post.score }}</span>
+                            {% if user.is_authenticated %}
+                            <button class="vote-btn downvote-btn p-2 rounded-lg hover:bg-blue-500/10 text-text-secondary-light dark:text-text-secondary hover:text-blue-500 dark:hover:text-blue-400 transition-colors {% if user_votes|lookup:post.id == -1 %}!text-blue-500 dark:!text-blue-400{% endif %}"
+                                    data-post-id="{{ post.id }}" data-vote-type="-1">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+
+                        <!-- Comment Count -->
+                        <button class="comment-count-btn flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-surface-light dark:hover:bg-surface-hover text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white transition-all"
+                                data-post-id="{{ post.id }}">
+                            <i class="fas fa-comment"></i>
+                            <span>{{ post.comment_count }}</span>
+                        </button>
+
+                        <!-- Reply Button -->
+                        {% if user.is_authenticated %}
+                        <button class="toggle-comments-btn px-3 py-2 rounded-lg border border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary text-text-dark dark:text-white hover:bg-primary/5 transition-all flex items-center gap-2"
+                                data-post-id="{{ post.id }}">
+                            <i class="fas fa-reply"></i>
+                            <span>Reply</span>
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Comments Section (initially hidden) -->
+                    <div class="comments-section mt-4 pt-4 border-t border-border-light dark:border-border-subtle" id="comments-{{ post.id }}" style="display: none;">
+                        {% if user.is_authenticated %}
+                        <!-- Quick Comment Form -->
+                        <div class="quick-comment-form mb-4 bg-surface-light dark:bg-surface-hover rounded-lg p-3">
+                            <form class="comment-form" data-post-id="{{ post.id }}">
+                                {% csrf_token %}
+                                <div class="flex gap-3">
+                                    <img src="{{ user.socialaccount_set.all.0.get_avatar_url|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                         alt="Your avatar"
+                                         class="w-8 h-8 rounded-full border-2 border-border-light dark:border-border-subtle flex-shrink-0">
+                                    <div class="flex-grow">
+                                        <textarea class="comment-textarea w-full bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg px-3 py-2 text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-primary dark:focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                                                  placeholder="Write a comment..."
+                                                  rows="2"></textarea>
+                                        <div class="flex items-center gap-2 mt-2">
+                                            <button type="button" class="cancel-comment-btn px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-subtle text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white transition-colors">
+                                                Cancel
+                                            </button>
+                                            <button type="submit" class="px-3 py-1.5 text-sm bg-primary hover:bg-primary/80 text-white rounded-lg font-semibold transition-all flex items-center gap-1">
+                                                <i class="fas fa-paper-plane"></i>
+                                                <span>Comment</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                        <!-- Comments List -->
+                        <div class="comments-list" data-post-id="{{ post.id }}">
+                            <!-- Comments will be loaded via AJAX -->
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-12">
+                    <i class="fas fa-comments text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
+                    <h5 class="text-xl font-semibold text-text-dark dark:text-white mb-2">No discussions yet</h5>
+                    <p class="text-text-secondary-light dark:text-text-secondary mb-4">Be the first to start a conversation!</p>
+                    {% if not user.is_authenticated %}
+                    <a href="{% provider_login_url 'google' %}" class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/80 text-white rounded-xl font-semibold transition-all">
+                        <i class="fab fa-google"></i>
+                        <span>Sign in to post</span>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Season Champion Section (if exists) -->
         {% if season_winner %}
-        <div class="section-container">
+        <div class="section-container mb-6 mt-6">
             <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500/20 via-surface-light to-yellow-600/10 dark:from-yellow-500/30 dark:via-surface dark:to-yellow-600/20 border-2 border-yellow-500/50 dark:border-yellow-400/60 p-8 text-center">
                 <!-- Crown Icon -->
                 <div class="text-6xl text-yellow-500 mb-3">
@@ -516,32 +696,6 @@
         </div>
         {% endif %}
 
-        <!-- Footer Information -->
-        <div class="section-container text-center">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                <div class="flex flex-col items-center gap-2 p-4">
-                    <div class="text-3xl text-blue-600 dark:text-blue-500">
-                        <i class="fas fa-mobile-alt"></i>
-                    </div>
-                    <span class="text-sm font-semibold text-text-dark dark:text-white">Mobile Friendly</span>
-                </div>
-                <div class="flex flex-col items-center gap-2 p-4">
-                    <div class="text-3xl text-secondary-light dark:text-secondary">
-                        <i class="fas fa-sync"></i>
-                    </div>
-                    <span class="text-sm font-semibold text-text-dark dark:text-white">Real-time Updates</span>
-                </div>
-                <div class="flex flex-col items-center gap-2 p-4">
-                    <div class="text-3xl text-yellow-600 dark:text-yellow-500">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <span class="text-sm font-semibold text-text-dark dark:text-white">Secure Login</span>
-                </div>
-            </div>
-            <p class="text-sm text-text-secondary-light dark:text-text-secondary">
-                Join the excitement • Make your picks • Win prizes • Have fun!
-            </p>
-        </div>
     </div>
 
     <!-- Message Board JavaScript -->
@@ -1041,148 +1195,6 @@
         // Initialize message board
         messageBoard.init();
     });
-    
-    // Force dark mode styles for message board
-    function forceDarkModeMessageBoard() {
-        const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        if (!isDarkMode) return;
-        
-        console.log('Forcing dark mode styles for message board...');
-        
-        // Fix original post text visibility
-        document.querySelectorAll('.post-text').forEach(el => {
-            el.style.setProperty('color', '#ffffff', 'important');
-            el.style.setProperty('font-size', '0.95rem', 'important');
-            el.style.setProperty('font-weight', '400', 'important');
-        });
-        
-        // Fix post author visibility
-        document.querySelectorAll('.post-author').forEach(el => {
-            el.style.setProperty('color', '#ffffff', 'important');
-            el.style.setProperty('font-weight', '600', 'important');
-        });
-        
-        // Fix post time visibility
-        document.querySelectorAll('.post-time').forEach(el => {
-            el.style.setProperty('color', '#cccccc', 'important');
-        });
-        
-        // Fix vote buttons - Reddit style
-        document.querySelectorAll('.vote-btn').forEach(el => {
-            el.style.setProperty('background', 'transparent', 'important');
-            el.style.setProperty('border', 'none', 'important');
-            el.style.setProperty('color', '#818384', 'important');
-            el.style.setProperty('width', '24px', 'important');
-            el.style.setProperty('height', '24px', 'important');
-            el.style.setProperty('border-radius', '2px', 'important');
-            el.style.setProperty('display', 'flex', 'important');
-            el.style.setProperty('align-items', 'center', 'important');
-            el.style.setProperty('justify-content', 'center', 'important');
-        });
-        
-        // Fix upvote hover/active colors
-        document.querySelectorAll('.upvote-btn').forEach(el => {
-            if (el.classList.contains('active')) {
-                el.style.setProperty('color', '#ff4500', 'important');
-            }
-        });
-        
-        // Fix downvote hover/active colors
-        document.querySelectorAll('.downvote-btn').forEach(el => {
-            if (el.classList.contains('active')) {
-                el.style.setProperty('color', '#7193ff', 'important');
-            }
-        });
-        
-        // Fix vote score visibility
-        document.querySelectorAll('.vote-score').forEach(el => {
-            el.style.setProperty('color', '#d7dadc', 'important');
-            el.style.setProperty('font-weight', '700', 'important');
-            el.style.setProperty('font-size', '0.75rem', 'important');
-        });
-        
-        // Fix Write Comment and Reply buttons
-        document.querySelectorAll('.toggle-comments-btn, .reply-btn').forEach(el => {
-            el.style.setProperty('color', '#ffffff', 'important');
-            el.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.4)', 'important');
-            el.style.setProperty('background', 'rgba(255, 255, 255, 0.08)', 'important');
-            el.style.setProperty('border-radius', '6px', 'important');
-        });
-        
-        // Fix comment form backgrounds
-        document.querySelectorAll('.quick-comment-form').forEach(el => {
-            el.style.setProperty('background', 'rgba(255, 255, 255, 0.03)', 'important');
-            el.style.setProperty('border-radius', '8px', 'important');
-            el.style.setProperty('padding', '1rem', 'important');
-        });
-        
-        // Fix form controls in comment forms (including reply forms)
-        document.querySelectorAll('.quick-comment-form .form-control, .comment-reply-form .form-control, .reply-form .form-control').forEach(el => {
-            el.style.setProperty('background', 'rgba(255, 255, 255, 0.05)', 'important');
-            el.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.2)', 'important');
-            el.style.setProperty('color', '#ffffff', 'important');
-        });
-        
-        // Fix reply forms specifically
-        document.querySelectorAll('.comment-reply-form, .reply-form').forEach(el => {
-            el.style.setProperty('background', 'rgba(255, 255, 255, 0.03)', 'important');
-            el.style.setProperty('border-radius', '8px', 'important');
-            el.style.setProperty('padding', '1rem', 'important');
-        });
-        
-        // Fix all textareas in reply forms
-        document.querySelectorAll('.comment-textarea, .reply-form textarea').forEach(el => {
-            el.style.setProperty('background', 'rgba(255, 255, 255, 0.05)', 'important');
-            el.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.2)', 'important');
-            el.style.setProperty('color', '#ffffff', 'important');
-        });
-        
-        // Fix submit buttons in all forms
-        document.querySelectorAll('.btn-primary').forEach(el => {
-            // Only target buttons, not other elements with btn-primary
-            if (el.tagName.toLowerCase() === 'button' && el.type === 'submit') {
-                el.style.setProperty('background', '#0d6efd', 'important');
-                el.style.setProperty('border-color', '#0d6efd', 'important');
-                el.style.setProperty('color', '#ffffff', 'important');
-                el.style.setProperty('opacity', '1', 'important');
-                el.style.setProperty('visibility', 'visible', 'important');
-            }
-        });
-        
-        // Fix comment content visibility
-        document.querySelectorAll('.comment-content p').forEach(el => {
-            el.style.setProperty('color', '#ffffff', 'important');
-        });
-        
-        // Fix comment author/time visibility
-        document.querySelectorAll('.comment-author').forEach(el => {
-            el.style.setProperty('color', '#ffffff', 'important');
-            el.style.setProperty('font-weight', '600', 'important');
-        });
-        
-        document.querySelectorAll('.comment-time').forEach(el => {
-            el.style.setProperty('color', '#cccccc', 'important');
-        });
-        
-        console.log('Dark mode styles applied to message board');
-    }
-    
-    // Apply dark mode styles on page load and after dynamic content changes
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(forceDarkModeMessageBoard, 100);
-        setTimeout(forceDarkModeMessageBoard, 500);
-        setTimeout(forceDarkModeMessageBoard, 1000);
-    });
-    
-    // Re-apply styles after AJAX operations
-    const originalFetch = window.fetch;
-    window.fetch = function(...args) {
-        return originalFetch.apply(this, args).then(response => {
-            setTimeout(forceDarkModeMessageBoard, 100);
-            return response;
-        });
-    };
-    
     </script>
 
 {% endblock %}
