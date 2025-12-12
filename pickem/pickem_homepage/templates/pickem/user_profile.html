@@ -3,144 +3,292 @@
 {% load pickem_homepage_extras %}
 
 {% block mobile_title %}
-    <div class="mobile-page-header">
-        <h2 class="mobile-title-text">
-            <i class="fas fa-user-circle me-2"></i>{{ profile_user.first_name|default:profile_user.username }}'s Profile
-        </h2>
-        {% if user_profile.tagline %}
-        <div class="mobile-subtitle">
-            {{ user_profile.tagline }}
-        </div>
-        {% endif %}
+    <div class="mobile-subtitle">
+        <i class="fas fa-user-circle mr-2"></i>{{ profile_user.first_name|default:profile_user.username }}'s Profile
     </div>
 {% endblock %}
 
 {% block content %}
-    <div class="container profile-main-container">
-        <div class="col">
-            <!-- Profile Header -->
-            <div class="section-container mb-4">
-                <div class="profile-header">
-                    <div class="profile-avatar-section">
-                        <img src="{{ profile_user.socialaccount_set.all.0.get_avatar_url }}" 
-                             alt="Profile picture" 
-                             class="profile-avatar">
-                        <div class="profile-basic-info">
-                            <h1 class="profile-name">
-                                {{ profile_user.first_name|default:profile_user.username }} 
-                                {{ profile_user.last_name }}
-                            </h1>
-                            {% if user_profile.tagline %}
-                            <p class="profile-tagline">{{ user_profile.tagline }}</p>
-                            {% endif %}
-                            {% if stats.favorite_team %}
-                            <div class="favorite-team">
-                                {% if stats.favorite_team_logo %}
-                                <img src="{{ stats.favorite_team_logo }}" alt="{{ stats.favorite_team }} logo" class="team-logo-small">
-                                {% endif %}
-                                <span>{{ stats.favorite_team }} Fan</span>
-                            </div>
-                            {% endif %}
-                        </div>
+    <!-- Hero Profile Section -->
+    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-slate-100 via-blue-200 to-indigo-200 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-600 dark:border-blue-500/40 shadow-xl">
+        <!-- Subtle background pattern -->
+        <div class="absolute inset-0 opacity-20 dark:opacity-5 pointer-events-none"></div>
+
+        <!-- Content -->
+        <div class="relative z-10">
+            <!-- Profile Avatar -->
+            <div class="relative inline-block mb-4">
+                <img src="{{ profile_user.socialaccount_set.all.0.get_avatar_url }}"
+                     alt="Profile picture"
+                     class="w-32 h-32 rounded-full border-4 border-primary shadow-lg">
+                <div class="absolute bottom-2 right-2 w-4 h-4 bg-green-500 border-2 border-white dark:border-surface rounded-full"></div>
+            </div>
+
+            <!-- User Name -->
+            <h1 class="text-3xl lg:text-5xl font-black tracking-tight mb-2"
+                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
+                {{ profile_user.first_name|default:profile_user.username }} {{ profile_user.last_name }}
+            </h1>
+
+            <!-- Tagline -->
+            {% if user_profile.tagline %}
+            <p class="text-base lg:text-xl text-gray-700 dark:text-text-secondary font-medium italic mb-3">
+                {{ user_profile.tagline }}
+            </p>
+            {% endif %}
+
+            <!-- Favorite Team Badge -->
+            {% if stats.favorite_team %}
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 dark:bg-primary/20 rounded-full">
+                {% if stats.favorite_team_logo %}
+                <img src="{{ stats.favorite_team_logo }}" alt="{{ stats.favorite_team }} logo" class="w-6 h-6 object-contain">
+                {% endif %}
+                <span class="font-semibold text-text-dark dark:text-white">{{ stats.favorite_team }} Fan</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+<div class="max-w-7xl mx-auto px-6 py-6">
+    {% if is_own_profile %}
+    <div class="flex justify-center mb-6">
+        <a href="{% url 'profile' %}" class="px-6 py-2.5 rounded-xl border-2 border-primary text-primary hover:bg-primary hover:text-white font-semibold transition-colors flex items-center gap-2">
+            <i class="fas fa-cog"></i>Settings
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Season Achievement Highlights -->
+    {% if stats.seasons_won > 0 or stats.weeks_won_current_season > 0 %}
+    <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b border-border-light dark:border-border-subtle">
+            <h3 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
+                <i class="fas fa-trophy text-primary"></i>
+                Achievements
+            </h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% if stats.seasons_won > 0 %}
+                <div class="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 text-gray-900">
+                    <i class="fas fa-crown text-3xl"></i>
+                    <div class="flex-1">
+                        <div class="font-semibold">{{ stats.seasons_won }} Season{{ stats.seasons_won|pluralize }} Won</div>
                     </div>
                 </div>
-                
-                {% if is_own_profile %}
-                <div class="profile-actions-row">
-                    <div class="d-flex justify-content-center w-100">
-                        <a href="{% url 'profile' %}" class="btn btn-outline-primary">
-                            <i class="fas fa-cog me-1"></i>Settings
-                        </a>
+                {% endif %}
+
+                {% if stats.weeks_won_current_season > 0 %}
+                <div class="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-gray-900">
+                    <i class="fas fa-calendar-check text-3xl"></i>
+                    <div class="flex-1">
+                        <div class="font-semibold">{{ stats.weeks_won_current_season }} Week{{ stats.weeks_won_current_season|pluralize }} Won This Season</div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if stats.perfect_weeks > 0 %}
+                <div class="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white">
+                    <i class="fas fa-bullseye text-3xl"></i>
+                    <div class="flex-1">
+                        <div class="font-semibold">{{ stats.perfect_weeks }} Perfect Week{{ stats.perfect_weeks|pluralize }}</div>
                     </div>
                 </div>
                 {% endif %}
             </div>
+        </div>
+    </div>
+    {% endif %}
 
-            <!-- Season Achievement Highlights -->
-            {% if stats.seasons_won > 0 or stats.weeks_won_current_season > 0 %}
-            <div class="section-container mb-4">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-trophy me-2"></i>Achievements
-                    </h3>
-                </div>
-                <div class="achievements-grid">
-                    {% if stats.seasons_won > 0 %}
-                    <div class="achievement-badge champion-badge">
-                        <i class="fas fa-crown"></i>
-                        <div class="achievement-text">
-                            <div class="achievement-label">{{ stats.seasons_won }} Season{{ stats.seasons_won|pluralize }} Won</div>
-                        </div>
+
+    <!-- Key Performance Metrics with Visual Indicators -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Accuracy Gauge -->
+        <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden p-6">
+            <h4 class="text-sm font-bold text-text-dark dark:text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-bullseye text-primary"></i>
+                Season Accuracy
+            </h4>
+            <div class="relative w-48 h-48 mx-auto">
+                <canvas id="accuracyGauge"></canvas>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="text-4xl font-black text-text-dark dark:text-white">{{ stats.pick_accuracy_current }}%</div>
+                        <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase">Accuracy</div>
                     </div>
-                    {% endif %}
-                    
-                    {% if stats.weeks_won_current_season > 0 %}
-                    <div class="achievement-badge weekly-winner-badge">
-                        <i class="fas fa-calendar-check"></i>
-                        <div class="achievement-text">
-                            <div class="achievement-label">{{ stats.weeks_won_current_season }} Week{{ stats.weeks_won_current_season|pluralize }} Won This Season</div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if stats.perfect_weeks > 0 %}
-                    <div class="achievement-badge perfect-week-badge">
-                        <i class="fas fa-bullseye"></i>
-                        <div class="achievement-text">
-                            <div class="achievement-label">{{ stats.perfect_weeks }} Perfect Week{{ stats.perfect_weeks|pluralize }}</div>
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
-            {% endif %}
+        </div>
 
-            <!-- Stats Overview -->
-            <div class="section-container mb-4">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-chart-line me-2"></i>Season Statistics ({{ gameseason_display }})
-                    </h3>
+        <!-- Points Progress -->
+        <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden p-6">
+            <h4 class="text-sm font-bold text-text-dark dark:text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-star text-primary"></i>
+                Season Progress
+            </h4>
+            <div class="relative w-48 h-48 mx-auto">
+                <canvas id="pointsGauge"></canvas>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="text-4xl font-black text-text-dark dark:text-white">{{ stats.current_season_points }}</div>
+                        <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase">Points</div>
+                        <div class="text-sm font-bold text-yellow-600 dark:text-yellow-400 mt-1">Rank #{{ stats.current_season_rank }}</div>
+                    </div>
                 </div>
-                
-                <div class="stats-overview-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-star"></i>
+            </div>
+        </div>
+
+        <!-- Streaks & Highlights -->
+        <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden p-6">
+            <h4 class="text-sm font-bold text-text-dark dark:text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-fire text-primary"></i>
+                Streaks & Highlights
+            </h4>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between p-3 bg-gradient-to-r from-orange-500/10 to-red-500/10 dark:from-orange-500/20 dark:to-red-500/20 rounded-xl border border-orange-500/30">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center">
+                            <i class="fas fa-fire text-white"></i>
                         </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ stats.current_season_points }}</div>
-                            <div class="stat-label">Points</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-trophy"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">#{{ stats.current_season_rank }}</div>
-                            <div class="stat-label">Current Rank</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-bullseye"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ stats.pick_accuracy_current }}%</div>
-                            <div class="stat-label">Pick Accuracy</div>
+                        <div>
+                            <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase">Current Streak</div>
+                            <div class="text-lg font-black text-text-dark dark:text-white">0 weeks</div>
                         </div>
                     </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-calendar-week"></i>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-500/10 to-amber-500/10 dark:from-yellow-500/20 dark:to-amber-500/20 rounded-xl border border-yellow-500/30">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-full flex items-center justify-center">
+                            <i class="fas fa-trophy text-white"></i>
                         </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ stats.weeks_won_current_season }}</div>
-                            <div class="stat-label">Weeks Won</div>
+                        <div>
+                            <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase">Weeks Won</div>
+                            <div class="text-lg font-black text-text-dark dark:text-white">{{ stats.weeks_won_current_season }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 dark:from-green-500/20 dark:to-emerald-500/20 rounded-xl border border-green-500/30">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                            <i class="fas fa-star text-white"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase">Perfect Weeks</div>
+                            <div class="text-lg font-black text-text-dark dark:text-white">{{ stats.perfect_weeks|default:0 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Performance Analysis -->
+    <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b border-border-light dark:border-border-subtle">
+            <h3 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
+                <i class="fas fa-chart-line text-primary"></i>
+                Performance Analysis
+            </h3>
+        </div>
+        <div class="p-6">
+
+            <!-- Current Season Stats -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <h6 class="text-lg font-semibold text-text-dark dark:text-white flex items-center gap-2">
+                        <i class="fas fa-calendar-alt text-primary"></i>Current Season ({{ gameseason_display }})
+                    </h6>
+                    {% if stats.pick_accuracy_current >= 70 %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg text-sm font-semibold">
+                            <i class="fas fa-arrow-up"></i> Hot Streak
+                        </span>
+                    {% elif stats.pick_accuracy_current >= 50 %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-semibold">
+                            <i class="fas fa-equals"></i> Steady
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-lg text-sm font-semibold">
+                            <i class="fas fa-arrow-down"></i> Improving
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div class="p-4 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/30">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Points</div>
+                        <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.current_season_points }}</div>
+                    </div>
+                    <div class="p-4 bg-yellow-500/20 border-yellow-500/30 rounded-xl border">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Current Rank</div>
+                        <div class="text-2xl font-black text-yellow-600 dark:text-yellow-400">#{{ stats.current_season_rank }}</div>
+                    </div>
+                    <div class="p-4 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/30">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Pick Accuracy</div>
+                        <div class="flex items-baseline justify-between">
+                            <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.pick_accuracy_current }}%</div>
+                            {% if stats.years_playing > 1 %}
+                            <div class="text-lg">
+                                {% if stats.pick_accuracy_current >= stats.pick_accuracy_lifetime %}
+                                    <i class="fas fa-arrow-up text-secondary-light dark:text-secondary"></i>
+                                {% else %}
+                                    <i class="fas fa-arrow-down text-red-600 dark:text-red-400"></i>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Correct Picks</div>
+                        <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.correct_picks|floatformat:0 }}</div>
+                    </div>
+                    <div class="p-4 {% if user_stats_obj.missedPicksSeason > 0 %}bg-red-500/10 dark:bg-red-600/20 border-red-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Missed Picks</div>
+                        <div class="text-2xl font-black {% if user_stats_obj.missedPicksSeason > 0 %}text-red-600 dark:text-red-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                            {{ user_stats_obj.missedPicksSeason|default:0 }}
+                            {% if user_stats_obj.missedPicksSeason > 0 %}
+                                <i class="fas fa-exclamation-triangle text-base"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="p-4 {% if stats.weeks_won_current_season > 0 %}bg-yellow-500/20 border-yellow-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Weeks Won</div>
+                        <div class="text-2xl font-black {% if stats.weeks_won_current_season > 0 %}text-yellow-600 dark:text-yellow-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                            {{ stats.weeks_won_current_season }}
+                            {% if stats.weeks_won_current_season > 0 %}
+                                <i class="fas fa-trophy text-base"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="p-4 {% if stats.perfect_weeks > 0 %}bg-secondary-light/20 dark:bg-secondary/20 border-secondary-light/30 dark:border-secondary/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Perfect Weeks</div>
+                        <div class="text-2xl font-black {% if stats.perfect_weeks > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                            {{ stats.perfect_weeks|default:0 }}
+                            {% if stats.perfect_weeks > 0 %}
+                                <i class="fas fa-star text-base"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Most Picked</div>
+                        <div class="flex items-center justify-center h-10">
+                            {% if user_stats_obj.mostPickedSeason %}
+                                {% with user_stats_obj.mostPickedSeason|lookuplogo as logo_url %}
+                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ user_stats_obj.mostPickedSeason }} team logo" class="w-12 h-12 object-contain">
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-text-secondary-light dark:text-text-secondary">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Least Picked</div>
+                        <div class="flex items-center justify-center h-10">
+                            {% if user_stats_obj.leastPickedSeason %}
+                                {% with user_stats_obj.leastPickedSeason|lookuplogo as logo_url %}
+                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ user_stats_obj.leastPickedSeason }} team logo" class="w-12 h-12 object-contain">
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-text-secondary-light dark:text-text-secondary">N/A</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -148,178 +296,187 @@
 
             <!-- Lifetime Stats -->
             {% if stats.years_playing > 1 %}
-            <div class="section-container mb-4">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-history me-2"></i>Lifetime Statistics
-                    </h3>
+            <div>
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <h6 class="text-lg font-semibold text-text-dark dark:text-white flex items-center gap-2">
+                        <i class="fas fa-history text-secondary-light dark:text-secondary"></i>Lifetime Performance
+                    </h6>
+                    {% if stats.seasons_won > 0 %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-purple-600/20 text-purple-700 dark:text-purple-400 rounded-lg text-sm font-semibold">
+                            <i class="fas fa-crown"></i> Champion
+                        </span>
+                    {% endif %}
                 </div>
-                
-                <div class="stats-overview-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-calendar-alt"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ stats.years_playing }}</div>
-                            <div class="stat-label">Years Playing</div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Years Playing</div>
+                        <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.years_playing }}</div>
+                    </div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Total Points</div>
+                        <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.total_lifetime_points|floatformat:0 }}</div>
+                    </div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Best Season</div>
+                        <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.best_season_points }}</div>
+                    </div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Best Rank</div>
+                        <div class="text-2xl font-black text-text-dark dark:text-white">#{{ stats.best_rank|default:"--" }}</div>
+                    </div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Pick Accuracy</div>
+                        <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.pick_accuracy_lifetime }}%</div>
+                    </div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Total Correct</div>
+                        <div class="text-2xl font-black text-text-dark dark:text-white">{{ user_stats_obj.correctPickTotalTotal|default:0 }}</div>
+                    </div>
+                    <div class="p-4 {% if user_stats_obj.missedPicksTotal > 0 %}bg-red-500/10 dark:bg-red-600/20 border-red-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Total Missed</div>
+                        <div class="text-2xl font-black {% if user_stats_obj.missedPicksTotal > 0 %}text-red-600 dark:text-red-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                            {{ user_stats_obj.missedPicksTotal|default:0 }}
+                            {% if user_stats_obj.missedPicksTotal > 0 %}
+                                <i class="fas fa-exclamation-triangle text-base"></i>
+                            {% endif %}
                         </div>
                     </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-trophy"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ stats.total_lifetime_points|floatformat:0 }}</div>
-                            <div class="stat-label">Total Points</div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Weeks Won</div>
+                        <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.weeks_won_total }}</div>
+                    </div>
+                    <div class="p-4 {% if user_stats_obj.perfectWeeksTotal > 0 %}bg-secondary-light/20 dark:bg-secondary/20 border-secondary-light/30 dark:border-secondary/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Perfect Weeks</div>
+                        <div class="text-2xl font-black {% if user_stats_obj.perfectWeeksTotal > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                            {{ user_stats_obj.perfectWeeksTotal|default:0 }}
+                            {% if user_stats_obj.perfectWeeksTotal > 0 %}
+                                <i class="fas fa-star text-base"></i>
+                            {% endif %}
                         </div>
                     </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-medal"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ stats.best_season_points }}</div>
-                            <div class="stat-label">Best Season</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-award"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">#{{ stats.best_rank|default:"--" }}</div>
-                            <div class="stat-label">Best Rank</div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Most Picked</div>
+                        <div class="flex items-center justify-center h-10">
+                            {% if user_stats_obj.mostPickedTotal %}
+                                {% with user_stats_obj.mostPickedTotal|lookuplogo as logo_url %}
+                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ user_stats_obj.mostPickedTotal }} team logo" class="w-12 h-12 object-contain">
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-text-secondary-light dark:text-text-secondary">N/A</span>
+                            {% endif %}
                         </div>
                     </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-crown"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ stats.weeks_won_total }}</div>
-                            <div class="stat-label">Weeks Won</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-bullseye"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ stats.pick_accuracy_lifetime }}%</div>
-                            <div class="stat-label">Accuracy</div>
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Least Picked</div>
+                        <div class="flex items-center justify-center h-10">
+                            {% if user_stats_obj.leastPickedTotal %}
+                                {% with user_stats_obj.leastPickedTotal|lookuplogo as logo_url %}
+                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ user_stats_obj.leastPickedTotal }} team logo" class="w-12 h-12 object-contain">
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-text-secondary-light dark:text-text-secondary">N/A</span>
+                            {% endif %}
                         </div>
                     </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-list-ol"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ stats.total_picks_made|floatformat:0 }}</div>
-                            <div class="stat-label">Total Picks</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Activity Summary -->
-            <div class="section-container mb-4">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-chart-pie me-2"></i>Activity Summary
-                    </h3>
-                </div>
-                
-                <div class="simple-activity-list">
-                    <div class="activity-row">
-                        <div class="activity-icon">
-                            <i class="fas fa-comments"></i>
-                        </div>
-                        <div class="activity-stat">
-                            <span class="activity-number">{{ posts_count }}</span>
-                            <span class="activity-text">Message Board Post{{ posts_count|pluralize }}</span>
-                        </div>
-                    </div>
-                    <br>
-                    <div class="activity-row">
-                        <div class="activity-icon">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="activity-stat">
-                            <span class="activity-number">{{ stats.correct_picks|floatformat:0 }}</span>
-                            <span class="activity-text">Correct Pick{{ stats.correct_picks|pluralize }}</span>
+                    <div class="p-4 {% if stats.seasons_won > 0 %}bg-purple-600/20 border-purple-600/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Seasons Won</div>
+                        <div class="text-2xl font-black {% if stats.seasons_won > 0 %}text-purple-700 dark:text-purple-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                            {% if stats.seasons_won > 0 %}
+                                <i class="fas fa-trophy"></i>
+                                {{ stats.seasons_won }}
+                            {% else %}
+                                0
+                            {% endif %}
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Team Pick Distribution Chart -->
-            <!-- Debug: Chart data check -->
-            <!-- Data available: {{ team_chart_data|length }} items, Labels: {{ team_chart_labels|length }} -->
-            {% if team_chart_data and team_chart_labels %}
-            <div class="section-container mb-4">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-chart-pie me-2"></i>Team Pick Distribution ({{ gameseason_display }})
-                    </h3>
-                </div>
-                
-                <div class="chart-container">
-                    <canvas id="teamPickChart" width="400" height="400"></canvas>
-                </div>
-                
-                <div class="chart-stats-summary mt-3">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="stat-mini">
-                                <span class="stat-mini-label">Most Picked:</span>
-                                <div class="stat-mini-team">
-                                    {% if most_picked_teams %}
-                                        {% for team in most_picked_teams %}
-                                            {% with team.slug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                 alt="{{ team.label }} logo" 
-                                                 class="team-logo-chart most-picked-logo"
-                                                 onerror="this.src='/static/images/nfl.svg'">
-                                            {% endwith %}
-                                        {% endfor %}
-                                    {% else %}
-                                        <img src="/static/images/nfl.svg" 
-                                             alt="No picks yet" 
-                                             class="team-logo-chart most-picked-logo">
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                {% comment %} <!-- Custom Chart Legend with Team Logos -->
-                <div class="custom-chart-legend mt-3" id="customChartLegend">
-                    <!-- Legend will be populated by JavaScript -->
-                </div> {% endcomment %}
-            </div>
-
-            {% endif %}
-
-            <!-- No Stats Message -->
-            {% if stats.years_playing == 0 %}
-            <div class="section-container text-center">
-                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
-                <h4 class="text-muted">{{ profile_user.first_name|default:profile_user.username }} hasn't started playing yet!</h4>
-                <p class="text-muted">Come back after they've submitted some picks to see their stats.</p>
             </div>
             {% endif %}
         </div>
     </div>
-    
+
+    <!-- Activity Summary -->
+    <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b border-border-light dark:border-border-subtle">
+            <h3 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
+                <i class="fas fa-chart-pie text-primary"></i>
+                Activity Summary
+            </h3>
+        </div>
+        <div class="p-6">
+            <div class="space-y-4">
+                <div class="flex items-center gap-6 p-6 bg-gradient-to-br from-surface-light to-white dark:from-surface-hover dark:to-surface rounded-2xl border border-border-light dark:border-border-subtle hover:shadow-lg transition-all">
+                    <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center text-white text-xl flex-shrink-0">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div class="flex items-baseline gap-3 flex-1">
+                        <span class="text-3xl font-black text-text-dark dark:text-white">{{ posts_count }}</span>
+                        <span class="text-lg font-semibold text-text-secondary-light dark:text-text-secondary">Message Board Post{{ posts_count|pluralize }}</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-6 p-6 bg-gradient-to-br from-surface-light to-white dark:from-surface-hover dark:to-surface rounded-2xl border border-border-light dark:border-border-subtle hover:shadow-lg transition-all">
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center text-white text-xl flex-shrink-0">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="flex items-baseline gap-3 flex-1">
+                        <span class="text-3xl font-black text-text-dark dark:text-white">{{ stats.correct_picks|floatformat:0 }}</span>
+                        <span class="text-lg font-semibold text-text-secondary-light dark:text-text-secondary">Correct Pick{{ stats.correct_picks|pluralize }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Pick Distribution Chart -->
+    {% if team_chart_data and team_chart_labels %}
+    <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b border-border-light dark:border-border-subtle">
+            <h3 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
+                <i class="fas fa-chart-pie text-primary"></i>
+                Team Pick Distribution ({{ gameseason_display }})
+            </h3>
+        </div>
+        <div class="p-6">
+            <div class="relative h-96 w-full max-w-xl mx-auto bg-white/5 dark:bg-black/10 backdrop-blur-md rounded-3xl border border-white/20 dark:border-white/10 p-8 shadow-xl">
+                <canvas id="teamPickChart" width="400" height="400"></canvas>
+            </div>
+
+            <div class="mt-6 bg-white/5 dark:bg-black/10 backdrop-blur-md rounded-2xl border border-white/20 dark:border-white/10 p-6 shadow-lg">
+                <div class="text-center">
+                    <span class="block text-sm font-bold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary mb-3">Most Picked:</span>
+                    <div class="flex items-center justify-center gap-2">
+                        {% if most_picked_teams %}
+                            {% for team in most_picked_teams %}
+                                {% with team.slug|lookuplogo as logo_url %}
+                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                     alt="{{ team.label }} logo"
+                                     class="w-10 h-10 object-contain drop-shadow-lg"
+                                     onerror="this.src='/static/images/nfl.svg'">
+                                {% endwith %}
+                            {% endfor %}
+                        {% else %}
+                            <img src="/static/images/nfl.svg"
+                                 alt="No picks yet"
+                                 class="w-10 h-10 object-contain drop-shadow-lg">
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- No Stats Message -->
+    {% if stats.years_playing == 0 %}
+    <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle p-12 text-center">
+        <i class="fas fa-chart-line text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
+        <h4 class="text-text-secondary-light dark:text-text-secondary text-xl font-semibold mb-2">{{ profile_user.first_name|default:profile_user.username }} hasn't started playing yet!</h4>
+        <p class="text-text-secondary-light dark:text-text-secondary">Come back after they've submitted some picks to see their stats.</p>
+    </div>
+    {% endif %}
+</div>
+
     <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -328,52 +485,17 @@
     {% if team_chart_data and team_chart_labels %}
     document.addEventListener('DOMContentLoaded', function() {
         const ctx = document.getElementById('teamPickChart').getContext('2d');
-        
+
         // Check if dark mode is active
-        const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        
+        const isDarkMode = document.documentElement.classList.contains('dark');
+
         // Team data for custom legend
         const teamSlugs = {{ team_chart_slugs|safe }};
         const teamLabels = {{ team_chart_labels|safe }};
         const teamData = {{ team_chart_data|safe }};
         const teamColors = {{ team_chart_colors|safe }};
         const teamLogos = {{ team_chart_logos|safe }};
-        
-        // Create custom legend
-        function createCustomLegend() {
-            const legendContainer = document.getElementById('customChartLegend');
-            if (!legendContainer) return;
-            
-            let legendHTML = '';
-            for (let i = 0; i < teamSlugs.length; i++) {
-                legendHTML += `
-                    <div class="legend-item" data-index="${i}" style="cursor: pointer;">
-                        <img src="${teamLogos[i]}" 
-                             alt="${teamLabels[i]} logo" 
-                             class="legend-team-logo"
-                             onerror="this.src='/static/images/nfl.svg'">
-                        <span class="legend-team-name">${teamLabels[i]}</span>
-                        <span class="legend-percentage">${teamData[i]}%</span>
-                        <div class="legend-color-dot" style="background-color: ${teamColors[i]};"></div>
-                    </div>
-                `;
-            }
-            legendContainer.innerHTML = legendHTML;
-            
-            // Add click handlers for legend items to toggle chart segments
-            const legendItems = legendContainer.querySelectorAll('.legend-item');
-            legendItems.forEach((item, index) => {
-                item.addEventListener('click', function() {
-                    const segment = teamPickChart.getDatasetMeta(0).data[index];
-                    segment.hidden = !segment.hidden;
-                    teamPickChart.update();
-                    
-                    // Update visual state of legend item
-                    item.classList.toggle('legend-item-hidden');
-                });
-            });
-        }
-        
+
         const teamPickChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -403,7 +525,7 @@
                 },
                 plugins: {
                     legend: {
-                        display: false  // We'll create a custom legend with team logos
+                        display: false
                     },
                     datalabels: {
                         color: '#ffffff',
@@ -412,7 +534,6 @@
                             weight: 'bold'
                         },
                         formatter: function(value, context) {
-                            // Only show label if percentage is above 2% to avoid clutter
                             if (value >= 2) {
                                 return context.chart.data.labels[context.dataIndex];
                             }
@@ -459,1182 +580,94 @@
                 }
             }
         });
-        
-        // Create the custom legend after chart is created
-        createCustomLegend();
-        
+
         // Update chart when theme changes
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
-                    const newIsDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-                    
-                    // Update legend colors
-                    teamPickChart.options.plugins.legend.labels.color = newIsDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)';
-                    
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const newIsDarkMode = document.documentElement.classList.contains('dark');
+
                     // Update border colors
                     teamPickChart.data.datasets[0].borderColor = newIsDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)';
-                    
+
                     // Update tooltip colors
                     teamPickChart.options.plugins.tooltip.backgroundColor = newIsDarkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.95)';
                     teamPickChart.options.plugins.tooltip.titleColor = newIsDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)';
                     teamPickChart.options.plugins.tooltip.bodyColor = newIsDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)';
                     teamPickChart.options.plugins.tooltip.borderColor = newIsDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
-                    
+
                     teamPickChart.update('none');
                 }
             });
         });
-        
+
         observer.observe(document.documentElement, {
             attributes: true,
-            attributeFilter: ['data-bs-theme']
+            attributeFilter: ['class']
         });
     });
     {% endif %}
+
+    // Accuracy Gauge Chart
+    const accuracyCtx = document.getElementById('accuracyGauge');
+    if (accuracyCtx) {
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        const accuracyValue = {{ stats.pick_accuracy_current }};
+
+        new Chart(accuracyCtx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [accuracyValue, 100 - accuracyValue],
+                    backgroundColor: [
+                        accuracyValue >= 70 ? '#10b981' : accuracyValue >= 50 ? '#3b82f6' : '#f59e0b',
+                        isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                    ],
+                    borderWidth: 0,
+                    cutout: '75%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+    }
+
+    // Points Gauge Chart
+    const pointsCtx = document.getElementById('pointsGauge');
+    if (pointsCtx) {
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        const currentPoints = {{ stats.current_season_points }};
+        const maxPoints = 200; // Estimate based on max possible points
+        const pointsPercent = Math.min((currentPoints / maxPoints) * 100, 100);
+
+        new Chart(pointsCtx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [pointsPercent, 100 - pointsPercent],
+                    backgroundColor: [
+                        '#f59e0b',
+                        isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                    ],
+                    borderWidth: 0,
+                    cutout: '75%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+    }
     </script>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-.profile-main-container {
-    max-width: 1200px;
-    padding: 0 1rem;
-}
-
-.profile-header {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 2rem 1.5rem 1rem 1.5rem;
-}
-
-.profile-avatar-section {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-}
-
-.profile-avatar {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 4px solid var(--bs-primary);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    transition: transform 0.3s ease;
-}
-
-.profile-avatar:hover {
-    transform: scale(1.05);
-}
-
-.profile-name {
-    margin: 0 0 0.5rem 0;
-    font-size: 2.2rem;
-    font-weight: 700;
-    line-height: 1.2;
-}
-
-.profile-tagline {
-    color: #6c757d;
-    font-style: italic;
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
-}
-
-.favorite-team {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #495057;
-    font-weight: 600;
-    padding: 0.5rem 1rem;
-    background: rgba(var(--bs-primary-rgb), 0.1);
-    border-radius: 20px;
-    transition: all 0.3s ease;
-    display: inline-flex;
-}
-
-.favorite-team:hover {
-    background: rgba(var(--bs-primary-rgb), 0.15);
-    transform: translateY(-1px);
-}
-
-.profile-actions-row {
-    padding: 0 1.5rem 1rem 1.5rem;
-    width: 100%;
-}
-
-.profile-actions-row .btn {
-    min-width: 120px;
-}
-
-
-.achievements-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.achievement-badge {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    border-radius: 12px;
-    font-weight: 600;
-}
-
-.achievement-badge i {
-    font-size: 2rem;
-}
-
-.achievement-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-
-.achievement-label {
-    font-size: 0.9rem;
-    opacity: 0.9;
-}
-
-.champion-badge {
-    background: linear-gradient(135deg, #ffd700, #ffed4e);
-    color: #1a1a1a;
-}
-
-.weekly-winner-badge {
-    background: linear-gradient(135deg, #ffc107, #ffb300);
-    color: #1a1a1a;
-}
-
-.perfect-week-badge {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-    color: #ffffff;
-}
-
-.stats-overview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-}
-
-.stat-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.5rem 1.75rem;
-    background: linear-gradient(135deg, #ffffff, #f8f9fa);
-    border-radius: 16px;
-    border: 1px solid #e9ecef;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-    min-height: 85px;
-}
-
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-}
-
-.stat-card:hover::before {
-    opacity: 1;
-}
-
-.stat-icon {
-    width: 70px;
-    height: 70px;
-    background: linear-gradient(135deg, var(--bs-primary), var(--bs-info));
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.75rem;
-    box-shadow: 0 4px 15px rgba(var(--bs-primary-rgb), 0.3);
-    transition: all 0.3s ease;
-}
-
-.stat-card:hover .stat-icon {
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(var(--bs-primary-rgb), 0.4);
-}
-
-.stat-content {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-    flex-grow: 1;
-}
-
-.stat-value {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #212529;
-    line-height: 1;
-    margin: 0;
-}
-
-.stat-label {
-    color: #6c757d;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    font-weight: 600;
-    margin: 0;
-}
-
-
-.lifetime-stat-item {
-    text-align: center;
-    padding: 1.5rem 1rem;
-    background: linear-gradient(135deg, #ffffff, #f8f9fa);
-    border-radius: 12px;
-    border: 1px solid #e9ecef;
-    transition: all 0.3s ease;
-    position: relative;
-}
-
-.lifetime-stat-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-}
-
-.lifetime-stat-label {
-    font-size: 0.8rem;
-    color: #6c757d;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin-bottom: 0.75rem;
-    font-weight: 600;
-}
-
-.lifetime-stat-value {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: #212529;
-    line-height: 1;
-}
-
-.activity-summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.25rem;
-}
-
-.activity-item {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #ffffff, #f8f9fa);
-    border-radius: 16px;
-    border: 1px solid #e9ecef;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.activity-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 4px;
-    background: linear-gradient(180deg, var(--bs-primary), var(--bs-success));
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.activity-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-}
-
-.activity-item:hover::before {
-    opacity: 1;
-}
-
-.activity-item i {
-    font-size: 2.25rem;
-    color: var(--bs-primary);
-    transition: all 0.3s ease;
-}
-
-.activity-item:hover i {
-    transform: scale(1.1);
-    color: var(--bs-info);
-}
-
-.activity-value {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: #212529;
-    line-height: 1;
-    margin-bottom: 0.25rem;
-}
-
-.activity-label {
-    color: #6c757d;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Modern Stats Grid Styles */
-.modern-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-}
-
-.modern-stat-card {
-    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.modern-stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--accent-gradient);
-}
-
-.modern-stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-}
-
-.modern-stat-card .stat-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: white;
-    background: var(--accent-gradient);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    flex-shrink: 0;
-}
-
-.modern-stat-card .stat-content {
-    flex: 1;
-}
-
-.modern-stat-card .stat-value {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: #1a1a1a;
-    line-height: 1;
-    margin-bottom: 0.5rem;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.modern-stat-card .stat-unit {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #5a6c7d;
-}
-
-.modern-stat-card .stat-label {
-    color: #2c3e50;
-    font-weight: 600;
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-}
-
-/* Color Variants for Stat Cards */
-.modern-stat-card.highlight-card {
-    --accent-gradient: linear-gradient(135deg, #6f42c1, #9561e2);
-}
-
-.modern-stat-card.primary-card {
-    --accent-gradient: linear-gradient(135deg, #007bff, #0056b3);
-}
-
-.modern-stat-card.success-card {
-    --accent-gradient: linear-gradient(135deg, #28a745, #20c997);
-}
-
-.modern-stat-card.warning-card {
-    --accent-gradient: linear-gradient(135deg, #ffc107, #f39c12);
-}
-
-.modern-stat-card.info-card {
-    --accent-gradient: linear-gradient(135deg, #17a2b8, #138496);
-}
-
-.modern-stat-card.neutral-card {
-    --accent-gradient: linear-gradient(135deg, #6c757d, #495057);
-}
-
-/* Modern Activity Grid Styles */
-.modern-activity-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
-    margin-top: 1.5rem;
-}
-
-.modern-activity-card {
-    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
-    border-radius: 16px;
-    padding: 2.5rem;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-    min-height: 120px;
-}
-
-.modern-activity-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--activity-gradient);
-}
-
-.modern-activity-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-}
-
-.modern-activity-card .activity-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: white;
-    background: var(--activity-gradient);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    flex-shrink: 0;
-}
-
-.modern-activity-card .activity-content {
-    flex: 1;
-}
-
-.modern-activity-card .activity-value {
-    font-size: 2.25rem;
-    font-weight: 800;
-    color: #1a1a1a;
-    line-height: 1;
-    margin-bottom: 0.5rem;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.modern-activity-card .activity-label {
-    color: #2c3e50;
-    font-weight: 700;
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-    letter-spacing: 0.3px;
-}
-
-.modern-activity-card .activity-description {
-    color: #5a6c7d;
-    font-size: 0.9rem;
-    font-weight: 500;
-    font-style: normal;
-}
-
-.modern-activity-card .activity-trend {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--activity-gradient);
-    background: rgba(0, 0, 0, 0.05);
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-
-/* Activity Card Color Variants */
-.modern-activity-card.social-card {
-    --activity-gradient: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-
-.modern-activity-card.performance-card {
-    --activity-gradient: linear-gradient(135deg, #27ae60, #229954);
-}
-
-/* Simple Activity List Styles */
-.simple-activity-list {
-    margin-top: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-/* Simple Stats List Styles */
-.simple-stats-list {
-    margin-top: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.activity-row {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 1.5rem 2rem;
-    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
-    border-radius: 12px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    transition: all 0.3s ease;
-    width: 100%;
-    box-sizing: border-box;
-    flex-wrap: nowrap;
-    min-height: 60px;
-    margin-bottom: 2.5rem;
-}
-
-.activity-row:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-}
-
-.activity-row:last-child {
-    margin-bottom: 0;
-}
-
-.activity-row .activity-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    color: white;
-    flex-shrink: 0;
-}
-
-.activity-row:nth-child(1) .activity-icon {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-
-.activity-row:nth-child(2) .activity-icon {
-    background: linear-gradient(135deg, #27ae60, #229954);
-}
-
-.activity-stat {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    flex: 1;
-    flex-wrap: nowrap;
-}
-
-.activity-number {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #1a1a1a;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.activity-text {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #2c3e50;
-    letter-spacing: 0.3px;
-}
-
-.stat-row {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 1.5rem 2rem;
-    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
-    border-radius: 12px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    transition: all 0.3s ease;
-    width: 100%;
-    box-sizing: border-box;
-    flex-wrap: nowrap;
-    min-height: 60px;
-    margin-bottom: 2.5rem;
-}
-
-.stat-row:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-}
-
-.stat-row:last-child {
-    margin-bottom: 0;
-}
-
-.stat-row .stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    color: white;
-    flex-shrink: 0;
-}
-
-.stat-row:nth-child(1) .stat-icon {
-    background: linear-gradient(135deg, #6f42c1, #9561e2);
-}
-
-.stat-row:nth-child(2) .stat-icon {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-}
-
-.stat-row:nth-child(3) .stat-icon {
-    background: linear-gradient(135deg, #28a745, #20c997);
-}
-
-.stat-row:nth-child(4) .stat-icon {
-    background: linear-gradient(135deg, #ffc107, #f39c12);
-}
-
-.stat-row:nth-child(5) .stat-icon {
-    background: linear-gradient(135deg, #17a2b8, #138496);
-}
-
-.stat-row:nth-child(6) .stat-icon {
-    background: linear-gradient(135deg, #6c757d, #495057);
-}
-
-.stat-info {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    flex: 1;
-    flex-wrap: nowrap;
-}
-
-.stat-number {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #1a1a1a;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.stat-text {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #2c3e50;
-    letter-spacing: 0.3px;
-}
-
-/* Dark Mode Support */
-[data-bs-theme="dark"] .modern-stat-card,
-[data-bs-theme="dark"] .modern-activity-card,
-[data-bs-theme="dark"] .activity-row,
-[data-bs-theme="dark"] .stat-row {
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
-
-[data-bs-theme="dark"] .modern-stat-card .stat-value,
-[data-bs-theme="dark"] .modern-activity-card .activity-value {
-    color: #ffffff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-[data-bs-theme="dark"] .modern-stat-card .stat-label,
-[data-bs-theme="dark"] .modern-activity-card .activity-label {
-    color: #e0e0e0;
-    font-weight: 600;
-}
-
-[data-bs-theme="dark"] .modern-stat-card .stat-unit {
-    color: #b0b0b0;
-}
-
-[data-bs-theme="dark"] .modern-activity-card .activity-description {
-    color: #c0c0c0;
-    font-weight: 500;
-}
-
-[data-bs-theme="dark"] .modern-activity-card .activity-trend {
-    background: rgba(255, 255, 255, 0.15);
-    color: #ffffff;
-}
-
-[data-bs-theme="dark"] .activity-number {
-    color: #ffffff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-[data-bs-theme="dark"] .activity-text {
-    color: #e0e0e0;
-}
-
-[data-bs-theme="dark"] .stat-number {
-    color: #ffffff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-[data-bs-theme="dark"] .stat-text {
-    color: #e0e0e0;
-}
-
-/* Enhanced hover effects for dark mode */
-[data-bs-theme="dark"] .modern-stat-card:hover,
-[data-bs-theme="dark"] .modern-activity-card:hover,
-[data-bs-theme="dark"] .activity-row:hover,
-[data-bs-theme="dark"] .stat-row:hover {
-    background: linear-gradient(135deg, #2a2a2a 0%, #3d3d3d 100%);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-}
-
-@media (max-width: 768px) {
-    .profile-main-container {
-        padding: 0 0.5rem;
-    }
-    
-    .profile-header {
-        flex-direction: column;
-        text-align: center;
-        padding: 1.5rem 1rem 1rem 1rem;
-    }
-    
-    .profile-actions-row {
-        padding: 0 1rem 1rem 1rem;
-    }
-    
-    .profile-avatar-section {
-        flex-direction: column;
-        text-align: center;
-        gap: 1rem;
-    }
-    
-    .profile-avatar {
-        width: 100px;
-        height: 100px;
-    }
-    
-    .profile-name {
-        font-size: 1.8rem;
-    }
-    
-    .stats-overview-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .stat-card {
-        padding: 1.25rem 1.5rem;
-        min-height: 75px;
-    }
-    
-    .stat-icon {
-        width: 60px;
-        height: 60px;
-        font-size: 1.5rem;
-    }
-    
-    .stat-value {
-        font-size: 1.6rem;
-    }
-    
-    .stat-label {
-        font-size: 0.75rem;
-    }
-    
-    
-    .lifetime-stat-item {
-        padding: 1rem 0.75rem;
-    }
-    
-    .lifetime-stat-value {
-        font-size: 1.5rem;
-    }
-    
-    .activity-summary {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .activity-item {
-        padding: 1.25rem;
-        gap: 1rem;
-    }
-    
-    .activity-item i {
-        font-size: 2rem;
-    }
-    
-    .activity-value {
-        font-size: 1.5rem;
-    }
-    
-    /* Modern components mobile styles */
-    .modern-stats-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .modern-stat-card {
-        padding: 1.5rem;
-        gap: 1rem;
-    }
-    
-    .modern-stat-card .stat-icon {
-        width: 50px;
-        height: 50px;
-        font-size: 1.25rem;
-    }
-    
-    .modern-stat-card .stat-value {
-        font-size: 1.75rem;
-    }
-    
-    .modern-activity-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-    
-    .modern-activity-card {
-        padding: 2rem;
-        gap: 1.5rem;
-        min-height: 100px;
-    }
-    
-    .modern-activity-card .activity-icon {
-        width: 50px;
-        height: 50px;
-        font-size: 1.25rem;
-    }
-    
-    .modern-activity-card .activity-value {
-        font-size: 1.5rem;
-    }
-    
-    /* Simple activity list mobile styles */
-    .simple-activity-list {
-        gap: 1.5rem;
-    }
-    
-    .activity-row {
-        padding: 1.25rem 1.5rem;
-        gap: 1rem;
-    }
-    
-    .activity-row .activity-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
-    }
-    
-    .activity-number {
-        font-size: 1.5rem;
-    }
-    
-    .activity-text {
-        font-size: 1rem;
-    }
-    
-    /* Simple stats list mobile styles */
-    .simple-stats-list {
-        gap: 1.5rem;
-    }
-    
-    .stat-row {
-        padding: 1.25rem 1.5rem;
-        gap: 1rem;
-    }
-    
-    .stat-row .stat-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
-    }
-    
-    .stat-number {
-        font-size: 1.5rem;
-    }
-    
-    .stat-text {
-        font-size: 1rem;
-    }
-}
-
-/* Chart Styles - Modern Glassmorphism */
-.chart-container {
-    position: relative;
-    height: 450px;
-    width: 100%;
-    max-width: 550px;
-    margin: 0 auto;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 2rem;
-    box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.chart-stats-summary {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border-radius: 20px;
-    padding: 2rem;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    margin-top: 2rem;
-}
-
-.stat-mini {
-    text-align: center;
-}
-
-.stat-mini-label {
-    display: block;
-    font-size: 0.95rem;
-    color: rgba(0, 0, 0, 0.7);
-    margin-bottom: 0.8rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.stat-mini-value {
-    display: block;
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: rgba(0, 0, 0, 0.9);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.stat-mini-team {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    flex-wrap: nowrap;
-    flex-direction: row;
-}
-
-.most-picked-item {
-    display: inline-flex;
-    align-items: center;
-    margin-right: 0.5rem;
-    flex-shrink: 0;
-}
-
-.most-picked-logo {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-    object-position: center;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-    max-width: 40px;
-    max-height: 40px;
-}
-
-/* Custom Chart Legend Styles */
-.custom-chart-legend {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.legend-item:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.legend-item.legend-item-hidden {
-    opacity: 0.5;
-    background: rgba(128, 128, 128, 0.1);
-}
-
-#customChartLegend .legend-team-logo {
-    width: 48px !important;
-    height: 48px !important;
-    max-width: 48px !important;
-    max-height: 48px !important;
-    object-fit: contain !important;
-    object-position: center;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
-    display: block !important;
-}
-
-.legend-team-name {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.8);
-    flex: 1;
-}
-
-.legend-percentage {
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.9);
-    margin-right: 0.5rem;
-}
-
-.legend-color-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-/* Dark Mode for Chart */
-[data-bs-theme="dark"] .chart-container {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-[data-bs-theme="dark"] .chart-stats-summary {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-[data-bs-theme="dark"] .stat-mini-label {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-[data-bs-theme="dark"] .stat-mini-value {
-    color: rgba(255, 255, 255, 0.95);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-/* Dark Mode for Custom Legend */
-[data-bs-theme="dark"] .legend-item {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-[data-bs-theme="dark"] .legend-item:hover {
-    background: rgba(0, 0, 0, 0.3);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-[data-bs-theme="dark"] .legend-team-name {
-    color: rgba(255, 255, 255, 0.8);
-}
-
-[data-bs-theme="dark"] .legend-percentage {
-    color: rgba(255, 255, 255, 0.9);
-}
-
-@media (max-width: 768px) {
-    .chart-container {
-        height: 350px;
-        padding: 1.5rem;
-        border-radius: 20px;
-    }
-    
-    .chart-stats-summary {
-        padding: 1.5rem;
-        border-radius: 16px;
-    }
-    
-    .stat-mini-value {
-        font-size: 1.3rem;
-    }
-    
-    .stat-mini-label {
-        font-size: 0.85rem;
-    }
-    
-    /* Mobile responsive for custom legend */
-    .custom-chart-legend {
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
-    }
-    
-    .legend-item {
-        padding: 0.6rem 0.8rem;
-        gap: 0.6rem;
-    }
-    
-    .legend-team-logo {
-        width: 32px;
-        height: 32px;
-    }
-    
-    .most-picked-logo {
-        width: 32px;
-        height: 32px;
-        max-width: 32px;
-        max-height: 32px;
-    }
-    
-    .legend-team-name,
-    .legend-percentage {
-        font-size: 0.85rem;
-    }
-}
-</style>
 {% endblock %}

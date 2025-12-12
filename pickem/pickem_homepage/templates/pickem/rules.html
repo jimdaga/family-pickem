@@ -33,262 +33,168 @@
         </div>
     </div>
 
-<div class="max-w-7xl mx-auto px-4 py-6">
-    <!-- Rules Content -->
-    <div class="section-container">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-book me-2"></i>Official League Regulations
-                    </h3>
-                    <p class="section-subtitle">Please review all rules carefully to ensure fair competition</p>
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Scoring System Section -->
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center">
+                <i class="fas fa-calculator text-white text-xl"></i>
+            </div>
+            <div>
+                <h3 class="text-2xl font-bold text-text-dark dark:text-white">Scoring System</h3>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">How points are awarded each week</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Win -->
+            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all group">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <i class="fas fa-check-circle text-white text-2xl"></i>
+                    </div>
+                    <div class="text-3xl font-black text-green-600 dark:text-green-400">+1</div>
                 </div>
+                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Wins</h4>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Correctly pick the winning team</p>
+            </div>
 
-                <div class="rules-accordion" id="rulesAccordion">
-
-                    <!-- Rule 1: Scoring System -->
-                    <div class="rule-card">
-                        <div class="rule-header" id="headingScoring">
-                            <button class="rule-toggle" type="button"
-                                    onclick="toggleRule(this)"
-                                    aria-expanded="true"
-                                    aria-controls="collapseScoring">
-                                <div class="rule-icon-container">
-                                    <i class="fas fa-calculator rule-icon"></i>
-                                </div>
-                                <div class="rule-title-container">
-                                    <h5 class="rule-title">Scoring System</h5>
-                                    <p class="rule-subtitle">Points, wins, losses, and weekly bonuses</p>
-                                </div>
-                                <div class="rule-arrow">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </button>
-                        </div>
-                        <div id="collapseScoring"
-                             class="rule-collapse"
-                             aria-labelledby="headingScoring">
-                            <div class="rule-body">
-                                <div class="rule-items">
-                                    <div class="rule-item">
-                                        <div class="rule-number">1.A</div>
-                                        <div class="rule-content">
-                                            <span class="rule-text">Wins are awarded <strong>1 point</strong></span>
-                                            <div class="rule-visual">
-                                                <i class="fas fa-plus-circle text-secondary-light dark:text-secondary"></i>
-                                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">+1 Point</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="rule-item">
-                                        <div class="rule-number">1.B</div>
-                                        <div class="rule-content">
-                                            <span class="rule-text">Losses receive <strong>no points</strong></span>
-                                            <div class="rule-visual">
-                                                <i class="fas fa-minus-circle text-red-500 dark:text-red-400"></i>
-                                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">0 Points</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="rule-item">
-                                        <div class="rule-number">1.C</div>
-                                        <div class="rule-content">
-                                            <span class="rule-text">Ties receive <strong>no points</strong></span>
-                                            <div class="rule-visual">
-                                                <i class="fas fa-equals text-yellow-500 dark:text-yellow-400"></i>
-                                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">0 Points</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="rule-item">
-                                        <div class="rule-number">1.D</div>
-                                        <div class="rule-content">
-                                            <span class="rule-text">Weekly winners receive <strong>2 bonus points</strong></span>
-                                            <div class="rule-visual">
-                                                <i class="fas fa-trophy text-yellow-500 dark:text-yellow-400"></i>
-                                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">+2 Bonus</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Loss -->
+            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all group">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <i class="fas fa-times-circle text-white text-2xl"></i>
                     </div>
-
-                    <!-- Rule 2: Advanced Rules -->
-                    <div class="rule-card">
-                        <div class="rule-header" id="headingAdvanced">
-                            <button class="rule-toggle" type="button"
-                                    onclick="toggleRule(this)"
-                                    aria-expanded="false"
-                                    aria-controls="collapseAdvanced">
-                                <div class="rule-icon-container">
-                                    <i class="fas fa-cogs rule-icon"></i>
-                                </div>
-                                <div class="rule-title-container">
-                                    <h5 class="rule-title">Advanced Rules</h5>
-                                    <p class="rule-subtitle">Tiebreakers, game locks, and special circumstances</p>
-                                </div>
-                                <div class="rule-arrow">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </button>
-                        </div>
-                        <div id="collapseAdvanced"
-                             class="rule-collapse collapsed"
-                             aria-labelledby="headingAdvanced">
-                            <div class="rule-body">
-                                <div class="rule-items">
-                                    <div class="rule-item">
-                                        <div class="rule-number">2.A</div>
-                                        <div class="rule-content">
-                                            <span class="rule-text">Tiebreakers determined by <strong>closest total score</strong> (No Price is Right rules)</span>
-                                            <div class="rule-visual">
-                                                <i class="fas fa-bullseye text-primary"></i>
-                                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">Closest Wins</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="rule-item">
-                                        <div class="rule-number">2.B</div>
-                                        <div class="rule-content">
-                                            <span class="rule-text">Secondary tiebreaker uses <strong>combined yards</strong> from Monday Night Football</span>
-                                            <div class="rule-visual">
-                                                <i class="fas fa-football-ball text-blue-500 dark:text-blue-400"></i>
-                                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">MNF Yards</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="rule-item">
-                                        <div class="rule-number">2.C</div>
-                                        <div class="rule-content">
-                                            <span class="rule-text">Games <strong>lock automatically</strong> when they start</span>
-                                            <div class="rule-visual">
-                                                <i class="fas fa-lock text-red-500 dark:text-red-400"></i>
-                                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">Auto-Lock</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Rule 3: Bonus Rules -->
-                    <div class="rule-card">
-                        <div class="rule-header" id="headingBonus">
-                            <button class="rule-toggle" type="button"
-                                    onclick="toggleRule(this)"
-                                    aria-expanded="false"
-                                    aria-controls="collapseBonus">
-                                <div class="rule-icon-container">
-                                    <i class="fas fa-star rule-icon"></i>
-                                </div>
-                                <div class="rule-title-container">
-                                    <h5 class="rule-title">Bonus Rules & Prizes</h5>
-                                    <p class="rule-subtitle">Special rewards, entry fees, and championship rules</p>
-                                </div>
-                                <div class="rule-arrow">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </button>
-                        </div>
-                        <div id="collapseBonus"
-                             class="rule-collapse collapsed"
-                             aria-labelledby="headingBonus">
-                            <div class="rule-body">
-                                <div class="rule-items">
-                                    <div class="rule-item">
-                                        <div class="rule-number">3.A</div>
-                                        <div class="rule-content">
-                                            <span class="rule-text">Perfect Week bonus: <strong>$10 from each participant</strong></span>
-                                            <div class="rule-visual">
-                                                <i class="fas fa-gem text-secondary-light dark:text-secondary"></i>
-                                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">Perfect Week</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="rule-item">
-                                        <div class="rule-number">3.B</div>
-                                        <div class="rule-content">
-                                            <span class="rule-text"><strong>$40 entry fee</strong> per person. Champion determined by most total points</span>
-                                            <div class="rule-visual">
-                                                <i class="fas fa-dollar-sign text-secondary-light dark:text-secondary"></i>
-                                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">$40 Entry</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="rule-item">
-                                        <div class="rule-number">3.C</div>
-                                        <div class="rule-content">
-                                            <span class="rule-text">Tied champions continue into the <strong>playoffs</strong></span>
-                                            <div class="rule-visual">
-                                                <i class="fas fa-trophy text-yellow-500 dark:text-yellow-400"></i>
-                                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">Playoffs</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                    <div class="text-3xl font-black text-red-600 dark:text-red-400">0</div>
                 </div>
+                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Losses</h4>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Incorrect picks earn no points</p>
+            </div>
 
-                <!-- Rules Footer -->
-                <div class="rules-footer mt-4">
-                    <div class="footer-content text-center">
-                        <div class="footer-icon">
-                            <i class="fas fa-handshake"></i>
-                        </div>
-                        <h6 class="footer-title">Remember: Good Sportsmanship Above All</h6>
-                        <p class="footer-text">
-                            These rules ensure fair play and fun for everyone. Questions? Contact the commissioner.
-                        </p>
-                        <div class="footer-badges">
-                            <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 dark:bg-primary/20 text-primary rounded-lg text-sm font-medium">
-                                <i class="fas fa-users"></i>Family Friendly
-                            </span>
-                            <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg text-sm font-medium">
-                                <i class="fas fa-balance-scale"></i>Fair Play
-                            </span>
-                            <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-lg text-sm font-medium">
-                                <i class="fas fa-trophy"></i>Competitive
-                            </span>
-                        </div>
+            <!-- Tie -->
+            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all group">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <i class="fas fa-equals text-white text-2xl"></i>
+                    </div>
+                    <div class="text-3xl font-black text-yellow-600 dark:text-yellow-400">0</div>
+                </div>
+                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Ties</h4>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Tied games award no points</p>
+            </div>
+
+            <!-- Weekly Winner -->
+            <div class="bg-gradient-to-br from-yellow-500/10 to-amber-500/10 dark:from-yellow-500/20 dark:to-amber-500/20 rounded-2xl p-6 border-2 border-yellow-500/50 hover:shadow-lg transition-all group">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                        <i class="fas fa-trophy text-white text-2xl"></i>
+                    </div>
+                    <div class="text-3xl font-black text-yellow-600 dark:text-yellow-400">+2</div>
+                </div>
+                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Weekly Winner</h4>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Bonus for most points in a week</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Rules Section -->
+    <div class="mb-8 mt-12">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center">
+                <i class="fas fa-cogs text-white text-xl"></i>
+            </div>
+            <div>
+                <h3 class="text-2xl font-bold text-text-dark dark:text-white">Advanced Rules</h3>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Tiebreakers and game mechanics</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Tiebreaker -->
+            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-bullseye text-white text-xl"></i>
+                </div>
+                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-3">Primary Tiebreaker</h4>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
+                    Determined by <strong class="text-text-dark dark:text-white">closest total score</strong>. No Price is Right rules - you can go over!
+                </p>
+            </div>
+
+            <!-- Secondary Tiebreaker -->
+            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all">
+                <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-football-ball text-white text-xl"></i>
+                </div>
+                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-3">Secondary Tiebreaker</h4>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
+                    Uses <strong class="text-text-dark dark:text-white">combined yards</strong> from Monday Night Football game
+                </p>
+            </div>
+
+            <!-- Auto Lock -->
+            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all">
+                <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-lock text-white text-xl"></i>
+                </div>
+                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-3">Game Locking</h4>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
+                    Games <strong class="text-text-dark dark:text-white">lock automatically</strong> when they start - no late picks allowed
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prizes & Entry Section -->
+    <div class="mt-12">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-2xl flex items-center justify-center">
+                <i class="fas fa-trophy text-white text-xl"></i>
+            </div>
+            <div>
+                <h3 class="text-2xl font-bold text-text-dark dark:text-white">Prizes & Championship</h3>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Entry fees and special rewards</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Perfect Week Bonus -->
+            <div class="bg-gradient-to-br from-green-500/10 to-emerald-500/10 dark:from-green-500/20 dark:to-emerald-500/20 rounded-2xl p-6 border-2 border-green-500/50 hover:shadow-lg transition-all">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-gem text-white text-2xl"></i>
+                    </div>
+                    <div class="text-3xl font-black text-green-600 dark:text-green-400">$10</div>
+                </div>
+                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Perfect Week Bonus</h4>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Get all picks correct and earn <strong class="text-text-dark dark:text-white">$10 from each participant</strong></p>
+            </div>
+
+            <!-- Entry Fee -->
+            <div class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/20 dark:to-indigo-500/20 rounded-2xl p-6 border-2 border-blue-500/50 hover:shadow-lg transition-all">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-dollar-sign text-white text-2xl"></i>
+                    </div>
+                    <div class="text-3xl font-black text-blue-600 dark:text-blue-400">$40</div>
+                </div>
+                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Entry Fee</h4>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Per person entry. Champion determined by <strong class="text-text-dark dark:text-white">most total points</strong></p>
+            </div>
+
+            <!-- Playoffs -->
+            <div class="bg-gradient-to-br from-purple-500/10 to-indigo-500/10 dark:from-purple-500/20 dark:to-indigo-500/20 rounded-2xl p-6 border-2 border-purple-500/50 hover:shadow-lg transition-all">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-crown text-white text-2xl"></i>
                     </div>
                 </div>
+                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Championship Tiebreaker</h4>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Tied champions continue into <strong class="text-text-dark dark:text-white">the playoffs</strong> to determine the winner</p>
             </div>
         </div>
     </div>
 </div>
-
-<!-- Accordion JavaScript -->
-<script>
-    function toggleRule(button) {
-        const isExpanded = button.getAttribute('aria-expanded') === 'true';
-        const targetId = button.getAttribute('aria-controls');
-        const targetPanel = document.getElementById(targetId);
-        const arrow = button.querySelector('.rule-arrow i');
-
-        // Toggle the current panel
-        if (isExpanded) {
-            button.setAttribute('aria-expanded', 'false');
-            targetPanel.classList.add('collapsed');
-            arrow.style.transform = 'rotate(0deg)';
-        } else {
-            button.setAttribute('aria-expanded', 'true');
-            targetPanel.classList.remove('collapsed');
-            arrow.style.transform = 'rotate(180deg)';
-        }
-    }
-
-    // Initialize first accordion to be open
-    document.addEventListener('DOMContentLoaded', function() {
-        const firstRuleArrow = document.querySelector('.rule-toggle .rule-arrow i');
-        if (firstRuleArrow) {
-            firstRuleArrow.style.transform = 'rotate(180deg)';
-        }
-    });
-    </script>
 
 {% endblock %}
