@@ -9,7 +9,7 @@
 @layer components {
   /* Cards */
   .card-base {
-    @apply rounded-2xl p-6 bg-surface-light dark:bg-surface shadow-xl border border-border-light dark:border-border-subtle transition-all;
+    @apply rounded-2xl p-6 bg-surface-light dark:bg-surface-hover shadow-xl border border-border-light dark:border-border-subtle transition-all;
   }
 
   .card-hover {
@@ -31,12 +31,12 @@
 
   /* Status Cards */
   .status-card {
-    @apply bg-surface-light dark:bg-surface rounded-2xl p-4 border border-border-light dark:border-border-subtle space-y-2;
+    @apply bg-surface-light dark:bg-surface-hover rounded-2xl p-4 border border-border-light dark:border-border-subtle space-y-2;
   }
 
   /* Game Cards */
   .game-card {
-    @apply bg-surface-light dark:bg-surface rounded-2xl p-5 border border-border-light dark:border-border-subtle shadow-lg transition-all space-y-4;
+    @apply bg-surface-light dark:bg-surface-hover rounded-2xl p-5 border border-border-light dark:border-border-subtle shadow-lg transition-all space-y-4;
   }
 
   /* Team Selection States */
@@ -52,12 +52,12 @@
 
   /* Leaderboard Items */
   .leaderboard-card {
-    @apply bg-surface-light dark:bg-surface rounded-2xl p-4 border border-border-light dark:border-border-subtle flex items-center justify-between hover:shadow-card-hover hover:-translate-y-1 transition-all;
+    @apply bg-surface-light dark:bg-surface-hover rounded-2xl p-4 border border-border-light dark:border-border-subtle flex items-center justify-between hover:shadow-card-hover hover:-translate-y-1 transition-all;
   }
 
   /* Section Container */
   .section-container {
-    @apply bg-bg-light dark:bg-bg-dark rounded-2xl p-2 sm:p-4 lg:p-6 shadow-xl border border-border-light dark:border-border-subtle mb-4;
+    @apply bg-bg-light dark:bg-surface rounded-2xl p-2 sm:p-4 lg:p-6 shadow-xl border border-border-light dark:border-border-subtle mb-4;
   }
 
   .section-title {
@@ -219,7 +219,7 @@
   }
 
   .stats-player-card {
-    @apply p-4 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all;
+    @apply p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all;
   }
 
   .stats-card-header {
@@ -312,7 +312,7 @@
   }
 
   .stat-card {
-    @apply bg-surface-light dark:bg-surface rounded-xl p-4 border border-border-light dark:border-border-subtle text-center;
+    @apply bg-surface-light dark:bg-surface-hover rounded-xl p-4 border border-border-light dark:border-border-subtle text-center;
   }
 
   .stat-icon {
@@ -349,7 +349,7 @@
 
   /* Rules Page Components */
   .rule-card {
-    @apply bg-surface-light dark:bg-surface rounded-xl mb-4 border border-border-light dark:border-border-subtle shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-0.5 transition-all;
+    @apply bg-surface-light dark:bg-surface-hover rounded-xl mb-4 border border-border-light dark:border-border-subtle shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-0.5 transition-all;
   }
 
   .rule-header {
