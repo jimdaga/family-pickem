@@ -102,7 +102,7 @@
   }
 
   .quarter-score {
-    @apply px-2 py-1 text-xs min-w-6 text-center bg-surface dark:bg-surface-hover rounded border border-border-light dark:border-border-subtle text-text-dark dark:text-gray-200;
+    @apply px-2 py-1 text-xs min-w-6 text-center bg-surface-light dark:bg-surface-hover rounded border border-border-light dark:border-border-subtle text-text-dark dark:text-gray-200;
   }
 
   .game-status-display {
