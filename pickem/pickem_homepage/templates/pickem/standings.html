@@ -45,31 +45,31 @@
         <div class="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-orange-500/10 to-red-500/10 dark:from-yellow-500/20 dark:via-orange-500/20 dark:to-red-500/20"></div>
         <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
 
-        <div class="relative z-10 text-center py-8">
+        <div class="relative z-10 text-center py-4">
             <!-- Crown Icon -->
-            <div class="mb-4">
-                <i class="fas fa-crown text-6xl text-yellow-500 animate-pulse"></i>
+            <div class="mb-2">
+                <i class="fas fa-crown text-4xl text-yellow-500 animate-pulse"></i>
             </div>
 
             <!-- Title -->
-            <h3 class="text-3xl font-black text-text-dark dark:text-white mb-6">
+            <h3 class="text-2xl font-black text-text-dark dark:text-white mb-3">
                 Season Champion
             </h3>
 
             <!-- Champion Info -->
             {% with season_winner.userID|safe_username as champion_name %}
             {% with season_winner.userID|lookupavatar as champion_avatar %}
-            <div class="flex flex-col items-center gap-4">
+            <div class="flex flex-col items-center gap-2">
                 <a href="{% url 'user_profile' season_winner.userID %}" class="group">
                     <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                          alt="Profile picture for {{ champion_name }}"
-                         class="w-24 h-24 rounded-full border-4 border-yellow-500 shadow-glow-primary group-hover:scale-110 transition-transform duration-200">
+                         class="w-16 h-16 rounded-full border-4 border-yellow-500 shadow-glow-primary group-hover:scale-110 transition-transform duration-200">
                 </a>
                 <div>
-                    <h4 class="text-2xl font-bold text-text-dark dark:text-white mb-1 uppercase">
+                    <h4 class="text-xl font-bold text-text-dark dark:text-white mb-1 uppercase">
                         {{ champion_name|default:"Unknown Champion" }}
                     </h4>
-                    <p class="text-text-secondary-light dark:text-text-secondary">
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary">
                         Congratulations on your victory!
                     </p>
                 </div>
