@@ -70,7 +70,7 @@
     <!-- Filter Controls -->
     <div class="section-container mb-6">
         <div class="flex flex-wrap gap-2 justify-center">
-            <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn active bg-blue-600 border-blue-600 text-white hover:bg-blue-700" data-filter="all">
+            <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn active border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-600/10" data-filter="all">
                 <i class="fas fa-list mr-2"></i>All Games
             </button>
             <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn border-green-600 text-green-600 dark:text-green-400 hover:bg-green-600/10" data-filter="live">
@@ -390,9 +390,6 @@
                                             <div class="team-details">
                                                 <div class="team-name {% if game.statusType == 'finished' and game.gameWinner != game.awayTeamSlug %}text-muted{% endif %}">
                                                     {{ game.awayTeamName }}
-                                                    {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}
-                                                        <i class="fas fa-chevron-right ms-1 winner-indicator"></i>
-                                                    {% endif %}
                                                 </div>
                                                 <div class="team-details">
                                                     <div class="team-record">
@@ -405,6 +402,11 @@
                                                                 {% endif %}
                                                             {% endif %}
                                                         {% endfor %}
+                                                        {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}
+                                                            <span class="inline-flex items-center ml-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700">
+                                                                <i class="fas fa-check mr-1"></i>W
+                                                            </span>
+                                                        {% endif %}
                                                     </div>
                                                     {% if game.awayTeamWinProbability %}
                                                     <div class="performance-item">
@@ -447,9 +449,6 @@
                                             <div class="team-details">
                                                 <div class="team-name {% if game.statusType == 'finished' and game.gameWinner != game.homeTeamSlug %}text-muted{% endif %}">
                                                     {{ game.homeTeamName }}
-                                                    {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}
-                                                        <i class="fas fa-chevron-right ms-1 winner-indicator"></i>
-                                                    {% endif %}
                                                 </div>
                                                 <div class="team-details">
                                                     <div class="team-record">
@@ -462,6 +461,11 @@
                                                                 {% endif %}
                                                             {% endif %}
                                                         {% endfor %}
+                                                        {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}
+                                                            <span class="inline-flex items-center ml-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700">
+                                                                <i class="fas fa-check mr-1"></i>W
+                                                            </span>
+                                                        {% endif %}
                                                     </div>
                                                     {% if game.homeTeamWinProbability %}
                                                     <div class="performance-item">
@@ -692,7 +696,7 @@
                                 {% for pick in picks %}
                                 {% if pick.userEmail == user.email and pick.pick == game.homeTeamSlug or pick.userEmail == user.email and pick.pick == game.awayTeamSlug %}
                                 <div class="{% if game.statusType == 'finished' or game.statusType == 'inprogress' %}border-t border-border-light dark:border-border-subtle mt-3 pt-3{% else %}mt-3 pt-3{% endif %}">
-                                    <div class="px-4 pb-4">
+                                    <div class="px-4 pb-4 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg mx-3">
                                         <div class="flex items-center gap-2 text-sm font-semibold text-text-dark dark:text-white mb-3">
                                             <i class="fas fa-star"></i>
                                             <span>Your Pick</span>
@@ -1099,11 +1103,7 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .filter-btn.active {
-            background-color: var(--bs-primary);
-            border-color: var(--bs-primary);
-            color: white;
-        }
+        /* .filter-btn.active styles removed - now handled by Tailwind in input.css */
         .score-updating {
             animation: pulse 1s infinite;
         }
