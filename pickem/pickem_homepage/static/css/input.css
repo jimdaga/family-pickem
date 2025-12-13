@@ -166,7 +166,7 @@
   }
 
   .missing-pick-username {
-    @apply text-xs font-bold text-text-dark dark:text-white text-center uppercase max-w-[60px] break-words;
+    @apply text-[0.625rem] font-bold text-text-dark dark:text-white text-center uppercase max-w-[60px] break-words;
   }
 
   .winner-showcase {
