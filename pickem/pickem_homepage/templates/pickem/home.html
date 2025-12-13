@@ -220,7 +220,7 @@
                         <div class="text-4xl text-yellow-500 mb-2">
                             <i class="fas fa-trophy"></i>
                         </div>
-                        <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">
+                        <div class="text-3xl font-bold text-text-dark dark:text-white mb-1 uppercase">
                             {% with current_week_winner.userID|safe_username as winner_name %}
                                 {{ winner_name|truncatechars:12 }}
                             {% endwith %}
@@ -320,14 +320,6 @@
                     <p class="text-xs text-text-secondary-light dark:text-text-secondary">View league leaderboard</p>
                 </a>
 
-                <a href="/stats/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-secondary-light dark:hover:border-secondary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
-                    <div class="text-3xl text-secondary-light dark:text-secondary mb-2 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Statistics</h5>
-                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Player performance data</p>
-                </a>
-
                 <a href="/rules/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-purple-600 dark:hover:border-purple-500 transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
                     <div class="text-3xl text-purple-600 dark:text-purple-500 mb-2 group-hover:scale-110 transition-transform">
                         <i class="fas fa-gavel"></i>
@@ -367,7 +359,7 @@
                                      class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:border-primary transition-colors">
                             </a>
                             <div class="flex-grow min-w-0">
-                                <div class="font-semibold text-text-dark dark:text-white truncate">{{ username|default:"Unknown Player" }}</div>
+                                <div class="font-semibold text-text-dark dark:text-white truncate uppercase">{{ username|default:"Unknown Player" }}</div>
                                 <div class="text-sm text-text-secondary-light dark:text-text-secondary">{{ player.total_points|default:0 }} points</div>
                             </div>
                             {% endwith %}
@@ -430,7 +422,7 @@
                                 <img src="{{ winner_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                      alt="Profile picture for {{ winner_name }}"
                                      class="w-8 h-8 rounded-full">
-                                <span class="font-medium text-text-dark dark:text-white">{{ winner_name|default:"Unknown Player" }}</span>
+                                <span class="font-medium text-text-dark dark:text-white uppercase">{{ winner_name|default:"Unknown Player" }}</span>
                                 {% endwith %}
                                 {% endwith %}
                             </div>
@@ -488,7 +480,7 @@
                             </a>
                             {% endwith %}
                             <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                <span class="font-semibold text-text-dark dark:text-white">{{ post.user.username }}</span>
+                                <span class="font-semibold text-text-dark dark:text-white uppercase">{{ post.user.username }}</span>
                                 <span class="text-sm text-text-secondary-light dark:text-text-secondary">{{ post.created_at|timesince }} ago</span>
                             </div>
 
@@ -682,7 +674,7 @@
                          alt="Profile picture for {{ champion_name }}"
                          class="w-24 h-24 rounded-full border-4 border-yellow-500 shadow-xl">
                     <div>
-                        <h4 class="text-2xl font-bold text-text-dark dark:text-white mb-1">
+                        <h4 class="text-2xl font-bold text-text-dark dark:text-white mb-1 uppercase">
                             {{ champion_name|default:"Unknown Champion" }}
                         </h4>
                         <p class="text-base text-text-secondary-light dark:text-text-secondary">
