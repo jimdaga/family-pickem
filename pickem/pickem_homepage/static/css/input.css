@@ -150,7 +150,7 @@
   }
 
   .missing-picks-section {
-    @apply bg-surface-light dark:bg-surface rounded-xl p-4 mt-4;
+    @apply bg-surface-light dark:bg-surface border-t border-border-light dark:border-border-subtle rounded-xl p-4 mt-4;
   }
 
   .missing-picks-header {
