@@ -687,57 +687,76 @@
                                     {% endif %}
                                 {% endif %}
 
-                                <!-- User's Pick Highlight -->
-                                {% if picks %}
-                                {% for pick in picks %}
-                                {% if pick.userEmail == user.email and pick.pick == game.homeTeamSlug or pick.userEmail == user.email and pick.pick == game.awayTeamSlug %}
+                                <!-- User's Pick Highlight - Always show -->
+                                {% if user.is_authenticated %}
                                 <div class="{% if game.statusType == 'finished' or game.statusType == 'inprogress' %}border-t border-border-light dark:border-border-subtle mt-3 pt-3{% else %}mt-3 pt-3{% endif %}">
                                     <div class="px-4 pb-4">
                                         <div class="flex items-center gap-2 text-sm font-semibold text-text-dark dark:text-white mb-3">
                                             <i class="fas fa-star"></i>
                                             <span>Your Pick</span>
                                         </div>
-                                        <div class="flex items-center gap-4">
-                                        {% if pick.pick == game.homeTeamSlug %}
-                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
-                                                 alt="{{ game.homeTeamName }} logo"
-                                                 class="w-9 h-9 object-contain flex-shrink-0"
-                                                 style="width: 36px !important; height: 36px !important; max-width: none !important;">
-                                            {% endwith %}
-                                            <span class="text-sm font-semibold text-text-dark dark:text-white">{{ game.homeTeamName }}</span>
-                                        {% else %}
-                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
-                                                 alt="{{ game.awayTeamName }} logo"
-                                                 class="w-9 h-9 object-contain flex-shrink-0"
-                                                 style="width: 36px !important; height: 36px !important; max-width: none !important;">
-                                            {% endwith %}
-                                            <span class="text-sm font-semibold text-text-dark dark:text-white">{{ game.awayTeamName }}</span>
-                                        {% endif %}
 
-                                        {% if game.statusType == 'finished' %}
-                                            {% if game.gameWinner == pick.pick %}
-                                                <span class="px-4 py-2 rounded-full text-xs font-bold ml-auto bg-green-600 text-white">
-                                                    <i class="fas fa-check-circle mr-1"></i>Correct
-                                                </span>
-                                            {% else %}
-                                                <span class="px-4 py-2 rounded-full text-xs font-bold ml-auto bg-red-600 text-white">
-                                                    <i class="fas fa-times-circle mr-1"></i>Incorrect
-                                                </span>
+                                        <div class="user-pick-content-{{ game.id }}">
+                                            {% if picks %}
+                                                {% for pick in picks %}
+                                                    {% if pick.userEmail == user.email %}
+                                                    {% if pick.pick == game.homeTeamSlug or pick.pick == game.awayTeamSlug %}
+                                                        <div class="flex items-center gap-4" data-user-has-pick="true">
+                                                        {% if pick.pick == game.homeTeamSlug %}
+                                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                                 alt="{{ game.homeTeamName }} logo"
+                                                                 class="w-9 h-9 object-contain flex-shrink-0"
+                                                                 style="width: 36px !important; height: 36px !important; max-width: none !important;">
+                                                            {% endwith %}
+                                                            <span class="text-sm font-semibold text-text-dark dark:text-white">{{ game.homeTeamName }}</span>
+                                                        {% else %}
+                                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                                 alt="{{ game.awayTeamName }} logo"
+                                                                 class="w-9 h-9 object-contain flex-shrink-0"
+                                                                 style="width: 36px !important; height: 36px !important; max-width: none !important;">
+                                                            {% endwith %}
+                                                            <span class="text-sm font-semibold text-text-dark dark:text-white">{{ game.awayTeamName }}</span>
+                                                        {% endif %}
+
+                                                        {% if game.statusType == 'finished' %}
+                                                            {% if game.gameWinner == pick.pick %}
+                                                                <span class="px-4 py-2 rounded-full text-xs font-bold ml-auto bg-green-600 text-white">
+                                                                    <i class="fas fa-check-circle mr-1"></i>Correct
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="px-4 py-2 rounded-full text-xs font-bold ml-auto bg-red-600 text-white">
+                                                                    <i class="fas fa-times-circle mr-1"></i>Incorrect
+                                                                </span>
+                                                            {% endif %}
+                                                        {% endif %}
+
+                                                        {% if pick.tieBreakerScore != None %}
+                                                        <div class="tiebreaker-display">
+                                                            <small>Tiebreaker: {{ pick.tieBreakerScore }} pts, {{ pick.tieBreakerYards }} yds</small>
+                                                        </div>
+                                                        {% endif %}
+                                                        </div>
+                                                    {% endif %}
+                                                    {% endif %}
+                                                {% endfor %}
                                             {% endif %}
-                                        {% endif %}
-                                        
-                                        {% if pick.tieBreakerScore != None %}
-                                        <div class="tiebreaker-display">
-                                            <small>Tiebreaker: {{ pick.tieBreakerScore }} pts, {{ pick.tieBreakerYards }} yds</small>
                                         </div>
-                                        {% endif %}
-                                        </div>
+
+                                        <script>
+                                        (function() {
+                                            var container = document.querySelector('.user-pick-content-{{ game.id }}');
+                                            if (container && !container.querySelector('[data-user-has-pick]')) {
+                                                var placeholder = document.createElement('div');
+                                                placeholder.className = 'flex items-center gap-4 min-h-[60px]';
+                                                placeholder.innerHTML = '<span class="text-sm text-text-secondary-light dark:text-text-secondary italic">No pick made</span>';
+                                                container.appendChild(placeholder);
+                                            }
+                                        })();
+                                        </script>
                                     </div>
                                 </div>
-                                {% endif %}
-                                {% endfor %}
                                 {% endif %}
 
                                 <!-- Missing Picks Alert -->
