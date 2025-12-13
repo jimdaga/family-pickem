@@ -741,7 +741,7 @@
                                 {% endif %}
 
                                 <!-- Missing Picks Alert -->
-                                {% if current_week == True and game.statusType == 'notstarted' or current_week == True and game.statusType == 'delayed' %}
+                                {% if game.statusType == 'notstarted' or game.statusType == 'delayed' %}
                                 <div class="missing-picks-section" style="display: none;" id="missing-picks-{{ game.id }}">
                                     <div class="missing-picks-header">
                                         <i class="fas fa-exclamation-triangle me-2"></i>Missing Picks
