@@ -750,7 +750,7 @@
                                             if (container && !container.querySelector('[data-user-has-pick]')) {
                                                 var placeholder = document.createElement('div');
                                                 placeholder.className = 'flex items-center gap-4';
-                                                placeholder.innerHTML = '<img src="/static/images/nfl.svg" alt="No pick" class="w-9 h-9 object-contain flex-shrink-0 opacity-20" style="width: 36px !important; height: 36px !important; max-width: none !important;"><span class="text-sm text-text-secondary-light dark:text-text-secondary italic">No pick made</span>';
+                                                placeholder.innerHTML = '<div class="w-9 h-9 flex-shrink-0 bg-border-light dark:bg-border-subtle rounded-lg flex items-center justify-center" style="width: 36px !important; height: 36px !important;"><i class="fas fa-question text-text-secondary-light dark:text-text-secondary text-sm"></i></div><span class="text-sm text-text-secondary-light dark:text-text-secondary italic">No pick made</span>';
                                                 container.appendChild(placeholder);
                                             }
                                         })();
