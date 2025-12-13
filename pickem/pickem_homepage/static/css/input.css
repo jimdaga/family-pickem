@@ -150,15 +150,15 @@
   }
 
   .missing-picks-section {
-    @apply bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-xl p-4 mt-4;
+    @apply bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-xl p-4 mt-4;
   }
 
   .missing-picks-header {
-    @apply text-red-700 dark:text-red-400 font-bold mb-2;
+    @apply text-text-dark dark:text-white font-bold mb-2;
   }
 
   .missing-picks-list {
-    @apply space-y-1 text-red-600 dark:text-red-300 text-sm;
+    @apply space-y-1 text-text-secondary-light dark:text-text-secondary text-sm;
   }
 
   .winner-showcase {
