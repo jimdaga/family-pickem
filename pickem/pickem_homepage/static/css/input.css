@@ -161,6 +161,14 @@
     @apply space-y-1 text-text-secondary-light dark:text-text-secondary text-sm;
   }
 
+  .missing-pick-user {
+    @apply flex flex-col items-center gap-1;
+  }
+
+  .missing-pick-username {
+    @apply text-xs font-bold text-text-dark dark:text-white text-center uppercase max-w-[60px] break-words;
+  }
+
   .winner-showcase {
     @apply flex items-center justify-center gap-6 py-6;
   }
