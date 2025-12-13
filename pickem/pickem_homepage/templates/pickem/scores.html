@@ -749,7 +749,8 @@
                                             var container = document.querySelector('.user-pick-content-{{ game.id }}');
                                             if (container && !container.querySelector('[data-user-has-pick]')) {
                                                 var placeholder = document.createElement('div');
-                                                placeholder.className = 'flex items-center gap-4 min-h-[60px]';
+                                                placeholder.className = 'flex items-center gap-4 py-2';
+                                                placeholder.style.minHeight = '52px';
                                                 placeholder.innerHTML = '<span class="text-sm text-text-secondary-light dark:text-text-secondary italic">No pick made</span>';
                                                 container.appendChild(placeholder);
                                             }
