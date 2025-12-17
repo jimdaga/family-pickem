@@ -2101,7 +2101,8 @@
 }
 
 /* Sort controls and filter buttons */
-[data-bs-theme="dark"] .sort-controls .sort-btn,
+/* REMOVED: Legacy Bootstrap rules - now handled by Tailwind in input.css */
+/* [data-bs-theme="dark"] .sort-controls .sort-btn,
 [data-bs-theme="dark"] .filter-controls .filter-btn {
   background-color: var(--bs-tertiary-bg) !important;
   border-color: var(--bs-border-color) !important;
@@ -2113,7 +2114,7 @@
   background-color: var(--bs-primary) !important;
   border-color: var(--bs-primary) !important;
   color: #ffffff !important;
-}
+} */
 
 /* Progress bars within stats */
 [data-bs-theme="dark"] .progress-bar {
@@ -2650,7 +2651,8 @@ html[data-bs-theme="dark"] body .time-group-full-width {
 }
 
 /* Filter controls */
-[data-bs-theme="dark"] .filter-controls .filter-btn {
+/* REMOVED: Legacy Bootstrap rules - now handled by Tailwind in input.css */
+/* [data-bs-theme="dark"] .filter-controls .filter-btn {
   background: var(--bs-secondary-bg) !important;
   color: #ffffff !important;
   border: 1px solid var(--bs-border-color) !important;
@@ -2660,7 +2662,7 @@ html[data-bs-theme="dark"] body .time-group-full-width {
   background: var(--bs-primary) !important;
   border-color: var(--bs-primary) !important;
   color: #ffffff !important;
-}
+} */
 
 /* Time group headers */
 [data-bs-theme="dark"] .section-header-content {
@@ -2692,20 +2694,20 @@ html[data-bs-theme="dark"] body .time-group-full-width {
 }
 
 /* Force all game-related containers to gray gradients */
-[data-bs-theme="dark"] .scores-main-container .time-group-full-width,
-[data-bs-theme="dark"] .scores-main-container .games-grid,
-[data-bs-theme="dark"] .scores-main-container .section-container {
-  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
-  color: #ffffff !important;
-  border: 1px solid var(--bs-border-color) !important;
-}
+/*[data-bs-theme="dark"] .scores-main-container .time-group-full-width,*/
+/*[data-bs-theme="dark"] .scores-main-container .games-grid,*/
+/*[data-bs-theme="dark"] .scores-main-container .section-container {*/
+/*  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;*/
+/*  color: #ffffff !important;*/
+/*  border: 1px solid var(--bs-border-color) !important;*/
+/*}*/
 
 /* Specific gray gradient for section containers */
-[data-bs-theme="dark"] .section-container {
-  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
-  background-color: #333333 !important;
-  color: #ffffff !important;
-}
+/*[data-bs-theme="dark"] .section-container {*/
+/*  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;*/
+/*  background-color: #333333 !important;*/
+/*  color: #ffffff !important;*/
+/*}*/
 
 /* Spread section white boxes */
 [data-bs-theme="dark"] .game-score-card [style*="background"],
@@ -2844,12 +2846,12 @@ html[data-bs-theme="dark"] .scores-main-container .game-status-header.status-liv
 }
 
 /* FORCE override any remaining white sections in scores */
-html[data-bs-theme="dark"] .scores-main-container .section-container,
-html[data-bs-theme="dark"] body .scores-main-container .section-container {
-  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;
-  background-color: #333333 !important;
-  color: #ffffff !important;
-}
+/*html[data-bs-theme="dark"] .scores-main-container .section-container,*/
+/*html[data-bs-theme="dark"] body .scores-main-container .section-container {*/
+/*  background: linear-gradient(135deg, #333333 0%, #3a3a3a 50%, #404040 100%) !important;*/
+/*  background-color: #333333 !important;*/
+/*  color: #ffffff !important;*/
+/*}*/
 
 /* FORCE override JavaScript-created columns and dynamic content */
 html[data-bs-theme="dark"] .scores-main-container .points-column,
@@ -3577,11 +3579,12 @@ html[data-bs-theme="dark"] body .scores-main-container .stat-value {
   color: #ffffff !important;
 }
 
-[data-bs-theme="dark"] .btn-outline-secondary:hover,
+/* REMOVED: Legacy Bootstrap rules - now handled by Tailwind in input.css */
+/* [data-bs-theme="dark"] .btn-outline-secondary:hover,
 [data-bs-theme="dark"] .btn-outline-primary:hover,
 [data-bs-theme="dark"] .filter-btn:hover {
   background-color: var(--bs-quaternary-bg) !important;
-}
+} */
 
 /* Ensure nested cards don't get overridden by main card styles */
 [data-bs-theme="dark"] .section-container .game-score-card,

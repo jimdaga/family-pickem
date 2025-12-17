@@ -2,144 +2,144 @@
 {% load static %}
 {% load pickem_homepage_extras %}
 
-{% block mobile_title %}
-    <div class="mobile-page-header">
-        <h2 class="mobile-title-text">
-            <i class="fas fa-edit me-2"></i>Submit Your Picks
-        </h2>
-        <div class="mobile-subtitle">
-            {% if competition == 'nfl-preseason' %}
-                Preseason - Week {{ week }}
-            {% else %}
-                Regular Season - Week {{ week }}
-            {% endif %}
+{% block content %}
+    <!-- Page Header (Responsive) -->
+    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 overflow-hidden shadow-xl">
+        <!-- Subtle background pattern -->
+        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
+        <div class="relative z-10">
+            <div class="flex items-center justify-center mb-3 lg:mb-4">
+                <i class="fas fa-football-ball text-4xl lg:text-6xl text-primary"></i>
+            </div>
+            <h2 class="text-3xl lg:text-5xl font-black tracking-tight mb-2 lg:mb-3" style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
+                Submit Your Picks
+            </h2>
+            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium">
+                {% if competition == 'nfl-preseason' %}
+                    Preseason - Week {{ week }}
+                {% else %}
+                    Regular Season - Week {{ week }}
+                {% endif %}
+            </p>
         </div>
     </div>
-{% endblock %}
 
-{% block content %}
-    <div class="container picks-main-container">
-        <div class="col">
-            <!-- Page Header -->
-            <div class="page-header-clean text-center d-none d-lg-block mb-4">
-                <h2 class="page-title">
-                    <i class="fas fa-edit me-2"></i>Submit Your Picks
-                </h2>
-                <p class="page-subtitle">
-                    {% if competition == 'nfl-preseason' %}
-                        Preseason - Week {{ week }}
-                    {% else %}
-                        Regular Season - Week {{ week }}
-                    {% endif %}
-                </p>
-            </div>            
-
-            <!-- Pick Progress Summary -->
-            <div class="section-container mb-4">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-chart-pie me-2"></i>Your Progress
-                    </h3>
+    <div class="max-w-7xl mx-auto px-6 py-6">
+        <!-- Pick Progress Summary -->
+        <div class="section-container mb-6">
+            {% with game_list|length as total_games %}
+            {% with pick_slugs|length as submitted_picks %}
+            <div class="space-y-4">
+                <!-- Stats Display -->
+                <div class="flex items-center justify-center gap-2 text-center">
+                    <div class="flex-1">
+                        <div class="text-4xl font-bold text-primary">{{ submitted_picks }}</div>
+                        <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Picks Submitted</div>
+                    </div>
+                    <div class="text-3xl text-text-secondary-light dark:text-text-secondary font-light">/</div>
+                    <div class="flex-1">
+                        <div class="text-4xl font-bold text-text-dark dark:text-white">{{ total_games }}</div>
+                        <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Total Games</div>
+                    </div>
                 </div>
-                
-                <div class="progress-summary">
-                    {% with game_list|length as total_games %}
-                    {% with pick_slugs|length as submitted_picks %}
-                    <div class="progress-stats">
-                        <div class="progress-stat-item">
-                            <div class="progress-stat-value">{{ submitted_picks }}</div>
-                            <div class="progress-stat-label">Picks Submitted</div>
-                        </div>
-                        <div class="progress-stat-divider">/</div>
-                        <div class="progress-stat-item">
-                            <div class="progress-stat-value">{{ total_games }}</div>
-                            <div class="progress-stat-label">Total Games</div>
+
+                <!-- Progress Bar -->
+                <div class="space-y-2">
+                    <div class="w-full bg-surface-light dark:bg-surface-hover rounded-full h-4 overflow-hidden border border-border-light dark:border-border-subtle">
+                        <div class="h-full bg-gradient-to-r from-primary to-orange-600 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                             style="width: {% widthratio submitted_picks total_games 100 %}%">
+                            {% if submitted_picks > 0 %}
+                            <span class="text-xs font-semibold text-white">{% widthratio submitted_picks total_games 100 %}%</span>
+                            {% endif %}
                         </div>
                     </div>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar-fill" style="width: {% widthratio submitted_picks total_games 100 %}%"></div>
-                    </div>
-                    <div class="progress-percentage">
-                        {% widthratio submitted_picks total_games 100 %}% Complete
-                    </div>
-                    {% endwith %}
-                    {% endwith %}
-                </div>
-            </div>
-
-            <!-- Available Games Section -->
-            {% if auth_required %}
-            <div class="section-container text-center">
-                <i class="fas fa-lock fa-3x text-muted mb-3"></i>
-                <h4 class="mb-2">Sign in to submit your picks</h4>
-                <p class="text-muted">You need to be logged in to make or edit picks. Please sign in and try again.</p>
-                <a href="/accounts/google/login/" class="btn btn-primary mt-2">
-                    <i class="fab fa-google me-2"></i>Sign in with Google
-                </a>
-            </div>
-            {% elif game_list %}
-            <div class="section-container mb-4">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        {% with game_list|length as total_games %}
-                        {% with pick_slugs|length as submitted_picks %}
-                        {% if total_games == submitted_picks and total_games > 0 %}
-                            <i class="fas fa-check-circle me-2"></i>You've submitted all your picks!
+                    <div class="text-center text-sm font-semibold {% if submitted_picks == total_games and total_games > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">
+                        {% if submitted_picks == total_games and total_games > 0 %}
+                            <i class="fas fa-check-circle mr-1"></i>All picks complete!
                         {% else %}
-                            <i class="fas fa-football-ball me-2"></i>Make Your Picks
-                            <span class="games-remaining-badge">
-                                {{ total_games|sub:submitted_picks }} remaining
-                            </span>
+                            {% widthratio submitted_picks total_games 100 %}% Complete - {{ total_games|sub:submitted_picks }} remaining
                         {% endif %}
-                        {% endwith %}
-                        {% endwith %}
-                    </h3>
+                    </div>
                 </div>
-                
-                <div class="games-grid">
+            </div>
+            {% endwith %}
+            {% endwith %}
+        </div>
+
+        <!-- Available Games Section -->
+        {% if auth_required %}
+        <div class="section-container text-center py-12">
+            <i class="fas fa-lock text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
+            <h4 class="text-xl font-semibold text-text-dark dark:text-white mb-2">Sign in to submit your picks</h4>
+            <p class="text-text-secondary-light dark:text-text-secondary mb-6">You need to be logged in to make or edit picks. Please sign in and try again.</p>
+            <a href="/accounts/google/login/" class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/80 text-white rounded-xl font-semibold transition-all">
+                <i class="fab fa-google"></i>
+                <span>Sign in with Google</span>
+            </a>
+        </div>
+        {% elif game_list %}
+        <div class="section-container mb-6">
+            {% with game_list|length as total_games %}
+            {% with pick_slugs|length as submitted_picks %}
+            <h3 class="section-title">
+                {% if total_games == submitted_picks and total_games > 0 %}
+                    <i class="fas fa-check-circle mr-2 text-secondary-light dark:text-secondary"></i>
+                    <span>You've submitted all your picks!</span>
+                {% else %}
+                    <i class="fas fa-football-ball mr-2"></i>
+                    <span>Make Your Picks</span>
+                    <span class="ml-3 px-3 py-1 text-sm font-semibold bg-primary text-white rounded-full">
+                        {{ total_games|sub:submitted_picks }} remaining
+                    </span>
+                {% endif %}
+            </h3>
+            {% endwith %}
+            {% endwith %}
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {% for game in game_list %}
                      {% if game.slug not in pick_slugs %}
                         {% with user.id|addstr:"-"|addstr:game.id as template %}
                             {% if template not in pick_ids %}
-                                <div class="game-card {% if auth_required %}disabled-card{% endif %}" data-game-id="{{ game.id }}">
+                                <div class="game-card flex flex-col bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 space-y-4 {% if auth_required %}opacity-50 pointer-events-none{% endif %}" data-game-id="{{ game.id }}">
                                     <!-- Game Header -->
-                                    <div class="game-header">
-                                        <div class="game-date">
-                                            <i class="fas fa-calendar me-2"></i>
-                                            {{ game.startTimestamp|date:"D, M d" }}
+                                    <div class="flex items-center justify-between flex-wrap gap-2">
+                                        <div class="flex items-center gap-2 text-sm text-text-secondary-light dark:text-text-secondary">
+                                            <i class="fas fa-calendar"></i>
+                                            <span>{{ game.startTimestamp|date:"D, M d" }}</span>
                                         </div>
-                                        <div class="game-time">
+                                        <div class="text-sm font-medium text-text-dark dark:text-white">
                                             {{ game.startTimestamp|date:"g:i A" }}
                                         </div>
                                         {% if game.statusType != 'notstarted' %}
-                                        <div class="game-status locked">
-                                            <i class="fas fa-lock me-1"></i>
-                                            Game Started
+                                        <div class="px-3 py-1 bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold flex items-center gap-1">
+                                            <i class="fas fa-lock"></i>
+                                            <span>Locked</span>
                                         </div>
                                         {% else %}
-                                        <div class="game-status available">
-                                            <i class="fas fa-check-circle me-1"></i>
-                                            Available
+                                        <div class="px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg text-sm font-semibold flex items-center gap-1">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Available</span>
                                         </div>
                                         {% endif %}
                                     </div>
 
                                     <!-- Game Info (Spread, Weather, etc.) -->
                                     {% if game.spread or game.overUnder or game.temperature or game.weatherCondition %}
-                                    <div class="game-info-bar">
+                                    <div class="flex flex-wrap items-center gap-3 text-sm text-text-secondary-light dark:text-text-secondary">
                                         {% if game.spread %}
-                                        <div class="game-info-item spread-item">
-                                            <i class="fas fa-chart-line me-1"></i>
-                                            <span class="info-label">Spread:</span>
-                                            <span class="info-value spread-value">
+                                        <div class="flex items-center gap-1.5">
+                                            <i class="fas fa-chart-line"></i>
+                                            <span class="font-medium">Spread:</span>
+                                            <span class="flex items-center gap-1 font-semibold text-text-dark dark:text-white">
                                                 {% if game.spread > 0 %}
                                                     {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="spread-team-logo">
+                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="w-4 h-4">
                                                     {% endwith %}
                                                     -{{ game.spread|floatformat:1 }}
                                                 {% else %}
                                                     {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="spread-team-logo">
+                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="w-4 h-4">
                                                     {% endwith %}
                                                     -{{ game.spread|floatformat:1|cut:"-" }}
                                                 {% endif %}
@@ -147,152 +147,164 @@
                                         </div>
                                         {% endif %}
                                         {% if game.overUnder %}
-                                        <div class="game-info-item">
-                                            <i class="fas fa-calculator me-1"></i>
-                                            <span class="info-label">O/U:</span>
-                                            <span class="info-value">{{ game.overUnder|floatformat:1 }}</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <i class="fas fa-calculator"></i>
+                                            <span class="font-medium">O/U:</span>
+                                            <span class="font-semibold text-text-dark dark:text-white">{{ game.overUnder|floatformat:1 }}</span>
                                         </div>
                                         {% endif %}
                                         {% if game.temperature and game.weatherCondition %}
-                                        <div class="game-info-item">
+                                        <div class="flex items-center gap-1.5">
                                             {% if 'Sun' in game.weatherCondition or 'Clear' in game.weatherCondition %}
-                                                <i class="fas fa-sun me-1" title="Sunny/Clear"></i>
+                                                <i class="fas fa-sun text-yellow-500" title="Sunny/Clear"></i>
                                             {% elif 'Cloud' in game.weatherCondition %}
-                                                <i class="fas fa-cloud me-1" title="Cloudy"></i>
+                                                <i class="fas fa-cloud" title="Cloudy"></i>
                                             {% elif 'Rain' in game.weatherCondition or 'Shower' in game.weatherCondition %}
-                                                <i class="fas fa-cloud-rain me-1" title="Rainy"></i>
+                                                <i class="fas fa-cloud-rain text-blue-500" title="Rainy"></i>
                                             {% elif 'Snow' in game.weatherCondition %}
-                                                <i class="fas fa-snowflake me-1" title="Snowy"></i>
+                                                <i class="fas fa-snowflake text-blue-300" title="Snowy"></i>
                                             {% elif 'Storm' in game.weatherCondition or 'Thunder' in game.weatherCondition %}
-                                                <i class="fas fa-bolt me-1" title="Stormy"></i>
+                                                <i class="fas fa-bolt text-purple-500" title="Stormy"></i>
                                             {% elif 'Wind' in game.weatherCondition %}
-                                                <i class="fas fa-wind me-1" title="Windy"></i>
+                                                <i class="fas fa-wind" title="Windy"></i>
                                             {% elif 'Fog' in game.weatherCondition %}
-                                                <i class="fas fa-smog me-1" title="Foggy"></i>
+                                                <i class="fas fa-smog" title="Foggy"></i>
                                             {% else %}
-                                                <i class="fas fa-thermometer-half me-1" title="Weather"></i>
+                                                <i class="fas fa-thermometer-half" title="Weather"></i>
                                             {% endif %}
-                                            <span class="info-value">{{ game.temperature }}°F, {{ game.weatherCondition }}</span>
+                                            <span>{{ game.temperature }}°F, {{ game.weatherCondition }}</span>
                                         </div>
                                         {% endif %}
                                         {% if game.venueIndoor %}
-                                        <div class="game-info-item">
-                                            <i class="fas fa-home me-1"></i>
-                                            <span class="info-value">Indoor</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <i class="fas fa-home"></i>
+                                            <span>Indoor</span>
                                         </div>
                                         {% endif %}
                                     </div>
                                     {% endif %}
 
                                     <!-- Team Selection -->
-                                    <div class="team-selection">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <!-- Away Team -->
-                                        <div class="team-option {% if game.statusType != 'notstarted' or auth_required %}disabled{% endif %}"
+                                        {% for team in wins_losses %}
+                                            {% if team.teamNameSlug == game.awayTeamSlug %}
+                                        <div class="team-option relative group rounded-xl border-2 border-transparent hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game.statusType != 'notstarted' or auth_required %}opacity-50 pointer-events-none{% endif %}"
                                              data-team="{{ game.awayTeamSlug }}"
                                              data-team-name="{{ game.awayTeamName }}">
-                                            <div class="team-logo-container">
+                                            <!-- Top Half - Team Color Background with Logo -->
+                                            <div class="relative h-[100px] flex items-center justify-center py-2"
+                                                 style="background: linear-gradient(135deg, #{{ team.alternateColor|default:'666666' }}40 0%, #{{ team.color|default:'333333' }} 50%, #{{ team.color|default:'333333' }} 100%);">
                                                 {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                     alt="{{ game.awayTeamName }} logo" 
-                                                     class="team-logo">
+                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                     alt="{{ game.awayTeamName }} logo"
+                                                     class="w-16 h-16 object-contain drop-shadow-lg relative z-10"
+                                                     {% if 'jets' in game.awayTeamSlug %}style="filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));"{% endif %}>
                                                 {% endwith %}
+                                                <!-- Selection Indicator -->
+                                                <div class="team-selection-indicator absolute top-2 right-2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <i class="fas fa-check"></i>
+                                                </div>
                                             </div>
-                                            <div class="team-info">
-                                                <div class="team-name">{{ game.awayTeamName }}</div>
-                                                <div class="team-details">
-                                                    <div class="team-record">
-                                                        {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                {% if team.teamTies > 0 %}
-                                                                    ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
-                                                                {% else %}
-                                                                    ({{ team.teamWins }}-{{ team.teamLosses }})
-                                                                {% endif %}
-                                                            {% endif %}
-                                                        {% endfor %}
+                                            <!-- Bottom Half - Original Background with Text -->
+                                            <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-surface-light dark:bg-surface-hover">
+                                                <div class="font-bold text-lg text-text-dark dark:text-white mb-1">{{ game.awayTeamName }}</div>
+                                                <div class="text-sm text-text-secondary-light dark:text-text-secondary space-y-1">
+                                                    <div>
+                                                        {% if team.teamTies > 0 %}
+                                                            ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                        {% else %}
+                                                            ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                        {% endif %}
                                                     </div>
                                                     {% if game.awayTeamWinProbability %}
-                                                    <div class="win-probability">
-                                                        <i class="fas fa-percentage me-1"></i>{{ game.awayTeamWinProbability|floatformat:0 }}% chance
+                                                    <div class="flex items-center justify-center gap-1 text-xs">
+                                                        <i class="fas fa-percentage"></i>
+                                                        <span>{{ game.awayTeamWinProbability|floatformat:0 }}% chance</span>
                                                     </div>
                                                     {% endif %}
                                                 </div>
                                             </div>
-                                            <div class="team-selection-indicator">
-                                                <i class="fas fa-check"></i>
-                                            </div>
                                         </div>
-
-                                        <!-- VS Divider -->
-                                        <div class="vs-divider">
-                                            <span class="vs-text">VS</span>
-                                            <div class="at-indicator">@</div>
-                                        </div>
+                                            {% endif %}
+                                        {% endfor %}
 
                                         <!-- Home Team -->
-                                        <div class="team-option {% if game.statusType != 'notstarted' or auth_required %}disabled{% endif %}"
+                                        {% for team in wins_losses %}
+                                            {% if team.teamNameSlug == game.homeTeamSlug %}
+                                        <div class="team-option relative group rounded-xl border-2 border-transparent hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game.statusType != 'notstarted' or auth_required %}opacity-50 pointer-events-none{% endif %}"
                                              data-team="{{ game.homeTeamSlug }}"
                                              data-team-name="{{ game.homeTeamName }}">
-                                            <div class="team-logo-container">
+                                            <!-- Top Half - Team Color Background with Logo -->
+                                            <div class="relative h-[100px] flex items-center justify-center py-2"
+                                                 style="background: linear-gradient(135deg, #{{ team.alternateColor|default:'666666' }}40 0%, #{{ team.color|default:'333333' }} 50%, #{{ team.color|default:'333333' }} 100%);">
                                                 {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                     alt="{{ game.homeTeamName }} logo" 
-                                                     class="team-logo">
+                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                     alt="{{ game.homeTeamName }} logo"
+                                                     class="w-16 h-16 object-contain drop-shadow-lg relative z-10"
+                                                     {% if 'jets' in game.homeTeamSlug %}style="filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));"{% endif %}>
                                                 {% endwith %}
+                                                <!-- Selection Indicator -->
+                                                <div class="team-selection-indicator absolute top-2 right-2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <i class="fas fa-check"></i>
+                                                </div>
                                             </div>
-                                            <div class="team-info">
-                                                <div class="team-name">{{ game.homeTeamName }}</div>
-                                                <div class="team-details">
-                                                    <div class="team-record">
-                                                        {% for team in wins_losses %}
-                                                            {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                {% if team.teamTies > 0 %}
-                                                                    ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
-                                                                {% else %}
-                                                                    ({{ team.teamWins }}-{{ team.teamLosses }})
-                                                                {% endif %}
-                                                            {% endif %}
-                                                        {% endfor %}
+                                            <!-- Bottom Half - Original Background with Text -->
+                                            <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-surface-light dark:bg-surface-hover">
+                                                <div class="font-bold text-lg text-text-dark dark:text-white mb-1">{{ game.homeTeamName }}</div>
+                                                <div class="text-sm text-text-secondary-light dark:text-text-secondary space-y-1">
+                                                    <div>
+                                                        {% if team.teamTies > 0 %}
+                                                            ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                        {% else %}
+                                                            ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                        {% endif %}
                                                     </div>
                                                     {% if game.homeTeamWinProbability %}
-                                                    <div class="win-probability">
-                                                        <i class="fas fa-percentage me-1"></i>{{ game.homeTeamWinProbability|floatformat:0 }}% chance
+                                                    <div class="flex items-center justify-center gap-1 text-xs">
+                                                        <i class="fas fa-percentage"></i>
+                                                        <span>{{ game.homeTeamWinProbability|floatformat:0 }}% chance</span>
                                                     </div>
                                                     {% endif %}
                                                 </div>
                                             </div>
-                                            <div class="team-selection-indicator">
-                                                <i class="fas fa-check"></i>
-                                            </div>
                                         </div>
+                                            {% endif %}
+                                        {% endfor %}
                                     </div>
 
                                     <!-- Tiebreaker Section -->
                                     {% if game.tieBreakerGame %}
-                                    <div class="tiebreaker-section">
-                                        <div class="tiebreaker-header">
-                                            <i class="fas fa-balance-scale me-2"></i>
-                                            Tiebreakers Required
+                                    <div class="tiebreaker-section bg-purple-500/10 dark:bg-purple-600/20 rounded-xl p-4 border border-purple-500/30 dark:border-purple-500/40">
+                                        <div class="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-semibold mb-3">
+                                            <i class="fas fa-balance-scale"></i>
+                                            <span>Tiebreakers Required</span>
                                         </div>
-                                        <div class="tiebreaker-inputs">
-                                            <div class="tiebreaker-input-group">
-                                                <label for="tiebreaker1-{{ game.id }}">Total Points Scored</label>
-                                                <input type="number" 
-                                                       id="tiebreaker1-{{ game.id }}" 
-                                                       name="tieBreakerScore" 
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div class="space-y-1">
+                                                <label for="tiebreaker1-{{ game.id }}" class="block text-sm font-medium text-text-dark dark:text-white">
+                                                    Total Points Scored
+                                                </label>
+                                                <input type="number"
+                                                       id="tiebreaker1-{{ game.id }}"
+                                                       name="tieBreakerScore"
                                                        placeholder="e.g. 45"
-                                                       min="0" 
+                                                       min="0"
                                                        max="200"
+                                                       class="w-full px-3 py-2 bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-purple-500 dark:focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all {% if game.statusType != 'notstarted' %}opacity-50 cursor-not-allowed{% endif %}"
                                                        {% if game.statusType != 'notstarted' %}disabled{% endif %}>
                                             </div>
-                                            <div class="tiebreaker-input-group">
-                                                <label for="tiebreaker2-{{ game.id }}">Total Yards</label>
-                                                <input type="number" 
-                                                       id="tiebreaker2-{{ game.id }}" 
-                                                       name="tieBreakerYards" 
+                                            <div class="space-y-1">
+                                                <label for="tiebreaker2-{{ game.id }}" class="block text-sm font-medium text-text-dark dark:text-white">
+                                                    Total Yards
+                                                </label>
+                                                <input type="number"
+                                                       id="tiebreaker2-{{ game.id }}"
+                                                       name="tieBreakerYards"
                                                        placeholder="e.g. 750"
-                                                       min="0" 
+                                                       min="0"
                                                        max="2000"
+                                                       class="w-full px-3 py-2 bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-purple-500 dark:focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all {% if game.statusType != 'notstarted' %}opacity-50 cursor-not-allowed{% endif %}"
                                                        {% if game.statusType != 'notstarted' %}disabled{% endif %}>
                                             </div>
                                         </div>
@@ -301,9 +313,32 @@
 
                                     <!-- Locked Game Message -->
                                     {% if game.statusType != 'notstarted' %}
-                                    <div class="locked-message">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <div class="flex items-center gap-2 px-4 py-3 bg-red-500/10 dark:bg-red-600/20 text-red-600 dark:text-red-400 rounded-xl border border-red-500/30 dark:border-red-500/40">
+                                        <i class="fas fa-exclamation-triangle"></i>
                                         <strong>Pick Missed - Game already started!</strong>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Game Footer (ESPN-style) - Always at bottom -->
+                                    {% if game.broadcast or game.gamecastUrl %}
+                                    <div class="mt-auto pt-3 border-t border-border-light dark:border-border-subtle">
+                                        <div class="flex items-center justify-between">
+                                            <!-- Gamecast Link (Left) -->
+                                            <div>
+                                                {% if game.gamecastUrl %}
+                                                <a href="{{ game.gamecastUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors font-medium">
+                                                    <i class="fas fa-external-link-alt"></i>
+                                                    <span>{% if game.statusType == 'finished' %}Final{% else %}Preview{% endif %}</span>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                            <!-- Broadcast Network (Right) -->
+                                            <div>
+                                                {% if game.broadcast %}
+                                                <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">{{ game.broadcast }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                     </div>
                                     {% endif %}
 
@@ -327,17 +362,17 @@
 
                                     <!-- Save Status Indicator -->
                                     <div class="save-status" style="display: none;">
-                                        <div class="save-indicator saving">
-                                            <i class="fas fa-spinner fa-spin me-2"></i>
-                                            Saving...
+                                        <div class="save-indicator saving flex items-center justify-center gap-2 px-4 py-2 bg-blue-500/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/30 dark:border-blue-500/40">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <span>Saving...</span>
                                         </div>
-                                        <div class="save-indicator success">
-                                            <i class="fas fa-check-circle me-2"></i>
-                                            Saved!
+                                        <div class="save-indicator success flex items-center justify-center gap-2 px-4 py-2 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-xl border border-secondary-light/30 dark:border-secondary/40">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Saved!</span>
                                         </div>
-                                        <div class="save-indicator error">
-                                            <i class="fas fa-exclamation-circle me-2"></i>
-                                            Error saving
+                                        <div class="save-indicator error flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 dark:bg-red-600/20 text-red-600 dark:text-red-400 rounded-xl border border-red-500/30 dark:border-red-500/40">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            <span>Error saving</span>
                                         </div>
                                     </div>
                                 </div>
@@ -350,82 +385,101 @@
 
             <!-- Submitted Picks Section -->
             <div class="section-container">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-check-square me-2"></i>Submitted Picks
-                        <span class="submitted-count-badge">{{ pick_slugs|length }}</span>
-                    </h3>
-                </div>
-                
-                <div class="submitted-picks-grid">
+                <h3 class="section-title">
+                    <i class="fas fa-check-square mr-2"></i>
+                    <span>Submitted Picks</span>
+                    <span class="ml-3 px-3 py-1 text-sm font-semibold bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-full">
+                        {{ pick_slugs|length }}
+                    </span>
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {% if pick_slugs and not auth_required %}
                         {% for game in game_list %}
                         {% if game.slug in pick_slugs %}
                             {% with user.id|addstr:"-"|addstr:game.id as template %}
                                 {% if template in pick_ids %}
-                                <div class="submitted-game-card">
-                                    <div class="submitted-game-header">
-                                        <div class="game-date-small">
+                                <div class="bg-surface-light dark:bg-surface rounded-xl p-5 border border-border-light dark:border-border-subtle hover:border-secondary-light/50 dark:hover:border-secondary/50 transition-all duration-200 space-y-4">
+                                    <!-- Game Header -->
+                                    <div class="flex items-center justify-between">
+                                        <div class="text-sm text-text-secondary-light dark:text-text-secondary">
                                             {{ game.startTimestamp|date:"M d @ g:i A" }}
                                         </div>
-                                        <div class="submitted-header-actions">
-                                            <div class="submitted-badge">
-                                                <i class="fas fa-check me-1"></i>
-                                                Submitted
-                                            </div>
+                                        <div class="px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg text-sm font-semibold flex items-center gap-1">
+                                            <i class="fas fa-check"></i>
+                                            <span>Submitted</span>
                                         </div>
                                     </div>
 
-                                    <div class="submitted-matchup">
+                                    <!-- Team Matchup -->
+                                    <div class="grid grid-cols-[1fr,auto,1fr] gap-3 items-stretch">
                                         {% for p in picks %}
                                             {% if p.slug == game.slug %}
                                                 <!-- Away Team -->
-                                                <div class="submitted-team {% if p.pick != game.awayTeamSlug %}not-selected{% endif %}">
-                                                    {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                         alt="{{ game.awayTeamName }} logo" 
-                                                         class="submitted-team-logo">
-                                                    {% endwith %}
-                                                    <div class="submitted-team-info">
-                                                        <div class="submitted-team-name">{{ game.awayTeamName }}</div>
+                                                {% for team in wins_losses %}
+                                                    {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                <div class="rounded-xl overflow-hidden {% if p.pick != game.awayTeamSlug %}opacity-40{% endif %}">
+                                                    <div class="h-[70px] flex items-center justify-center py-2"
+                                                         style="background: linear-gradient(135deg, #{{ team.alternateColor|default:'666666' }}40 0%, #{{ team.color|default:'333333' }} 50%, #{{ team.color|default:'333333' }} 100%);">
+                                                        {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                        <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                             alt="{{ game.awayTeamName }} logo"
+                                                             class="w-12 h-12 object-contain drop-shadow-lg"
+                                                             {% if 'jets' in game.awayTeamSlug %}style="filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));"{% endif %}>
+                                                        {% endwith %}
+                                                    </div>
+                                                    <div class="bg-surface-light dark:bg-surface-hover p-2 text-center">
+                                                        <div class="font-bold text-sm text-text-dark dark:text-white">{{ game.awayTeamName }}</div>
                                                         {% if p.pick == game.awayTeamSlug %}
-                                                            <div class="your-pick-indicator">
-                                                                <i class="fas fa-star me-1"></i>Your Pick
-                                                            </div>
+                                                        <div class="flex items-center justify-center gap-1 mt-1 text-primary text-xs font-semibold">
+                                                            <i class="fas fa-star"></i>
+                                                            <span>Your Pick</span>
+                                                        </div>
                                                         {% endif %}
                                                     </div>
                                                 </div>
+                                                    {% endif %}
+                                                {% endfor %}
 
                                                 <!-- VS -->
-                                                <div class="submitted-vs">@</div>
+                                                <div class="flex items-center text-lg font-bold text-text-secondary-light dark:text-text-secondary">@</div>
 
                                                 <!-- Home Team -->
-                                                <div class="submitted-team {% if p.pick != game.homeTeamSlug %}not-selected{% endif %}">
-                                                    {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                         alt="{{ game.homeTeamName }} logo" 
-                                                         class="submitted-team-logo">
-                                                    {% endwith %}
-                                                    <div class="submitted-team-info">
-                                                        <div class="submitted-team-name">{{ game.homeTeamName }}</div>
+                                                {% for team in wins_losses %}
+                                                    {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                <div class="rounded-xl overflow-hidden {% if p.pick != game.homeTeamSlug %}opacity-40{% endif %}">
+                                                    <div class="h-[70px] flex items-center justify-center py-2"
+                                                         style="background: linear-gradient(135deg, #{{ team.alternateColor|default:'666666' }}40 0%, #{{ team.color|default:'333333' }} 50%, #{{ team.color|default:'333333' }} 100%);">
+                                                        {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                        <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                             alt="{{ game.homeTeamName }} logo"
+                                                             class="w-12 h-12 object-contain drop-shadow-lg"
+                                                             {% if 'jets' in game.homeTeamSlug %}style="filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));"{% endif %}>
+                                                        {% endwith %}
+                                                    </div>
+                                                    <div class="bg-surface-light dark:bg-surface-hover p-2 text-center">
+                                                        <div class="font-bold text-sm text-text-dark dark:text-white">{{ game.homeTeamName }}</div>
                                                         {% if p.pick == game.homeTeamSlug %}
-                                                            <div class="your-pick-indicator">
-                                                                <i class="fas fa-star me-1"></i>Your Pick
-                                                            </div>
+                                                        <div class="flex items-center justify-center gap-1 mt-1 text-primary text-xs font-semibold">
+                                                            <i class="fas fa-star"></i>
+                                                            <span>Your Pick</span>
+                                                        </div>
                                                         {% endif %}
                                                     </div>
                                                 </div>
+                                                    {% endif %}
+                                                {% endfor %}
 
                                                 <!-- Tiebreaker Info -->
                                                 {% if game.tieBreakerGame and p.tieBreakerScore and p.tieBreakerYards %}
-                                                <div class="tiebreaker-info">
-                                                    <div class="tiebreaker-item">
-                                                        <span class="tiebreaker-label">Points:</span>
-                                                        <span class="tiebreaker-value">{{ p.tieBreakerScore }}</span>
+                                                <div class="col-span-3 grid grid-cols-2 gap-3 pt-3 border-t border-border-light dark:border-border-subtle">
+                                                    <div class="flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/10 dark:bg-purple-600/20 text-purple-600 dark:text-purple-400 rounded-lg text-sm">
+                                                        <span class="font-medium">Points:</span>
+                                                        <span class="font-bold">{{ p.tieBreakerScore }}</span>
                                                     </div>
-                                                    <div class="tiebreaker-item">
-                                                        <span class="tiebreaker-label">Yards:</span>
-                                                        <span class="tiebreaker-value">{{ p.tieBreakerYards }}</span>
+                                                    <div class="flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/10 dark:bg-purple-600/20 text-purple-600 dark:text-purple-400 rounded-lg text-sm">
+                                                        <span class="font-medium">Yards:</span>
+                                                        <span class="font-bold">{{ p.tieBreakerYards }}</span>
                                                     </div>
                                                 </div>
                                                 {% endif %}
@@ -435,13 +489,13 @@
                                         {% endfor %}
                                     </div>
 
-                                    <!-- Edit/Lock Actions - Always at bottom -->
-                                    <div class="submitted-pick-actions">
+                                    <!-- Edit/Lock Actions -->
+                                    <div class="pt-3 border-t border-border-light dark:border-border-subtle">
                                         {% if not game|is_game_locked %}
                                         {% for p in picks %}
                                             {% if p.slug == game.slug %}
-                                        <button class="edit-pick-btn" 
-                                                data-game-id="{{ game.id }}" 
+                                        <button class="edit-pick-btn w-full px-4 py-2 bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl font-semibold hover:bg-blue-600/20 dark:hover:bg-blue-600/30 transition-all flex items-center justify-center gap-2"
+                                                data-game-id="{{ game.id }}"
                                                 data-pick-id="{{ p.id }}"
                                                 data-game-slug="{{ game.slug }}"
                                                 data-current-pick="{{ p.pick }}"
@@ -449,8 +503,12 @@
                                                 data-away-name="{{ game.awayTeamName }}"
                                                 data-home-team="{{ game.homeTeamSlug }}"
                                                 data-home-name="{{ game.homeTeamName }}"
-                                                data-away-logo="{% with game.awayTeamSlug|lookuplogo as logo_url %}{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}{% endwith %}"
-                                                data-home-logo="{% with game.homeTeamSlug|lookuplogo as logo_url %}{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}{% endwith %}"
+                                                data-away-logo="{% with game.awayTeamSlug|lookuplogo as team_data %}{{ team_data.teamLogo|default:'/static/images/nfl.svg' }}{% endwith %}"
+                                                data-home-logo="{% with game.homeTeamSlug|lookuplogo as team_data %}{{ team_data.teamLogo|default:'/static/images/nfl.svg' }}{% endwith %}"
+                                                data-away-color="{% with game.awayTeamSlug|lookuplogo as team_data %}{{ team_data.color|default:'333333' }}{% endwith %}"
+                                                data-away-alt-color="{% with game.awayTeamSlug|lookuplogo as team_data %}{{ team_data.alternateColor|default:'666666' }}{% endwith %}"
+                                                data-home-color="{% with game.homeTeamSlug|lookuplogo as team_data %}{{ team_data.color|default:'333333' }}{% endwith %}"
+                                                data-home-alt-color="{% with game.homeTeamSlug|lookuplogo as team_data %}{{ team_data.alternateColor|default:'666666' }}{% endwith %}"
                                                 data-is-tiebreaker="{{ game.tieBreakerGame|yesno:'true,false' }}"
                                                 data-tiebreaker-score="{{ p.tieBreakerScore|default:'' }}"
                                                 data-tiebreaker-yards="{{ p.tieBreakerYards|default:'' }}"
@@ -460,16 +518,19 @@
                                                 data-weather-condition="{{ game.weatherCondition|default:'' }}"
                                                 data-venue-indoor="{{ game.venueIndoor|yesno:'true,false' }}"
                                                 data-home-win-probability="{{ game.homeTeamWinProbability|default:'' }}"
-                                                data-away-win-probability="{{ game.awayTeamWinProbability|default:'' }}">
-                                            <i class="fas fa-edit me-1"></i>
-                                            Edit Pick
+                                                data-away-win-probability="{{ game.awayTeamWinProbability|default:'' }}"
+                                                data-broadcast="{{ game.broadcast|default:'' }}"
+                                                data-gamecast-url="{{ game.gamecastUrl|default:'' }}"
+                                                data-game-status="{{ game.statusType }}">
+                                            <i class="fas fa-edit"></i>
+                                            <span>Edit Pick</span>
                                         </button>
                                             {% endif %}
                                         {% endfor %}
                                         {% else %}
-                                        <div class="pick-locked-indicator">
-                                            <i class="fas fa-lock me-1"></i>
-                                            Pick Locked - {{ game|game_lock_reason }}
+                                        <div class="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 dark:bg-red-600/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-semibold">
+                                            <i class="fas fa-lock"></i>
+                                            <span>Pick Locked - {{ game|game_lock_reason }}</span>
                                         </div>
                                         {% endif %}
                                     </div>
@@ -479,66 +540,84 @@
                         {% endif %}
                         {% endfor %}
                     {% else %}
-                        <div class="no-picks-message">
-                            <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No picks submitted yet. Get started above!</p>
+                        <div class="col-span-full flex flex-col items-center justify-center py-12 text-center">
+                            <i class="fas fa-info-circle text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
+                            <p class="text-text-secondary-light dark:text-text-secondary">No picks submitted yet. Get started above!</p>
                         </div>
                     {% endif %}
                 </div>
             </div>
             {% else %}
-            <div class="section-container">
-                <div class="no-games-message text-center">
-                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                    {% if is_default_week %}
-                    <h4 class="text-primary">Ready for Week {{ week }}?</h4>
-                    <p class="text-muted mb-4">The NFL schedule for Week {{ week }} is being finalized. Games will appear here once released, but you can check back soon to start making your picks!</p>
-                    <div class="season-prep-info">
-                        <div class="prep-card">
-                            <i class="fas fa-trophy fa-2x text-warning mb-2"></i>
-                            <h6>Get Ready</h6>
-                            <p class="small text-muted">Review team stats and prepare your strategy for the upcoming season.</p>
-                        </div>
-                        <div class="prep-card">
-                            <i class="fas fa-users fa-2x text-info mb-2"></i>
-                            <h6>Join the Competition</h6>
-                            <p class="small text-muted">Week {{ week }} picks will be available as soon as games are scheduled.</p>
-                        </div>
-                        <div class="prep-card">
-                            <i class="fas fa-chart-line fa-2x text-success mb-2"></i>
-                            <h6>Track Progress</h6>
-                            <p class="small text-muted">Check the scores page for live updates once the season begins.</p>
-                        </div>
+            <div class="section-container text-center py-12">
+                <i class="fas fa-calendar-times text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
+                {% if is_default_week %}
+                <h4 class="text-2xl font-bold text-primary mb-3">Ready for Week {{ week }}?</h4>
+                <p class="text-text-secondary-light dark:text-text-secondary mb-6 max-w-2xl mx-auto">
+                    The NFL schedule for Week {{ week }} is being finalized. Games will appear here once released, but you can check back soon to start making your picks!
+                </p>
+
+                <!-- Season Prep Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-8 max-w-4xl mx-auto">
+                    <div class="bg-surface-light dark:bg-surface-hover rounded-xl p-6 border border-border-light dark:border-border-subtle">
+                        <i class="fas fa-trophy text-4xl text-yellow-500 mb-3"></i>
+                        <h6 class="text-lg font-semibold text-text-dark dark:text-white mb-2">Get Ready</h6>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">Review team stats and prepare your strategy for the upcoming season.</p>
                     </div>
-                    <div class="mt-4">
-                        <a href="{% url 'scores' %}" class="btn btn-outline-primary me-2">
-                            <i class="fas fa-chart-line me-1"></i>View Scores
-                        </a>
-                        <a href="{% url 'standings' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-trophy me-1"></i>Standings
-                        </a>
+                    <div class="bg-surface-light dark:bg-surface-hover rounded-xl p-6 border border-border-light dark:border-border-subtle">
+                        <i class="fas fa-users text-4xl text-blue-500 mb-3"></i>
+                        <h6 class="text-lg font-semibold text-text-dark dark:text-white mb-2">Join the Competition</h6>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">Week {{ week }} picks will be available as soon as games are scheduled.</p>
                     </div>
-                    {% else %}
-                    <h4 class="text-muted">No games available for this week</h4>
-                    <p class="text-muted">Check back later or view other weeks.</p>
-                    {% endif %}
+                    <div class="bg-surface-light dark:bg-surface-hover rounded-xl p-6 border border-border-light dark:border-border-subtle">
+                        <i class="fas fa-chart-line text-4xl text-secondary-light dark:text-secondary mb-3"></i>
+                        <h6 class="text-lg font-semibold text-text-dark dark:text-white mb-2">Track Progress</h6>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">Check the scores page for live updates once the season begins.</p>
+                    </div>
                 </div>
+
+                <div class="flex items-center justify-center gap-3 mt-6">
+                    <a href="{% url 'scores' %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all">
+                        <i class="fas fa-chart-line"></i>
+                        <span>View Scores</span>
+                    </a>
+                    <a href="{% url 'standings' %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-border-light dark:border-border-subtle text-text-dark dark:text-white rounded-xl font-semibold hover:bg-surface-hover transition-all">
+                        <i class="fas fa-trophy"></i>
+                        <span>Standings</span>
+                    </a>
+                </div>
+                {% else %}
+                <h4 class="text-2xl font-bold text-text-secondary-light dark:text-text-secondary mb-3">No games available for this week</h4>
+                <p class="text-text-secondary-light dark:text-text-secondary">Check back later or view other weeks.</p>
+                {% endif %}
             </div>
             {% endif %}
         </div>
     </div>
 
     <!-- Edit Pick Modal -->
-    <div class="modal fade" id="editPickModal" tabindex="-1" aria-labelledby="editPickModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editPickModalLabel">
-                        <i class="fas fa-edit me-2"></i>Edit Your Pick
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div id="editPickModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="editPickModalLabel" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" aria-hidden="true"></div>
+
+        <!-- Modal Container -->
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <!-- Modal Content -->
+            <div class="relative inline-block align-bottom bg-bg-light dark:bg-bg-dark rounded-2xl border-2 border-border-light dark:border-border-subtle shadow-2xl text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <!-- Header -->
+                <div class="border-b border-border-light dark:border-border-subtle p-6">
+                    <div class="flex items-center justify-between">
+                        <h5 class="text-xl font-bold text-text-dark dark:text-white flex items-center gap-2" id="editPickModalLabel">
+                            <i class="fas fa-edit text-primary"></i>
+                            <span>Edit Your Pick</span>
+                        </h5>
+                        <button type="button" class="p-2 rounded-lg hover:bg-surface-hover transition-colors" onclick="closeEditModal()" aria-label="Close">
+                            <i class="fas fa-times text-text-secondary-light dark:text-text-secondary"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="modal-body">
+
+                <!-- Body -->
+                <div class="py-6 px-6">
                     <form id="editPickForm">
                         {% csrf_token %}
                         <input type="hidden" id="editPickId" name="pick_id">
@@ -549,95 +628,134 @@
                         <input type="hidden" name="uid" value="{{ user.id }}">
 
                         <!-- Game Info -->
-                        <div class="edit-game-info mb-4">
-                            <h6 class="game-title" id="editGameTitle"></h6>
-                            <div class="game-time" id="editGameTime"></div>
+                        <div class="mb-6 text-center">
+                            <h6 class="text-lg font-bold text-text-dark dark:text-white mb-2" id="editGameTitle"></h6>
+                            <div class="text-sm text-text-secondary-light dark:text-text-secondary" id="editGameTime"></div>
                         </div>
 
                         <!-- Game Stats (Spread, Weather, etc.) -->
-                        <div id="editGameStatsBar" class="game-info-bar mb-4" style="display: none;">
-                            <div id="editSpreadInfo" class="game-info-item" style="display: none;">
-                                <i class="fas fa-chart-line me-1"></i>
-                                <span class="info-label">Spread:</span>
-                                <span class="info-value" id="editSpreadValue"></span>
+                        <div id="editGameStatsBar" class="flex flex-wrap items-center justify-center gap-4 mb-6 text-sm text-text-secondary-light dark:text-text-secondary" style="display: none;">
+                            <div id="editSpreadInfo" class="flex items-center gap-1.5" style="display: none;">
+                                <i class="fas fa-chart-line"></i>
+                                <span class="font-medium">Spread:</span>
+                                <span class="font-semibold text-text-dark dark:text-white" id="editSpreadValue"></span>
                             </div>
-                            <div id="editOverUnderInfo" class="game-info-item" style="display: none;">
-                                <i class="fas fa-calculator me-1"></i>
-                                <span class="info-label">O/U:</span>
-                                <span class="info-value" id="editOverUnderValue"></span>
+                            <div id="editOverUnderInfo" class="flex items-center gap-1.5" style="display: none;">
+                                <i class="fas fa-calculator"></i>
+                                <span class="font-medium">O/U:</span>
+                                <span class="font-semibold text-text-dark dark:text-white" id="editOverUnderValue"></span>
                             </div>
-                            <div id="editWeatherInfo" class="game-info-item" style="display: none;">
-                                <i class="fas fa-thermometer-half me-1"></i>
-                                <span class="info-value" id="editWeatherValue"></span>
+                            <div id="editWeatherInfo" class="flex items-center gap-1.5" style="display: none;">
+                                <i id="editWeatherIcon" class="fas fa-thermometer-half"></i>
+                                <span class="text-text-dark dark:text-white" id="editWeatherValue"></span>
                             </div>
-                            <div id="editVenueInfo" class="game-info-item" style="display: none;">
-                                <i class="fas fa-home me-1"></i>
-                                <span class="info-value">Indoor</span>
+                            <div id="editVenueInfo" class="flex items-center gap-1.5" style="display: none;">
+                                <i class="fas fa-home"></i>
+                                <span class="text-text-dark dark:text-white">Indoor</span>
                             </div>
                         </div>
 
                         <!-- Team Selection -->
-                        <div class="edit-team-selection mb-4">
-                            <h6 class="mb-3">Select Your Pick:</h6>
-                            <div class="team-options-edit">
-                                <div class="team-option-edit" id="editAwayTeam">
-                                    <div class="team-logo-container">
-                                        <img id="editAwayLogo" src="" alt="" class="team-logo-edit">
+                        <div class="mb-6">
+                            <h6 class="text-base font-semibold text-text-dark dark:text-white mb-6 text-center">Select Your Pick:</h6>
+                            <div class="grid grid-cols-[1fr,auto,1fr] gap-4 items-stretch">
+                                <!-- Away Team -->
+                                <div class="team-option-edit relative group rounded-xl border-2 border-transparent hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col" id="editAwayTeam">
+                                    <!-- Top Half - Team Color Background with Logo -->
+                                    <div class="relative h-[100px] flex items-center justify-center py-2" id="editAwayColorBg">
+                                        <img id="editAwayLogo" src="" alt="" class="w-16 h-16 object-contain drop-shadow-lg relative z-10">
+                                        <!-- Selection Indicator -->
+                                        <div class="selection-indicator absolute top-2 right-2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <i class="fas fa-check"></i>
+                                        </div>
                                     </div>
-                                    <div class="team-name-edit" id="editAwayName"></div>
-                                    <div id="editAwayWinProb" class="win-probability" style="display: none;">
-                                        <i class="fas fa-percentage me-1"></i><span id="editAwayWinProbValue"></span>% chance
-                                    </div>
-                                    <div class="selection-indicator">
-                                        <i class="fas fa-check"></i>
+                                    <!-- Bottom Half - Text -->
+                                    <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-surface-light dark:bg-surface-hover">
+                                        <div class="font-bold text-lg text-text-dark dark:text-white mb-1" id="editAwayName"></div>
+                                        <div id="editAwayWinProb" class="flex items-center justify-center gap-1 text-xs text-text-secondary-light dark:text-text-secondary" style="display: none;">
+                                            <i class="fas fa-percentage"></i>
+                                            <span><span id="editAwayWinProbValue"></span>% chance</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="vs-divider-edit">VS</div>
-                                <div class="team-option-edit" id="editHomeTeam">
-                                    <div class="team-logo-container">
-                                        <img id="editHomeLogo" src="" alt="" class="team-logo-edit">
+
+                                <!-- VS Divider -->
+                                <div class="flex items-center text-2xl font-bold text-text-secondary-light dark:text-text-secondary">@</div>
+
+                                <!-- Home Team -->
+                                <div class="team-option-edit relative group rounded-xl border-2 border-transparent hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col" id="editHomeTeam">
+                                    <!-- Top Half - Team Color Background with Logo -->
+                                    <div class="relative h-[100px] flex items-center justify-center py-2" id="editHomeColorBg">
+                                        <img id="editHomeLogo" src="" alt="" class="w-16 h-16 object-contain drop-shadow-lg relative z-10">
+                                        <!-- Selection Indicator -->
+                                        <div class="selection-indicator absolute top-2 right-2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <i class="fas fa-check"></i>
+                                        </div>
                                     </div>
-                                    <div class="team-name-edit" id="editHomeName"></div>
-                                    <div id="editHomeWinProb" class="win-probability" style="display: none;">
-                                        <i class="fas fa-percentage me-1"></i><span id="editHomeWinProbValue"></span>% chance
-                                    </div>
-                                    <div class="selection-indicator">
-                                        <i class="fas fa-check"></i>
+                                    <!-- Bottom Half - Text -->
+                                    <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-surface-light dark:bg-surface-hover">
+                                        <div class="font-bold text-lg text-text-dark dark:text-white mb-1" id="editHomeName"></div>
+                                        <div id="editHomeWinProb" class="flex items-center justify-center gap-1 text-xs text-text-secondary-light dark:text-text-secondary" style="display: none;">
+                                            <i class="fas fa-percentage"></i>
+                                            <span><span id="editHomeWinProbValue"></span>% chance</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Tiebreaker Section -->
-                        <div id="editTiebreakerSection" class="edit-tiebreaker-section mb-4" style="display: none;">
-                            <h6 class="mb-3">
-                                <i class="fas fa-balance-scale me-2"></i>Tiebreakers
+                        <div id="editTiebreakerSection" class="bg-purple-500/10 dark:bg-purple-600/20 rounded-xl p-4 border border-purple-500/30 dark:border-purple-500/40" style="display: none;">
+                            <h6 class="text-base font-semibold flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-4">
+                                <i class="fas fa-balance-scale"></i>
+                                <span>Tiebreakers</span>
                             </h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="editTiebreakerScore">Total Points Scored</label>
-                                        <input type="number" id="editTiebreakerScore" name="tieBreakerScore" 
-                                               class="form-control" placeholder="e.g. 45" min="0" max="200">
-                                    </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label for="editTiebreakerScore" class="block text-sm font-medium text-text-dark dark:text-white">
+                                        Total Points Scored
+                                    </label>
+                                    <input type="number" id="editTiebreakerScore" name="tieBreakerScore"
+                                           class="w-full px-3 py-2 bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-purple-500 dark:focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
+                                           placeholder="e.g. 45" min="0" max="200">
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="editTiebreakerYards">Total Yards</label>
-                                        <input type="number" id="editTiebreakerYards" name="tieBreakerYards" 
-                                               class="form-control" placeholder="e.g. 750" min="0" max="2000">
-                                    </div>
+                                <div class="space-y-1">
+                                    <label for="editTiebreakerYards" class="block text-sm font-medium text-text-dark dark:text-white">
+                                        Total Yards
+                                    </label>
+                                    <input type="number" id="editTiebreakerYards" name="tieBreakerYards"
+                                           class="w-full px-3 py-2 bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-purple-500 dark:focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
+                                           placeholder="e.g. 750" min="0" max="2000">
                                 </div>
                             </div>
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>Cancel
+
+                <!-- Game Footer (Preview/Broadcast) -->
+                <div id="editGameFooter" class="border-t border-border-light dark:border-border-subtle px-6 py-3" style="display: none;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <a id="editPreviewLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors font-medium">
+                                <i class="fas fa-external-link-alt"></i>
+                                <span id="editPreviewText">Preview</span>
+                            </a>
+                        </div>
+                        <div>
+                            <span id="editBroadcastFooter" class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="border-t border-border-light dark:border-border-subtle p-6 flex flex-col gap-3">
+                    <button type="button" class="w-full px-4 py-3 bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl font-semibold hover:bg-blue-600/20 dark:hover:bg-blue-600/30 transition-all flex items-center justify-center gap-2" id="saveEditPickBtn">
+                        <i class="fas fa-save"></i>
+                        <span>SAVE CHANGES</span>
                     </button>
-                    <button type="button" class="btn btn-primary" id="saveEditPickBtn">
-                        <i class="fas fa-save me-1"></i>Save Changes
+                    <button type="button" class="w-full px-4 py-3 bg-gray-500/10 dark:bg-gray-600/20 text-gray-600 dark:text-gray-400 rounded-xl font-semibold hover:bg-gray-500/20 dark:hover:bg-gray-600/30 transition-all flex items-center justify-center gap-2" onclick="closeEditModal()">
+                        <i class="fas fa-times"></i>
+                        <span>CANCEL</span>
                     </button>
                 </div>
             </div>
@@ -646,6 +764,36 @@
 
     <!-- Auto-save JavaScript -->
     <script>
+    // Modal helper functions
+    function openEditModal() {
+        const modal = document.getElementById('editPickModal');
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeEditModal() {
+        const modal = document.getElementById('editPickModal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('editPickModal')?.addEventListener('click', function(e) {
+        if (e.target === this || e.target.classList.contains('bg-opacity-50')) {
+            closeEditModal();
+        }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('editPickModal');
+            if (modal && !modal.classList.contains('hidden')) {
+                closeEditModal();
+            }
+        }
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
         // Handle team selection clicks
         document.querySelectorAll('.team-option:not(.disabled)').forEach(option => {
@@ -812,6 +960,10 @@
                 const homeName = this.dataset.homeName;
                 const awayLogo = this.dataset.awayLogo;
                 const homeLogo = this.dataset.homeLogo;
+                const awayColor = this.dataset.awayColor || '333333';
+                const awayAltColor = this.dataset.awayAltColor || '666666';
+                const homeColor = this.dataset.homeColor || '333333';
+                const homeAltColor = this.dataset.homeAltColor || '666666';
                 const isTiebreaker = this.dataset.isTiebreaker === 'true';
                 const tiebreakerScore = this.dataset.tiebreakerScore;
                 const tiebreakerYards = this.dataset.tiebreakerYards;
@@ -822,6 +974,9 @@
                 const venueIndoor = this.dataset.venueIndoor === 'true';
                 const homeWinProbability = this.dataset.homeWinProbability;
                 const awayWinProbability = this.dataset.awayWinProbability;
+                const broadcast = this.dataset.broadcast;
+                const gamecastUrl = this.dataset.gamecastUrl;
+                const gameStatus = this.dataset.gameStatus;
 
                 // Populate modal with game data
                 document.getElementById('editPickId').value = pickId;
@@ -840,6 +995,26 @@
                 document.getElementById('editAwayLogo').alt = `${awayName} logo`;
                 document.getElementById('editHomeLogo').src = homeLogo;
                 document.getElementById('editHomeLogo').alt = `${homeName} logo`;
+
+                // Apply team color backgrounds
+                const awayColorBg = document.getElementById('editAwayColorBg');
+                const homeColorBg = document.getElementById('editHomeColorBg');
+                awayColorBg.style.background = `linear-gradient(135deg, #${awayAltColor}40 0%, #${awayColor} 50%, #${awayColor} 100%)`;
+                homeColorBg.style.background = `linear-gradient(135deg, #${homeAltColor}40 0%, #${homeColor} 50%, #${homeColor} 100%)`;
+
+                // Apply Jets logo fix (white drop shadow for visibility)
+                const awayLogoEl = document.getElementById('editAwayLogo');
+                const homeLogoEl = document.getElementById('editHomeLogo');
+                if (awayTeam.includes('jets')) {
+                    awayLogoEl.style.filter = 'drop-shadow(0 0 6px rgba(255,255,255,0.9))';
+                } else {
+                    awayLogoEl.style.filter = '';
+                }
+                if (homeTeam.includes('jets')) {
+                    homeLogoEl.style.filter = 'drop-shadow(0 0 6px rgba(255,255,255,0.9))';
+                } else {
+                    homeLogoEl.style.filter = '';
+                }
 
                 // Set win probabilities
                 const awayWinProbElement = document.getElementById('editAwayWinProb');
@@ -886,7 +1061,7 @@
                 const overUnderInfo = document.getElementById('editOverUnderInfo');
                 const weatherInfo = document.getElementById('editWeatherInfo');
                 const venueInfo = document.getElementById('editVenueInfo');
-                
+
                 let hasStats = false;
 
                 // Show spread if available
@@ -934,8 +1109,36 @@
                 // Show/hide the entire stats bar
                 statsBar.style.display = hasStats ? 'flex' : 'none';
 
+                // Populate game footer (Preview/Broadcast)
+                const gameFooter = document.getElementById('editGameFooter');
+                const previewLink = document.getElementById('editPreviewLink');
+                const previewText = document.getElementById('editPreviewText');
+                const broadcastFooter = document.getElementById('editBroadcastFooter');
+
+                if (gamecastUrl || broadcast) {
+                    gameFooter.style.display = 'block';
+
+                    if (gamecastUrl && gamecastUrl !== '') {
+                        previewLink.href = gamecastUrl;
+                        previewLink.style.display = 'inline-flex';
+                        // Show "Final" for finished games, "Preview" for others
+                        previewText.textContent = gameStatus === 'finished' ? 'Final' : 'Preview';
+                    } else {
+                        previewLink.style.display = 'none';
+                    }
+
+                    if (broadcast && broadcast !== '') {
+                        broadcastFooter.textContent = broadcast;
+                        broadcastFooter.style.display = 'inline';
+                    } else {
+                        broadcastFooter.style.display = 'none';
+                    }
+                } else {
+                    gameFooter.style.display = 'none';
+                }
+
                 // Show modal
-                new bootstrap.Modal(document.getElementById('editPickModal')).show();
+                openEditModal();
             });
         });
 
@@ -989,7 +1192,7 @@
             .then(response => {
                 if (response.ok) {
                     // Close modal and reload page
-                    bootstrap.Modal.getInstance(document.getElementById('editPickModal')).hide();
+                    closeEditModal();
                     window.location.reload();
                 } else {
                     throw new Error('Update failed');

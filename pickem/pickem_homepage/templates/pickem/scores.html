@@ -3,32 +3,33 @@
 {% load pickem_homepage_extras %}
 
 {% block mobile_title %}
-    <div class="mobile-page-header">
-        <h2 class="mobile-title-text">
-            <i class="fas fa-chart-line me-2"></i>Live Scores
-        </h2>
-        <div class="mobile-subtitle">
-            {% if competition == 'nfl-preseason' %}
-                Preseason - Week {{ week }}
-            {% else %}
-                Regular Season - Week {{ week }}
-            {% endif %}
-        </div>
+    <div class="mobile-subtitle">
+        <i class="fas fa-chart-line mr-2"></i>Scores
     </div>
 {% endblock %}
 
 {% block content %}
 
-<div class="container min-vh-100">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <div class="container standings-main-container">
-        <div class="col">
-        <!-- Page Header -->
-        <div class="page-header-clean text-center d-none d-lg-block mb-4">
-            <h2 class="page-title">
-                <i class="fas fa-chart-line me-3"></i>Live Scores
+    <!-- Hero Header -->
+    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 shadow-xl animate-fade-in">
+        <!-- Subtle background pattern -->
+        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
+
+        <!-- Content -->
+        <div class="relative z-10">
+            <!-- Icon -->
+            <div class="flex items-center justify-center mb-3 lg:mb-4">
+                <i class="fas fa-chart-line text-4xl lg:text-6xl text-primary"></i>
+            </div>
+
+            <!-- Title -->
+            <h2 class="text-3xl lg:text-5xl font-black tracking-tight mb-2 lg:mb-3"
+                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
+                Live Scores
             </h2>
-            <p class="page-subtitle">
+
+            <!-- Subtitle -->
+            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium">
                 {% if competition == 'nfl-preseason' %}
                     Preseason - Week {{ week }}
                 {% else %}
@@ -36,121 +37,119 @@
                 {% endif %}
             </p>
         </div>
+    </div>
+
+<div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
 
 
-        <!-- Your Weekly Performance Section (Compact) -->
-        {% if user.is_authenticated and user_weekly_stats %}
-        <div class="section-container mb-4 weekly-performance-compact">
-            <div class="weekly-performance-avatar">
-                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}" 
-                     alt="Your profile picture" 
-                     class="player-avatar">
-            </div>
-            <div class="weekly-performance-stats">
-                <div class="stat-item">
-                    <span class="stat-label">Picks Accuracy:</span>
-                    <span class="stat-value">{{ user_weekly_stats.accuracy }}% <small>({{ user_weekly_stats.correct_picks }}/{{ user_weekly_stats.total_graded_picks }} Graded)</small></span>
-                    <br />
-                    <span class="stat-label">Correct Picks:</span>
-                    <span class="stat-value">{{ user_weekly_stats.correct_picks }}</span>
-                    <br />
-                    <span class="stat-label">Week {{ week }} Points:</span>
-                    <span class="stat-value">{{ user_weekly_stats.weekly_points }}</span>
+    <!-- Your Weekly Performance Section -->
+    {% if user.is_authenticated and user_weekly_stats %}
+    <div class="section-container mb-6">
+        <div class="flex items-center gap-4">
+            <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                 alt="Your profile picture"
+                 class="w-16 h-16 rounded-full border-2 border-primary">
+            <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                <div>
+                    <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase font-semibold">Picks Accuracy:</div>
+                    <div class="text-lg font-bold text-text-dark dark:text-white">{{ user_weekly_stats.accuracy }}% <span class="text-sm font-normal text-text-secondary-light dark:text-text-secondary">({{ user_weekly_stats.correct_picks }}/{{ user_weekly_stats.total_graded_picks }} Graded)</span></div>
+                </div>
+                <div>
+                    <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase font-semibold">Correct Picks:</div>
+                    <div class="text-lg font-bold text-text-dark dark:text-white">{{ user_weekly_stats.correct_picks }}</div>
+                </div>
+                <div>
+                    <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase font-semibold">Week {{ week }} Points:</div>
+                    <div class="text-lg font-bold text-text-dark dark:text-white">{{ user_weekly_stats.weekly_points }}</div>
                 </div>
             </div>
         </div>
-        {% endif %}
+    </div>
+    {% endif %}
 
-        <div class="section-container mb-4">
-            <div class="filter-controls d-flex flex-wrap gap-2 justify-content-center">
-                <button class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all">
-                    <i class="fas fa-list me-1"></i>All Games
-                </button>
-                <button class="btn btn-outline-success btn-sm filter-btn" data-filter="live">
-                    <i class="fas fa-circle me-1 pulse-icon"></i>Live
-                </button>
-                <button class="btn btn-outline-danger btn-sm filter-btn" data-filter="final">
-                    <i class="fas fa-flag-checkered me-1"></i>Final
-                </button>
-                <button class="btn btn-outline-info btn-sm filter-btn" data-filter="upcoming">
-                    <i class="fas fa-clock me-1"></i>Upcoming
-                </button>
-            </div>
+    <!-- Filter Controls -->
+    <div class="section-container mb-6">
+        <div class="flex flex-wrap gap-2 justify-center">
+            <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn active bg-blue-600 border-blue-600 text-white hover:bg-blue-700" data-filter="all">
+                <i class="fas fa-list mr-2"></i>All Games
+            </button>
+            <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn border-green-600 text-green-600 dark:text-green-400 hover:bg-green-600/10" data-filter="live">
+                <i class="fas fa-circle mr-2 animate-pulse"></i>Live
+            </button>
+            <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-600/10" data-filter="final">
+                <i class="fas fa-flag-checkered mr-2"></i>Final
+            </button>
+            <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-600/10" data-filter="upcoming">
+                <i class="fas fa-clock mr-2"></i>Upcoming
+            </button>
         </div>
+    </div>
 
         
 
-        <!-- Week Stats Sidebar - Moved Above Games -->
-        {% if show_week_stats_sidebar %}
-        
-        <!-- Week Winner Card - Full Width on Top -->
-        {% for player in week_winner %}
-        {% if player.id != None %}
-        <div class="row mt-2 mb-3">
-            <div class="col-12">
-                <div class="section-container mb-4">
-                    <div class="section-header">
-                        <h3 class="section-title">
-                            <i class="fas fa-trophy me-2"></i>Week Winner
-                        </h3>
-                    </div>
-                    <div class="winner-showcase">
-                        {% with player.userID|lookupname as username %}
-                        {% with player.userID|lookupavatar as avatar %}
-                        <div class="winner-profile">
-                            <a href="{% url 'user_profile' player.userID %}" class="winner-avatar-link">
-                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                     alt="Profile picture for {{ username }}" 
-                                     class="winner-avatar">
-                            </a>
-                            <div class="winner-details">
-                                <h4 class="winner-name">{{ username|default:"Unknown Player" }}</h4>
-                                <div class="winner-badge">
-                                    <i class="fas fa-crown me-1"></i>Champion
-                                </div>
-                            </div>
-                        </div>
-                        {% endwith %}
-                        {% endwith %}
-                    </div>
+    <!-- Week Winner Card -->
+    {% if show_week_stats_sidebar %}
+    {% for player in week_winner %}
+    {% if player.id != None %}
+    <div class="section-container mb-6">
+        <h3 class="section-title">
+            <i class="fas fa-trophy mr-2"></i>Week Winner
+        </h3>
+        <div class="flex items-center justify-center gap-6 py-6">
+            {% with player.userID|lookupname as username %}
+            {% with player.userID|lookupavatar as avatar %}
+            <a href="{% url 'user_profile' player.userID %}" class="group">
+                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                     alt="Profile picture for {{ username }}"
+                     class="w-24 h-24 rounded-full border-4 border-yellow-500 shadow-glow-primary group-hover:scale-110 transition-transform">
+            </a>
+            <div class="text-center">
+                <h4 class="text-2xl font-bold text-text-dark dark:text-white mb-2">{{ username|default:"Unknown Player" }}</h4>
+                <div class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 dark:bg-yellow-600/20 border-2 border-yellow-500 rounded-xl">
+                    <i class="fas fa-crown text-yellow-500"></i>
+                    <span class="font-bold text-text-dark dark:text-white">Champion</span>
                 </div>
             </div>
+            {% endwith %}
+            {% endwith %}
         </div>
-        {% endif %}
-        {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
         
         <!-- Week Points Leaderboard - Two Columns on Large Screens -->
-        <div class="row mt-2 mb-3">
-            <div class="col-12">
-                <div class="section-container">
-                    <div class="section-header collapsible-header" data-bs-toggle="collapse" data-bs-target="#week-points-leaderboard" aria-expanded="true">
-                        <div class="section-header-content">
-                            <h3 class="section-title">
-                                <i class="fas fa-list-ol me-2"></i>Week Points
-                            </h3>
-                        </div>
-                        <div class="collapse-indicator">
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                    </div>
-                    <div class="points-leaderboard points-leaderboard-multi-column collapse show" id="week-points-leaderboard">
+        <div class="section-container mb-6" x-data="{ open: true }">
+            <button @click="open = !open"
+                    class="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-light/50 dark:hover:bg-surface-hover/50 rounded-t-2xl transition-colors"
+                    type="button">
+                <h3 class="text-2xl font-bold text-text-dark dark:text-gray-100 flex items-center mb-0">
+                    <i class="fas fa-list-ol mr-2"></i>Week Points
+                </h3>
+                <i class="fas fa-chevron-down transition-transform duration-200" :class="{ 'rotate-180': open }"></i>
+            </button>
+            <div x-show="open"
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="opacity-0 -translate-y-2"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 class="points-leaderboard points-leaderboard-multi-column bg-transparent px-1 sm:px-2 lg:px-4 pb-4"
+                 id="week-points-leaderboard">
                         {% for player in user_points %}
-                        <div class="player-points-card">
+                        <div data-player-card class="w-full flex items-center justify-between p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-2">
                             {% with player.uid|lookupname as username %}
                             {% with player.uid|lookupavatar as avatar %}
-                            <div class="player-info">
-                                <a href="{% url 'user_profile' player.uid %}" class="player-mini-avatar-link">
-                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                         alt="Profile picture for {{ username }}" 
-                                         class="player-mini-avatar">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <a href="{% url 'user_profile' player.uid %}" class="flex-shrink-0 group">
+                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                         alt="Profile picture for {{ username }}"
+                                         class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:scale-110 transition-transform">
                                 </a>
-                                <div class="player-details">
-                                    <div class="player-name">{{ username|default:"Unknown Player" }}</div>
+                                <div class="min-w-0 flex-1">
+                                    <a href="{% url 'user_profile' player.uid %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
                                 </div>
                             </div>
-                            <div class="player-score">
-                                <span class="score-value">{{ player.wins }}</span>
-                                <span class="score-label">pts</span>
+                            <div class="flex items-baseline gap-1 flex-shrink-0">
+                                <span class="text-2xl font-black text-secondary-light dark:text-secondary">{{ player.wins }}</span>
+                                <span class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
                             </div>
                             {% endwith %}
                             {% endwith %}
@@ -159,175 +158,181 @@
 
                         {% for player in players_names %}
                         {% if player not in users_w_points %}
-                        <div class="player-points-card">
+                        <div data-player-card class="w-full flex items-center justify-between p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-2">
                             {% with player|lookupname as username %}
                             {% with player|lookupavatar as avatar %}
-                            <div class="player-info">
-                                <a href="{% url 'user_profile' player %}" class="player-mini-avatar-link">
-                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                         alt="Profile picture for {{ username }}" 
-                                         class="player-mini-avatar">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <a href="{% url 'user_profile' player %}" class="flex-shrink-0 group">
+                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                         alt="Profile picture for {{ username }}"
+                                         class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:scale-110 transition-transform">
                                 </a>
-                                <div class="player-details">
-                                    <div class="player-name">{{ username|default:"Unknown Player" }}</div>
+                                <div class="min-w-0 flex-1">
+                                    <a href="{% url 'user_profile' player %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
                                 </div>
                             </div>
-                            <div class="player-score">
-                                <span class="score-value">0</span>
-                                <span class="score-label">pts</span>
+                            <div class="flex items-baseline gap-1 flex-shrink-0">
+                                <span class="text-2xl font-black text-secondary-light dark:text-secondary">0</span>
+                                <span class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
                             </div>
                             {% endwith %}
                             {% endwith %}
                         </div>
                         {% endif %}
                         {% endfor %}
-                    </div>
-                    <script>
-                        // Week Points Leaderboard Layout Manager
-                        window.weekPointsLayoutManager = (function() {
-                            const CONTAINER_ID = 'week-points-leaderboard';
-                            let originalCards = [];
-                            
-                            function captureOriginalCards() {
-                                try {
-                                    const container = document.getElementById(CONTAINER_ID);
-                                    if (!container) return;
-                                    
-                                    // Capture cards if we haven't already or if container was reset
-                                    if (originalCards.length === 0 || !container.querySelector('.points-column')) {
-                                        const playerCards = container.querySelectorAll('.player-points-card');
-                                        if (playerCards.length > 0) {
-                                            originalCards = Array.from(playerCards).map(card => card.cloneNode(true));
-                                        }
-                                    }
-                                } catch (error) {
-                                    console.error('Error capturing original cards:', error);
-                                }
-                            }
-                            
-                            function applyColumnLayout() {
-                                try {
-                                    const container = document.getElementById(CONTAINER_ID);
-                                    if (!container) return;
-                                    
-                                    captureOriginalCards();
-                                    const totalCards = originalCards.length;
-                                
-                                if (window.innerWidth >= 992 && totalCards > 0) {
-                                    // Only rebuild if not already in column layout
-                                    if (!container.querySelector('.points-column')) {
-                                        // Clear container
-                                        container.innerHTML = '';
-                                        
-                                        // Create two columns
-                                        const leftColumn = document.createElement('div');
-                                        leftColumn.className = 'points-column points-column-left';
-                                        const rightColumn = document.createElement('div');
-                                        rightColumn.className = 'points-column points-column-right';
-                                        
-                                        // Calculate split point (first half goes to left, second half to right)
-                                        const halfPoint = Math.ceil(totalCards / 2);
-                                        
-                                        // Distribute cards
-                                        for (let i = 0; i < totalCards; i++) {
-                                            if (i < halfPoint) {
-                                                leftColumn.appendChild(originalCards[i].cloneNode(true));
-                                            } else {
-                                                rightColumn.appendChild(originalCards[i].cloneNode(true));
-                                            }
-                                        }
-                                        
-                                        container.appendChild(leftColumn);
-                                        container.appendChild(rightColumn);
-                                    }
-                                } else {
-                                    // Mobile: restore original single-column layout
-                                    if (container.querySelector('.points-column')) {
-                                        container.innerHTML = '';
-                                        originalCards.forEach(card => {
-                                            container.appendChild(card.cloneNode(true));
-                                        });
-                                    }
-                                }
-                                } catch (error) {
-                                    console.error('Error applying column layout:', error);
-                                }
-                            }
-                            
-                            function refreshLayout() {
-                                // Reset to allow recapture of cards
-                                originalCards = [];
-                                applyColumnLayout();
-                            }
-                            
-                            // Public interface
-                            return {
-                                init: function() {
-                                    applyColumnLayout();
-                                    window.addEventListener('resize', applyColumnLayout);
-                                },
-                                refresh: refreshLayout,
-                                apply: applyColumnLayout
-                            };
-                        })();
-                        
-                        // Initialize on page load
-                        weekPointsLayoutManager.init();
-                    </script>
-                </div>
             </div>
         </div>
+        <script>
+            // Week Points Leaderboard Layout Manager - Updated for Tailwind
+                window.weekPointsLayoutManager = (function() {
+                    const CONTAINER_ID = 'week-points-leaderboard';
+                    let originalCards = [];
+
+                    function captureOriginalCards() {
+                        try {
+                            const container = document.getElementById(CONTAINER_ID);
+                            if (!container) return;
+
+                            // Capture cards if we haven't already or if container was reset
+                            if (originalCards.length === 0 || !container.querySelector('.points-column')) {
+                                const playerCards = container.querySelectorAll('[data-player-card]');
+                                if (playerCards.length > 0) {
+                                    originalCards = Array.from(playerCards).map(card => card.cloneNode(true));
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error capturing original cards:', error);
+                        }
+                    }
+
+                    function applyColumnLayout() {
+                        try {
+                            const container = document.getElementById(CONTAINER_ID);
+                            if (!container) return;
+
+                            captureOriginalCards();
+                            const totalCards = originalCards.length;
+
+                            if (window.innerWidth >= 1024 && totalCards > 0) {
+                                // Only rebuild if not already in column layout
+                                if (!container.querySelector('.points-column')) {
+                                    // Clear container
+                                    container.innerHTML = '';
+
+                                    // Create two columns with Tailwind classes
+                                    const leftColumn = document.createElement('div');
+                                    leftColumn.className = 'points-column flex-1 min-w-0';
+                                    const rightColumn = document.createElement('div');
+                                    rightColumn.className = 'points-column flex-1 min-w-0';
+
+                                    // Calculate split point (first half goes to left, second half to right)
+                                    const halfPoint = Math.ceil(totalCards / 2);
+
+                                    // Distribute cards
+                                    for (let i = 0; i < totalCards; i++) {
+                                        if (i < halfPoint) {
+                                            leftColumn.appendChild(originalCards[i].cloneNode(true));
+                                        } else {
+                                            rightColumn.appendChild(originalCards[i].cloneNode(true));
+                                        }
+                                    }
+
+                                    // Create wrapper with flex
+                                    const wrapper = document.createElement('div');
+                                    wrapper.className = 'w-full flex gap-4';
+                                    wrapper.appendChild(leftColumn);
+                                    wrapper.appendChild(rightColumn);
+                                    container.appendChild(wrapper);
+                                }
+                            } else {
+                                // Mobile: restore original single-column layout
+                                if (container.querySelector('.points-column')) {
+                                    container.innerHTML = '';
+                                    originalCards.forEach(card => {
+                                        container.appendChild(card.cloneNode(true));
+                                    });
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error applying column layout:', error);
+                        }
+                    }
+
+                    function refreshLayout() {
+                        // Reset to allow recapture of cards
+                        originalCards = [];
+                        applyColumnLayout();
+                    }
+
+                    // Public interface
+                    return {
+                        init: function() {
+                            applyColumnLayout();
+                            window.addEventListener('resize', applyColumnLayout);
+                        },
+                        refresh: refreshLayout,
+                        apply: applyColumnLayout
+                    };
+                })();
+
+            // Initialize on page load
+            weekPointsLayoutManager.init();
+        </script>
         {% endif %}
 
         <!-- Games by Start Time - Full Width -->
         {% if game_list %}
             {% regroup game_list by startTimestamp as games_by_time %}
             {% for time_group in games_by_time %}
-            <div class="time-group-full-width">
-                <div class="section-header collapsible-header" data-bs-toggle="collapse" data-bs-target="#games-{{ time_group.grouper|date:'Y-m-d-Hi' }}" aria-expanded="true">
-                    <div class="section-header-content">
-                        <h3 class="section-title">
-                            <i class="fas fa-calendar me-2"></i>{{ time_group.grouper|date:"l, F j" }}
-                        </h3>
-                        <span class="game-time-display">{{ time_group.grouper|date:"g:i A" }}</span>
+            <div class="section-container mb-4 relative" x-data="{ open: true }">
+                <button @click="open = !open"
+                        class="w-full flex items-center justify-between px-4 py-2 hover:bg-surface-light/50 dark:hover:bg-surface-hover/50 rounded-t-2xl transition-colors"
+                        type="button">
+                    <div class="flex items-center text-lg font-bold text-text-dark dark:text-gray-100">
+                        <i class="fas fa-calendar mr-2"></i>
+                        <span>{{ time_group.grouper|date:"l, F j" }}</span>
                     </div>
-                    <div class="collapse-indicator">
-                        <i class="fas fa-chevron-down"></i>
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-semibold text-text-dark dark:text-white px-3 py-1 bg-primary/90 rounded-lg">
+                            {{ time_group.grouper|date:"g:i A" }}
+                        </span>
+                        <i class="fas fa-chevron-down transition-transform duration-200" :class="{ 'rotate-180': open }"></i>
                     </div>
-                </div>
+                </button>
 
-                <div class="games-grid collapse show" id="games-{{ time_group.grouper|date:'Y-m-d-Hi' }}">
+                <div x-show="open"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 -translate-y-2"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     class="games-grid px-1 sm:px-2 lg:px-4 pt-1 pb-4 grid grid-cols-1 md:grid-cols-2 gap-6"
+                     id="games-{{ time_group.grouper|date:'Y-m-d-Hi' }}">
                             {% for game in time_group.list %}
-                            <div class="game-score-card" data-game-status="{{ game.statusType|lower }}">
-                                <!-- Main Game Content (consistent height) -->
-                                <div class="game-main-content">
-                                    <!-- Game Status Header -->
-                                    <div class="game-status-header {% if game.statusType == 'inprogress' %}status-live{% else %}status-standard{% endif %}">
-                                        <div class="status-info">
-                                            <i class="fas {% if game.statusType == 'inprogress' %}fa-circle status-live-dot{% elif game.statusType == 'finished' %}fa-check-circle{% else %}fa-clock{% endif %} me-2"></i>
-                                            {{ game.statusTitle }}
-                                        </div>
-                                        <div class="game-time">
-                                            {{ game.startTimestamp|date:"g:i A" }}
-                                        </div>
+                            <div class="game-score-card bg-surface-light dark:bg-surface rounded-xl overflow-hidden border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 flex flex-col" data-game-status="{{ game.statusType|lower }}">
+                                <!-- Game Status Header -->
+                                <div class="flex items-center justify-between px-3 py-1 text-sm font-semibold text-white {% if game.statusType == 'inprogress' %}bg-gradient-to-r from-green-600 to-green-700{% elif game.statusType == 'finished' %}bg-gradient-to-r from-blue-600 to-blue-700{% else %}bg-gradient-to-r from-gray-600 to-gray-700 dark:from-gray-700 dark:to-gray-800{% endif %}">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas {% if game.statusType == 'inprogress' %}fa-circle animate-pulse{% elif game.statusType == 'finished' %}fa-check-circle{% else %}fa-clock{% endif %}"></i>
+                                        <span>{{ game.statusTitle }}</span>
                                     </div>
+                                    <span class="text-xs opacity-90">{{ game.startTimestamp|date:"g:i A" }}</span>
+                                </div>
 
-                                    <!-- Game Info (Spread, Weather, etc.) -->
+                                <!-- Game Info (Spread, Weather, etc.) -->
                                 {% if game.spread or game.overUnder or game.temperature or game.weatherCondition %}
-                                <div class="game-info-bar">
+                                <div class="flex flex-wrap items-center justify-center gap-3 px-3 py-1 text-xs text-text-dark dark:text-text-secondary border-b border-border-light dark:border-border-subtle bg-border-light dark:bg-surface-hover">
                                     {% if game.spread %}
-                                    <div class="game-info-item spread-item">
-                                        <i class="fas fa-chart-line me-1"></i>
-                                        <span class="info-label">Spread:</span>
-                                        <span class="info-value spread-value">
+                                    <div class="flex items-center gap-1">
+                                        <i class="fas fa-chart-line"></i>
+                                        <span class="font-medium">Spread:</span>
+                                        <span class="flex items-center gap-1 font-semibold text-text-dark dark:text-white">
                                             {% if game.spread > 0 %}
                                                 {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="spread-team-logo">
+                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="w-4 h-4 max-w-4 max-h-4 flex-shrink-0 object-contain" style="width: 16px; height: 16px;">
                                                 {% endwith %}
                                                 -{{ game.spread|floatformat:1 }}
                                             {% else %}
                                                 {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="spread-team-logo">
+                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="w-4 h-4 max-w-4 max-h-4 flex-shrink-0 object-contain" style="width: 16px; height: 16px;">
                                                 {% endwith %}
                                                 -{{ game.spread|floatformat:1|cut:"-" }}
                                             {% endif %}
@@ -335,38 +340,38 @@
                                     </div>
                                     {% endif %}
                                     {% if game.overUnder %}
-                                    <div class="game-info-item">
-                                        <i class="fas fa-calculator me-1"></i>
-                                        <span class="info-label">O/U:</span>
-                                        <span class="info-value">{{ game.overUnder|floatformat:1 }}</span>
+                                    <div class="flex items-center gap-1">
+                                        <i class="fas fa-calculator"></i>
+                                        <span class="font-medium">O/U:</span>
+                                        <span class="font-semibold text-text-dark dark:text-white">{{ game.overUnder|floatformat:1 }}</span>
                                     </div>
                                     {% endif %}
                                     {% if game.temperature and game.weatherCondition %}
-                                    <div class="game-info-item">
+                                    <div class="flex items-center gap-1">
                                         {% if 'Sun' in game.weatherCondition or 'Clear' in game.weatherCondition %}
-                                            <i class="fas fa-sun me-1" title="Sunny/Clear"></i>
+                                            <i class="fas fa-sun text-yellow-500"></i>
                                         {% elif 'Cloud' in game.weatherCondition %}
-                                            <i class="fas fa-cloud me-1" title="Cloudy"></i>
+                                            <i class="fas fa-cloud"></i>
                                         {% elif 'Rain' in game.weatherCondition or 'Shower' in game.weatherCondition %}
-                                            <i class="fas fa-cloud-rain me-1" title="Rainy"></i>
+                                            <i class="fas fa-cloud-rain text-blue-500"></i>
                                         {% elif 'Snow' in game.weatherCondition %}
-                                            <i class="fas fa-snowflake me-1" title="Snowy"></i>
+                                            <i class="fas fa-snowflake text-blue-300"></i>
                                         {% elif 'Storm' in game.weatherCondition or 'Thunder' in game.weatherCondition %}
-                                            <i class="fas fa-bolt me-1" title="Stormy"></i>
+                                            <i class="fas fa-bolt text-purple-500"></i>
                                         {% elif 'Wind' in game.weatherCondition %}
-                                            <i class="fas fa-wind me-1" title="Windy"></i>
+                                            <i class="fas fa-wind"></i>
                                         {% elif 'Fog' in game.weatherCondition %}
-                                            <i class="fas fa-smog me-1" title="Foggy"></i>
+                                            <i class="fas fa-smog"></i>
                                         {% else %}
-                                            <i class="fas fa-thermometer-half me-1" title="Weather"></i>
+                                            <i class="fas fa-thermometer-half"></i>
                                         {% endif %}
-                                        <span class="info-value">{{ game.temperature }}°F, {{ game.weatherCondition }}</span>
+                                        <span>{{ game.temperature }}°F</span>
                                     </div>
                                     {% endif %}
                                     {% if game.venueIndoor %}
-                                    <div class="game-info-item">
-                                        <i class="fas fa-home me-1"></i>
-                                        <span class="info-value">Indoor</span>
+                                    <div class="flex items-center gap-1">
+                                        <i class="fas fa-home"></i>
+                                        <span>Indoor</span>
                                     </div>
                                     {% endif %}
                                 </div>
@@ -378,9 +383,9 @@
                                     <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}winning-team{% endif %}">
                                         <div class="team-info">
                                             {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                 alt="{{ game.awayTeamName }} logo" 
-                                                 class="team-logo">
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                 alt="{{ game.awayTeamName }} logo"
+                                                 class="team-logo w-12 h-12 flex-shrink-0">
                                             {% endwith %}
                                             <div class="team-details">
                                                 <div class="team-name {% if game.statusType == 'finished' and game.gameWinner != game.awayTeamSlug %}text-muted{% endif %}">
@@ -418,13 +423,15 @@
                                         
                                         {% if game.statusType != 'notstarted' %}
                                         <div class="score-breakdown">
-                                            <div class="quarters">
-                                                <span class="quarter-score">{{ game.awayTeamPeriod1|default:"—" }}</span>
-                                                <span class="quarter-score">{{ game.awayTeamPeriod2|default:"—" }}</span>
-                                                <span class="quarter-score">{{ game.awayTeamPeriod3|default:"—" }}</span>
-                                                <span class="quarter-score">{{ game.awayTeamPeriod4|default:"—" }}</span>
+                                            <div class="flex items-center gap-2">
+                                                <div class="quarters">
+                                                    <span class="quarter-score">{{ game.awayTeamPeriod1|default:"—" }}</span>
+                                                    <span class="quarter-score">{{ game.awayTeamPeriod2|default:"—" }}</span>
+                                                    <span class="quarter-score">{{ game.awayTeamPeriod3|default:"—" }}</span>
+                                                    <span class="quarter-score">{{ game.awayTeamPeriod4|default:"—" }}</span>
+                                                </div>
+                                                <div class="total-score text-3xl md:text-4xl font-black text-primary pl-3">{{ game.awayTeamScore|default:"0" }}</div>
                                             </div>
-                                            <div class="total-score">{{ game.awayTeamScore|default:"0" }}</div>
                                         </div>
                                         {% endif %}
                                     </div>
@@ -433,9 +440,9 @@
                                     <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}winning-team{% endif %}">
                                         <div class="team-info">
                                             {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                 alt="{{ game.homeTeamName }} logo" 
-                                                 class="team-logo">
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                 alt="{{ game.homeTeamName }} logo"
+                                                 class="team-logo w-12 h-12 flex-shrink-0">
                                             {% endwith %}
                                             <div class="team-details">
                                                 <div class="team-name {% if game.statusType == 'finished' and game.gameWinner != game.homeTeamSlug %}text-muted{% endif %}">
@@ -473,96 +480,122 @@
                                         
                                         {% if game.statusType != 'notstarted' %}
                                         <div class="score-breakdown">
-                                            <div class="quarters">
-                                                <span class="quarter-score">{{ game.homeTeamPeriod1|default:"—" }}</span>
-                                                <span class="quarter-score">{{ game.homeTeamPeriod2|default:"—" }}</span>
-                                                <span class="quarter-score">{{ game.homeTeamPeriod3|default:"—" }}</span>
-                                                <span class="quarter-score">{{ game.homeTeamPeriod4|default:"—" }}</span>
+                                            <div class="flex items-center gap-2">
+                                                <div class="quarters">
+                                                    <span class="quarter-score">{{ game.homeTeamPeriod1|default:"—" }}</span>
+                                                    <span class="quarter-score">{{ game.homeTeamPeriod2|default:"—" }}</span>
+                                                    <span class="quarter-score">{{ game.homeTeamPeriod3|default:"—" }}</span>
+                                                    <span class="quarter-score">{{ game.homeTeamPeriod4|default:"—" }}</span>
+                                                </div>
+                                                <div class="total-score text-3xl md:text-4xl font-black text-primary pl-3">{{ game.homeTeamScore|default:"0" }}</div>
                                             </div>
-                                            <div class="total-score">{{ game.homeTeamScore|default:"0" }}</div>
                                         </div>
                                         {% endif %}
                                     </div>
                                 </div>
 
-                                <!-- Game Status Badge (Centered between teams) -->
-                                {% if game.statusType != 'notstarted' %}
-                                <div class="game-status-display">
-                                    {% if game.statusType|lower == 'inprogress' %}
-                                        <span class="game-status live">LIVE</span>
-                                    {% elif game.statusType|lower == 'finished' %}
-                                        <span class="game-status final">FINAL</span>
-                                    {% elif game.statusType|lower == 'notstarted' %}
-                                        <span class="game-status upcoming">UPCOMING</span>
+                                <!-- Preview and Broadcast Info -->
+                                {% if game.broadcast or game.gamecastUrl %}
+                                <div class="flex items-center justify-between px-4 py-3 border-t border-border-light dark:border-border-subtle bg-border-light dark:bg-surface-hover">
+                                    {% if game.gamecastUrl %}
+                                    <a href="{{ game.gamecastUrl }}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1 bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 rounded-lg transition-colors">
+                                        <i class="fas fa-external-link-alt text-primary"></i>
+                                        <span class="text-sm font-semibold text-primary">Game Preview</span>
+                                    </a>
+                                    {% else %}
+                                    <div></div>
+                                    {% endif %}
+                                    {% if game.broadcast %}
+                                    <div class="flex items-center gap-2 ml-auto">
+                                        <i class="fas fa-tv text-primary"></i>
+                                        <span class="text-sm font-semibold text-text-dark dark:text-white">{{ game.broadcast }}</span>
+                                    </div>
                                     {% endif %}
                                 </div>
                                 {% endif %}
+
+                                <!-- Game Status Badge -->
+                                {% if game.statusType != 'notstarted' %}
+                                <div class="flex items-center justify-center py-2 mt-1 mb-0">
+                                    {% if game.statusType|lower == 'inprogress' %}
+                                        <span class="px-4 py-1.5 bg-gradient-to-r from-green-600 to-green-700 text-white text-xs font-bold uppercase tracking-wider rounded-full">LIVE</span>
+                                    {% elif game.statusType|lower == 'finished' %}
+                                        <span class="px-4 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-bold uppercase tracking-wider rounded-full">FINAL</span>
+                                    {% endif %}
                                 </div>
-                                <!-- End Main Game Content -->
+                                {% endif %}
 
                                 <!-- Player Picks Section -->
                                 {% if picks %}
                                     {% if game.statusType == 'finished' or game.statusType == 'inprogress' %}
-                                <div class="picks-section">
-                                    <div class="picks-header">
-                                        <i class="fas fa-users me-2"></i>Player Picks
-                                    </div>
-                                    
-                                    
-                                    <!-- Away Team Picks -->
-                                    <div class="team-picks-group away-team-picks" data-team="{{ game.awayTeamSlug }}">
-                                        <div class="team-picks-header">
-                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                 alt="{{ game.awayTeamName }} logo" 
-                                                 class="team-picks-logo">
-                                            {% endwith %}
-                                            <span class="team-picks-name">{{ game.awayTeamName }}</span>
+                                <div class="border-t border-border-light dark:border-border-subtle mt-3 pt-3">
+                                    <div class="px-4">
+                                        <div class="flex items-center gap-2 text-sm font-semibold text-text-dark dark:text-white mb-3">
+                                            <i class="fas fa-users"></i>
+                                            <span>Player Picks</span>
                                         </div>
-                                        <div class="team-picks-list">
+
+                                        <!-- Team Picks Grid (Responsive: stacked on mobile, side-by-side on larger screens) -->
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                                    <!-- Away Team Picks -->
+                                    <div class="space-y-2" data-team="{{ game.awayTeamSlug }}">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                 alt="{{ game.awayTeamName }} logo"
+                                                 class="flex-shrink-0 object-contain"
+                                                 style="width: 20px !important; height: 20px !important; max-width: none !important;">
+                                            {% endwith %}
+                                            <span class="text-sm font-semibold text-text-dark dark:text-white truncate">{{ game.awayTeamName }}</span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2">
                                             {% for pick in picks %}
                                                 {% if pick.pick == game.awayTeamSlug %}
                                                     {% with pick.uid|lookupname as username %}
                                                     {% with pick.uid|lookupavatar as avatar %}
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
-                                                            <div class="pick-player">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
-                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                         alt="{{ username|default:'Unknown' }}" 
-                                                                         class="pick-avatar pick-correct" 
+                                                            <div class="flex flex-col items-center gap-1">
+                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                                         alt="{{ username|default:'Unknown' }}"
+                                                                         class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
+                                                                         style="box-shadow: 0 0 12px rgba(40, 167, 69, 0.7), 0 0 24px rgba(40, 167, 69, 0.4);"
                                                                          title="{{ username|default:'Unknown' }} - Correct Pick">
                                                                 </a>
-                                                                <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                                <span class="text-xs text-text-dark dark:text-white font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
                                                                 {% if pick.tieBreakerScore != None %}
-                                                                <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
                                                                 {% endif %}
                                                             </div>
                                                         {% else %}
-                                                            <div class="pick-player">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
-                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                         alt="{{ username|default:'Unknown' }}" 
-                                                                         class="pick-avatar pick-incorrect" 
+                                                            <div class="flex flex-col items-center gap-1 opacity-60">
+                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                                         alt="{{ username|default:'Unknown' }}"
+                                                                         class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
+                                                                         style="box-shadow: 0 0 12px rgba(220, 53, 69, 0.7), 0 0 24px rgba(220, 53, 69, 0.4);"
                                                                          title="{{ username|default:'Unknown' }} - Incorrect Pick">
                                                                 </a>
-                                                                <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
                                                                 {% if pick.tieBreakerScore != None %}
-                                                                <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
                                                                 {% endif %}
                                                             </div>
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
-                                                        <div class="pick-player">
-                                                            <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
-                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                     alt="{{ username|default:'Unknown' }}" 
-                                                                     class="pick-avatar pick-pending" 
+                                                        <div class="flex flex-col items-center gap-1">
+                                                            <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                                     alt="{{ username|default:'Unknown' }}"
+                                                                     class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
+                                                                     style="box-shadow: 0 0 12px rgba(255, 193, 7, 0.7), 0 0 24px rgba(255, 193, 7, 0.4);"
                                                                      title="{{ username|default:'Unknown' }} - Game In Progress">
                                                             </a>
-                                                            <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                            <span class="text-xs text-text-dark dark:text-white font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
                                                             {% if pick.tieBreakerScore != None %}
-                                                            <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                            <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
                                                             {% endif %}
                                                         </div>
                                                     {% endif %}
@@ -578,59 +611,63 @@
                                     </div>
 
                                     <!-- Home Team Picks -->
-                                    <div class="team-picks-group home-team-picks" data-team="{{ game.homeTeamSlug }}">
-                                        <div class="team-picks-header">
+                                    <div class="space-y-2" data-team="{{ game.homeTeamSlug }}">
+                                        <div class="flex items-center gap-2 mb-2">
                                             {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                 alt="{{ game.homeTeamName }} logo" 
-                                                 class="team-picks-logo">
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                 alt="{{ game.homeTeamName }} logo"
+                                                 class="flex-shrink-0 object-contain"
+                                                 style="width: 20px !important; height: 20px !important; max-width: none !important;">
                                             {% endwith %}
-                                            <span class="team-picks-name">{{ game.homeTeamName }}</span>
+                                            <span class="text-sm font-semibold text-text-dark dark:text-white truncate">{{ game.homeTeamName }}</span>
                                         </div>
-                                        <div class="team-picks-list">
+                                        <div class="flex flex-wrap gap-2">
                                             {% for pick in picks %}
                                                 {% if pick.pick == game.homeTeamSlug %}
                                                     {% with pick.uid|lookupname as username %}
                                                     {% with pick.uid|lookupavatar as avatar %}
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
-                                                            <div class="pick-player">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
-                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                         alt="{{ username|default:'Unknown' }}" 
-                                                                         class="pick-avatar pick-correct" 
+                                                            <div class="flex flex-col items-center gap-1">
+                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                                         alt="{{ username|default:'Unknown' }}"
+                                                                         class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
+                                                                         style="box-shadow: 0 0 12px rgba(40, 167, 69, 0.7), 0 0 24px rgba(40, 167, 69, 0.4);"
                                                                          title="{{ username|default:'Unknown' }} - Correct Pick">
                                                                 </a>
-                                                                <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                                <span class="text-xs text-text-dark dark:text-white font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
                                                                 {% if pick.tieBreakerScore != None %}
-                                                                <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
                                                                 {% endif %}
                                                             </div>
                                                         {% else %}
-                                                            <div class="pick-player">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
-                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                         alt="{{ username|default:'Unknown' }}" 
-                                                                         class="pick-avatar pick-incorrect" 
+                                                            <div class="flex flex-col items-center gap-1 opacity-60">
+                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                                         alt="{{ username|default:'Unknown' }}"
+                                                                         class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
+                                                                         style="box-shadow: 0 0 12px rgba(220, 53, 69, 0.7), 0 0 24px rgba(220, 53, 69, 0.4);"
                                                                          title="{{ username|default:'Unknown' }} - Incorrect Pick">
                                                                 </a>
-                                                                <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
                                                                 {% if pick.tieBreakerScore != None %}
-                                                                <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
                                                                 {% endif %}
                                                             </div>
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
-                                                        <div class="pick-player">
-                                                            <a href="{% url 'user_profile' pick.uid %}" class="pick-avatar-link">
-                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                                                     alt="{{ username|default:'Unknown' }}" 
-                                                                     class="pick-avatar pick-pending" 
+                                                        <div class="flex flex-col items-center gap-1">
+                                                            <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                                     alt="{{ username|default:'Unknown' }}"
+                                                                     class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
+                                                                     style="box-shadow: 0 0 12px rgba(255, 193, 7, 0.7), 0 0 24px rgba(255, 193, 7, 0.4);"
                                                                      title="{{ username|default:'Unknown' }} - Game In Progress">
                                                             </a>
-                                                            <span class="pick-username">{{ username|default:'Unknown' }}</span>
+                                                            <span class="text-xs text-text-dark dark:text-white font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
                                                             {% if pick.tieBreakerScore != None %}
-                                                            <small class="tiebreaker-mini">({{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }})</small>
+                                                            <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
                                                             {% endif %}
                                                         </div>
                                                     {% endif %}
@@ -644,60 +681,86 @@
                                             {% endif %}
                                         </div>
                                     </div>
+                                    </div>
                                 </div>
+                            </div>
                                     {% endif %}
                                 {% endif %}
 
-                                <!-- User's Pick Highlight -->
-                                {% if picks %}
-                                {% for pick in picks %}
-                                {% if pick.userEmail == user.email and pick.pick == game.homeTeamSlug or pick.userEmail == user.email and pick.pick == game.awayTeamSlug %}
-                                <div class="user-pick-section">
-                                    <div class="user-pick-header">
-                                        <i class="fas fa-star me-2"></i>Your Pick
-                                    </div>
-                                    <div class="user-pick-display">
-                                        {% if pick.pick == game.homeTeamSlug %}
-                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                 alt="{{ game.homeTeamName }} logo" 
-                                                 class="user-pick-logo">
-                                            {% endwith %}
-                                            <span class="user-pick-team">{{ game.homeTeamName }}</span>
-                                        {% else %}
-                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                 alt="{{ game.awayTeamName }} logo" 
-                                                 class="user-pick-logo">
-                                            {% endwith %}
-                                            <span class="user-pick-team">{{ game.awayTeamName }}</span>
-                                        {% endif %}
-                                        
-                                        {% if game.statusType == 'finished' %}
-                                            {% if game.gameWinner == pick.pick %}
-                                                <span class="pick-result pick-correct">
-                                                    <i class="fas fa-check-circle me-1"></i>Correct
-                                                </span>
-                                            {% else %}
-                                                <span class="pick-result pick-incorrect">
-                                                    <i class="fas fa-times-circle me-1"></i>Incorrect
-                                                </span>
-                                            {% endif %}
-                                        {% endif %}
-                                        
-                                        {% if pick.tieBreakerScore != None %}
-                                        <div class="tiebreaker-display">
-                                            <small>Tiebreaker: {{ pick.tieBreakerScore }} pts, {{ pick.tieBreakerYards }} yds</small>
+                                <!-- User's Pick Highlight - Always show -->
+                                {% if user.is_authenticated %}
+                                <div class="{% if game.statusType == 'finished' or game.statusType == 'inprogress' %}border-t border-border-light dark:border-border-subtle mt-3 pt-3{% else %}mt-3 pt-3{% endif %}">
+                                    <div class="px-4 pb-4">
+                                        <div class="flex items-center gap-2 text-sm font-semibold text-text-dark dark:text-white mb-3">
+                                            <i class="fas fa-star"></i>
+                                            <span>Your Pick</span>
                                         </div>
-                                        {% endif %}
+
+                                        <div class="user-pick-content-{{ game.id }}">
+                                            {% if picks %}
+                                                {% for pick in picks %}
+                                                    {% if pick.userEmail == user.email %}
+                                                    {% if pick.pick == game.homeTeamSlug or pick.pick == game.awayTeamSlug %}
+                                                        <div class="flex items-center gap-4" data-user-has-pick="true">
+                                                        {% if pick.pick == game.homeTeamSlug %}
+                                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                                 alt="{{ game.homeTeamName }} logo"
+                                                                 class="w-9 h-9 object-contain flex-shrink-0"
+                                                                 style="width: 36px !important; height: 36px !important; max-width: none !important;">
+                                                            {% endwith %}
+                                                            <span class="text-sm font-semibold text-text-dark dark:text-white">{{ game.homeTeamName }}</span>
+                                                        {% else %}
+                                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                                 alt="{{ game.awayTeamName }} logo"
+                                                                 class="w-9 h-9 object-contain flex-shrink-0"
+                                                                 style="width: 36px !important; height: 36px !important; max-width: none !important;">
+                                                            {% endwith %}
+                                                            <span class="text-sm font-semibold text-text-dark dark:text-white">{{ game.awayTeamName }}</span>
+                                                        {% endif %}
+
+                                                        {% if game.statusType == 'finished' %}
+                                                            {% if game.gameWinner == pick.pick %}
+                                                                <span class="px-4 py-2 rounded-full text-xs font-bold ml-auto bg-green-600 text-white">
+                                                                    <i class="fas fa-check-circle mr-1"></i>Correct
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="px-4 py-2 rounded-full text-xs font-bold ml-auto bg-red-600 text-white">
+                                                                    <i class="fas fa-times-circle mr-1"></i>Incorrect
+                                                                </span>
+                                                            {% endif %}
+                                                        {% endif %}
+
+                                                        {% if pick.tieBreakerScore != None %}
+                                                        <div class="tiebreaker-display">
+                                                            <small>Tiebreaker: {{ pick.tieBreakerScore }} pts, {{ pick.tieBreakerYards }} yds</small>
+                                                        </div>
+                                                        {% endif %}
+                                                        </div>
+                                                    {% endif %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+
+                                        <script>
+                                        (function() {
+                                            var container = document.querySelector('.user-pick-content-{{ game.id }}');
+                                            if (container && !container.querySelector('[data-user-has-pick]')) {
+                                                var placeholder = document.createElement('div');
+                                                placeholder.className = 'flex items-center gap-4';
+                                                placeholder.innerHTML = '<div class="w-9 h-9 flex-shrink-0 bg-border-light dark:bg-border-subtle rounded-lg flex items-center justify-center" style="width: 36px !important; height: 36px !important;"><i class="fas fa-question text-text-secondary-light dark:text-text-secondary text-sm"></i></div><span class="text-sm text-text-secondary-light dark:text-text-secondary italic">No pick made</span>';
+                                                container.appendChild(placeholder);
+                                            }
+                                        })();
+                                        </script>
                                     </div>
                                 </div>
                                 {% endif %}
-                                {% endfor %}
-                                {% endif %}
 
                                 <!-- Missing Picks Alert -->
-                                {% if current_week == True and game.statusType == 'notstarted' or current_week == True and game.statusType == 'delayed' %}
+                                {% if game.statusType == 'notstarted' or game.statusType == 'delayed' %}
                                 <div class="missing-picks-section" style="display: none;" id="missing-picks-{{ game.id }}">
                                     <div class="missing-picks-header">
                                         <i class="fas fa-exclamation-triangle me-2"></i>Missing Picks
@@ -735,34 +798,33 @@
                                     })();
                                 </script>
                                 {% endif %}
-                                                         </div>
-                             {% endfor %}
-                         </div>
-                     </div>
-                     {% endfor %}
-                {% else %}
-                <div class="section-container">
-                    <div class="no-games-message text-center">
-                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                        {% if is_default_week %}
-                        <h4 class="text-muted">Week {{ week }} Games Coming Soon</h4>
-                        <p class="text-muted">NFL Week {{ week }} games will appear here once the schedule is released. Get ready for the season by submitting your picks!</p>
-                        <div class="mt-3">
-                            <a href="{% url 'game_picks' %}" class="btn btn-primary">
-                                <i class="fas fa-edit me-2"></i>Submit Week {{ week }} Picks
-                            </a>
-                        </div>
-                        {% else %}
-                        <h4 class="text-muted">No games scheduled</h4>
-                        <p class="text-muted">Check back later or view other weeks.</p>
-                        {% endif %}
-                    </div>
+                            </div>
+                            {% endfor %}
                 </div>
-                {% endif %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="section-container mb-6">
+                <div class="flex flex-col items-center justify-center py-12 text-center">
+                    <i class="fas fa-calendar-times text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
+                    {% if is_default_week %}
+                    <h4 class="text-xl font-bold text-text-dark dark:text-white mb-3">Week {{ week }} Games Coming Soon</h4>
+                    <p class="text-text-secondary-light dark:text-text-secondary mb-6 max-w-md">NFL Week {{ week }} games will appear here once the schedule is released. Get ready for the season by submitting your picks!</p>
+                    <a href="{% url 'game_picks' %}" class="btn-primary px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 transition-all hover:shadow-card-hover">
+                        <i class="fas fa-edit"></i>
+                        <span>Submit Week {{ week }} Picks</span>
+                    </a>
+                    {% else %}
+                    <h4 class="text-xl font-bold text-text-dark dark:text-white mb-3">No games scheduled</h4>
+                    <p class="text-text-secondary-light dark:text-text-secondary">Check back later or view other weeks.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
 
         <!-- Week Stats Sidebar - Below Games -->
         {% if show_week_stats_sidebar %}
-        <div class="row mt-4 d-none">
+        <div class="row mt-4 hidden">
             <div class="col-lg-6 mb-4">
                 <!-- Week Winner Card -->
                 {% for player in week_winner %}
@@ -796,166 +858,13 @@
                 {% endif %}
                 {% endfor %}
             </div>
-            
-            <div class="col-lg-6 mb-4">
-                <!-- Week Points Leaderboard -->
-                <div class="section-container">
-                    <div class="section-header">
-                        <h3 class="section-title">
-                            <i class="fas fa-list-ol me-2"></i>Week Points
-                        </h3>
-                    </div>
-                    <div class="points-leaderboard">
-                        {% for player in user_points %}
-                        <div class="player-points-card">
-                            {% with player.uid|lookupname as username %}
-                            {% with player.uid|lookupavatar as avatar %}
-                            <div class="player-info">
-                                <a href="{% url 'user_profile' player.uid %}" class="player-mini-avatar-link">
-                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                         alt="Profile picture for {{ username }}" 
-                                         class="player-mini-avatar">
-                                </a>
-                                <div class="player-details">
-                                    <div class="player-name">{{ username|default:"Unknown Player" }}</div>
-                                </div>
-                            </div>
-                            <div class="player-score">
-                                <span class="score-value">{{ player.wins }}</span>
-                                <span class="score-label">pts</span>
-                            </div>
-                            {% endwith %}
-                            {% endwith %}
-                        </div>
-                        {% endfor %}
-
-                        {% for player in players_names %}
-                        {% if player not in users_w_points %}
-                        <div class="player-points-card">
-                            {% with player|lookupname as username %}
-                            {% with player|lookupavatar as avatar %}
-                            <div class="player-info">
-                                <a href="{% url 'user_profile' player %}" class="player-mini-avatar-link">
-                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                         alt="Profile picture for {{ username }}" 
-                                         class="player-mini-avatar">
-                                </a>
-                                <div class="player-details">
-                                    <div class="player-name">{{ username|default:"Unknown Player" }}</div>
-                                </div>
-                            </div>
-                            <div class="player-score">
-                                <span class="score-value">0</span>
-                                <span class="score-label">pts</span>
-                            </div>
-                            {% endwith %}
-                            {% endwith %}
-                        </div>
-                        {% endif %}
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
         </div>
         {% endif %}
     </div>
 
-    <!-- Collapsible Enhancement Script -->
+    <!-- Game Filtering and Interactions Script -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
-        
-        // Restore saved states from localStorage on page load
-        function restoreCollapseStates() {
-            collapsibleHeaders.forEach(header => {
-                const target = header.getAttribute('data-bs-target');
-                const targetElement = document.querySelector(target);
-                const savedState = localStorage.getItem('collapse-state-' + target);
-                
-                console.log('Restoring state for', target, ':', savedState); // Debug log
-                
-                if (savedState === 'collapsed' && targetElement) {
-                    // Remove the 'show' class to collapse it
-                    targetElement.classList.remove('show');
-                    header.setAttribute('aria-expanded', 'false');
-                } else if (savedState === 'expanded' && targetElement) {
-                    // Ensure it's expanded
-                    targetElement.classList.add('show');
-                    header.setAttribute('aria-expanded', 'true');
-                }
-            });
-        }
-        
-        // Save state when toggled
-        function saveCollapseState(target, isExpanded) {
-            const state = isExpanded ? 'expanded' : 'collapsed';
-            localStorage.setItem('collapse-state-' + target, state);
-            console.log('Saved state for', target, ':', state); // Debug log
-        }
-        
-        // Set up event listeners for state saving
-        collapsibleHeaders.forEach(header => {
-            const target = header.getAttribute('data-bs-target');
-            const targetElement = document.querySelector(target);
-            
-            // Listen for Bootstrap collapse events
-            targetElement.addEventListener('shown.bs.collapse', function() {
-                saveCollapseState(target, true);
-                header.setAttribute('aria-expanded', 'true');
-            });
-            
-            targetElement.addEventListener('hidden.bs.collapse', function() {
-                saveCollapseState(target, false);
-                header.setAttribute('aria-expanded', 'false');
-            });
-            
-            // Add smooth scroll when expanding sections
-            targetElement.addEventListener('shown.bs.collapse', function() {
-                setTimeout(() => {
-                    header.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start' 
-                    });
-                }, 100);
-            });
-        });
-        
-        // Add keyboard support
-        collapsibleHeaders.forEach(header => {
-            header.setAttribute('tabindex', '0');
-            header.setAttribute('role', 'button');
-            
-            header.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    this.click();
-                }
-            });
-        });
-        
-        // Restore states after a small delay to ensure Bootstrap is ready
-        setTimeout(restoreCollapseStates, 100);
-        
-        // Debug: Add button to clear all saved states (remove this if not needed)
-        if (localStorage.getItem('scores-debug-mode')) {
-            const debugBtn = document.createElement('button');
-            debugBtn.textContent = 'Clear Collapse States';
-            debugBtn.style.position = 'fixed';
-            debugBtn.style.top = '10px';
-            debugBtn.style.right = '10px';
-            debugBtn.style.zIndex = '9999';
-            debugBtn.onclick = function() {
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('collapse-state-')) {
-                        localStorage.removeItem(key);
-                    }
-                });
-                location.reload();
-            };
-            document.body.appendChild(debugBtn);
-        }
-    });
-
     // Game Filtering Functionality
     const filterButtons = document.querySelectorAll('.filter-btn');
     const gameCards = document.querySelectorAll('.game-score-card');
@@ -1053,39 +962,39 @@
         /* Pick status border colors */
         .pick-avatar.pick-correct {
             border-color: #28a745;
-            box-shadow: 0 0 6px rgba(40, 167, 69, 0.4);
+            box-shadow: 0 0 12px rgba(40, 167, 69, 0.7), 0 0 24px rgba(40, 167, 69, 0.4);
         }
-        
+
         .pick-avatar.pick-incorrect {
             border-color: #dc3545;
-            box-shadow: 0 0 6px rgba(220, 53, 69, 0.4);
+            box-shadow: 0 0 12px rgba(220, 53, 69, 0.7), 0 0 24px rgba(220, 53, 69, 0.4);
         }
-        
+
         .pick-avatar.pick-pending {
             border-color: #ffc107;
-            box-shadow: 0 0 6px rgba(255, 193, 7, 0.4);
+            box-shadow: 0 0 12px rgba(255, 193, 7, 0.7), 0 0 24px rgba(255, 193, 7, 0.4);
         }
-        
+
         .pick-avatar:hover {
             transform: scale(1.15);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
-        
+
         .pick-avatar.pick-correct:hover {
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.6);
+            box-shadow: 0 0 16px rgba(40, 167, 69, 0.8), 0 0 32px rgba(40, 167, 69, 0.5), 0 4px 12px rgba(40, 167, 69, 0.6);
         }
-        
+
         .pick-avatar.pick-incorrect:hover {
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.6);
+            box-shadow: 0 0 16px rgba(220, 53, 69, 0.8), 0 0 32px rgba(220, 53, 69, 0.5), 0 4px 12px rgba(220, 53, 69, 0.6);
         }
-        
+
         .pick-avatar.pick-pending:hover {
-            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.6);
+            box-shadow: 0 0 16px rgba(255, 193, 7, 0.8), 0 0 32px rgba(255, 193, 7, 0.5), 0 4px 12px rgba(255, 193, 7, 0.6);
         }
         
         .missing-pick-avatar {
-            width: 48px;
-            height: 48px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             border: 3px solid #dc3545;
             object-fit: cover;
@@ -1094,12 +1003,13 @@
             transition: all 0.2s ease;
             margin: 2px;
             display: inline-block;
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.6), 0 0 20px rgba(220, 53, 69, 0.3);
         }
-        
+
         .missing-pick-avatar:hover {
             opacity: 1;
             transform: scale(1.15);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.5);
+            box-shadow: 0 0 16px rgba(220, 53, 69, 0.8), 0 0 32px rgba(220, 53, 69, 0.5), 0 4px 12px rgba(220, 53, 69, 0.6);
         }
         
         /* Team picks layout adjustments */
@@ -1176,7 +1086,7 @@
         /* Missing picks section improvements */
         .missing-picks-section {
             background: rgba(0, 0, 0, 0.02);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
             border-radius: 0 0 12px 12px;
             padding: 12px;
             margin-top: 12px;
@@ -1240,153 +1150,6 @@
         }
     `;
     document.head.appendChild(scoresPageStyle);
-
-    // Add immediate dark mode CSS injection
-    const immediateDarkModeStyle = document.createElement('style');
-    immediateDarkModeStyle.textContent = `
-        /* Immediate dark mode fixes for scores page */
-        [data-bs-theme="dark"] .game-score-card {
-            background: linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%) !important;
-            background-color: #404040 !important;
-            color: #ffffff !important;
-            border: 1px solid #555555 !important;
-        }
-        [data-bs-theme="dark"] .game-status-header {
-            background: #2a2a2a !important;
-            background-color: #2a2a2a !important;
-            color: #ffffff !important;
-            border-bottom: 1px solid #555555 !important;
-        }
-        [data-bs-theme="dark"] .game-info-bar {
-            background: #2a2a2a !important;
-            background-color: #2a2a2a !important;
-            color: #ffffff !important;
-        }
-        [data-bs-theme="dark"] .game-info-item {
-            background: #333333 !important;
-            background-color: #333333 !important;
-            color: #ffffff !important;
-            border: 1px solid #555555 !important;
-        }
-        [data-bs-theme="dark"] .team-name {
-            color: #ffffff !important;
-        }
-        
-        /* Fix total-score class to have light text and strong contrast */
-        [data-bs-theme="dark"] .total-score {
-            color: #ffffff !important;
-            text-shadow: none !important;
-            opacity: 1 !important;
-            font-weight: 800 !important;
-        }
-        
-        /* Fix LIVE button background - make the container dark */
-        [data-bs-theme="dark"] .game-status-display {
-            background: #2a2a2a !important;
-            background-color: #2a2a2a !important;
-            border: 1px solid #555555 !important;
-            padding: 0.5rem !important;
-        }
-        
-        /* Force LIVE button itself to have proper styling */
-        [data-bs-theme="dark"] .game-status.live {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
-            color: #ffffff !important;
-            border: 1px solid #1e7e34 !important;
-        }
-        
-        /* Dark mode avatar styles */
-        [data-bs-theme="dark"] .pick-avatar {
-            border-color: #555555 !important;
-        }
-        
-        [data-bs-theme="dark"] .pick-avatar.pick-correct {
-            border-color: #198754 !important;
-            box-shadow: 0 0 8px rgba(25, 135, 84, 0.5) !important;
-        }
-        
-        [data-bs-theme="dark"] .pick-avatar.pick-incorrect {
-            border-color: #dc3545 !important;
-            box-shadow: 0 0 8px rgba(220, 53, 69, 0.5) !important;
-        }
-        
-        [data-bs-theme="dark"] .pick-avatar.pick-pending {
-            border-color: #ffc107 !important;
-            box-shadow: 0 0 8px rgba(255, 193, 7, 0.5) !important;
-        }
-        
-        [data-bs-theme="dark"] .pick-avatar.pick-correct:hover {
-            box-shadow: 0 4px 16px rgba(25, 135, 84, 0.7) !important;
-        }
-        
-        [data-bs-theme="dark"] .pick-avatar.pick-incorrect:hover {
-            box-shadow: 0 4px 16px rgba(220, 53, 69, 0.7) !important;
-        }
-        
-        [data-bs-theme="dark"] .pick-avatar.pick-pending:hover {
-            box-shadow: 0 4px 16px rgba(255, 193, 7, 0.7) !important;
-        }
-        
-        [data-bs-theme="dark"] .missing-pick-avatar {
-            border-color: #dc3545 !important;
-        }
-        
-        [data-bs-theme="dark"] .missing-pick-avatar:hover {
-            box-shadow: 0 4px 16px rgba(220, 53, 69, 0.6) !important;
-        }
-        
-        [data-bs-theme="dark"] .tiebreaker-mini {
-            color: #adb5bd !important;
-        }
-        
-        /* Dark mode team picks and missing picks */
-        [data-bs-theme="dark"] .team-picks-list {
-            background: rgba(255, 255, 255, 0.05) !important;
-        }
-        
-        [data-bs-theme="dark"] .team-picks-name {
-            color: #ffffff !important;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-        }
-        
-        [data-bs-theme="dark"] .pick-username {
-            color: #e9ecef !important;
-        }
-        
-        [data-bs-theme="dark"] .missing-picks-section {
-            background: rgba(255, 255, 255, 0.05) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
-        
-        [data-bs-theme="dark"] .missing-picks-header {
-            color: #e9ecef !important;
-        }
-        
-        [data-bs-theme="dark"] .no-picks-message {
-            color: #adb5bd !important;
-        }
-        
-        /* Mobile responsive styles for pick usernames */
-        @media (max-width: 768px) {
-            .pick-player {
-                min-width: 50px;
-                gap: 0.2rem;
-                margin: 0.2rem;
-            }
-            
-            .pick-username {
-                font-size: 0.7rem;
-                max-width: 50px;
-            }
-            
-            .pick-avatar {
-                width: 40px;
-                height: 40px;
-            }
-        }
-        
-    `;
-    document.head.appendChild(immediateDarkModeStyle);
 
     // Live Score Updates
     let updateInterval;
@@ -1676,12 +1439,13 @@
             console.log('Applying dark mode fixes to scores page...');
             
             // Target Week Points leaderboard
-            const pointsLeaderboard = document.querySelector('#week-points-leaderboard');
-            if (pointsLeaderboard) {
-                pointsLeaderboard.style.setProperty('background-color', '#404040', 'important');
-                pointsLeaderboard.style.setProperty('background', '#404040', 'important');
-                pointsLeaderboard.style.setProperty('color', '#ffffff', 'important');
-            }
+            // COMMENTED OUT - Using Tailwind CSS backgrounds now
+            // const pointsLeaderboard = document.querySelector('#week-points-leaderboard');
+            // if (pointsLeaderboard) {
+            //     pointsLeaderboard.style.setProperty('background-color', '#404040', 'important');
+            //     pointsLeaderboard.style.setProperty('background', '#404040', 'important');
+            //     pointsLeaderboard.style.setProperty('color', '#ffffff', 'important');
+            // }
             
             // Force Week Points player cards
             const playerCards = document.querySelectorAll('.player-points-card');
@@ -1854,9 +1618,13 @@
     }
     
     // Run after page load and after any updates
-    document.addEventListener('DOMContentLoaded', hideEmptyTeamPickSections);
+    hideEmptyTeamPickSections();
     setTimeout(hideEmptyTeamPickSections, 100);
-    
+    }); // End DOMContentLoaded
+
     </script>
+
+    <!-- Alpine.js for collapsible sections -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
 {% endblock %}

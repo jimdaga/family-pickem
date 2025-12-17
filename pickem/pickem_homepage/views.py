@@ -83,11 +83,23 @@ def index(request):
     
     # Get current week games
     current_games = GamesAndScores.objects.filter(
-        gameseason=gameseason, 
-        gameWeek=current_week, 
+        gameseason=gameseason,
+        gameWeek=current_week,
         competition=current_competition
     ).count()
-    
+
+    # Get today's games (games happening on the current date)
+    from datetime import datetime
+    today_games = GamesAndScores.objects.filter(
+        gameseason=gameseason,
+        startTimestamp__date=today
+    ).order_by('startTimestamp')
+
+    # Get team records for today's games
+    wins_losses = []
+    if today_games.exists():
+        wins_losses = Teams.objects.filter(gameseason=gameseason)
+
     # Get total players count
     total_players = User.objects.filter(is_active=True, is_superuser=False).count()
     
@@ -216,6 +228,8 @@ def index(request):
         'top_players': top_players,
         'current_week_winner': current_week_winner,
         'current_games': current_games,
+        'today_games': today_games,
+        'wins_losses': wins_losses,
         'total_players': total_players,
         'total_picks': total_picks,
         'total_correct_picks': total_correct_picks,
@@ -374,7 +388,7 @@ def scores(request):
         'players_names': players_names,
         'players_ids': players_ids,
         'week_winner': week_winner,
-        'current_week': True,
+        'current_week': game_week,
         'points_total': points_total,
         'show_week_stats_sidebar': picks_total > 0,
         'game_weeks': range(1,19),
@@ -468,34 +482,6 @@ def scores_long(request, competition, gameseason, week):
         'game_weeks': range(1,19),
         'gameseason': gameseason,
         'user_weekly_stats': user_weekly_stats
-    }
-    return HttpResponse(template.render(context, request))
-
-def stats(request):
-    today = date.today()
-    gameseason = get_season()
-    
-    User = get_user_model()
-
-    # Get list of players and their rankings
-    players = User.objects.filter(is_active=True)
-    player_points = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
-    
-    # Get players with stats entries for Player Performance Analysis
-    # Order by season accuracy (descending), then by weeks won (descending)
-    player_stats = userStats.objects.all().order_by(
-        '-pickPercentSeason', 
-        '-weeksWonSeason',
-        '-correctPickTotalSeason'
-    )
-
-    template = loader.get_template('pickem/stats.html')
-
-    context = {
-        'players': players,
-        'player_points': player_points,
-        'player_stats': player_stats,
-        'gameseason': gameseason
     }
     return HttpResponse(template.render(context, request))
 

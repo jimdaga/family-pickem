@@ -4,227 +4,281 @@
 {% load pickem_homepage_extras %}
 
 {% block mobile_title %}
-    <div class="mobile-page-header">
-        <h2 class="mobile-title-text">
-            <i class="fas fa-trophy me-2"></i>League Standings
-        </h2>
+    <div class="mobile-subtitle">
+        <i class="fas fa-trophy mr-2"></i>Standings
     </div>
 {% endblock %}
 
 {% block content %}
 
-<div class="container min-vh-100">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <div class="container standings-main-container">
-        <div class="col">
-            <!-- Page Header -->
-            <div class="page-header-clean text-center d-none d-lg-block mb-4">
-                <h2 class="page-title">
-                    <i class="fas fa-trophy me-3"></i>League Standings
-                </h2>
+    <!-- Hero Header -->
+    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 shadow-xl animate-fade-in">
+        <!-- Subtle background pattern -->
+        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
+
+        <!-- Content -->
+        <div class="relative z-10">
+            <!-- Icon -->
+            <div class="flex items-center justify-center mb-3 lg:mb-4">
+                <i class="fas fa-trophy text-4xl lg:text-6xl text-primary"></i>
             </div>
 
-            <!-- Season Champion Section (if exists) -->
-            {% if season_winner %}
-            <div class="section-container mb-4">
-                <div class="champion-spotlight">
-                    <div class="champion-content">
-                        <div class="champion-crown">
-                            <i class="fas fa-crown"></i>
-                        </div>
-                        <h3 class="champion-title">Season Champion</h3>
-                        {% with season_winner.userID|safe_username as champion_name %}
-                        {% with season_winner.userID|lookupavatar as champion_avatar %}
-                        <div class="champion-info">
-                            <a href="{% url 'user_profile' season_winner.userID %}" class="champion-avatar-link">
-                                <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
-                                     alt="Profile picture for {{ champion_name }}" 
-                                     class="champion-avatar">
-                            </a>
-                            <div class="champion-details">
-                                <h4 class="champion-name">{{ champion_name|default:"Unknown Champion" }}</h4>
-                                <p class="champion-subtitle">Congratulations on your victory!</p>
-                            </div>
-                        </div>
-                        {% endwith %}
-                        {% endwith %}
-                    </div>
+            <!-- Title -->
+            <h2 class="text-3xl lg:text-5xl font-black tracking-tight mb-2 lg:mb-3"
+                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
+                League Standings
+            </h2>
+
+            <!-- Subtitle -->
+            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium">
+                Current season rankings and weekly champions
+            </p>
+        </div>
+    </div>
+
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- Season Champion Section (if exists) -->
+    {% if season_winner %}
+    <div class="section-container mb-6 relative overflow-hidden">
+        <!-- Animated Background -->
+        <div class="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-orange-500/10 to-red-500/10 dark:from-yellow-500/20 dark:via-orange-500/20 dark:to-red-500/20"></div>
+        <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+
+        <div class="relative z-10 text-center py-4">
+            <!-- Crown Icon -->
+            <div class="mb-2">
+                <i class="fas fa-crown text-4xl text-yellow-500 animate-pulse"></i>
+            </div>
+
+            <!-- Title -->
+            <h3 class="text-2xl font-black text-text-dark dark:text-white mb-3">
+                Season Champion
+            </h3>
+
+            <!-- Champion Info -->
+            {% with season_winner.userID|safe_username as champion_name %}
+            {% with season_winner.userID|lookupavatar as champion_avatar %}
+            <div class="flex flex-col items-center gap-2">
+                <a href="{% url 'user_profile' season_winner.userID %}" class="group">
+                    <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                         alt="Profile picture for {{ champion_name }}"
+                         class="w-16 h-16 rounded-full border-4 border-yellow-500 shadow-glow-primary group-hover:scale-110 transition-transform duration-200">
+                </a>
+                <div>
+                    <h4 class="text-xl font-bold text-text-dark dark:text-white mb-1 uppercase">
+                        {{ champion_name|default:"Unknown Champion" }}
+                    </h4>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                        Congratulations on your victory!
+                    </p>
                 </div>
             </div>
-            {% endif %}
+            {% endwith %}
+            {% endwith %}
+        </div>
+    </div>
+    {% endif %}
 
-            <!-- Overall Points Section -->
-            <div class="section-container mb-5">
-                <div class="section-header d-flex justify-content-between align-items-center">
-                    <h3 class="section-title mb-0">
-                        <i class="fas fa-medal me-2"></i>Leaderboard
-                    </h3>
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="seasonDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            {% for season in all_seasons %}
-                                {% if season.value == selected_season %}
-                                    {{ season.display }}
-                                {% endif %}
-                            {% empty %}
-                                Select Season
-                            {% endfor %}
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="seasonDropdown">
-                            {% for season in all_seasons %}
-                            <li>
-                                <a class="dropdown-item {% if season.value == selected_season %}active{% endif %}" href="?season={{ season.value }}">
-                                    {{ season.display }}
-                                </a>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="leaderboard-container">
-                    {% for player in player_points %}
-                    <a href="{% url 'user_profile' player.userID %}" class="leaderboard-card-link">
-                        <div class="leaderboard-card d-flex align-items-center">
-                            {% with player.userID|safe_username as username %}
-                            {% with player.userID|lookupavatar as avatar %}
-                            
-                            <!-- Rank Number (Left) -->
-                            <div class="rank-number-left">
-                                {{ forloop.counter }}
-                            </div>
-                            
-                            <!-- Player Info (Center) -->
-                            <div class="player-info-center d-flex align-items-center flex-grow-1">
-                                <img class="player-avatar me-3" src="{{ avatar }}" alt="Profile picture for {{ username }}">
-                                <div class="player-details">
-                                    <h5 class="player-name mb-1">{{ username }}</h5>
-                                    <small class="text-muted">{{ player.userID|lookuptagline }}</small>
-                                </div>
-                            </div>
-                            
-                            <!-- Points (Right) -->
-                            <div class="points-display-right">
-                                <div class="points-number">{{ player.total_points|default:0 }}</div>
-                                <small class="points-label">POINTS</small>
-                            </div>
-                            
-                            {% endwith %}
-                            {% endwith %}
-                        </div>
+    <!-- Overall Points Section -->
+    <div class="section-container mb-6">
+        <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+            <h3 class="section-title">
+                <i class="fas fa-medal mr-2"></i>Leaderboard
+            </h3>
+
+            <!-- Season Dropdown -->
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open"
+                        @click.away="open = false"
+                        class="px-4 py-2 bg-surface-light dark:bg-surface-hover border border-border-light dark:border-border-subtle rounded-xl text-text-dark dark:text-white font-medium hover:bg-surface-light/80 dark:hover:bg-surface transition-all flex items-center gap-2"
+                        type="button">
+                    <span>
+                        {% for season in all_seasons %}
+                            {% if season.value == selected_season %}
+                                {{ season.display }}
+                            {% endif %}
+                        {% empty %}
+                            Select Season
+                        {% endfor %}
+                    </span>
+                    <i class="fas fa-chevron-down text-sm transition-transform" :class="{ 'rotate-180': open }"></i>
+                </button>
+
+                <div x-show="open"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-150"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95"
+                     class="absolute right-0 mt-2 w-48 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle z-50 py-2 max-h-64 overflow-y-auto"
+                     style="display: none;">
+                    {% for season in all_seasons %}
+                    <a href="?season={{ season.value }}"
+                       class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors {% if season.value == selected_season %}bg-primary/10 font-semibold{% endif %}">
+                        {{ season.display }}
                     </a>
-                    {% empty %}
-                    <div class="empty-state">
-                        <i class="fas fa-users text-muted mb-3"></i>
-                        <p class="text-muted">No player data available.</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Week Winners Section -->
-            <div class="section-container mb-5">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-calendar-check me-2"></i>Weekly Champions
-                    </h3>
-                </div>
-                
-                <div class="week-winners-grid">
-                    {% for i in 18|times %}
-                    <div class="week-winner-card">
-                        <div class="week-number">Week {{ i }}</div>
-                        <div class="winner-info d-flex flex-column align-items-center justify-content-center">
-                            {% with i|lookweekwinner:selected_season as winnername %}
-                                {% for x in winnername %}
-                                    {% with x.userID|safe_username as username %}
-                                    {% with x.userID|lookupavatar as avatar %}
-                                    <div class="winner-display">
-                                        <a href="{% url 'user_profile' x.userID %}" class="winner-avatar-link">
-                                            <img class="winner-avatar mb-2" src="{{ avatar }}" alt="Profile picture for {{ username }}">
-                                        </a>
-                                        <div class="winner-details">
-                                            <div class="winner-name">
-                                                <i class="fas fa-trophy text-warning me-1"></i>
-                                                <span>{{ username }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endwith %}
-                                    {% endwith %}
-                                {% empty %}
-                                    <!-- If no winner, show a placeholder -->
-                                    <img class="winner-avatar-placeholder mb-2" src="{% static 'images/profile.png' %}" alt="TDB User Profile Picture">
-                                    <div class="winner-details">
-                                        <div class="winner-name">
-                                            <span class="text-muted">TBD</span>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            {% endwith %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Week Details Section -->
-            <div class="section-container">
-                <div class="section-header">
-                    <h3 class="section-title">
-                        <i class="fas fa-chart-line me-2"></i>Detailed Breakdown
-                    </h3>
-                </div>
-
-                <!-- Player Detail Cards for All Screen Sizes -->
-                <div class="player-cards-container">
-                    {% for player in player_points %}
-                    <div class="player-detail-card">
-                        {% with player.userID|safe_username as username %}
-                        <div class="player-card-header d-flex align-items-center mb-3">
-                            {% with player.userID|lookupavatar as avatar %}
-                            <a href="{% url 'user_profile' player.userID %}" class="player-profile-link">
-                                <img class="player-profile-img me-3" src="{{ avatar }}" alt="Profile picture for {{ username }}">
-                            </a>
-                            {% endwith %}
-                            <div class="flex-grow-1">
-                                <h5 class="mb-0 text-uppercase">{{ username }}</h5>
-                                <small class="text-muted">Total: <strong>{{ player.total_points|default:0 }} points</strong></small>
-                            </div>
-                        </div>
-                        {% endwith %}
-                        
-                        <div class="weeks-grid">
-                            {% for week_num in 18|times %}
-                                <div class="week-item">
-                                    <div class="week-label">Week {{ week_num }}</div>
-                                    {% with player|get_week_points:week_num as points %}
-                                        <div class="week-points">
-                                            {% if points != None %}
-                                                {{ points }}
-                                                {% if player|get_week_winner:week_num %}
-                                                    <span class="trophy-icon ms-1" aria-label="Week winner">&#127942;</span>
-                                                {% endif %}
-                                            {% else %}
-                                                -
-                                            {% endif %}
-                                        </div>
-                                    {% endwith %}
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="empty-state">
-                        <i class="fas fa-chart-line text-muted mb-3"></i>
-                        <p class="text-muted">No player data available.</p>
-                    </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
+
+        <!-- Leaderboard -->
+        <div class="space-y-2">
+            {% for player in player_points %}
+            <a href="{% url 'user_profile' player.userID %}"
+               class="block bg-surface-light dark:bg-surface rounded-xl p-4 border border-border-light dark:border-border-subtle hover:border-primary/50 dark:hover:border-primary/50 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-200 animate-fade-in-up"
+               style="animation-delay: {{ forloop.counter0|add:1|floatformat:2 }}s">
+                {% with player.userID|safe_username as username %}
+                {% with player.userID|lookupavatar as avatar %}
+
+                <div class="flex items-center gap-4">
+                    <!-- Rank Badge -->
+                    <div class="flex-shrink-0 w-12 h-12 rounded-full
+                                {% if forloop.counter == 1 %}bg-yellow-500
+                                {% elif forloop.counter == 2 %}bg-gray-400
+                                {% elif forloop.counter == 3 %}bg-orange-600
+                                {% else %}bg-surface-hover{% endif %}
+                                flex items-center justify-center font-black text-white text-lg shadow-lg">
+                        {{ forloop.counter }}
+                    </div>
+
+                    <!-- Player Avatar & Info -->
+                    <img src="{{ avatar }}"
+                         alt="Profile picture for {{ username }}"
+                         class="w-14 h-14 rounded-full border-2 border-border-light dark:border-border-subtle">
+
+                    <div class="flex-1 min-w-0">
+                        <h5 class="font-bold text-lg text-text-dark dark:text-white truncate uppercase">{{ username }}</h5>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary truncate">{{ player.userID|lookuptagline }}</p>
+                    </div>
+
+                    <!-- Points Display -->
+                    <div class="text-right flex-shrink-0">
+                        <div class="text-3xl font-black text-secondary-light dark:text-secondary">{{ player.total_points|default:0 }}</div>
+                        <div class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase tracking-wide">Points</div>
+                    </div>
+                </div>
+
+                {% endwith %}
+                {% endwith %}
+            </a>
+            {% empty %}
+            <div class="flex flex-col items-center justify-center py-12 text-center">
+                <i class="fas fa-users text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
+                <p class="text-text-secondary-light dark:text-text-secondary">No player data available.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Week Winners Section -->
+    <div class="section-container mb-6">
+        <h3 class="section-title mb-6">
+            <i class="fas fa-calendar-check mr-2"></i>Weekly Champions
+        </h3>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {% for i in 18|times %}
+            <div class="bg-surface-light dark:bg-surface-hover rounded-xl p-4 border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all">
+                <div class="text-center mb-3">
+                    <div class="text-sm font-bold text-primary mb-2">Week {{ i }}</div>
+                </div>
+                <div class="flex flex-col items-center justify-center">
+                    {% with i|lookweekwinner:selected_season as winnername %}
+                        {% for x in winnername %}
+                            {% with x.userID|safe_username as username %}
+                            {% with x.userID|lookupavatar as avatar %}
+                            <div class="text-center">
+                                <a href="{% url 'user_profile' x.userID %}" class="block mb-2">
+                                    <img src="{{ avatar }}"
+                                         alt="Profile picture for {{ username }}"
+                                         class="w-16 h-16 rounded-full border-2 border-yellow-500 mx-auto hover:scale-110 transition-transform">
+                                </a>
+                                <div class="flex items-center justify-center gap-1 text-xs font-semibold text-text-dark dark:text-white">
+                                    <i class="fas fa-trophy text-yellow-500"></i>
+                                    <span class="truncate max-w-[80px] uppercase">{{ username }}</span>
+                                </div>
+                            </div>
+                            {% endwith %}
+                            {% endwith %}
+                        {% empty %}
+                            <!-- If no winner, show a placeholder -->
+                            <img src="{% static 'images/profile.png' %}"
+                                 alt="TBD User Profile Picture"
+                                 class="w-16 h-16 rounded-full border-2 border-border-light dark:border-border-subtle opacity-50 mb-2 mx-auto">
+                            <div class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold">TBD</div>
+                        {% endfor %}
+                    {% endwith %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Week Details Section -->
+    <div class="section-container">
+        <h3 class="section-title mb-6">
+            <i class="fas fa-chart-line mr-2"></i>Detailed Breakdown
+        </h3>
+
+        <!-- Player Detail Cards -->
+        <div class="space-y-4">
+            {% for player in player_points %}
+            <div class="bg-surface-light dark:bg-surface-hover rounded-xl p-6 border border-border-light dark:border-border-subtle">
+                {% with player.userID|safe_username as username %}
+
+                <!-- Player Header -->
+                <div class="flex items-center gap-4 mb-4 pb-4 border-b border-border-light dark:border-border-subtle">
+                    {% with player.userID|lookupavatar as avatar %}
+                    <a href="{% url 'user_profile' player.userID %}">
+                        <img src="{{ avatar }}"
+                             alt="Profile picture for {{ username }}"
+                             class="w-14 h-14 rounded-full border-2 border-border-light dark:border-border-subtle hover:scale-110 transition-transform">
+                    </a>
+                    {% endwith %}
+                    <div class="flex-1">
+                        <h5 class="text-xl font-bold text-text-dark dark:text-white uppercase">{{ username }}</h5>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                            Total: <strong class="text-secondary-light dark:text-secondary">{{ player.total_points|default:0 }} points</strong>
+                        </p>
+                    </div>
+                </div>
+                {% endwith %}
+
+                <!-- Weeks Grid -->
+                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-2">
+                    {% for week_num in 18|times %}
+                    <div class="flex flex-col items-center justify-center p-2 bg-bg-light dark:bg-surface rounded-lg border border-border-light dark:border-border-subtle">
+                        <div class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold mb-1">W{{ week_num }}</div>
+                        {% with player|get_week_points:week_num as points %}
+                        <div class="text-lg font-black text-text-dark dark:text-white flex items-center gap-1">
+                            {% if points != None %}
+                                {{ points }}
+                                {% if player|get_week_winner:week_num %}
+                                    <span class="text-yellow-500 text-base" title="Week winner">🏆</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-text-secondary-light dark:text-text-secondary">-</span>
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="flex flex-col items-center justify-center py-12 text-center">
+                <i class="fas fa-chart-line text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
+                <p class="text-text-secondary-light dark:text-text-secondary">No player data available.</p>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 </div>
 
-
+<!-- Alpine.js for dropdown (if not already included) -->
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
 {% endblock %}

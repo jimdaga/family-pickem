@@ -30,7 +30,7 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL='https'
 DEBUG='True'
 
 # Allowed Host(s)
-ALLOWED_HOSTS = ['localhost']
+ALLOWED_HOSTS = ['localhost', 'corticolous-unarbitrarily-noel.ngrok-free.dev']
 
 if 'DJANGO_ALLOWED_HOSTS' in os.environ:
     django_allowed_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS')
@@ -50,7 +50,7 @@ if 'RDS_DB_NAME' in os.environ:
         pass
 
 # CSRF Origins 
-CSRF_TRUSTED_ORIGINS = ['https://*.localhost']
+CSRF_TRUSTED_ORIGINS = ['https://*.localhost', 'https://*.corticolous-unarbitrarily-noel.ngrok-free.dev']
 
 if 'CSRF_TRUSTED_ORIGINS' in os.environ:
     CSRF_TRUSTED_ORIGINS.append(os.environ["CSRF_TRUSTED_ORIGINS"])
@@ -129,6 +129,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'pickem.context_processors.theme_context',
                 'pickem.context_processors.site_banner_context',
+                'pickem.context_processors.footer_stats_context',
             ],
         },
     },

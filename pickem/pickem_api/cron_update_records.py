@@ -52,13 +52,15 @@ def get_team_ids():
         for leauge in leagues_data:
             for team in leauge['teams']:
                 print('Updating Team Data for {}'.format(team['team']['slug']))
-                update_team_record(team['team']['id'], team['team']['slug'], team['team']['displayName'])
+                team_color = team['team'].get('color', '')
+                team_alt_color = team['team'].get('alternateColor', '')
+                update_team_record(team['team']['id'], team['team']['slug'], team['team']['displayName'], team_color, team_alt_color)
 
     except requests.exceptions.RequestException:
         print(response.text)
 
 
-def update_team_record(team_id, team_slug, team_display_name):
+def update_team_record(team_id, team_slug, team_display_name, team_color='', team_alt_color=''):
     """
     Get all the game data from ESPN APIs
     """
@@ -129,6 +131,8 @@ def update_team_record(team_id, team_slug, team_display_name):
         "teamWins": team_wins,
         "teamLosses": team_losses,
         "teamTies": team_ties,
+        "color": team_color,
+        "alternateColor": team_alt_color,
     }
 
     payload_string = json.dumps(payload, default=str)
