@@ -10,6 +10,34 @@
 {% endblock %}
 
 {% block content %}
+    <!-- Hero Profile Section -->
+    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-slate-100 via-blue-200 to-indigo-200 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-600 dark:border-blue-500/40 shadow-xl">
+        <!-- Subtle background pattern -->
+        <div class="absolute inset-0 opacity-20 dark:opacity-5 pointer-events-none"></div>
+
+        <!-- Content -->
+        <div class="relative z-10">
+            <!-- Profile Avatar -->
+            <div class="relative inline-block mb-4">
+                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                     alt="Your profile picture"
+                     class="w-32 h-32 rounded-full border-4 border-primary shadow-lg">
+                <div class="absolute bottom-2 right-2 w-4 h-4 bg-green-500 border-2 border-white dark:border-surface rounded-full"></div>
+            </div>
+
+            <!-- User Name -->
+            <h1 class="text-3xl lg:text-5xl font-black tracking-tight mb-2"
+                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
+                {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} {{ user.socialaccount_set.all.0.extra_data.family_name }}
+            </h1>
+
+            <!-- Email -->
+            <p class="text-base lg:text-xl text-gray-700 dark:text-text-secondary font-medium">
+                {{ user.email }}
+            </p>
+        </div>
+    </div>
+
 <div class="max-w-7xl mx-auto px-6 py-6">
     <!-- Messages -->
     {% if messages %}
@@ -27,20 +55,6 @@
             {% endfor %}
         </div>
     {% endif %}
-
-    <!-- Profile Header -->
-    <div class="text-center mb-8">
-        <div class="relative inline-block mb-4">
-            <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
-                 alt="Your profile picture"
-                 class="w-32 h-32 rounded-full border-4 border-primary shadow-lg">
-            <div class="absolute bottom-2 right-2 w-4 h-4 bg-green-500 border-2 border-white dark:border-surface rounded-full"></div>
-        </div>
-        <h2 class="text-3xl font-bold text-text-dark dark:text-white mb-2">
-            {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} {{ user.socialaccount_set.all.0.extra_data.family_name }}
-        </h2>
-        <h3 class="text-lg text-text-secondary-light dark:text-text-secondary">{{ user.email }}</h3>
-    </div>
 
     <!-- Profile Content Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -81,7 +95,7 @@
                             {% if user_profile.favorite_team %}
                                 {% for team in teams %}
                                     {% if team.teamNameSlug == user_profile.favorite_team %}
-                                        <img src="{{ team.teamLogo }}" alt="{{ team.teamNameName }}" class="w-6 h-6 object-contain">
+                                        <img src="{{ team.teamLogo }}" alt="{{ team.teamNameName }}" class="w-5 h-5 object-contain">
                                         {{ team.teamNameName }}
                                     {% endif %}
                                 {% endfor %}
@@ -172,34 +186,39 @@
             </div>
             <div class="p-6">
                 <div class="space-y-6">
-                    <div class="flex items-center justify-between">
+                    <!-- Dark Mode Toggle -->
+                    <div class="flex items-center justify-between gap-4">
                         <div class="flex-1">
                             <div class="flex items-center gap-2 mb-1">
                                 <i class="fas fa-moon text-text-dark dark:text-white"></i>
                                 <span class="font-semibold text-text-dark dark:text-white">Dark Mode</span>
                             </div>
-                            <small class="text-text-secondary-light dark:text-text-secondary">Use dark theme for the site</small>
+                            <div class="text-sm text-text-secondary-light dark:text-text-secondary">Use dark theme for the site</div>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" class="sr-only peer setting-toggle"
                                    id="darkMode" data-setting="dark_mode"
                                    {% if user_profile.dark_mode %}checked{% endif %}>
-                            <div class="w-11 h-6 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            <div class="w-14 h-7 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer-checked:bg-primary transition-colors duration-300"></div>
+                            <div class="absolute top-0.5 left-0.5 bg-white w-6 h-6 rounded-full transition-transform duration-300 peer-checked:translate-x-7 pointer-events-none"></div>
                         </label>
                     </div>
-                    <div class="flex items-center justify-between opacity-50">
+
+                    <!-- Email Notifications Toggle (Disabled) -->
+                    <div class="flex items-center justify-between gap-4 opacity-50">
                         <div class="flex-1">
                             <div class="flex items-center gap-2 mb-1">
                                 <i class="fas fa-bell text-text-dark dark:text-white"></i>
                                 <span class="font-semibold text-text-dark dark:text-white">Email Notifications</span>
                             </div>
-                            <small class="text-text-secondary-light dark:text-text-secondary">This feature is coming soon</small>
+                            <div class="text-sm text-text-secondary-light dark:text-text-secondary">This feature is coming soon</div>
                         </div>
                         <label class="relative inline-flex items-center cursor-not-allowed">
                             <input type="checkbox" class="sr-only peer setting-toggle" disabled
                                    id="emailNotifications" data-setting="email_notifications"
                                    {% if user_profile.email_notifications %}checked{% endif %}>
-                            <div class="w-11 h-6 bg-gray-300 dark:bg-gray-600 rounded-full peer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                            <div class="w-14 h-7 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                            <div class="absolute top-0.5 left-0.5 bg-white w-6 h-6 rounded-full pointer-events-none"></div>
                         </label>
                     </div>
                 </div>
@@ -208,36 +227,6 @@
     </div>
 </div>
 
-<!-- CSS for Username Validation -->
-<style>
-.is-valid {
-    border-color: #10b981 !important;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
-}
-
-.is-invalid {
-    border-color: #ef4444 !important;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
-}
-
-.is-info {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-}
-
-.valid-feedback {
-    color: #10b981 !important;
-    display: block !important;
-}
-
-.invalid-feedback {
-    display: block !important;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-</style>
 
 <!-- JavaScript for Profile Functionality -->
 <script>

@@ -82,3 +82,22 @@ Medium Priority
 - [x] rules page 
 - [x] Show submitted "tie breaker" on picks page 
 - [x] Recollect all the game data (for each week, update)
+
+
+
+- [ ] Write script to use ESPNs calendar data to populate the weeks:
+```
+                    "label": "Regular Season",
+                    "value": "2",
+                    "startDate": "2025-09-04T07:00Z",
+                    "endDate": "2026-01-08T07:59Z",
+                    "entries": [
+                        {
+                            "label": "Week 1",
+                            "alternateLabel": "Week 1",
+                            "detail": "Sep 4-9",
+                            "value": "1",
+                            "startDate": "2025-09-04T07:00Z",
+                            "endDate": "2025-09-10T06:59Z"
+                        },
+```

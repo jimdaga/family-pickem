@@ -30,7 +30,7 @@ echo "################################################################"
 echo
 python /code/pickem_api/cron_update_records.py --url $1
 
-# Update overall standings 
+# Update overall standings
 echo
 echo
 echo "################################################################"
@@ -40,5 +40,16 @@ echo "#"
 echo "################################################################"
 echo
 python /code/pickem_api/cron_update_standings.py --url $1
+
+# Update user rankings
+echo
+echo
+echo "################################################################"
+echo "#"
+echo "# Running: /code/pickem_api/cron_update_rankings.py"
+echo "#"
+echo "################################################################"
+echo
+python /code/pickem_api/cron_update_rankings.py --url $1
 echo
 exit 0

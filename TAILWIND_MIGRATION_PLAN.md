@@ -661,22 +661,50 @@ Once migration is complete:
 - [ ] Convert footer and banner system
 
 ### Week 3: Page Templates
-- [ ] Convert `home.html`
-  - [ ] Hero section
-  - [ ] Status cards
-  - [ ] Quick action cards
-  - [ ] Leaderboard preview
-  - [ ] League stats
-- [ ] Convert `picks.html`
-  - [ ] Progress indicator
-  - [ ] Game cards
-  - [ ] Team selection UI
-- [ ] Convert `standings.html`
-  - [ ] Leaderboard cards
-  - [ ] Week winners grid
-  - [ ] Detailed breakdown
-- [ ] Convert `scores.html`
-- [ ] Convert `stats.html`
+- [x] Convert `home.html` ✅
+  - [x] Hero section with gradient background and logo
+  - [x] Welcome message (authenticated/unauthenticated)
+  - [x] Today's games section with live game cards
+  - [x] Current week status cards
+  - [x] Quick action navigation cards
+  - [x] Top players leaderboard preview
+  - [x] League statistics cards
+  - [x] Recent week winners
+  - [x] Message board section with posts, comments, voting
+  - [x] Season champion showcase (if applicable)
+- [x] Convert `picks.html` ✅
+  - [x] Progress indicator
+  - [x] Game cards
+  - [x] Team selection UI
+- [x] Convert `standings.html` ✅
+  - [x] Season champion spotlight
+  - [x] Leaderboard with rank badges
+  - [x] Season dropdown (Alpine.js)
+  - [x] Weekly champions grid
+  - [x] Detailed breakdown table
+- [x] Convert `scores.html` ✅
+  - [x] Hero banner with gradient background
+  - [x] User weekly stats card
+  - [x] Filter buttons (All/Live/Final/Upcoming)
+  - [x] Week winner showcase
+  - [x] Week points leaderboard (collapsible with Alpine.js)
+  - [x] Game time groups (collapsible with Alpine.js)
+  - [x] Game cards with team info, spreads, weather
+  - [x] Player picks sections
+  - [x] Missing picks alerts
+- [x] Convert `stats.html` ✅
+  - [x] Hero banner with gradient background
+  - [x] League overview quick stats (4 cards)
+  - [x] Sort controls (position, accuracy, weeks won, name)
+  - [x] Player stats cards with position badges
+  - [x] Season accuracy progress bars (season & lifetime)
+  - [x] Current season stats grid (7 stat items)
+  - [x] Lifetime performance stats grid (8 stat items)
+  - [x] Trend badges (hot streak, steady, improving)
+  - [x] Champion badges for season winners
+  - [x] Team logo displays (most/least picked)
+  - [x] JavaScript sorting functionality
+  - [x] Empty state for no data
 - [ ] Convert `user_profile.html`
 - [ ] Convert `rules.html`
 

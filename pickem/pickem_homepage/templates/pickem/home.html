@@ -866,7 +866,7 @@
                     }
                     
                     if (toggleBtn) {
-                        toggleBtn.innerHTML = '<i class="fas fa-edit me-1"></i>Write Comment';
+                        toggleBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>Write Comment';
                     }
                     
                     // Load comments if not already loaded
@@ -879,7 +879,7 @@
                     commentsSection.style.display = 'none';
                     
                     if (toggleBtn) {
-                        toggleBtn.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                        toggleBtn.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
                     }
                 }
             },
@@ -900,7 +900,7 @@
                         setTimeout(forceDarkModeMessageBoard, 10);
                     }
                     
-                    button.innerHTML = '<i class="fas fa-times me-1"></i>Hide Comments';
+                    button.innerHTML = '<i class="fas fa-times mr-1"></i>Hide Comments';
                     
                     // Load comments if not already loaded
                     const commentsList = commentsSection.querySelector('.comments-list');
@@ -918,11 +918,11 @@
                             // Apply dark mode styles to the newly shown comment form
                             setTimeout(forceDarkModeMessageBoard, 10);
                         }
-                        button.innerHTML = '<i class="fas fa-times me-1"></i>Hide Comments';
+                        button.innerHTML = '<i class="fas fa-times mr-1"></i>Hide Comments';
                     } else {
                         // Hide the entire comments section
                         commentsSection.style.display = 'none';
-                        button.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                        button.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
                     }
                 }
             },
@@ -982,26 +982,26 @@
                                 </button>
                             </div>
                             <button class="btn btn-sm btn-outline-secondary reply-btn" data-comment-id="${comment.id}">
-                                <i class="fas fa-reply me-1"></i>Reply
+                                <i class="fas fa-reply mr-1"></i>Reply
                             </button>
                         </div>
                         
                         <!-- Reply form (initially hidden) -->
                         <div class="comment-reply-form" id="reply-form-${comment.id}" style="display: none;">
                             <form class="reply-form mt-2" data-parent-id="${comment.id}">
-                                <div class="d-flex">
-                                    <img src="${window.currentUserAvatar || 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'}" 
-                                         alt="Your avatar" class="comment-avatar me-2">
-                                    <div class="flex-grow-1">
-                                        <textarea class="form-control comment-textarea" 
+                                <div class="flex">
+                                    <img src="${window.currentUserAvatar || 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'}"
+                                         alt="Your avatar" class="comment-avatar mr-2">
+                                    <div class="flex-1">
+                                        <textarea class="input-base comment-textarea" 
                                                   placeholder="Write a reply..." 
                                                   rows="2"></textarea>
                                         <div class="comment-actions mt-2">
-                                            <button type="button" class="btn btn-sm btn-secondary cancel-reply-btn" data-comment-id="${comment.id}">
+                                            <button type="button" class="px-3 py-1.5 text-sm font-medium text-text-dark dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors cancel-reply-btn" data-comment-id="${comment.id}">
                                                 Cancel
                                             </button>
-                                            <button type="submit" class="btn btn-sm btn-primary">
-                                                <i class="fas fa-paper-plane me-1"></i>Reply
+                                            <button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/80 rounded-lg transition-colors">
+                                                <i class="fas fa-paper-plane mr-1"></i>Reply
                                             </button>
                                         </div>
                                     </div>
@@ -1079,7 +1079,7 @@
                             // Reset the reply button
                             const replyButton = document.querySelector(`[data-comment-id="${parentId}"].reply-btn`);
                             if (replyButton) {
-                                replyButton.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                                replyButton.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
                             }
                         } else {
                             // Hide only the comment form, keep comments visible
@@ -1091,7 +1091,7 @@
                             // Update the toggle button to show "Write Comment" instead of "Hide Comments"
                             const toggleBtn = document.querySelector(`[data-post-id="${postId}"].toggle-comments-btn`);
                             if (toggleBtn) {
-                                toggleBtn.innerHTML = '<i class="fas fa-edit me-1"></i>Write Comment';
+                                toggleBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>Write Comment';
                             }
                         }
                         
@@ -1105,7 +1105,7 @@
                         if (commentCountBtn) {
                             const currentCount = parseInt(commentCountBtn.textContent.match(/\d+/)[0]);
                             const newCount = currentCount + 1;
-                            commentCountBtn.innerHTML = `<i class="fas fa-comment me-1"></i>${newCount} comment${newCount !== 1 ? 's' : ''}`;
+                            commentCountBtn.innerHTML = `<i class="fas fa-comment mr-1"></i>${newCount} comment${newCount !== 1 ? 's' : ''}`;
                         }
                     } else {
                         alert('Error creating comment: ' + data.error);
@@ -1130,7 +1130,7 @@
                             const otherCommentId = form.id.replace('reply-form-', '');
                             const otherReplyBtn = document.querySelector(`[data-comment-id="${otherCommentId}"].reply-btn`);
                             if (otherReplyBtn) {
-                                otherReplyBtn.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                                otherReplyBtn.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
                             }
                         }
                     });
@@ -1138,12 +1138,12 @@
                     // Toggle this reply form
                     if (replyForm.style.display === 'none') {
                         replyForm.style.display = 'block';
-                        button.innerHTML = '<i class="fas fa-times me-1"></i>Cancel';
+                        button.innerHTML = '<i class="fas fa-times mr-1"></i>Cancel';
                         // Apply dark mode styles to the newly shown reply form
                         setTimeout(forceDarkModeMessageBoard, 10);
                     } else {
                         replyForm.style.display = 'none';
-                        button.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                        button.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
                     }
                 }
             },
@@ -1162,7 +1162,7 @@
                 }
                 
                 if (replyButton) {
-                    replyButton.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                    replyButton.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
                 }
             },
             
@@ -1178,7 +1178,7 @@
                     commentsSection.style.display = 'none';
                     const toggleBtn = document.querySelector(`[data-post-id="${form.dataset.postId}"].toggle-comments-btn`);
                     if (toggleBtn) {
-                        toggleBtn.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                        toggleBtn.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
                     }
                 }
             }

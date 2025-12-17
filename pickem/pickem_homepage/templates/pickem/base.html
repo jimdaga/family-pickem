@@ -119,15 +119,15 @@
                     {% if user.is_authenticated %}
                         <!-- User Profile Dropdown -->
                         <div class="relative dropdown-container">
-                            <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-border-light dark:border-border-subtle hover:bg-surface-light dark:hover:bg-surface-hover transition-colors"
+                            <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 dark:border-border-subtle dark:hover:bg-surface-hover transition-colors"
                                     aria-label="User menu" onclick="toggleDropdown(event, this)">
                                 <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
                                      alt="Profile picture"
                                      class="w-8 h-8 rounded-full">
-                                <span class="text-text-dark dark:text-white font-medium">
+                                <span class="text-white font-medium">
                                     {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
                                 </span>
-                                <i class="fas fa-chevron-down text-xs text-text-dark dark:text-white"></i>
+                                <i class="fas fa-chevron-down text-xs text-white"></i>
                             </button>
 
                             <div class="nav-dropdown absolute right-0 mt-2 w-64 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle hidden z-50 py-2">

@@ -45,6 +45,8 @@ class Teams(models.Model):
     teamWins = models.IntegerField(default=0)
     teamLosses = models.IntegerField(default=0)
     teamTies = models.IntegerField(default=0)
+    color = models.CharField(max_length=6, blank=True, null=True)
+    alternateColor = models.CharField(max_length=6, blank=True, null=True)
 
 class GamesAndScores(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -90,6 +92,10 @@ class GamesAndScores(models.Model):
     temperature = models.IntegerField(blank=True, null=True, help_text="Game temperature in Fahrenheit")
     weatherCondition = models.CharField(max_length=100, blank=True, null=True, help_text="Weather condition description")
     venueIndoor = models.BooleanField(default=False, help_text="Whether the game is played indoors")
+
+    # Broadcast and Links
+    broadcast = models.CharField(max_length=50, blank=True, null=True, help_text="TV network broadcasting the game (e.g., CBS, FOX, ESPN)")
+    gamecastUrl = models.URLField(max_length=500, blank=True, null=True, help_text="ESPN Gamecast URL for the game")
 
     class Meta:
         ordering = ['startTimestamp']
@@ -196,6 +202,7 @@ class userSeasonPoints(models.Model):
     week_18_winner = models.BooleanField(default=False, blank=True)
 
     total_points = models.IntegerField(blank=True, null=True)
+    current_rank = models.IntegerField(blank=True, null=True, help_text='Current ranking position (handles ties)')
 
     year_winner = models.BooleanField(default=False, blank=True)
 

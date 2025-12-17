@@ -32,10 +32,10 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(GamesAndScores)
 class GamesAndScoresAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'competition', 'gameseason', 'gameWeek', 'gameyear', 'startTimestamp', 'statusTitle', 
-        'homeTeamName', 'homeTeamScore', 'awayTeamName', 'awayTeamScore', 'gameWinner' )
-    list_filter = ('startTimestamp', 'gameseason', 'gameWeek',)
-    search_fields = ('homeTeamName', 'awayTeamName')
+    list_display = ('slug', 'competition', 'gameseason', 'gameWeek', 'gameyear', 'startTimestamp', 'statusTitle',
+        'homeTeamName', 'homeTeamScore', 'awayTeamName', 'awayTeamScore', 'gameWinner', 'broadcast', 'gamecastUrl')
+    list_filter = ('startTimestamp', 'gameseason', 'gameWeek', 'broadcast')
+    search_fields = ('homeTeamName', 'awayTeamName', 'broadcast')
     date_hierarchy = 'startTimestamp'
     ordering = ('gameWeek', 'startTimestamp' )
 
@@ -78,9 +78,9 @@ class GameWeekssAdmin(admin.ModelAdmin):
     list_filter = ('weekNumber', 'date', 'season')
     ordering = ('competition', 'weekNumber', 'date')
 
-@admin.register(Teams) 
+@admin.register(Teams)
 class TeamsAdmin(admin.ModelAdmin):
-    list_display = ('teamNameSlug', 'teamNameName', 'teamWins', 'teamLosses', 'teamTies')
+    list_display = ('teamNameSlug', 'teamNameName', 'teamWins', 'teamLosses', 'teamTies', 'color', 'alternateColor')
 
 @admin.register(userStats)
 class userStatsAdmin(admin.ModelAdmin):

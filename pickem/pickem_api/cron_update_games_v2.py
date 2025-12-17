@@ -363,6 +363,28 @@ def build_payload(week):
                     venue_data = competition['venue']
                     venue_indoor = venue_data.get('indoor', False)
 
+                # Extract broadcast information
+                broadcast = None
+                if 'broadcasts' in competition and len(competition['broadcasts']) > 0:
+                    # Get the first broadcast's market name (e.g., "CBS", "FOX", "ESPN")
+                    broadcast_data = competition['broadcasts'][0]
+                    if 'names' in broadcast_data and len(broadcast_data['names']) > 0:
+                        broadcast = broadcast_data['names'][0]
+
+                # Fallback to geoBroadcasts if broadcasts is empty
+                if not broadcast and 'geoBroadcasts' in competition and len(competition['geoBroadcasts']) > 0:
+                    geo_broadcast = competition['geoBroadcasts'][0]
+                    if 'media' in geo_broadcast:
+                        broadcast = geo_broadcast['media'].get('shortName')
+
+                # Extract gamecast URL from event links
+                gamecast_url = None
+                if 'links' in event:
+                    for link in event['links']:
+                        if link.get('text') == 'Gamecast' or link.get('shortText') == 'Gamecast':
+                            gamecast_url = link.get('href')
+                            break
+
             payload = {
                 "id": game_id,
                 "slug": "{}-{}".format(home_team_slug, away_team_slug),
@@ -400,7 +422,10 @@ def build_payload(week):
                 # Weather and venue information
                 "temperature": temperature,
                 "weatherCondition": weather_condition,
-                "venueIndoor": venue_indoor
+                "venueIndoor": venue_indoor,
+                # Broadcast and links
+                "broadcast": broadcast,
+                "gamecastUrl": gamecast_url
             }
             json_string = json.dumps(payload, default=str)
             add_games(json_string, game_id)
