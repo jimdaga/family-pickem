@@ -560,7 +560,7 @@
                                                                 <a href="{% url 'user_profile' pick.uid %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
-                                                                         class="w-10 h-10 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
+                                                                         class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
                                                                          style="box-shadow: 0 0 12px rgba(40, 167, 69, 0.7), 0 0 24px rgba(40, 167, 69, 0.4);"
                                                                          title="{{ username|default:'Unknown' }} - Correct Pick">
                                                                 </a>
@@ -574,7 +574,7 @@
                                                                 <a href="{% url 'user_profile' pick.uid %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
-                                                                         class="w-10 h-10 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
+                                                                         class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
                                                                          style="box-shadow: 0 0 12px rgba(220, 53, 69, 0.7), 0 0 24px rgba(220, 53, 69, 0.4);"
                                                                          title="{{ username|default:'Unknown' }} - Incorrect Pick">
                                                                 </a>
@@ -589,7 +589,7 @@
                                                             <a href="{% url 'user_profile' pick.uid %}" class="group">
                                                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                      alt="{{ username|default:'Unknown' }}"
-                                                                     class="w-10 h-10 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
+                                                                     class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
                                                                      style="box-shadow: 0 0 12px rgba(255, 193, 7, 0.7), 0 0 24px rgba(255, 193, 7, 0.4);"
                                                                      title="{{ username|default:'Unknown' }} - Game In Progress">
                                                             </a>
@@ -632,7 +632,7 @@
                                                                 <a href="{% url 'user_profile' pick.uid %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
-                                                                         class="w-10 h-10 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
+                                                                         class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
                                                                          style="box-shadow: 0 0 12px rgba(40, 167, 69, 0.7), 0 0 24px rgba(40, 167, 69, 0.4);"
                                                                          title="{{ username|default:'Unknown' }} - Correct Pick">
                                                                 </a>
@@ -646,7 +646,7 @@
                                                                 <a href="{% url 'user_profile' pick.uid %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
-                                                                         class="w-10 h-10 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
+                                                                         class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
                                                                          style="box-shadow: 0 0 12px rgba(220, 53, 69, 0.7), 0 0 24px rgba(220, 53, 69, 0.4);"
                                                                          title="{{ username|default:'Unknown' }} - Incorrect Pick">
                                                                 </a>
@@ -661,7 +661,7 @@
                                                             <a href="{% url 'user_profile' pick.uid %}" class="group">
                                                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                      alt="{{ username|default:'Unknown' }}"
-                                                                     class="w-10 h-10 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
+                                                                     class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
                                                                      style="box-shadow: 0 0 12px rgba(255, 193, 7, 0.7), 0 0 24px rgba(255, 193, 7, 0.4);"
                                                                      title="{{ username|default:'Unknown' }} - Game In Progress">
                                                             </a>
@@ -993,8 +993,8 @@
         }
         
         .missing-pick-avatar {
-            width: 48px;
-            height: 48px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             border: 3px solid #dc3545;
             object-fit: cover;
