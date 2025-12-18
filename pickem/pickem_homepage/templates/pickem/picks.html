@@ -1070,9 +1070,9 @@
                     const spreadElement = document.getElementById('editSpreadValue');
                     
                     if (spreadValue > 0) {
-                        spreadElement.innerHTML = `<img src="${homeLogo}" alt="${homeName} logo" class="spread-team-logo"> -${Math.abs(spreadValue).toFixed(1)}`;
+                        spreadElement.innerHTML = `<img src="${homeLogo}" alt="${homeName} logo" class="w-4 h-4 object-contain inline-block align-middle"> -${Math.abs(spreadValue).toFixed(1)}`;
                     } else {
-                        spreadElement.innerHTML = `<img src="${awayLogo}" alt="${awayName} logo" class="spread-team-logo"> -${Math.abs(spreadValue).toFixed(1)}`;
+                        spreadElement.innerHTML = `<img src="${awayLogo}" alt="${awayName} logo" class="w-4 h-4 object-contain inline-block align-middle"> -${Math.abs(spreadValue).toFixed(1)}`;
                     }
                     spreadInfo.style.display = 'flex';
                     hasStats = true;

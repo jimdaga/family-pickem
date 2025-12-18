@@ -102,7 +102,7 @@
 
 
     <!-- Key Performance Metrics with Visual Indicators -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <!-- Accuracy Gauge -->
         <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden p-6">
             <h4 class="text-sm font-bold text-text-dark dark:text-white mb-4 flex items-center gap-2">
@@ -115,24 +115,6 @@
                     <div class="text-center">
                         <div class="text-4xl font-black text-text-dark dark:text-white">{{ stats.pick_accuracy_current }}%</div>
                         <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase">Accuracy</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Points Progress -->
-        <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden p-6">
-            <h4 class="text-sm font-bold text-text-dark dark:text-white mb-4 flex items-center gap-2">
-                <i class="fas fa-star text-primary"></i>
-                Season Progress
-            </h4>
-            <div class="relative w-48 h-48 mx-auto">
-                <canvas id="pointsGauge"></canvas>
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="text-center">
-                        <div class="text-4xl font-black text-text-dark dark:text-white">{{ stats.current_season_points }}</div>
-                        <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase">Points</div>
-                        <div class="text-sm font-bold text-yellow-600 dark:text-yellow-400 mt-1">Rank #{{ stats.current_season_rank }}</div>
                     </div>
                 </div>
             </div>
@@ -213,17 +195,17 @@
                     {% endif %}
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <div class="p-4 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/30">
+                    <div class="p-4 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/30 text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Points</div>
                         <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.current_season_points }}</div>
                     </div>
-                    <div class="p-4 bg-yellow-500/20 border-yellow-500/30 rounded-xl border">
+                    <div class="p-4 bg-yellow-500/20 border-yellow-500/30 rounded-xl border text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Current Rank</div>
                         <div class="text-2xl font-black text-yellow-600 dark:text-yellow-400">#{{ stats.current_season_rank }}</div>
                     </div>
-                    <div class="p-4 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/30">
+                    <div class="p-4 bg-primary/10 dark:bg-primary/20 rounded-xl border border-primary/30 text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Pick Accuracy</div>
-                        <div class="flex items-baseline justify-between">
+                        <div class="flex items-baseline justify-center gap-2">
                             <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.pick_accuracy_current }}%</div>
                             {% if stats.years_playing > 1 %}
                             <div class="text-lg">
@@ -236,38 +218,38 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Correct Picks</div>
                         <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.correct_picks|floatformat:0 }}</div>
                     </div>
-                    <div class="p-4 {% if user_stats_obj.missedPicksSeason > 0 %}bg-red-500/10 dark:bg-red-600/20 border-red-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                    <div class="p-4 {% if user_stats_obj.missedPicksSeason > 0 %}bg-red-500/10 dark:bg-red-600/20 border-red-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Missed Picks</div>
-                        <div class="text-2xl font-black {% if user_stats_obj.missedPicksSeason > 0 %}text-red-600 dark:text-red-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                        <div class="text-2xl font-black {% if user_stats_obj.missedPicksSeason > 0 %}text-red-600 dark:text-red-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center justify-center gap-2">
                             {{ user_stats_obj.missedPicksSeason|default:0 }}
                             {% if user_stats_obj.missedPicksSeason > 0 %}
                                 <i class="fas fa-exclamation-triangle text-base"></i>
                             {% endif %}
                         </div>
                     </div>
-                    <div class="p-4 {% if stats.weeks_won_current_season > 0 %}bg-yellow-500/20 border-yellow-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                    <div class="p-4 {% if stats.weeks_won_current_season > 0 %}bg-yellow-500/20 border-yellow-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Weeks Won</div>
-                        <div class="text-2xl font-black {% if stats.weeks_won_current_season > 0 %}text-yellow-600 dark:text-yellow-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                        <div class="text-2xl font-black {% if stats.weeks_won_current_season > 0 %}text-yellow-600 dark:text-yellow-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center justify-center gap-2">
                             {{ stats.weeks_won_current_season }}
                             {% if stats.weeks_won_current_season > 0 %}
                                 <i class="fas fa-trophy text-base"></i>
                             {% endif %}
                         </div>
                     </div>
-                    <div class="p-4 {% if stats.perfect_weeks > 0 %}bg-secondary-light/20 dark:bg-secondary/20 border-secondary-light/30 dark:border-secondary/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                    <div class="p-4 {% if stats.perfect_weeks > 0 %}bg-secondary-light/20 dark:bg-secondary/20 border-secondary-light/30 dark:border-secondary/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Perfect Weeks</div>
-                        <div class="text-2xl font-black {% if stats.perfect_weeks > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                        <div class="text-2xl font-black {% if stats.perfect_weeks > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-dark dark:text-white{% endif %} flex items-center justify-center gap-2">
                             {{ stats.perfect_weeks|default:0 }}
                             {% if stats.perfect_weeks > 0 %}
                                 <i class="fas fa-star text-base"></i>
                             {% endif %}
                         </div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Most Picked</div>
                         <div class="flex items-center justify-center h-10">
                             {% if user_stats_obj.mostPickedSeason %}
@@ -279,7 +261,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Least Picked</div>
                         <div class="flex items-center justify-center h-10">
                             {% if user_stats_obj.leastPickedSeason %}
@@ -308,53 +290,53 @@
                     {% endif %}
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Years Playing</div>
                         <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.years_playing }}</div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Total Points</div>
                         <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.total_lifetime_points|floatformat:0 }}</div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Best Season</div>
                         <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.best_season_points }}</div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Best Rank</div>
                         <div class="text-2xl font-black text-text-dark dark:text-white">#{{ stats.best_rank|default:"--" }}</div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Pick Accuracy</div>
                         <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.pick_accuracy_lifetime }}%</div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Total Correct</div>
                         <div class="text-2xl font-black text-text-dark dark:text-white">{{ user_stats_obj.correctPickTotalTotal|default:0 }}</div>
                     </div>
-                    <div class="p-4 {% if user_stats_obj.missedPicksTotal > 0 %}bg-red-500/10 dark:bg-red-600/20 border-red-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                    <div class="p-4 {% if user_stats_obj.missedPicksTotal > 0 %}bg-red-500/10 dark:bg-red-600/20 border-red-500/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Total Missed</div>
-                        <div class="text-2xl font-black {% if user_stats_obj.missedPicksTotal > 0 %}text-red-600 dark:text-red-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                        <div class="text-2xl font-black {% if user_stats_obj.missedPicksTotal > 0 %}text-red-600 dark:text-red-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center justify-center gap-2">
                             {{ user_stats_obj.missedPicksTotal|default:0 }}
                             {% if user_stats_obj.missedPicksTotal > 0 %}
                                 <i class="fas fa-exclamation-triangle text-base"></i>
                             {% endif %}
                         </div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Weeks Won</div>
                         <div class="text-2xl font-black text-text-dark dark:text-white">{{ stats.weeks_won_total }}</div>
                     </div>
-                    <div class="p-4 {% if user_stats_obj.perfectWeeksTotal > 0 %}bg-secondary-light/20 dark:bg-secondary/20 border-secondary-light/30 dark:border-secondary/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                    <div class="p-4 {% if user_stats_obj.perfectWeeksTotal > 0 %}bg-secondary-light/20 dark:bg-secondary/20 border-secondary-light/30 dark:border-secondary/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Perfect Weeks</div>
-                        <div class="text-2xl font-black {% if user_stats_obj.perfectWeeksTotal > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                        <div class="text-2xl font-black {% if user_stats_obj.perfectWeeksTotal > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-dark dark:text-white{% endif %} flex items-center justify-center gap-2">
                             {{ user_stats_obj.perfectWeeksTotal|default:0 }}
                             {% if user_stats_obj.perfectWeeksTotal > 0 %}
                                 <i class="fas fa-star text-base"></i>
                             {% endif %}
                         </div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Most Picked</div>
                         <div class="flex items-center justify-center h-10">
                             {% if user_stats_obj.mostPickedTotal %}
@@ -366,7 +348,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Least Picked</div>
                         <div class="flex items-center justify-center h-10">
                             {% if user_stats_obj.leastPickedTotal %}
@@ -378,9 +360,9 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="p-4 {% if stats.seasons_won > 0 %}bg-purple-600/20 border-purple-600/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border">
+                    <div class="p-4 {% if stats.seasons_won > 0 %}bg-purple-600/20 border-purple-600/30{% else %}bg-surface-light dark:bg-surface-hover border-border-light dark:border-border-subtle{% endif %} rounded-xl border text-center">
                         <div class="text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-1">Seasons Won</div>
-                        <div class="text-2xl font-black {% if stats.seasons_won > 0 %}text-purple-700 dark:text-purple-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center gap-2">
+                        <div class="text-2xl font-black {% if stats.seasons_won > 0 %}text-purple-700 dark:text-purple-400{% else %}text-text-dark dark:text-white{% endif %} flex items-center justify-center gap-2">
                             {% if stats.seasons_won > 0 %}
                                 <i class="fas fa-trophy"></i>
                                 {{ stats.seasons_won }}
