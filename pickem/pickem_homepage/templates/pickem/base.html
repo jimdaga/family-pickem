@@ -308,12 +308,12 @@
 
             <!-- Center: Week & Rank -->
             <div class="flex items-center justify-center gap-4">
-                <span class="text-white font-semibold">
+                <span class="text-white font-semibold hidden sm:inline-flex items-center">
                     <i class="fas fa-calendar-week mr-1.5 text-primary"></i>
                     Week {{ current_week|default:"--" }}
                 </span>
                 {% if user_current_rank %}
-                <span class="text-white font-semibold">
+                <span class="text-white font-semibold inline-flex items-center">
                     <i class="fas fa-trophy mr-1.5 text-yellow-500"></i>
                     Rank #{{ user_current_rank }}
                 </span>

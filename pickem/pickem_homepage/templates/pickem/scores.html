@@ -380,13 +380,13 @@
                                 <!-- Teams and Scores -->
                                 <div class="teams-matchup">
                                     <!-- Away Team -->
-                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}winning-team{% endif %}">
+                                    {% with game.awayTeamSlug|lookuplogo as away_team %}
+                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}winning-team{% endif %}"
+                                         {% if away_team.color %}style="background: linear-gradient(135deg, #{{ away_team.color }}15 0%, #{{ away_team.alternateColor|default:away_team.color }}08 100%);"{% endif %}>
                                         <div class="team-info">
-                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                            <img src="{{ away_team.teamLogo|default:'/static/images/nfl.svg' }}"
                                                  alt="{{ game.awayTeamName }} logo"
                                                  class="team-logo w-12 h-12 flex-shrink-0">
-                                            {% endwith %}
                                             <div class="team-details">
                                                 <div class="team-name {% if game.statusType == 'finished' and game.gameWinner != game.awayTeamSlug %}text-muted{% endif %}">
                                                     {{ game.awayTeamName }}
@@ -435,15 +435,16 @@
                                         </div>
                                         {% endif %}
                                     </div>
+                                    {% endwith %}
 
                                     <!-- Home Team -->
-                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}winning-team{% endif %}">
+                                    {% with game.homeTeamSlug|lookuplogo as home_team %}
+                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}winning-team{% endif %}"
+                                         {% if home_team.color %}style="background: linear-gradient(135deg, #{{ home_team.color }}15 0%, #{{ home_team.alternateColor|default:home_team.color }}08 100%);"{% endif %}>
                                         <div class="team-info">
-                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                            <img src="{{ home_team.teamLogo|default:'/static/images/nfl.svg' }}"
                                                  alt="{{ game.homeTeamName }} logo"
                                                  class="team-logo w-12 h-12 flex-shrink-0">
-                                            {% endwith %}
                                             <div class="team-details">
                                                 <div class="team-name {% if game.statusType == 'finished' and game.gameWinner != game.homeTeamSlug %}text-muted{% endif %}">
                                                     {{ game.homeTeamName }}
@@ -492,6 +493,7 @@
                                         </div>
                                         {% endif %}
                                     </div>
+                                    {% endwith %}
                                 </div>
 
                                 <!-- Preview and Broadcast Info -->
@@ -1504,11 +1506,11 @@
                 item.style.setProperty('border', '1px solid #555555', 'important');
             });
             
-            // 5. Fix team score rows
+            // 5. Fix team score rows - preserve team color gradients
             const teamScoreRows = document.querySelectorAll('.team-score-row');
             console.log(`Found ${teamScoreRows.length} team score rows`);
             teamScoreRows.forEach(row => {
-                row.style.setProperty('background', 'transparent', 'important');
+                // Don't override background - let team color gradients show through
                 row.style.setProperty('color', '#ffffff', 'important');
             });
             
