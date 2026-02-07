@@ -23,7 +23,10 @@ spec:
               command: [ "/bin/bash", "-c" ]
               args:
                 - |
-                  {{ .Values.cron.command }}
+                  {{ .Values.cron.command }} {{ include "family-pickem.fullname" . }}
+              envFrom:
+                - secretRef:
+                    name: {{ include "family-pickem.fullname" . }}-envvars
               resources:
                 {{- toYaml .Values.resources | nindent 16 }}
           {{- with .Values.nodeSelector }}
