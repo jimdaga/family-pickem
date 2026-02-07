@@ -309,10 +309,35 @@ For template debugging, check:
 
 ## Deployment
 
-Production deployments use:
-- AWS S3 for static file storage
-- PostgreSQL database (RDS or self-hosted)
-- Docker containers via docker-compose
-- Environment-based configuration (see `settings.py` for RDS/K8s detection)
+### ArgoCD GitOps (Production Infrastructure)
 
-GitHub Actions workflows in `.github/workflows/` handle artifact publishing.
+The application runs on a single-node Kubernetes 1.28 cluster (`dagabuntu.home` / `192.168.1.222`) managed by ArgoCD. All infrastructure is GitOps-managed:
+
+**Environments:**
+- **Production (`pickem-prd`)**: Runs the latest GitHub Release. Deployed automatically when a release is published.
+- **Dev (`pickem-dev`)**: Runs the latest code from `main`. Deployed automatically on every push to main.
+
+**Deployment flow — DO NOT hardcode chart versions:**
+- **Dev**: ArgoCD uses `targetRevision: ">=0.0.0-latest"` to auto-track every new `-latest` chart published on push to main. No manual version updates needed.
+- **Prd**: The `update_argocd` job in `publish-artifacts.yaml` automatically updates `pickem-prd.yaml`'s `targetRevision` when a GitHub Release is published. Never manually edit the prd targetRevision.
+
+**Key files:**
+- `infra/argocd/applications/` — ArgoCD Application manifests (prd, dev, argocd self-mgmt, ESO, nginx)
+- `infra/app/values-prd.yaml` / `values-dev.yaml` — Helm values per environment
+- `charts/family-pickem/` — Helm chart templates
+- `.github/workflows/publish-artifacts.yaml` — Release workflow (Docker + Helm + ArgoCD prd update)
+- `.github/workflows/publish-artifacts-latest.yaml` — Main branch workflow (Docker + Helm `-latest`)
+
+**Secrets**: Managed via External Secrets Operator (ESO) pulling from AWS Secrets Manager (`family-pickem/{prd,dev}/{envvars,pickemctl}`)
+
+**Known quirks:**
+- Bitnami PostgreSQL subchart names services as `{release}-postgresql`, NOT `{fullnameOverride}-postgresql`
+- ESO pinned to v0.19.2 (K8s 1.28 compat — v1.x+ needs K8s 1.30+)
+- TLS terminated at Cloudflare edge, no cert-manager on cluster
+- This dev machine (fedora) is NOT the K8s node — use `ssh jim@192.168.1.222` for node ops
+
+### Legacy Reference
+- AWS S3 for static file storage
+- PostgreSQL database (self-hosted on K8s via Bitnami subchart)
+- Docker images published to Docker Hub (`familypickem/pickem-django`)
+- Environment-based configuration (see `settings.py` for RDS/K8s detection)
