@@ -30,11 +30,6 @@ postgresql:
     postgresql:
       auth:
         database: "pickem"
-  primary:
-    persistence:
-      storageClass: "manual"
-      size: 40Gi
-
 cron:
   schedule: "* * * * *"
   command: "/code/pickem_api/cron.sh"
