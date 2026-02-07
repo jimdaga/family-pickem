@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-backup-script
+  namespace: pickem-prd
+data:
+  backup.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    BACKUP_FILE="/tmp/pickem-${TIMESTAMP}.sql.gz"
+    S3_BUCKET="family-pickem-backups"
+    S3_PREFIX="postgres"
+    KEEP_COUNT=5
+
+    echo "[$(date)] Starting PostgreSQL backup..."
+
+    # Install AWS CLI
+    echo "[$(date)] Installing awscli..."
+    apt-get update -qq && apt-get install -y -qq awscli > /dev/null 2>&1
+    echo "[$(date)] awscli installed."
+
+    # Run pg_dump and compress
+    echo "[$(date)] Running pg_dump..."
+    pg_dump -h pickem-prd-postgresql -U postgres -d pickem | gzip > "${BACKUP_FILE}"
+    FILESIZE=$(stat -c%s "${BACKUP_FILE}")
+    echo "[$(date)] Dump complete. File size: ${FILESIZE} bytes"
+
+    if [ "${FILESIZE}" -lt 1000 ]; then
+      echo "[$(date)] ERROR: Backup file is suspiciously small (${FILESIZE} bytes). Aborting."
+      exit 1
+    fi
+
+    # Upload to S3
+    echo "[$(date)] Uploading to s3://${S3_BUCKET}/${S3_PREFIX}/pickem-${TIMESTAMP}.sql.gz..."
+    aws s3 cp "${BACKUP_FILE}" "s3://${S3_BUCKET}/${S3_PREFIX}/pickem-${TIMESTAMP}.sql.gz"
+    echo "[$(date)] Upload complete."
+
+    # Rotate old backups: keep only the most recent $KEEP_COUNT
+    echo "[$(date)] Checking backup rotation (keeping ${KEEP_COUNT} most recent)..."
+    BACKUPS=$(aws s3 ls "s3://${S3_BUCKET}/${S3_PREFIX}/" | grep '\.sql\.gz$' | sort | awk '{print $4}')
+    BACKUP_COUNT=$(echo "${BACKUPS}" | wc -l)
+
+    if [ "${BACKUP_COUNT}" -gt "${KEEP_COUNT}" ]; then
+      DELETE_COUNT=$((BACKUP_COUNT - KEEP_COUNT))
+      echo "[$(date)] Found ${BACKUP_COUNT} backups. Deleting ${DELETE_COUNT} oldest..."
+      echo "${BACKUPS}" | head -n "${DELETE_COUNT}" | while read -r FILE; do
+        echo "[$(date)] Deleting s3://${S3_BUCKET}/${S3_PREFIX}/${FILE}"
+        aws s3 rm "s3://${S3_BUCKET}/${S3_PREFIX}/${FILE}"
+      done
+    else
+      echo "[$(date)] Only ${BACKUP_COUNT} backups found, no rotation needed."
+    fi
+
+    # Clean up temp file
+    rm -f "${BACKUP_FILE}"
+    echo "[$(date)] Backup completed successfully."
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: pickem-prd
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: backup
+              image: postgres:15
+              command: ["/bin/bash", "/scripts/backup.sh"]
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: pickem-prd-postgresql
+                      key: postgres-password
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: family-pickem-prd-envvars
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: family-pickem-prd-envvars
+                      key: AWS_SECRET_ACCESS_KEY
+                - name: AWS_DEFAULT_REGION
+                  value: "us-east-1"
+              volumeMounts:
+                - name: backup-script
+                  mountPath: /scripts
+          volumes:
+            - name: backup-script
+              configMap:
+                name: postgres-backup-script
+                defaultMode: 0755

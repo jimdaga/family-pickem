@@ -128,5 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# custom 
+# custom
 .env.appnode_modules/
+
+# Database dumps (contain production data)
+docker/postgres/init/*.sql.gz
+docker/postgres/init/*.sql
