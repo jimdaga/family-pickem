@@ -20,6 +20,22 @@ spec:
     - repoURL: git@github.com:jimdaga/family-pickem.git
       targetRevision: main
       ref: values
+  ignoreDifferences:
+    - group: external-secrets.io
+      kind: ExternalSecret
+      jsonPointers:
+        - /spec/dataFrom/0/extract/conversionStrategy
+        - /spec/dataFrom/0/extract/decodingStrategy
+        - /spec/dataFrom/0/extract/metadataPolicy
+        - /spec/target/deletionPolicy
+        - /spec/data/0/remoteRef/conversionStrategy
+        - /spec/data/0/remoteRef/decodingStrategy
+        - /spec/data/0/remoteRef/metadataPolicy
+    - kind: Secret
+      name: pickem-prd-postgresql
+      jsonPointers:
+        - /data/password
+        - /data/postgres-password
   destination:
     server: https://kubernetes.default.svc
     namespace: pickem-prd
