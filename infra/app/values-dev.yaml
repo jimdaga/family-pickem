@@ -12,8 +12,7 @@ image:
 ingress:
   enabled: true
   className: "nginx"
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
+  annotations: {}
   hosts:
     - host: dev.family-pickem.com
       paths:
@@ -30,6 +29,10 @@ postgresql:
     postgresql:
       auth:
         database: "pickem"
+  primary:
+    persistence:
+      storageClass: "manual"
+      size: 10Gi
 
 cron:
   schedule: "*/5 * * * *"
