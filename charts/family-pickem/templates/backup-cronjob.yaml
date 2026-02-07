@@ -25,7 +25,7 @@ data:
 
     # Run pg_dump and compress
     echo "[$(date)] Running pg_dump..."
-    pg_dump -h {{ include "family-pickem.fullname" . }}-postgresql -U postgres -d pickem | gzip > "${BACKUP_FILE}"
+    pg_dump -h {{ .Release.Name }}-postgresql -U postgres -d pickem | gzip > "${BACKUP_FILE}"
     FILESIZE=$(stat -c%s "${BACKUP_FILE}")
     echo "[$(date)] Dump complete. File size: ${FILESIZE} bytes"
 
@@ -84,7 +84,7 @@ spec:
                 - name: PGPASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: {{ include "family-pickem.fullname" . }}-postgresql
+                      name: {{ .Release.Name }}-postgresql
                       key: postgres-password
                 - name: AWS_ACCESS_KEY_ID
                   valueFrom:
