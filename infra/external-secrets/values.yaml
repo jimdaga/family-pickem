@@ -1,7 +1,11 @@
-# External Secrets Operator Helm chart values
-# Install: helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace -f infra/external-secrets/values.yaml
+# External Secrets Operator v2 Helm chart values
+# Managed by ArgoCD
 
-installCRDs: true
+# CRDs are managed by the chart
+crds:
+  createClusterExternalSecret: true
+  createClusterSecretStore: true
+  createPushSecret: true
 
 # Single-node: minimal resources
 replicaCount: 1
