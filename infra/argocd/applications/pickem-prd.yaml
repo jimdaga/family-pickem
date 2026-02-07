@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pickem-prd
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # Helm chart source — pinned to specific release version
+    # Updated automatically by GitHub Actions when a release is published
+    - repoURL: https://jimdaga.github.io/family-pickem
+      chart: family-pickem
+      targetRevision: "0.0.105"
+      helm:
+        valueFiles:
+          - $values/infra/app/values-prd.yaml
+    # Git source for values files
+    - repoURL: git@github.com:jimdaga/family-pickem.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pickem-prd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - ServerSideApply=true

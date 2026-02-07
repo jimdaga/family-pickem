@@ -1,0 +1,13 @@
+# External Secrets Operator Helm chart values
+# Install: helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace -f infra/external-secrets/values.yaml
+
+installCRDs: true
+
+# Single-node: minimal resources
+replicaCount: 1
+
+webhook:
+  replicaCount: 1
+
+certController:
+  replicaCount: 1

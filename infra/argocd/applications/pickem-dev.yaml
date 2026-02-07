@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pickem-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # Helm chart source — tracks latest pre-release versions
+    - repoURL: https://jimdaga.github.io/family-pickem
+      chart: family-pickem
+      targetRevision: ">=0.0.0-latest"
+      helm:
+        valueFiles:
+          - $values/infra/app/values-dev.yaml
+    # Git source for values files
+    - repoURL: git@github.com:jimdaga/family-pickem.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pickem-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
