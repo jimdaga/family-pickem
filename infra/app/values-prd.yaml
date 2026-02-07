@@ -30,6 +30,9 @@ postgresql:
     postgresql:
       auth:
         database: "pickem"
+  primary:
+    persistence:
+      existingClaim: postgres-prd-pvc
 cron:
   schedule: "* * * * *"
   command: "/code/pickem_api/cron.sh"
