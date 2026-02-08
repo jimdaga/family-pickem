@@ -330,6 +330,12 @@ The application runs on a single-node Kubernetes 1.28 cluster (`dagabuntu.home` 
 
 **Secrets**: Managed via External Secrets Operator (ESO) pulling from AWS Secrets Manager (`family-pickem/{prd,dev}/{envvars,pickemctl}`)
 
+**CRITICAL — Secrets workflow:**
+- **NEVER manually edit K8s secrets** — ESO will overwrite them on the next sync (every 1h or on annotation change). Always update the source of truth in AWS Secrets Manager.
+- **AWS CLI auth required** — If the AWS session is expired, ask the user to run `aws login` before making any secret changes. Do not attempt secret operations with an expired session.
+- After updating AWS Secrets Manager, force ESO sync: `kubectl annotate externalsecret <name> -n <ns> force-sync=$(date +%s) --overwrite`
+- Then restart the deployment to pick up new values: `kubectl rollout restart deployment/<name> -n <ns>`
+
 **Known quirks:**
 - Bitnami PostgreSQL subchart names services as `{release}-postgresql`, NOT `{fullnameOverride}-postgresql`
 - ESO pinned to v0.19.2 (K8s 1.28 compat — v1.x+ needs K8s 1.30+)

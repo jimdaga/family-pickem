@@ -110,6 +110,7 @@ if __name__ == '__main__':
     # Parse command line arguments for compatibility with cron.sh
     parser = argparse.ArgumentParser(description='Update user rankings in the standings')
     parser.add_argument('--url', type=str, help='API URL (for compatibility with cron.sh)')
+    parser.add_argument('--token', help='API authentication token (for compatibility with cron.sh)')
 
     args = parser.parse_args()
     update_rankings(url=args.url)
