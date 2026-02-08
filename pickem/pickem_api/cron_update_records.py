@@ -8,7 +8,16 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Update Team Records')
 parser.add_argument("--url", help="Specify the API url.")
+parser.add_argument("--token", help="API authentication token.")
 args, leftovers = parser.parse_known_args()
+
+
+def get_api_headers():
+    """Build common headers for API requests, including auth token if provided."""
+    headers = {"Content-Type": "application/json"}
+    if args.token:
+        headers["Authorization"] = "Token {}".format(args.token)
+    return headers
 
 def get_season():
     """
@@ -64,9 +73,7 @@ def update_team_record(team_id, team_slug, team_display_name, team_color='', tea
     """
     Get all the game data from ESPN APIs
     """
-    headers = {
-        "Content-Type": "application/json",
-    }
+    headers = get_api_headers()
 
     #year = datetime.date.today().year
     year = "2025" # Annoying stuff about the API, I'll fix this next year. 

@@ -13,7 +13,16 @@ from espn_api.football import League
 parser = argparse.ArgumentParser(description='Populate/Update NFL Games.')
 parser.add_argument('--url', default='localhost', help='The host for the API endpoint (e.g., localhost or a domain name)')
 parser.add_argument("--gameweek", help="Specify the week to update.")
+parser.add_argument("--token", help="API authentication token.")
 args, leftovers = parser.parse_known_args()
+
+
+def get_api_headers():
+    """Build common headers for API requests, including auth token if provided."""
+    headers = {"Content-Type": "application/json"}
+    if args.token:
+        headers["Authorization"] = "Token {}".format(args.token)
+    return headers
 
 # ESPN Weather Condition ID mapping (based on observation and common weather APIs)
 WEATHER_CONDITION_MAP = {
@@ -71,11 +80,7 @@ def check_game_id(id):
     """
     url = "http://{}/api/games/{}".format(args.url, id)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
-
-    x = requests.get(url, headers = headers)
+    x = requests.get(url, headers=get_api_headers())
     if  x.status_code == 200:
         return True
     else:
@@ -116,11 +121,7 @@ def get_game_week(game_date):
     try:
         url = "http://{}/api/weeks/{}".format(args.url, game_date)
 
-        headers = {
-            "Content-Type": "application/json",
-        }
-
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=get_api_headers())
         json_response = json.loads(response.text)
         return json_response['weekNumber']
     except:
@@ -129,15 +130,11 @@ def get_game_week(game_date):
 
 def get_team_slug(team_id):
     """
-    
+
     """
     url = "http://{}/api/teams/id/{}".format(args.url, team_id)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
-
-    x = requests.get(url, headers = headers)
+    x = requests.get(url, headers=get_api_headers())
     if  x.status_code == 200:
         json_response = json.loads(x.text)
         return json_response[0]['teamNameSlug']
@@ -149,17 +146,15 @@ def add_games(payload, id):
     """
     Send POST/PUT to API to add game
     """
-    headers = {
-        "Content-Type": "application/json",
-    }
+    headers = get_api_headers()
 
-    if check_game_id(id): 
+    if check_game_id(id):
         url = "http://{}/api/games/{}".format(args.url, id)
-        x = requests.put(url, data = payload, headers = headers)
+        x = requests.put(url, data=payload, headers=headers)
         verb = "Updated"
     else:
         url = "http://{}/api/games/".format(args.url)
-        x = requests.post(url, data = payload, headers = headers)
+        x = requests.post(url, data=payload, headers=headers)
         verb = "Added"
     
     if  x.status_code == 200 or x.status_code == 201:

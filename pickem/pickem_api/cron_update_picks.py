@@ -18,7 +18,16 @@ formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
 
 parser = argparse.ArgumentParser(description='Update User Picks')
 parser.add_argument("--url", help="Specify the API url.")
+parser.add_argument("--token", help="API authentication token.")
 args, leftovers = parser.parse_known_args()
+
+
+def get_api_headers():
+    """Build common headers for API requests, including auth token if provided."""
+    headers = {"Content-Type": "application/json"}
+    if args.token:
+        headers["Authorization"] = "Token {}".format(args.token)
+    return headers
 
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setLevel(logging.DEBUG)
@@ -66,16 +75,12 @@ def post_win(pick_id):
     """
     Send PUT to update pick as a win
     """
-    headers = {
-        "Content-Type": "application/json",
-    }
+    headers = get_api_headers()
 
     payload='{"pick_correct": "true"}'
-    
-    gameseason = get_season()
 
     url = "http://{}/api/userpicks/{}".format(args.url, pick_id)
-    x = requests.patch(url, payload, headers = headers)
+    x = requests.patch(url, payload, headers=headers)
 
     if  x.status_code == 200 or x.status_code == 201:
         logger.info(" - Game ID {} sucesfully maked as a win!".format(pick_id))
@@ -86,14 +91,12 @@ def update_game_as_scored(game_id, game_slug):
     """
     Send POST to update game as scored
     """
-    headers = {
-        "Content-Type": "application/json",
-    }
+    headers = get_api_headers()
 
     payload='{"gameScored": "true"}'
 
     url = "http://{}/api/games/{}".format(args.url, game_id)
-    x = requests.patch(url, payload, headers = headers)
+    x = requests.patch(url, payload, headers=headers)
 
     if  x.status_code == 200 or x.status_code == 201:
         logger.info("Game slug {} sucesfully updated game as scored".format(game_slug))
