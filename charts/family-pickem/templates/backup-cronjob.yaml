@@ -84,8 +84,8 @@ spec:
                 - name: PGPASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: {{ .Release.Name }}-postgresql
-                      key: postgres-password
+                      name: {{ include "family-pickem.fullname" . }}-envvars
+                      key: DATABASE_PASS
                 - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
