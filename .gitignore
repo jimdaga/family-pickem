@@ -129,7 +129,16 @@ dmypy.json
 .pyre/
 
 # custom
-.env.appnode_modules/
+.env.app
+node_modules/
+
+# Generated CSS migration artifacts
+css_migration_scan.json
+css_tailwind_mappings.json
+legacy_css_definitions.json
+
+# Database dumps
+*.sql
 
 # Database dumps (contain production data)
 docker/postgres/init/*.sql.gz
