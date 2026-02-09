@@ -5,7 +5,26 @@ on:
     types: [published]
 
 jobs:
+  run_tests:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r pickem/requirements.txt
+
+      - name: Run tests
+        run: cd pickem && python manage.py test --settings=pickem.test_settings --verbosity=2
+
   publish_docker:
+    needs: [run_tests]
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
@@ -34,6 +53,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   publish_helm:
+    needs: [run_tests]
     permissions:
       contents: write
     runs-on: ubuntu-latest
