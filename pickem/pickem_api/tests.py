@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.contrib import admin
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.db import IntegrityError
@@ -172,6 +173,28 @@ class TenantDomainModelTest(TestCase):
         self.assertEqual(audit.actor, self.owner)
         self.assertEqual(audit.metadata['role'], FamilyMembership.Role.MEMBER)
         self.assertIsNotNone(audit.created_at)
+
+
+class TenantDomainAdminTest(TestCase):
+    def test_tenant_domain_models_are_registered_in_admin(self):
+        expected_models = [
+            Family,
+            FamilyMembership,
+            Pool,
+            PoolSettings,
+            FamilyInvitation,
+            FamilyAuditLog,
+        ]
+
+        for model in expected_models:
+            self.assertIn(model, admin.site._registry)
+
+    def test_invitation_admin_displays_hash_without_raw_code_fields(self):
+        invitation_admin = admin.site._registry[FamilyInvitation]
+
+        self.assertIn('code_hash', invitation_admin.list_display)
+        self.assertNotIn('code', invitation_admin.list_display)
+        self.assertNotIn('raw_code', invitation_admin.list_display)
 
 
 class TeamsModelTest(TestCase):

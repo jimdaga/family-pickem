@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import GamePicks, GamesAndScores, GameWeeks, Teams, userPoints, userSeasonPoints, userStats, currentSeason, UserProfile
+from .models import (
+    Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, GamePicks,
+    GamesAndScores, GameWeeks, Pool, PoolSettings, Teams, userPoints,
+    userSeasonPoints, userStats, currentSeason, UserProfile,
+)
 
 # Register your models here.
 @admin.register(UserProfile)
@@ -29,6 +33,70 @@ class UserProfileAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(Family)
+class FamilyAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'status', 'created_at', 'updated_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('name', 'slug')
+    date_hierarchy = 'created_at'
+    ordering = ('name', 'slug')
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(Pool)
+class PoolAdmin(admin.ModelAdmin):
+    list_display = ('name', 'family', 'slug', 'season', 'competition', 'status', 'is_default', 'created_at', 'updated_at')
+    list_filter = ('status', 'competition', 'season', 'is_default', 'created_at')
+    search_fields = ('name', 'slug', 'family__name', 'family__slug')
+    date_hierarchy = 'created_at'
+    ordering = ('family__name', 'season', 'name')
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(FamilyMembership)
+class FamilyMembershipAdmin(admin.ModelAdmin):
+    list_display = ('family', 'user', 'role', 'status', 'created_at', 'updated_at')
+    list_filter = ('role', 'status', 'created_at')
+    search_fields = ('family__name', 'family__slug', 'user__username', 'user__email', 'user__first_name', 'user__last_name')
+    date_hierarchy = 'created_at'
+    ordering = ('family__name', 'user__username')
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(PoolSettings)
+class PoolSettingsAdmin(admin.ModelAdmin):
+    list_display = ('pool', 'picks_lock_at_kickoff', 'allow_tiebreaker', 'created_at', 'updated_at')
+    list_filter = ('picks_lock_at_kickoff', 'allow_tiebreaker', 'created_at')
+    search_fields = ('pool__name', 'pool__slug', 'pool__family__name', 'pool__family__slug')
+    date_hierarchy = 'created_at'
+    ordering = ('pool__family__name', 'pool__name')
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(FamilyInvitation)
+class FamilyInvitationAdmin(admin.ModelAdmin):
+    list_display = ('family', 'pool', 'code_hash', 'role', 'expires_at', 'is_revoked', 'max_uses', 'use_count', 'created_by', 'created_at')
+    list_filter = ('role', 'is_revoked', 'expires_at', 'created_at')
+    search_fields = ('family__name', 'family__slug', 'pool__name', 'pool__slug', 'code_hash', 'created_by__username', 'created_by__email')
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(FamilyAuditLog)
+class FamilyAuditLogAdmin(admin.ModelAdmin):
+    list_display = ('family', 'pool', 'actor', 'action', 'target_type', 'target_id', 'ip_address', 'created_at')
+    list_filter = ('action', 'created_at')
+    search_fields = ('family__name', 'family__slug', 'pool__name', 'pool__slug', 'actor__username', 'actor__email', 'target_type', 'target_id')
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
+    readonly_fields = (
+        'family', 'pool', 'actor', 'action', 'target_type', 'target_id',
+        'metadata', 'ip_address', 'user_agent', 'created_at',
+    )
+
 
 @admin.register(GamesAndScores)
 class GamesAndScoresAdmin(admin.ModelAdmin):
