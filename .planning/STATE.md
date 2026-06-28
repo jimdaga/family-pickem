@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-06-28T18:35:22.292Z"
+last_updated: "2026-06-28T18:45:05.279Z"
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
-  percent: 25
+  completed_plans: 2
+  percent: 50
 ---
 
 # GSD State
 
 **Project:** Family Pickem Multi-Tenancy  
-**Updated:** 2026-06-28 after Phase 1 Plan 01 execution
+**Updated:** 2026-06-28 after Phase 1 Plan 02 execution
 
 ## Project Reference
 
@@ -41,12 +41,21 @@ See: `.planning/PROJECT.md`
   - Added additive migration `pickem_api.0073_domain_schema_foundation`.
   - Added tenant domain admin registrations and focused model/admin tests.
   - Summary: `.planning/phases/01-domain-schema-foundation/01-01-SUMMARY.md`.
+- Phase 1 Plan 02 completed:
+  - Added nullable `pool` scope to `GamePicks`, `userSeasonPoints`, retained `userPoints`, and `userStats`.
+  - Added additive/backfill migration `pickem_api.0074_add_legacy_pool_scope`.
+  - Added idempotent legacy family/pool/settings/membership backfill with owner fallback and role preservation.
+  - Added admin pool visibility and focused pool-scope/backfill tests.
+  - Summary: `.planning/phases/01-domain-schema-foundation/01-02-SUMMARY.md`.
 
 ## Decisions
 
 - 01-01: Family and Pool are separate first-class models.
 - 01-01: `GamesAndScores`, `GameWeeks`, and `Teams` remain global reference tables with no tenant fields.
 - 01-01: `FamilyInvitation` stores `code_hash` only; no raw invite-code model/admin/test field exists.
+- 01-02: Legacy competition rows use nullable Pool foreign keys; non-null enforcement and strict tenant uniqueness remain deferred.
+- 01-02: Default legacy pool slug is `<season>-pickem` when `currentSeason` exists, otherwise `legacy-pickem` with fallback season 2024.
+- 01-02: Plan 02 reads message-board activity only for no-owner fallback; Plan 03 owns message-board family/member coverage.
 
 ## Verification
 
@@ -55,11 +64,12 @@ Commands run:
 ```bash
 cd pickem && ../venv/bin/python manage.py check --settings=pickem.test_settings
 cd pickem && ../venv/bin/python manage.py test --settings=pickem.test_settings --verbosity=2
+cd pickem && ../venv/bin/python manage.py makemigrations --check --dry-run --settings=pickem.test_settings
 ```
 
 Result:
 
-- 50 tests passed.
+- 63 tests passed.
 - Django check reported 13 existing warnings for `max_length` on `IntegerField` fields in `userStats`.
 - Phase 1 final plan check passed and confirmed prior blockers were resolved:
   - message-board-only legacy memberships covered;
@@ -70,7 +80,7 @@ Result:
 
 ## Next Action
 
-Continue Phase 1 with Plan 02:
+Continue Phase 1 with Plan 03:
 
 ```bash
 $gsd-execute-phase 1

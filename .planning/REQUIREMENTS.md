@@ -11,7 +11,7 @@
 - [x] **TEN-02**: A family has at least one pool for a season/competition.
 - [x] **TEN-03**: A signed-in user can belong to one or more families.
 - [x] **TEN-04**: A family membership has a role of owner, admin, or member.
-- [ ] **TEN-05**: Existing global production data is assigned to a default legacy family and pool.
+- [x] **TEN-05**: Existing global production data is assigned to a default legacy family and pool.
 
 ### Authorization
 
@@ -30,8 +30,8 @@
 
 ### Pool Gameplay
 
-- [ ] **POOL-01**: Picks are scoped to a pool.
-- [ ] **POOL-02**: Standings and weekly winners are scoped to a pool.
+- [x] **POOL-01**: Picks are scoped to a pool.
+- [x] **POOL-02**: Standings and weekly winners are scoped to a pool.
 - [ ] **POOL-03**: Scores can use global NFL game data while showing only pool-scoped pick overlays.
 - [ ] **POOL-04**: Rules/settings are visible and editable in the appropriate family/pool context.
 - [ ] **POOL-05**: Background scoring jobs update only the intended pool data.
@@ -80,7 +80,7 @@
 | TEN-02 | Phase 1 | Complete |
 | TEN-03 | Phase 1 | Complete |
 | TEN-04 | Phase 1 | Complete |
-| TEN-05 | Phase 1 | Pending |
+| TEN-05 | Phase 1 | Complete |
 | AUTHZ-01 | Phase 2, Phase 4 | Pending |
 | AUTHZ-02 | Phase 2, Phase 4 | Pending |
 | AUTHZ-03 | Phase 2, Phase 5 | Pending |
@@ -90,8 +90,8 @@
 | INV-02 | Phase 3, Phase 5 | Pending |
 | INV-03 | Phase 3 | Pending |
 | INV-04 | Phase 3 | Pending |
-| POOL-01 | Phase 1, Phase 4 | Pending |
-| POOL-02 | Phase 1, Phase 4, Phase 6 | Pending |
+| POOL-01 | Phase 1, Phase 4 | Complete |
+| POOL-02 | Phase 1, Phase 4, Phase 6 | Complete |
 | POOL-03 | Phase 4 | Pending |
 | POOL-04 | Phase 4, Phase 5 | Pending |
 | POOL-05 | Phase 6 | Pending |
@@ -112,4 +112,4 @@
 
 ---
 *Requirements defined: 2026-06-28*
-*Last updated: 2026-06-28 after discovery approval*
+*Last updated: 2026-06-28 after Phase 1 Plan 02 execution*
