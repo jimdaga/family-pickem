@@ -335,17 +335,13 @@ family = models.ForeignKey(
 | A1 | Use `hashlib.sha256` for invite code hashing rather than Django password hashers. [ASSUMED] | Code Examples | A slower keyed or password-style hash may be preferred before public invite joins; planner can gate final helper design. |
 | A2 | Deterministic slug names `legacy-family-league` and `legacy-pickem` are acceptable. [ASSUMED] | Architecture Patterns | Product copy may prefer a different name; migration must document whatever is chosen. |
 
-## Open Questions
+## Resolved Decisions
 
-1. **Should `SiteBanner.family` default to legacy family or remain nullable for site-wide banners?**
-   - What we know: context allows nullable `SiteBanner.family` to preserve site-wide banners. [VERIFIED: .planning/phases/01-domain-schema-foundation/01-CONTEXT.md]
-   - What's unclear: whether current active banners should be treated as legacy-family-only or global announcements.
-   - Recommendation: add nullable `family`; leave existing rows null in Phase 1 unless product explicitly wants legacy-family assignment.
+1. **Banner family mapping:** `SiteBanner.family` remains nullable in Phase 1. Existing banners remain site-wide with `family=None`, preserving current banner behavior while allowing family-scoped banners later. [RESOLVED: D-10/D-11/D-19, COMM-03]
 
-2. **Should the first superuser become legacy family owner while commissioners become admins?**
-   - What we know: D-13 maps commissioners and superusers to owner/admin memberships. [VERIFIED: .planning/phases/01-domain-schema-foundation/01-CONTEXT.md]
-   - What's unclear: exact owner/admin split.
-   - Recommendation: make superusers owners and `UserProfile.is_commissioner=True` non-superusers admins; ensure at least one owner exists.
+2. **Legacy owner/admin mapping:** Active superusers become `owner` memberships for the deterministic legacy family. Non-superuser users with `UserProfile.is_commissioner=True` become `admin` memberships. If no active superuser exists, the backfill must still leave at least one legacy family owner by promoting the first active commissioner; if no active commissioner exists, promote the earliest active user referenced by picks, standings, stats, or message-board activity. [RESOLVED: D-13/D-14]
+
+3. **Message-board-only membership mapping:** Active users referenced by `MessageBoardPost.user`, `MessageBoardComment.user`, or `MessageBoardVote.user` receive legacy family `member` memberships even when they have no picks, standings, or stats rows. Missing, deleted, or inactive references are skipped without failing the migration. [RESOLVED: D-14]
 
 ## Environment Availability
 
