@@ -201,7 +201,7 @@ class TenantDomainAdminTest(TestCase):
 
 class LegacyPoolScopeModelTest(TestCase):
     def setUp(self):
-        self.family = Family.objects.create(name='Legacy Family League', slug='legacy-family-league')
+        self.family = Family.objects.create(name='Scope Test Family', slug='scope-test-family')
         self.pool = Pool.objects.create(
             family=self.family,
             name='2025 Pickem',
@@ -276,6 +276,12 @@ class LegacyPoolScopeModelTest(TestCase):
 
 
 class LegacyPoolBackfillMigrationTest(TestCase):
+    def setUp(self):
+        FamilyMembership.objects.filter(family__slug='legacy-family-league').delete()
+        PoolSettings.objects.filter(pool__family__slug='legacy-family-league').delete()
+        Pool.objects.filter(family__slug='legacy-family-league').delete()
+        Family.objects.filter(slug='legacy-family-league').delete()
+
     def _migration_module(self):
         return importlib.import_module('pickem_api.migrations.0074_add_legacy_pool_scope')
 
@@ -381,14 +387,14 @@ class LegacyPoolBackfillMigrationTest(TestCase):
         self.assertFalse(FamilyMembership.objects.filter(family=family, user=inactive_superuser).exists())
 
     def test_backfill_uses_earliest_active_competition_or_message_board_user_owner_fallback(self):
-        later_competition_user = User.objects.create_user(
-            username='later',
-            email='later@example.com',
-            password='pass',
-        )
         earliest_board_user = User.objects.create_user(
             username='earliest',
             email='earliest@example.com',
+            password='pass',
+        )
+        later_competition_user = User.objects.create_user(
+            username='later',
+            email='later@example.com',
             password='pass',
         )
         GamePicks.objects.create(
