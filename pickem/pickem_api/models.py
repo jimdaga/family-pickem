@@ -356,6 +356,13 @@ class GamesAndScores(models.Model):
 
 class GamePicks(models.Model):
     id = models.CharField(max_length=250, primary_key=True)
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='game_picks',
+        blank=True,
+        null=True,
+    )
     userEmail = models.EmailField(blank=True, db_column='useremail')
     uid = models.IntegerField(blank=True, null=True)
     userID = models.CharField(max_length=250, blank=True, db_column='userid')
@@ -374,10 +381,22 @@ class GamePicks(models.Model):
 
     class Meta:
         ordering = ['gameWeek']
+        indexes = [
+            models.Index(fields=['pool', 'gameseason'], name='gp_pool_season_idx'),
+            models.Index(fields=['pool', 'gameseason', 'gameWeek'], name='gp_pool_season_week_idx'),
+            models.Index(fields=['pool', 'userID'], name='gp_pool_userid_idx'),
+        ]
 
 
 class userSeasonPoints(models.Model):
     id = models.AutoField(primary_key=True)
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='season_points',
+        blank=True,
+        null=True,
+    )
     userEmail = models.EmailField(blank=True, db_column='useremail')
     userID = models.CharField(max_length=250, blank=True, db_column='userid')
     gameyear = models.CharField(max_length=4, blank=True)
@@ -464,10 +483,21 @@ class userSeasonPoints(models.Model):
 
     class Meta:
         ordering = ['total_points']
+        indexes = [
+            models.Index(fields=['pool', 'gameseason'], name='usp_pool_season_idx'),
+            models.Index(fields=['pool', 'userID'], name='usp_pool_userid_idx'),
+        ]
 
 
 class userPoints(models.Model):
     id = models.CharField(max_length=250, primary_key=True)
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='legacy_user_points',
+        blank=True,
+        null=True,
+    )
     userEmail = models.EmailField(blank=True, db_column='useremail')
     userID = models.CharField(max_length=250, blank=True, db_column='userid')
     gameyear = models.CharField(max_length=4, blank=True)
@@ -553,6 +583,10 @@ class userPoints(models.Model):
 
     class Meta:
         ordering = ['total_points']
+        indexes = [
+            models.Index(fields=['pool', 'gameseason'], name='up_pool_season_idx'),
+            models.Index(fields=['pool', 'userID'], name='up_pool_userid_idx'),
+        ]
 
 
 class GameWeeks(models.Model):
@@ -563,6 +597,13 @@ class GameWeeks(models.Model):
 
 class userStats(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='user_stats',
+        blank=True,
+        null=True,
+    )
     userEmail = models.EmailField(blank=True, db_column='useremail')
     userID = models.CharField(max_length=250, blank=True, db_column='userid')
     # Number of Weeks Won (Season / All Time)
@@ -591,6 +632,11 @@ class userStats(models.Model):
     # Perfect Weeks (Season / All Time)
     perfectWeeksSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='perfectweeksseason')
     perfectWeeksTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='perfectweekstotal')
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['pool', 'userID'], name='us_pool_userid_idx'),
+        ]
 
 class currentSeason(models.Model):
     season = models.IntegerField(blank=True, null=True)
