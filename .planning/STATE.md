@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-06-28T18:45:05.279Z"
+last_updated: "2026-06-28T18:51:32Z"
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
-  percent: 50
+  completed_plans: 3
+  percent: 75
 ---
 
 # GSD State
 
 **Project:** Family Pickem Multi-Tenancy  
-**Updated:** 2026-06-28 after Phase 1 Plan 02 execution
+**Updated:** 2026-06-28 after Phase 1 Plan 03 execution
 
 ## Project Reference
 
@@ -47,6 +47,13 @@ See: `.planning/PROJECT.md`
   - Added idempotent legacy family/pool/settings/membership backfill with owner fallback and role preservation.
   - Added admin pool visibility and focused pool-scope/backfill tests.
   - Summary: `.planning/phases/01-domain-schema-foundation/01-02-SUMMARY.md`.
+- Phase 1 Plan 03 completed:
+  - Added nullable `family` scope to `SiteBanner`, `MessageBoardPost`, `MessageBoardComment`, and `MessageBoardVote`.
+  - Added additive/backfill migration `pickem_homepage.0005_add_family_scope`.
+  - Added idempotent homepage message-board family backfill and message-board-only active member coverage.
+  - Preserved site-wide banner behavior with nullable `SiteBanner.family`.
+  - Added admin family visibility and focused homepage family-scope tests.
+  - Summary: `.planning/phases/01-domain-schema-foundation/01-03-SUMMARY.md`.
 
 ## Decisions
 
@@ -56,6 +63,9 @@ See: `.planning/PROJECT.md`
 - 01-02: Legacy competition rows use nullable Pool foreign keys; non-null enforcement and strict tenant uniqueness remain deferred.
 - 01-02: Default legacy pool slug is `<season>-pickem` when `currentSeason` exists, otherwise `legacy-pickem` with fallback season 2024.
 - 01-02: Plan 02 reads message-board activity only for no-owner fallback; Plan 03 owns message-board family/member coverage.
+- 01-03: Site banners remain site-wide when `family` is null; existing banner rows are not forced into the legacy family.
+- 01-03: Homepage message-board backfill runs after `pickem_api.0074_add_legacy_pool_scope` so Plan 02 owner/admin roles are preserved.
+- 01-03: Comment family scope derives from `post.family`; vote family scope derives from the vote's post or comment target.
 
 ## Verification
 
@@ -69,7 +79,7 @@ cd pickem && ../venv/bin/python manage.py makemigrations --check --dry-run --set
 
 Result:
 
-- 63 tests passed.
+- 40 homepage tests passed for Plan 03.
 - Django check reported 13 existing warnings for `max_length` on `IntegerField` fields in `userStats`.
 - Phase 1 final plan check passed and confirmed prior blockers were resolved:
   - message-board-only legacy memberships covered;
@@ -80,7 +90,7 @@ Result:
 
 ## Next Action
 
-Continue Phase 1 with Plan 03:
+Continue Phase 1 with Plan 04:
 
 ```bash
 $gsd-execute-phase 1

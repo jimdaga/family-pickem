@@ -38,9 +38,9 @@
 
 ### Community And Profiles
 
-- [ ] **COMM-01**: Message-board posts, comments, and votes are scoped to a family or pool.
+- [x] **COMM-01**: Message-board posts, comments, and votes are scoped to a family or pool.
 - [ ] **COMM-02**: Family members can see member/profile stats only within allowed family context.
-- [ ] **COMM-03**: Site/family banners do not leak across families.
+- [x] **COMM-03**: Site/family banners do not leak across families.
 
 ### Audit And Hardening
 
@@ -95,9 +95,9 @@
 | POOL-03 | Phase 4 | Pending |
 | POOL-04 | Phase 4, Phase 5 | Pending |
 | POOL-05 | Phase 6 | Pending |
-| COMM-01 | Phase 1, Phase 4 | Pending |
+| COMM-01 | Phase 1, Phase 4 | Complete |
 | COMM-02 | Phase 4 | Pending |
-| COMM-03 | Phase 1, Phase 5 | Pending |
+| COMM-03 | Phase 1, Phase 5 | Complete |
 | SEC-01 | Phase 1, Phase 5 | Complete |
 | SEC-02 | Phase 6 | Pending |
 | SEC-03 | Phase 2, Phase 4, Phase 7 | Pending |
@@ -112,4 +112,4 @@
 
 ---
 *Requirements defined: 2026-06-28*
-*Last updated: 2026-06-28 after Phase 1 Plan 02 execution*
+*Last updated: 2026-06-28 after Phase 1 Plan 03 execution*
