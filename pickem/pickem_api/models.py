@@ -36,6 +36,259 @@ class UserProfile(models.Model):
         ordering = ['user__username']
 
 
+class Family(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        INACTIVE = 'inactive', 'Inactive'
+
+    name = models.CharField(max_length=200, help_text="Family display name")
+    slug = models.SlugField(max_length=80, unique=True, help_text="Stable family URL slug")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        help_text="Family lifecycle status",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Family"
+        verbose_name_plural = "Families"
+        ordering = ['name', 'slug']
+        indexes = [
+            models.Index(fields=['slug'], name='family_slug_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(status__in=['active', 'inactive']),
+                name='family_status_valid',
+            ),
+        ]
+
+
+class Pool(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        INACTIVE = 'inactive', 'Inactive'
+        ARCHIVED = 'archived', 'Archived'
+
+    family = models.ForeignKey(Family, on_delete=models.PROTECT, related_name='pools')
+    name = models.CharField(max_length=200, help_text="Pool display name")
+    slug = models.SlugField(max_length=80, help_text="Stable pool slug within a family")
+    season = models.IntegerField(help_text="Season in YYZZ format, e.g. 2526")
+    competition = models.CharField(max_length=50, default='nfl', help_text="Competition identifier")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        help_text="Pool lifecycle status",
+    )
+    is_default = models.BooleanField(default=False, help_text="Default pool for this family")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.family.name} - {self.name}"
+
+    class Meta:
+        verbose_name = "Pool"
+        verbose_name_plural = "Pools"
+        ordering = ['family__name', 'season', 'name']
+        indexes = [
+            models.Index(fields=['family', 'slug', 'status'], name='pool_family_slug_status_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['family', 'slug'], name='unique_pool_family_slug'),
+            models.CheckConstraint(
+                check=models.Q(status__in=['active', 'inactive', 'archived']),
+                name='pool_status_valid',
+            ),
+        ]
+
+
+class FamilyMembership(models.Model):
+    class Role(models.TextChoices):
+        OWNER = 'owner', 'Owner'
+        ADMIN = 'admin', 'Admin'
+        MEMBER = 'member', 'Member'
+
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        INACTIVE = 'inactive', 'Inactive'
+
+    family = models.ForeignKey(Family, on_delete=models.PROTECT, related_name='memberships')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='family_memberships')
+    role = models.CharField(
+        max_length=20,
+        choices=Role.choices,
+        default=Role.MEMBER,
+        help_text="Family-level role",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        help_text="Membership lifecycle status",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} in {self.family.name} ({self.role})"
+
+    class Meta:
+        verbose_name = "Family Membership"
+        verbose_name_plural = "Family Memberships"
+        ordering = ['family__name', 'user__username']
+        indexes = [
+            models.Index(fields=['family', 'user', 'status'], name='member_family_user_status_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['family', 'user'], name='unique_family_membership_user'),
+            models.CheckConstraint(
+                check=models.Q(role__in=['owner', 'admin', 'member']),
+                name='family_membership_role_valid',
+            ),
+            models.CheckConstraint(
+                check=models.Q(status__in=['active', 'inactive']),
+                name='family_membership_status_valid',
+            ),
+        ]
+
+
+class PoolSettings(models.Model):
+    pool = models.OneToOneField(Pool, on_delete=models.PROTECT, related_name='settings')
+    picks_lock_at_kickoff = models.BooleanField(
+        default=True,
+        help_text="Lock picks when each game starts",
+    )
+    allow_tiebreaker = models.BooleanField(
+        default=True,
+        help_text="Allow tiebreaker predictions",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Settings for {self.pool}"
+
+    class Meta:
+        verbose_name = "Pool Settings"
+        verbose_name_plural = "Pool Settings"
+        ordering = ['pool__family__name', 'pool__name']
+
+
+class FamilyInvitation(models.Model):
+    family = models.ForeignKey(Family, on_delete=models.PROTECT, related_name='invitations')
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='invitations',
+        blank=True,
+        null=True,
+    )
+    code_hash = models.CharField(max_length=128, unique=True, help_text="Hashed invite code")
+    role = models.CharField(
+        max_length=20,
+        choices=FamilyMembership.Role.choices,
+        default=FamilyMembership.Role.MEMBER,
+        help_text="Role assigned when invite is accepted",
+    )
+    expires_at = models.DateTimeField(blank=True, null=True)
+    is_revoked = models.BooleanField(default=False)
+    max_uses = models.PositiveIntegerField(blank=True, null=True)
+    use_count = models.PositiveIntegerField(default=0)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='created_family_invitations',
+        blank=True,
+        null=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Invitation for {self.family.name}"
+
+    class Meta:
+        verbose_name = "Family Invitation"
+        verbose_name_plural = "Family Invitations"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['code_hash'], name='invitation_code_hash_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(role__in=['owner', 'admin', 'member']),
+                name='family_invitation_role_valid',
+            ),
+        ]
+
+
+class FamilyAuditLog(models.Model):
+    class Action(models.TextChoices):
+        INVITATION_CREATED = 'invitation_created', 'Invitation created'
+        INVITATION_REVOKED = 'invitation_revoked', 'Invitation revoked'
+        MEMBERSHIP_CREATED = 'membership_created', 'Membership created'
+        MEMBERSHIP_UPDATED = 'membership_updated', 'Membership updated'
+        POOL_SETTINGS_UPDATED = 'pool_settings_updated', 'Pool settings updated'
+        MANUAL_PICK_UPDATED = 'manual_pick_updated', 'Manual pick updated'
+        WEEK_WINNER_UPDATED = 'week_winner_updated', 'Week winner updated'
+
+    family = models.ForeignKey(Family, on_delete=models.PROTECT, related_name='audit_logs')
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='audit_logs',
+        blank=True,
+        null=True,
+    )
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='family_audit_logs',
+        blank=True,
+        null=True,
+    )
+    action = models.CharField(max_length=50, choices=Action.choices)
+    target_type = models.CharField(max_length=100, blank=True)
+    target_id = models.CharField(max_length=100, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    user_agent = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.family.name}: {self.action} at {self.created_at}"
+
+    class Meta:
+        verbose_name = "Family Audit Log"
+        verbose_name_plural = "Family Audit Logs"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['family', 'created_at'], name='audit_family_created_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(action__in=[
+                    'invitation_created',
+                    'invitation_revoked',
+                    'membership_created',
+                    'membership_updated',
+                    'pool_settings_updated',
+                    'manual_pick_updated',
+                    'week_winner_updated',
+                ]),
+                name='family_audit_log_action_valid',
+            ),
+        ]
+
+
 class Teams(models.Model):
     id = models.IntegerField(primary_key=True)
     gameseason = models.IntegerField(blank=True, null=True)

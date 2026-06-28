@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.db import IntegrityError
@@ -133,7 +135,7 @@ class TenantDomainModelTest(TestCase):
             pool=pool,
             code_hash='sha256:invite-hash',
             role=FamilyMembership.Role.MEMBER,
-            expires_at=timezone.now() + timezone.timedelta(days=7),
+            expires_at=timezone.now() + timedelta(days=7),
             max_uses=3,
             created_by=self.owner,
         )
