@@ -8,9 +8,9 @@
 ### Tenant Domain
 
 - [ ] **TEN-01**: A signed-in user can create a family.
-- [ ] **TEN-02**: A family has at least one pool for a season/competition.
-- [ ] **TEN-03**: A signed-in user can belong to one or more families.
-- [ ] **TEN-04**: A family membership has a role of owner, admin, or member.
+- [x] **TEN-02**: A family has at least one pool for a season/competition.
+- [x] **TEN-03**: A signed-in user can belong to one or more families.
+- [x] **TEN-04**: A family membership has a role of owner, admin, or member.
 - [ ] **TEN-05**: Existing global production data is assigned to a default legacy family and pool.
 
 ### Authorization
@@ -44,7 +44,7 @@
 
 ### Audit And Hardening
 
-- [ ] **SEC-01**: Security-sensitive admin actions are audit logged.
+- [x] **SEC-01**: Security-sensitive admin actions are audit logged.
 - [ ] **SEC-02**: Session-authenticated JSON mutations use CSRF protection or a documented secure alternative.
 - [ ] **SEC-03**: Cross-family isolation has automated negative tests.
 - [ ] **SEC-04**: Cache keys and precomputed data are family/pool scoped.
@@ -77,9 +77,9 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TEN-01 | Phase 3 | Pending |
-| TEN-02 | Phase 1 | Pending |
-| TEN-03 | Phase 1 | Pending |
-| TEN-04 | Phase 1 | Pending |
+| TEN-02 | Phase 1 | Complete |
+| TEN-03 | Phase 1 | Complete |
+| TEN-04 | Phase 1 | Complete |
 | TEN-05 | Phase 1 | Pending |
 | AUTHZ-01 | Phase 2, Phase 4 | Pending |
 | AUTHZ-02 | Phase 2, Phase 4 | Pending |
@@ -98,13 +98,14 @@
 | COMM-01 | Phase 1, Phase 4 | Pending |
 | COMM-02 | Phase 4 | Pending |
 | COMM-03 | Phase 1, Phase 5 | Pending |
-| SEC-01 | Phase 1, Phase 5 | Pending |
+| SEC-01 | Phase 1, Phase 5 | Complete |
 | SEC-02 | Phase 6 | Pending |
 | SEC-03 | Phase 2, Phase 4, Phase 7 | Pending |
 | SEC-04 | Phase 4, Phase 6 | Pending |
 | SEC-05 | Phase 6 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 27 total
 - Mapped to phases: 27
 - Unmapped: 0
