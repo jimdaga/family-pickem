@@ -1,16 +1,21 @@
 from io import StringIO
+from importlib import import_module
 
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.core.management import call_command
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase, Client
 from django.utils import timezone
 
 from pickem.utils import get_season
-from pickem_api.models import currentSeason, UserProfile
+from pickem_api.models import currentSeason, Family, FamilyMembership, UserProfile
 from pickem_homepage.models import (
     MessageBoardPost,
     MessageBoardComment,
+    MessageBoardVote,
     SiteBanner,
 )
 from pickem_homepage.views import is_commissioner
@@ -265,6 +270,236 @@ class SiteBannerModelTests(TestCase):
             end_date=timezone.now() - timezone.timedelta(hours=1),
         )
         self.assertFalse(banner.is_currently_active())
+
+    def test_site_wide_banner_can_remain_family_null_and_active(self):
+        banner = SiteBanner.objects.create(
+            title="Site-wide",
+            is_active=True,
+            start_date=timezone.now() - timezone.timedelta(hours=1),
+            family=None,
+        )
+
+        self.assertIsNone(banner.family)
+        self.assertEqual(SiteBanner.get_active_banner(), banner)
+
+
+class HomepageFamilyScopeModelTests(TestCase):
+    """Model tests for nullable family scope on homepage-owned data."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.family = Family.objects.create(name="Tenant Family", slug="tenant-family")
+        cls.user = User.objects.create_user("family_user", password="pass")
+
+    def test_message_board_rows_can_reference_family(self):
+        post = MessageBoardPost.objects.create(
+            family=self.family,
+            user=self.user,
+            title="Scoped post",
+            content="body",
+        )
+        comment = MessageBoardComment.objects.create(
+            family=self.family,
+            post=post,
+            user=self.user,
+            content="reply",
+        )
+        post_vote = MessageBoardVote.objects.create(
+            family=self.family,
+            user=self.user,
+            post=post,
+            vote_type=1,
+        )
+        comment_vote = MessageBoardVote.objects.create(
+            family=self.family,
+            user=self.user,
+            comment=comment,
+            vote_type=-1,
+        )
+
+        self.assertEqual(post.family, self.family)
+        self.assertEqual(comment.family, self.family)
+        self.assertEqual(post_vote.family, self.family)
+        self.assertEqual(comment_vote.family, self.family)
+
+    def test_family_fields_are_nullable_first(self):
+        post = MessageBoardPost.objects.create(
+            family=None,
+            user=self.user,
+            title="Legacy post",
+            content="body",
+        )
+        comment = MessageBoardComment.objects.create(
+            family=None,
+            post=post,
+            user=self.user,
+            content="reply",
+        )
+        vote = MessageBoardVote.objects.create(
+            family=None,
+            user=self.user,
+            post=post,
+            vote_type=1,
+        )
+
+        self.assertIsNone(post.family)
+        self.assertIsNone(comment.family)
+        self.assertIsNone(vote.family)
+
+
+class HomepageFamilyBackfillMigrationTests(TestCase):
+    """Direct tests for homepage family backfill helpers."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.migration = import_module(
+            "pickem_homepage.migrations.0005_add_family_scope"
+        )
+
+    def setUp(self):
+        Family.objects.filter(slug=self.migration.LEGACY_FAMILY_SLUG).delete()
+
+    def test_backfill_assigns_message_board_rows_to_legacy_family_and_leaves_banners_site_wide(self):
+        user = User.objects.create_user("poster", password="pass")
+        post = MessageBoardPost.objects.create(user=user, title="Post", content="body")
+        comment = MessageBoardComment.objects.create(
+            post=post, user=user, content="comment"
+        )
+        post_vote = MessageBoardVote.objects.create(
+            user=user, post=post, vote_type=1
+        )
+        comment_vote = MessageBoardVote.objects.create(
+            user=user, comment=comment, vote_type=-1
+        )
+        banner = SiteBanner.objects.create(title="Global", is_active=True)
+
+        self.migration.backfill_homepage_family_scope(
+            apps=MigrationExecutor(connection).loader.project_state().apps,
+            schema_editor=None,
+        )
+
+        legacy_family = Family.objects.get(slug=self.migration.LEGACY_FAMILY_SLUG)
+        post.refresh_from_db()
+        comment.refresh_from_db()
+        post_vote.refresh_from_db()
+        comment_vote.refresh_from_db()
+        banner.refresh_from_db()
+        self.assertEqual(post.family, legacy_family)
+        self.assertEqual(comment.family, legacy_family)
+        self.assertEqual(post_vote.family, legacy_family)
+        self.assertEqual(comment_vote.family, legacy_family)
+        self.assertIsNone(banner.family)
+
+    def test_backfill_creates_member_memberships_for_message_board_only_active_users(self):
+        post_user = User.objects.create_user("post_only", password="pass")
+        comment_user = User.objects.create_user("comment_only", password="pass")
+        vote_user = User.objects.create_user("vote_only", password="pass")
+        post = MessageBoardPost.objects.create(
+            user=post_user, title="Post", content="body"
+        )
+        comment = MessageBoardComment.objects.create(
+            post=post, user=comment_user, content="comment"
+        )
+        MessageBoardVote.objects.create(user=vote_user, comment=comment, vote_type=1)
+
+        self.migration.backfill_homepage_family_scope(
+            apps=MigrationExecutor(connection).loader.project_state().apps,
+            schema_editor=None,
+        )
+
+        legacy_family = Family.objects.get(slug=self.migration.LEGACY_FAMILY_SLUG)
+        memberships = FamilyMembership.objects.filter(
+            family=legacy_family,
+            user__in=[post_user, comment_user, vote_user],
+            status=FamilyMembership.Status.ACTIVE,
+            role=FamilyMembership.Role.MEMBER,
+        )
+        self.assertEqual(memberships.count(), 3)
+
+    def test_backfill_preserves_existing_elevated_roles_and_skips_inactive_users(self):
+        admin_user = User.objects.create_user("admin_member", password="pass")
+        inactive_user = User.objects.create_user(
+            "inactive_member", password="pass", is_active=False
+        )
+        legacy_family = Family.objects.create(
+            slug=self.migration.LEGACY_FAMILY_SLUG,
+            name=self.migration.LEGACY_FAMILY_NAME,
+        )
+        FamilyMembership.objects.create(
+            family=legacy_family,
+            user=admin_user,
+            role=FamilyMembership.Role.ADMIN,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        MessageBoardPost.objects.create(
+            user=admin_user, title="Admin post", content="body"
+        )
+        MessageBoardPost.objects.create(
+            user=inactive_user, title="Inactive post", content="body"
+        )
+
+        self.migration.backfill_homepage_family_scope(
+            apps=MigrationExecutor(connection).loader.project_state().apps,
+            schema_editor=None,
+        )
+
+        admin_membership = FamilyMembership.objects.get(
+            family=legacy_family, user=admin_user
+        )
+        self.assertEqual(admin_membership.role, FamilyMembership.Role.ADMIN)
+        self.assertFalse(
+            FamilyMembership.objects.filter(
+                family=legacy_family, user=inactive_user
+            ).exists()
+        )
+
+    def test_comment_and_vote_family_backfill_derive_from_targets(self):
+        legacy_family = Family.objects.create(
+            slug=self.migration.LEGACY_FAMILY_SLUG,
+            name=self.migration.LEGACY_FAMILY_NAME,
+        )
+        user = User.objects.create_user("target_user", password="pass")
+        post = MessageBoardPost.objects.create(
+            family=legacy_family, user=user, title="Scoped", content="body"
+        )
+        comment = MessageBoardComment.objects.create(
+            family=None, post=post, user=user, content="comment"
+        )
+        post_vote = MessageBoardVote.objects.create(
+            family=None, user=user, post=post, vote_type=1
+        )
+        comment_vote = MessageBoardVote.objects.create(
+            family=None, user=user, comment=comment, vote_type=-1
+        )
+
+        self.migration.backfill_homepage_family_scope(
+            apps=MigrationExecutor(connection).loader.project_state().apps,
+            schema_editor=None,
+        )
+
+        comment.refresh_from_db()
+        post_vote.refresh_from_db()
+        comment_vote.refresh_from_db()
+        self.assertEqual(comment.family, legacy_family)
+        self.assertEqual(post_vote.family, legacy_family)
+        self.assertEqual(comment_vote.family, legacy_family)
+
+
+class HomepageFamilyScopeAdminTests(TestCase):
+    """Admin registration tests for homepage family scope fields."""
+
+    def test_admin_classes_expose_family_for_homepage_scope(self):
+        expected_models = [
+            SiteBanner,
+            MessageBoardPost,
+            MessageBoardComment,
+            MessageBoardVote,
+        ]
+
+        for model in expected_models:
+            model_admin = admin.site._registry[model]
+            self.assertIn("family", model_admin.list_filter)
+            self.assertIn("family", model_admin.get_list_display(None))
 
 
 class DjangoSystemCheckTests(TestCase):
