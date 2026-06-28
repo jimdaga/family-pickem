@@ -108,7 +108,41 @@ def index(request):
     finished_game_slugs = finished_games.values_list('slug', flat=True)
     total_picks = GamePicks.objects.filter(gameseason=gameseason, slug__in=finished_game_slugs).count()
     total_correct_picks = GamePicks.objects.filter(gameseason=gameseason, slug__in=finished_game_slugs, pick_correct=True).count()
-    
+
+    # Get week points data for the compact leaderboard
+    week_picks = GamePicks.objects.filter(
+        gameseason=gameseason,
+        gameWeek=current_week,
+        competition=current_competition
+    )
+    week_picks_count = week_picks.count()
+
+    # Calculate week points (correct picks per user)
+    week_points = GamePicks.objects.filter(
+        gameseason=gameseason,
+        gameWeek=current_week,
+        competition=current_competition,
+        pick_correct=True
+    ).values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
+
+    # Get list of users who have points
+    users_with_week_points = week_points.values_list('uid', flat=True).distinct()
+
+    # Get all players who submitted picks this week (for showing 0-point players)
+    week_players = week_picks.values_list('uid', flat=True).distinct()
+
+    # Build a lookup of user ID -> overall season rank (use both int and string keys for template compatibility)
+    all_user_ranks = {}
+    season_standings = userSeasonPoints.objects.filter(gameseason=gameseason).order_by('-total_points')
+    for rank, player_points in enumerate(season_standings, 1):
+        try:
+            user_id = player_points.userID
+            # Store with both int and string keys for template lookup compatibility
+            all_user_ranks[int(user_id)] = rank
+            all_user_ranks[str(user_id)] = rank
+        except (ValueError, TypeError):
+            continue
+
     # Calculate league accuracy
     league_accuracy = 0
     if total_picks > 0:
@@ -239,6 +273,12 @@ def index(request):
         'user_picks_count': user_picks_count,
         'user_pick_status': user_pick_status,
         'gameseason': gameseason,
+        # Week points data for compact leaderboard
+        'week_points': week_points,
+        'users_with_week_points': users_with_week_points,
+        'week_players': week_players,
+        'show_week_points': week_picks_count > 0,
+        'all_user_ranks': all_user_ranks,
         # Message board data
         'message_posts': message_posts,
         'user_votes': user_votes,
