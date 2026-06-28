@@ -357,7 +357,11 @@ class HomepageFamilyBackfillMigrationTests(TestCase):
         )
 
     def setUp(self):
-        Family.objects.filter(slug=self.migration.LEGACY_FAMILY_SLUG).delete()
+        legacy_family = Family.objects.filter(
+            slug=self.migration.LEGACY_FAMILY_SLUG
+        ).first()
+        if legacy_family:
+            FamilyMembership.objects.filter(family=legacy_family).delete()
 
     def test_backfill_assigns_message_board_rows_to_legacy_family_and_leaves_banners_site_wide(self):
         user = User.objects.create_user("poster", password="pass")
@@ -421,9 +425,9 @@ class HomepageFamilyBackfillMigrationTests(TestCase):
         inactive_user = User.objects.create_user(
             "inactive_member", password="pass", is_active=False
         )
-        legacy_family = Family.objects.create(
+        legacy_family, _ = Family.objects.get_or_create(
             slug=self.migration.LEGACY_FAMILY_SLUG,
-            name=self.migration.LEGACY_FAMILY_NAME,
+            defaults={"name": self.migration.LEGACY_FAMILY_NAME},
         )
         FamilyMembership.objects.create(
             family=legacy_family,
@@ -454,9 +458,9 @@ class HomepageFamilyBackfillMigrationTests(TestCase):
         )
 
     def test_comment_and_vote_family_backfill_derive_from_targets(self):
-        legacy_family = Family.objects.create(
+        legacy_family, _ = Family.objects.get_or_create(
             slug=self.migration.LEGACY_FAMILY_SLUG,
-            name=self.migration.LEGACY_FAMILY_NAME,
+            defaults={"name": self.migration.LEGACY_FAMILY_NAME},
         )
         user = User.objects.create_user("target_user", password="pass")
         post = MessageBoardPost.objects.create(
