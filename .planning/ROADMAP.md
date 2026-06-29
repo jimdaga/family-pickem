@@ -76,14 +76,14 @@ Definition of done:
 
 **Goal:** Let users create, join, and switch families/pools.
 
-**Plans:** 3/5 plans executed
+**Plans:** 4/5 plans executed
 
 Plans:
 
 - [x] 03-01-PLAN.md — Add post-login routing and onboarding shell.
 - [x] 03-02-PLAN.md — Add create-family flow with default pool.
 - [x] 03-03-PLAN.md — Add minimal invite creation and acceptance.
-- [ ] 03-04-PLAN.md — Add header/mobile family switcher.
+- [x] 03-04-PLAN.md — Add header/mobile family switcher.
 - [ ] 03-05-PLAN.md — Run final Phase 3 verification and handoff.
 
 Scope:
