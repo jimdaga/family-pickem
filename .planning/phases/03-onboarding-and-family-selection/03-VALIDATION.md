@@ -1,7 +1,7 @@
 ---
 phase: 03
 slug: onboarding-and-family-selection
-status: draft
+status: complete
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-06-29
@@ -32,15 +32,32 @@ created: 2026-06-29
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 03-01-01 | 01 | 1 | INV-03/INV-04 | global data exposure | signed-in users route by active membership count before seeing global private data | integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | pending |
-| 03-01-02 | 01 | 1 | INV-03 | no-family leakage | no-family onboarding does not render global standings/picks/message-board content | template/integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | pending |
-| 03-02-01 | 02 | 2 | TEN-01/TEN-02 | tenant creation integrity | create-family creates family, default pool, settings, owner membership, audit | integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage pickem_api --settings=pickem.test_settings` | Yes | pending |
-| 03-02-02 | 02 | 2 | AUTHZ-05 | identifier trust | slug collisions are handled server-side | unit/integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | pending |
-| 03-03-01 | 03 | 3 | INV-01/INV-02 | invite brute force/leakage | raw invite code is transient; only `code_hash` persists | unit/integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage pickem_api --settings=pickem.test_settings` | Yes | pending |
-| 03-03-02 | 03 | 3 | INV-03/AUTHZ-05 | invalid invite access | revoked, expired, exhausted, bad-code, inactive family/pool fail closed | integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | pending |
-| 03-03-03 | 03 | 3 | SEC-02 | CSRF | invite/create/join mutations reject missing CSRF tokens | security integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | pending |
-| 03-04-01 | 04 | 4 | INV-04 | cross-family leakage | switcher lists active memberships only and links to default active pools | template/integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | pending |
-| 03-05-01 | 05 | 5 | regression | route safety | existing public pages/tests still pass | regression | `cd pickem && ../venv/bin/python manage.py test --settings=pickem.test_settings` | Yes | pending |
+| 03-01-01 | 01 | 1 | INV-03/INV-04 | global data exposure | signed-in users route by active membership count before seeing global private data | integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | passed; see `03-01-SUMMARY.md` and final 03-05 run |
+| 03-01-02 | 01 | 1 | INV-03 | no-family leakage | no-family onboarding does not render global standings/picks/message-board content | template/integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | passed; see `03-01-SUMMARY.md` and final 03-05 run |
+| 03-02-01 | 02 | 2 | TEN-01/TEN-02 | tenant creation integrity | create-family creates family, default pool, settings, owner membership, audit | integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage pickem_api --settings=pickem.test_settings` | Yes | passed; see `03-02-SUMMARY.md` and final 03-05 run |
+| 03-02-02 | 02 | 2 | AUTHZ-05 | identifier trust | slug collisions are handled server-side | unit/integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | passed; see `03-02-SUMMARY.md` and final 03-05 run |
+| 03-03-01 | 03 | 3 | INV-01/INV-02 | invite brute force/leakage | raw invite code is transient; only `code_hash` persists | unit/integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage pickem_api --settings=pickem.test_settings` | Yes | passed; see `03-03-SUMMARY.md` and final 03-05 run |
+| 03-03-02 | 03 | 3 | INV-03/AUTHZ-05 | invalid invite access | revoked, expired, exhausted, bad-code, inactive family/pool fail closed | integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | passed; see `03-03-SUMMARY.md` and final 03-05 run |
+| 03-03-03 | 03 | 3 | SEC-02 | CSRF | invite/create/join mutations reject missing CSRF tokens | security integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | passed; see `03-03-SUMMARY.md` and final 03-05 run |
+| 03-04-01 | 04 | 4 | INV-04 | cross-family leakage | switcher lists active memberships only and links to default active pools | template/integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | passed; see `03-04-SUMMARY.md` and final 03-05 run |
+| 03-05-01 | 05 | 5 | regression | route safety | existing public pages/tests still pass | regression | `cd pickem && ../venv/bin/python manage.py test --settings=pickem.test_settings` | Yes | passed; see `03-05-SUMMARY.md` |
+
+## Final Verification Evidence
+
+Executed for Plan 03-05 on 2026-06-29:
+
+- `cd pickem && ../venv/bin/python manage.py check --settings=pickem.test_settings` passed with 13 existing `pickem_api.userStats` `IntegerField(max_length=...)` warnings.
+- `cd pickem && ../venv/bin/python manage.py makemigrations --check --dry-run --settings=pickem.test_settings` passed with `No changes detected` and the same existing warnings.
+- `cd pickem && ../venv/bin/python manage.py test pickem_homepage pickem_api --settings=pickem.test_settings --verbosity=2` passed with 116 tests.
+- `cd pickem && ../venv/bin/python manage.py test --settings=pickem.test_settings --verbosity=2` passed with 116 tests.
+- `curl -s --max-time 5 http://localhost:8000 | head -40` returned public homepage HTML including `<title>Family Pick'em</title>`.
+
+## Phase 4 Handoff Risks
+
+- Full dashboard/home, picks, scores, standings, rules, profile, and message-board page data remain partially or wholly global compatibility routes until Phase 4 migrates them into explicit `/families/<family_slug>/pools/<pool_slug>/...` context.
+- Phase 4 must add tenant-scoped query filters and negative tests for picks, standings, stats, message-board content, profile context, and any pick overlays on global NFL score data.
+- Phase 4 should preserve the Phase 3 route-entry guarantees: no-family users stay on onboarding, active members enter explicit tenant URLs, and switcher choices remain active-membership-only.
+- Phase 5 still owns full invite management, role management, family settings, and audit-log UI; Phase 3 only delivered minimal owner-created member invites.
 
 ## Wave 0 Requirements
 
