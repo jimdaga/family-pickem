@@ -14,7 +14,15 @@ from django.urls import reverse
 from django.utils import timezone
 
 from pickem.utils import get_season
-from pickem_api.models import currentSeason, Family, FamilyMembership, Pool, UserProfile
+from pickem_api.models import (
+    currentSeason,
+    Family,
+    FamilyAuditLog,
+    FamilyMembership,
+    Pool,
+    PoolSettings,
+    UserProfile,
+)
 from pickem_homepage.authz import family_member_required
 from pickem_homepage.models import (
     MessageBoardPost,
@@ -212,6 +220,165 @@ class PostLoginTenantRoutingTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+
+class CreateFamilyFlowTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            "creator", email="creator@example.com", password="pass"
+        )
+        self.other_user = User.objects.create_user(
+            "other", email="other@example.com", password="pass"
+        )
+
+    def test_create_family_requires_login(self):
+        response = self.client.get(reverse("create_family"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response["Location"])
+
+    def test_valid_post_creates_family_default_pool_settings_owner_and_audit(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("create_family"), {"name": "Smith Family"})
+
+        family = Family.objects.get(name="Smith Family")
+        pool = Pool.objects.get(family=family)
+        membership = FamilyMembership.objects.get(family=family, user=self.user)
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "family_pool_home",
+                kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+            ),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(family.slug, "smith-family")
+        self.assertEqual(family.status, Family.Status.ACTIVE)
+        self.assertEqual(pool.name, "Main Pickem")
+        self.assertEqual(pool.slug, "main-pickem")
+        self.assertEqual(pool.season, get_season())
+        self.assertEqual(pool.competition, "nfl")
+        self.assertEqual(pool.status, Pool.Status.ACTIVE)
+        self.assertTrue(pool.is_default)
+        self.assertEqual(pool.family, family)
+        self.assertTrue(PoolSettings.objects.filter(pool=pool).exists())
+        self.assertEqual(membership.role, FamilyMembership.Role.OWNER)
+        self.assertEqual(membership.status, FamilyMembership.Status.ACTIVE)
+        self.assertEqual(
+            FamilyMembership.objects.filter(
+                family=family,
+                role=FamilyMembership.Role.OWNER,
+                status=FamilyMembership.Status.ACTIVE,
+            ).count(),
+            1,
+        )
+        self.assertQuerysetEqual(
+            FamilyMembership.objects.filter(family=family).values_list(
+                "user_id", flat=True
+            ),
+            [self.user.id],
+        )
+        self.assertTrue(
+            FamilyAuditLog.objects.filter(
+                family=family,
+                pool=pool,
+                actor=self.user,
+                action=FamilyAuditLog.Action.MEMBERSHIP_CREATED,
+                target_type="FamilyMembership",
+                target_id=str(membership.id),
+            ).exists()
+        )
+        self.assertTrue(
+            FamilyAuditLog.objects.filter(
+                family=family,
+                pool=pool,
+                actor=self.user,
+                action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                target_type="Pool",
+                target_id=str(pool.id),
+            ).exists()
+        )
+
+    def test_slug_collisions_receive_unique_family_slug(self):
+        Family.objects.create(name="Smith Family", slug="smith-family")
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("create_family"), {"name": "Smith Family"})
+
+        family = Family.objects.get(slug="smith-family-2")
+        pool = Pool.objects.get(family=family)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(pool.slug, "main-pickem")
+
+    def test_client_supplied_tenant_and_role_fields_are_ignored(self):
+        attacker_family = Family.objects.create(
+            name="Attacker Family", slug="attacker-family"
+        )
+        attacker_pool = Pool.objects.create(
+            family=attacker_family,
+            name="Attacker Pool",
+            slug="attacker-pool",
+            season=1999,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        self.client.force_login(self.user)
+
+        self.client.post(
+            reverse("create_family"),
+            {
+                "name": "Controlled Family",
+                "owner": self.other_user.id,
+                "user": self.other_user.id,
+                "user_id": self.other_user.id,
+                "role": FamilyMembership.Role.ADMIN,
+                "status": FamilyMembership.Status.INACTIVE,
+                "season": 1999,
+                "family": attacker_family.id,
+                "family_id": attacker_family.id,
+                "pool": attacker_pool.id,
+                "pool_id": attacker_pool.id,
+                "is_default": "false",
+            },
+        )
+
+        family = Family.objects.get(name="Controlled Family")
+        pool = Pool.objects.get(family=family)
+        membership = FamilyMembership.objects.get(family=family)
+
+        self.assertNotEqual(family.id, attacker_family.id)
+        self.assertNotEqual(pool.id, attacker_pool.id)
+        self.assertEqual(pool.season, get_season())
+        self.assertTrue(pool.is_default)
+        self.assertEqual(membership.user, self.user)
+        self.assertEqual(membership.role, FamilyMembership.Role.OWNER)
+        self.assertEqual(membership.status, FamilyMembership.Status.ACTIVE)
+        self.assertFalse(
+            FamilyMembership.objects.filter(
+                family=family,
+                user=self.other_user,
+            ).exists()
+        )
+
+    def test_create_family_post_requires_csrf_token(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+
+        response = csrf_client.post(reverse("create_family"), {"name": "Smith Family"})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Family.objects.filter(name="Smith Family").exists())
 
 
 class IsCommissionerTests(TestCase):
