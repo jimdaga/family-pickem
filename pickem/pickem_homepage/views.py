@@ -11,6 +11,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Sum, Count, Q, Avg
 from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
@@ -24,6 +25,9 @@ from datetime import date
 
 from django.forms import formset_factory
 from pickem.utils import get_season as get_season_from_api
+from pickem_api.authz import get_user_family_memberships
+from pickem_api.models import Family, FamilyMembership, Pool
+from pickem_homepage.authz import family_member_required
 
 def get_season(display_name=False):
     return get_season_from_api(display_name=display_name)
@@ -53,8 +57,86 @@ def commissioner_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+
+def get_default_active_pool_for_family(family):
+    """Return a family's default active pool, or first active pool as a safe fallback."""
+    default_pool = (
+        Pool.objects.filter(
+            family=family,
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        .order_by('-season', 'slug')
+        .first()
+    )
+    if default_pool:
+        return default_pool
+
+    return (
+        Pool.objects.filter(family=family, status=Pool.Status.ACTIVE)
+        .order_by('-season', 'slug')
+        .first()
+    )
+
+
+def get_family_pool_choices(user):
+    choices = []
+    for membership in get_user_family_memberships(user):
+        family = membership.family
+        pool = get_default_active_pool_for_family(family)
+        choices.append({
+            'membership': membership,
+            'family': family,
+            'pool': pool,
+            'url': reverse(
+                'family_pool_home',
+                kwargs={'family_slug': family.slug, 'pool_slug': pool.slug},
+            ) if pool else None,
+        })
+    return choices
+
+
+@login_required
+def onboarding(request):
+    context = {'gameseason': get_season()}
+    return render(request, 'pickem/onboarding.html', context)
+
+
+@login_required
+def family_picker(request):
+    choices = get_family_pool_choices(request.user)
+    if not choices:
+        return redirect('onboarding')
+
+    context = {
+        'family_choices': choices,
+        'gameseason': get_season(),
+    }
+    return render(request, 'pickem/family_picker.html', context)
+
+
+@family_member_required
+def family_pool_home(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    context = {
+        'family': tenant_context.family,
+        'pool': tenant_context.pool,
+        'membership': tenant_context.membership,
+        'gameseason': get_season(),
+    }
+    return render(request, 'pickem/family_pool_home.html', context)
+
+
 # @ratelimit(key='ip', rate='30/m', method='GET', block=True)  # Disabled for now
 def index(request):
+    if request.user.is_authenticated:
+        family_choices = get_family_pool_choices(request.user)
+        if not family_choices:
+            return redirect('onboarding')
+        if len(family_choices) == 1 and family_choices[0]['url']:
+            return redirect(family_choices[0]['url'])
+        return redirect('family_picker')
+
     today = date.today()
     today_date = today.strftime("%Y-%m-%d")
     gameseason = get_season()

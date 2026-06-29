@@ -7,6 +7,13 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('onboarding/', views.onboarding, name='onboarding'),
+    path('families/', views.family_picker, name='family_picker'),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/',
+        views.family_pool_home,
+        name='family_pool_home',
+    ),
     path('scores/', views.scores, name='scores'),
     path('standings/', views.standings, name='standings'),
     path('rules/', views.rules, name='rules'),
