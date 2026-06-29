@@ -7,7 +7,7 @@
 
 ### Tenant Domain
 
-- [ ] **TEN-01**: A signed-in user can create a family.
+- [x] **TEN-01**: A signed-in user can create a family.
 - [x] **TEN-02**: A family has at least one pool for a season/competition.
 - [x] **TEN-03**: A signed-in user can belong to one or more families.
 - [x] **TEN-04**: A family membership has a role of owner, admin, or member.
@@ -76,7 +76,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEN-01 | Phase 3 | Pending |
+| TEN-01 | Phase 3 | Complete |
 | TEN-02 | Phase 1 | Complete |
 | TEN-03 | Phase 1 | Complete |
 | TEN-04 | Phase 1 | Complete |

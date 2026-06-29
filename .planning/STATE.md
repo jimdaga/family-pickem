@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planned
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-06-29T13:01:01.389Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-06-29T13:08:52.862Z"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 12
-  completed_plans: 8
-  percent: 25
+  completed_plans: 9
+  percent: 75
 ---
 
 # GSD State
@@ -84,6 +84,15 @@ See: `.planning/PROJECT.md`
   - `03-03-PLAN.md`: minimal invite creation and acceptance.
   - `03-04-PLAN.md`: header/mobile family switcher.
   - `03-05-PLAN.md`: final verification and handoff.
+- Phase 3 Plan 01 completed:
+  - Added authenticated root routing by active family membership count.
+  - Added onboarding, family picker, and protected tenant pool entry shells.
+  - Summary: `.planning/phases/03-onboarding-and-family-selection/03-01-SUMMARY.md`.
+- Phase 3 Plan 02 completed:
+  - Added authenticated create-family flow with a single family-name field.
+  - Created `Family`, current-season default NFL `Pool`, `PoolSettings`, owner `FamilyMembership`, and `FamilyAuditLog` rows transactionally.
+  - Added CSRF, slug collision, server-owned field, validation-error, onboarding-link, and success redirect tests.
+  - Summary: `.planning/phases/03-onboarding-and-family-selection/03-02-SUMMARY.md`.
 
 ## Decisions
 
@@ -108,6 +117,9 @@ See: `.planning/PROJECT.md`
 - [Phase 03]: 03-01: Authenticated root requests now route by active family membership count before legacy global homepage data is queried.
 - [Phase 03]: 03-01: Tenant entry reuses family_member_required for membership and pool-family consistency checks.
 - [Phase 03]: 03-01: Create/join onboarding links remain shell entry paths for 03-02 and 03-03.
+- [Phase 03]: 03-02: Create-family accepts only a family name; tenant, owner, role, status, season, and pool values are server-derived.
+- [Phase 03]: 03-02: Default create-family pool is `Main Pickem` / `main-pickem` for the current NFL season.
+- [Phase 03]: 03-02: Existing audit actions are reused for equivalent security-sensitive onboarding records because the audit enum has no family-created action.
 
 ## Verification
 
@@ -138,15 +150,19 @@ Result:
   - 47 `pickem_api` tests passed.
   - 45 `pickem_homepage` tests passed.
   - 92 full-suite tests passed.
+- Phase 3 Plan 02 verification passed:
+  - `manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` passed with 58 tests.
+  - `makemigrations --check --dry-run --settings=pickem.test_settings` reported `No changes detected`.
+  - Both commands reported the 13 existing `pickem_api.userStats` `IntegerField(max_length=...)` warnings.
 
 ## Next Action
 
-Execute Phase 3: Onboarding And Family Selection.
+Execute Phase 3 Plan 03: minimal invite creation and acceptance.
 
 ## Session
 
-**Last session:** 2026-06-29T13:01:01.385Z
-**Stopped at:** Completed 03-01-PLAN.md
+**Last session:** 2026-06-29T13:08:52.858Z
+**Stopped at:** Completed 03-02-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -154,3 +170,4 @@ Execute Phase 3: Onboarding And Family Selection.
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 03-onboarding-and-family-selection P01 | 201 | 3 tasks | 6 files |
+| Phase 03-onboarding-and-family-selection P02 | 250 | 3 tasks | 6 files |
