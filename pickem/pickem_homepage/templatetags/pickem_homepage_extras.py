@@ -4,6 +4,7 @@ from pickem_api.models import Teams, GamePicks, userSeasonPoints, userStats, Use
 from django.shortcuts import render
 from allauth.socialaccount.models import SocialAccount
 from datetime import date
+from django.utils import timezone
 import requests
 from pickem.utils import get_season
 
@@ -250,6 +251,18 @@ def game_lock_reason(game):
     except:
         # Fallback to old logic if there's an error
         return "Game has started" if game.statusType != 'notstarted' else "Available"
+
+
+@register.filter
+def game_start_label(game):
+    """Render a friendly game start label for scheduled games."""
+    try:
+        start_local = timezone.localtime(game.startTimestamp)
+        if game.statusType == 'notstarted' and start_local.hour == 0 and start_local.minute == 0:
+            return "Upcoming"
+        return start_local.strftime("%I:%M %p").lstrip("0")
+    except Exception:
+        return "Upcoming" if getattr(game, 'statusType', None) == 'notstarted' else ""
 
 @register.simple_tag
 def week_lock_status(games):
