@@ -117,6 +117,54 @@
                 <!-- Right Side Navigation -->
                 <div class="hidden lg:flex items-center space-x-4">
                     {% if user.is_authenticated %}
+                        {% if current_family and current_pool %}
+                        <div class="relative dropdown-container" data-testid="family-context-switcher">
+                            <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 dark:border-border-subtle dark:hover:bg-surface-hover transition-colors"
+                                    aria-label="Switch family" onclick="toggleDropdown(event, this)">
+                                <i class="fas fa-users text-primary"></i>
+                                <span class="text-left">
+                                    <span class="block text-[11px] font-semibold uppercase text-slate-300">Current family</span>
+                                    <span class="block max-w-44 truncate text-sm font-semibold text-white">{{ current_family.name }}</span>
+                                    <span class="block max-w-44 truncate text-xs text-slate-300">{{ current_pool.name }}</span>
+                                </span>
+                                {% if family_switcher_choices|length > 1 %}
+                                <i class="fas fa-chevron-down text-xs text-white"></i>
+                                {% endif %}
+                            </button>
+
+                            <div class="nav-dropdown absolute right-0 mt-2 w-72 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle hidden z-50 py-2">
+                                <div class="px-4 py-2 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Switch family</div>
+                                {% for choice in family_switcher_choices %}
+                                    {% if choice.url %}
+                                    <a class="block px-4 py-3 hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{{ choice.url }}">
+                                        <span class="block font-bold text-text-dark dark:text-white">{{ choice.family.name }}</span>
+                                        <span class="block text-sm text-text-secondary-light dark:text-text-secondary">{{ choice.pool.name }} - {{ choice.pool.season }}</span>
+                                    </a>
+                                    {% endif %}
+                                {% endfor %}
+                                <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
+                                <a class="flex items-center px-4 py-2 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% url 'family_picker' %}">
+                                    <i class="fas fa-exchange-alt mr-3"></i>All families
+                                </a>
+                            </div>
+                        </div>
+                        {% elif family_switcher_choices %}
+                        <a data-testid="family-context-switcher" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-600 text-white hover:bg-slate-700 dark:border-border-subtle dark:hover:bg-surface-hover transition-colors" href="{% url 'family_picker' %}">
+                            <i class="fas fa-users text-primary"></i>
+                            <span class="text-sm font-semibold">Switch family</span>
+                        </a>
+                        {% else %}
+                        <div class="flex items-center gap-2" data-testid="family-onboarding-actions">
+                            <a class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors" href="{% url 'create_family' %}">
+                                <i class="fas fa-plus"></i>
+                                <span>Create family</span>
+                            </a>
+                            <a class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-600 text-white text-sm font-semibold hover:bg-slate-700 dark:border-border-subtle dark:hover:bg-surface-hover transition-colors" href="{% url 'join_family' %}">
+                                <i class="fas fa-ticket"></i>
+                                <span>Join</span>
+                            </a>
+                        </div>
+                        {% endif %}
                         <!-- User Profile Dropdown -->
                         <div class="relative dropdown-container">
                             <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 dark:border-border-subtle dark:hover:bg-surface-hover transition-colors"
@@ -212,6 +260,43 @@
 
                     {% if user.is_authenticated %}
                     <div class="border-t border-border-light dark:border-border-subtle my-2"></div>
+                    {% if current_family and current_pool %}
+                    <div class="px-4 py-3 rounded-lg bg-border-light dark:bg-surface-hover" data-testid="family-context-switcher">
+                        <div class="text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Current family</div>
+                        <div class="mt-1 font-bold text-text-dark dark:text-white">{{ current_family.name }}</div>
+                        <div class="text-sm text-text-secondary-light dark:text-text-secondary">{{ current_pool.name }}</div>
+                    </div>
+                    <div class="mobile-dropdown-container">
+                        <button class="w-full flex items-center justify-between px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors mobile-dropdown-trigger" onclick="toggleMobileDropdown(this)">
+                            <span><i class="fas fa-exchange-alt mr-3"></i>Switch family</span>
+                            <i class="fas fa-chevron-down transition-transform duration-200"></i>
+                        </button>
+                        <div class="mobile-dropdown-menu hidden pl-8 pr-4 py-2 space-y-1">
+                            {% for choice in family_switcher_choices %}
+                                {% if choice.url %}
+                                <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="{{ choice.url }}">
+                                    <span class="block font-semibold">{{ choice.family.name }}</span>
+                                    <span class="block text-xs text-text-secondary-light dark:text-text-secondary">{{ choice.pool.name }}</span>
+                                </a>
+                                {% endif %}
+                            {% endfor %}
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="{% url 'family_picker' %}">All families</a>
+                        </div>
+                    </div>
+                    {% elif family_switcher_choices %}
+                    <a data-testid="family-context-switcher" class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="{% url 'family_picker' %}">
+                        <i class="fas fa-users mr-3"></i>Switch family
+                    </a>
+                    {% else %}
+                    <div class="grid grid-cols-2 gap-2" data-testid="family-onboarding-actions">
+                        <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="{% url 'create_family' %}">
+                            <i class="fas fa-plus mr-2"></i>Create
+                        </a>
+                        <a class="block px-4 py-3 border border-border-light dark:border-border-subtle text-text-dark dark:text-white rounded-lg font-semibold text-center" href="{% url 'join_family' %}">
+                            <i class="fas fa-ticket mr-2"></i>Join
+                        </a>
+                    </div>
+                    {% endif %}
                     <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="/picks">
                         <i class="fas fa-edit mr-2"></i>Submit Weekly Picks
                     </a>
