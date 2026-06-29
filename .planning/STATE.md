@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planned
-stopped_at: Phase 2 planned
-last_updated: "2026-06-28T20:15:00.000Z"
+status: executed
+stopped_at: Phase 2 executed
+last_updated: "2026-06-28T20:45:00.000Z"
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 4
-  percent: 13
+  completed_plans: 7
+  percent: 25
 ---
 
 # GSD State
@@ -23,7 +23,7 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** Families can run private pick'em pools with strict server-enforced data isolation.  
-**Current focus:** Phase 02 — authorization-foundation
+**Current focus:** Phase 03 — onboarding-and-family-selection
 
 ## Completed
 
@@ -65,6 +65,19 @@ See: `.planning/PROJECT.md`
   - `02-01-PLAN.md`: core tenant authorization helpers.
   - `02-02-PLAN.md`: view/API guards and proof integration.
   - `02-03-PLAN.md`: final verification and handoff.
+- Phase 2 Plan 01 completed:
+  - Added `pickem_api.authz` with centralized tenant denial classes, role checks, family/pool resolution, and explicit legacy fallback.
+  - Added helper tests for active member access, role denial, inactive/non-member denial, superuser/commissioner non-bypass, pool-family mismatch, cross-family denial, and legacy fallback.
+  - Summary: `.planning/phases/02-authorization-foundation/02-01-SUMMARY.md`.
+- Phase 2 Plan 02 completed:
+  - Added `pickem_homepage.authz.family_member_required`.
+  - Added DRF/API denial mapping and `GET /api/families/<family_slug>/pools/<pool_slug>/authz-check/` proof endpoint.
+  - Added browser and API integration tests for anonymous, non-member, wrong-role, allowed member/admin/owner, and pool-family mismatch behavior.
+  - Summary: `.planning/phases/02-authorization-foundation/02-02-SUMMARY.md`.
+- Phase 2 Plan 03 completed:
+  - Confirmed no pending migrations.
+  - Ran Django check, focused app suites, and full suite successfully.
+  - Summary: `.planning/phases/02-authorization-foundation/02-03-SUMMARY.md`.
 
 ## Decisions
 
@@ -81,6 +94,7 @@ See: `.planning/PROJECT.md`
 - 02: Tenant authorization helpers must not grant implicit access to `is_superuser` or legacy `UserProfile.is_commissioner`; explicit active `FamilyMembership` is required.
 - 02: Anonymous page requests redirect to login; anonymous API/helper denials are auth errors; authenticated non-members get 404; active members lacking role get 403.
 - 02: Phase 2 intentionally avoids broad product route migration; later phases own onboarding, page scoping, and family admin migration.
+- 02: Proof endpoint is intentionally minimal and returns only family slug, pool slug, and current user's role.
 
 ## Verification
 
@@ -105,19 +119,19 @@ Result:
   - validation artifact added;
   - owner fallback and role-preservation tests/tasks included in Plan 02;
   - final verification moved to dependent Wave 3 Plan 04.
-
-## Planned
-
-- Phase 2 Plan 01: `.planning/phases/02-authorization-foundation/02-01-PLAN.md`
-- Phase 2 Plan 02: `.planning/phases/02-authorization-foundation/02-02-PLAN.md`
-- Phase 2 Plan 03: `.planning/phases/02-authorization-foundation/02-03-PLAN.md`
+- Phase 2 verification passed:
+  - `manage.py check --settings=pickem.test_settings` passed with 13 existing `userStats` warnings.
+  - `makemigrations --check --dry-run --settings=pickem.test_settings` reported `No changes detected`.
+  - 47 `pickem_api` tests passed.
+  - 45 `pickem_homepage` tests passed.
+  - 92 full-suite tests passed.
 
 ## Next Action
 
-Execute Phase 2: Authorization Foundation.
+Plan Phase 3: Onboarding And Family Selection.
 
 ## Session
 
-**Last session:** 2026-06-28T20:15:00.000Z
-**Stopped at:** Phase 2 planned
-**Resume file:** .planning/phases/02-authorization-foundation/02-01-PLAN.md
+**Last session:** 2026-06-28T20:45:00.000Z
+**Stopped at:** Phase 2 executed
+**Resume file:** .planning/phases/02-authorization-foundation/02-03-SUMMARY.md

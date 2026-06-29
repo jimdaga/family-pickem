@@ -52,13 +52,13 @@ Definition of done:
 
 **Goal:** Centralize family/pool resolution, role checks, and tenant-scoped query helpers before moving pages.
 
-**Plans:** 0/3 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 
-- [ ] 02-01-PLAN.md — Create core tenant authorization helpers.
-- [ ] 02-02-PLAN.md — Add view/API guards and a proof integration.
-- [ ] 02-03-PLAN.md — Run final Phase 2 verification and handoff.
+- [x] 02-01-PLAN.md — Create core tenant authorization helpers.
+- [x] 02-02-PLAN.md — Add view/API guards and a proof integration.
+- [x] 02-03-PLAN.md — Run final Phase 2 verification and handoff. (completed 2026-06-28)
 
 Scope:
 
