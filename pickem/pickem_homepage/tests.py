@@ -245,6 +245,26 @@ class CreateFamilyFlowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/accounts/login/", response["Location"])
 
+    def test_onboarding_links_to_create_family_route(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("onboarding"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'href="{reverse("create_family")}"')
+        self.assertContains(response, "Create family")
+
+    def test_create_family_form_renders_validation_errors(self):
+        self.client.force_login(self.user)
+        family_count = Family.objects.count()
+
+        response = self.client.post(reverse("create_family"), {"name": ""})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/create_family.html")
+        self.assertContains(response, "This field is required.")
+        self.assertEqual(Family.objects.count(), family_count)
+
     def test_valid_post_creates_family_default_pool_settings_owner_and_audit(self):
         self.client.force_login(self.user)
 
