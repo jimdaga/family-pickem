@@ -10,6 +10,7 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.http import Http404, HttpResponse
 from django.test import TestCase, Client, RequestFactory
+from django.urls import reverse
 from django.utils import timezone
 
 from pickem.utils import get_season
@@ -84,6 +85,133 @@ class ViewSmokeTests(TestCase):
     def test_api_weeks_returns_200(self):
         resp = self.client.get("/api/weeks")
         self.assertEqual(resp.status_code, 200)
+
+
+class PostLoginTenantRoutingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            "tenant-user", email="tenant@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "outsider-user", email="outsider@example.com", password="pass"
+        )
+
+    def _family_with_pool(self, name, slug, *, is_default=True):
+        family = Family.objects.create(name=name, slug=slug)
+        pool = Pool.objects.create(
+            family=family,
+            name="Main Pickem",
+            slug="main",
+            season=2526,
+            competition="nfl",
+            is_default=is_default,
+        )
+        return family, pool
+
+    def _active_membership(self, user, family, role=FamilyMembership.Role.MEMBER):
+        return FamilyMembership.objects.create(
+            family=family,
+            user=user,
+            role=role,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def test_anonymous_root_still_renders_public_homepage(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Family Pickem")
+        self.assertTemplateUsed(response, "pickem/home.html")
+
+    def test_authenticated_user_with_no_active_membership_routes_to_onboarding(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get("/")
+
+        self.assertRedirects(
+            response,
+            reverse("onboarding"),
+            fetch_redirect_response=False,
+        )
+
+    def test_onboarding_has_no_global_private_home_data(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("onboarding"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/onboarding.html")
+        self.assertContains(response, "Start your family pick'em league")
+        self.assertNotContains(response, "Week 1 Points")
+        self.assertNotContains(response, "League Accuracy")
+        self.assertNotContains(response, "Message Board")
+
+    def test_authenticated_user_with_one_active_membership_routes_to_default_pool(self):
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.user, family)
+        self.client.force_login(self.user)
+
+        response = self.client.get("/")
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "family_pool_home",
+                kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+            ),
+            fetch_redirect_response=False,
+        )
+
+    def test_authenticated_user_with_multiple_active_memberships_routes_to_picker(self):
+        smith, _ = self._family_with_pool("Smith Family", "smith-family")
+        jones, _ = self._family_with_pool("Jones Family", "jones-family")
+        inactive, _ = self._family_with_pool("Inactive Family", "inactive-family")
+        self._active_membership(self.user, smith)
+        self._active_membership(self.user, jones)
+        FamilyMembership.objects.create(
+            family=inactive,
+            user=self.user,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.INACTIVE,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get("/")
+
+        self.assertRedirects(
+            response,
+            reverse("family_picker"),
+            fetch_redirect_response=False,
+        )
+
+        picker_response = self.client.get(reverse("family_picker"))
+        self.assertEqual(picker_response.status_code, 200)
+        self.assertTemplateUsed(picker_response, "pickem/family_picker.html")
+        self.assertContains(picker_response, "Smith Family")
+        self.assertContains(picker_response, "Jones Family")
+        self.assertNotContains(picker_response, "Inactive Family")
+
+    def test_outsider_direct_tenant_entry_is_denied(self):
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.user, family)
+        self.client.force_login(self.outsider)
+
+        response = self.client.get(
+            reverse(
+                "family_pool_home",
+                kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
 
 
 class IsCommissionerTests(TestCase):
