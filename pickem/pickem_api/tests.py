@@ -17,6 +17,15 @@ from pickem_api.models import (
 from pickem_api.serializers import (
     GameSerializer, currentSeasonSerializer, TeamsSerializer, GamePicksSerializer,
 )
+from pickem_api.authz import (
+    AuthenticationRequired,
+    PermissionDeniedForTenant,
+    TenantNotFound,
+    get_legacy_default_pool,
+    require_family_membership,
+    require_pool_membership,
+    resolve_pool_context,
+)
 
 
 class UserProfileModelTest(TestCase):
@@ -197,6 +206,166 @@ class TenantDomainAdminTest(TestCase):
         self.assertIn('code_hash', invitation_admin.list_display)
         self.assertNotIn('code', invitation_admin.list_display)
         self.assertNotIn('raw_code', invitation_admin.list_display)
+
+
+class TenantAuthorizationHelperTest(TestCase):
+    def setUp(self):
+        self.family = Family.objects.create(name='Smith Family', slug='smith-family')
+        self.other_family = Family.objects.create(name='Jones Family', slug='jones-family')
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name='Main Pickem',
+            slug='main',
+            season=2526,
+        )
+        self.other_pool = Pool.objects.create(
+            family=self.other_family,
+            name='Main Pickem',
+            slug='main',
+            season=2526,
+        )
+        self.member = User.objects.create_user('member', email='member@example.com')
+        self.admin_user = User.objects.create_user('admin-member', email='admin-member@example.com')
+        self.owner = User.objects.create_user('owner-member', email='owner-member@example.com')
+        self.inactive_user = User.objects.create_user('inactive-member', email='inactive@example.com')
+        self.outsider = User.objects.create_user('outsider', email='outsider@example.com')
+        self.superuser = User.objects.create_superuser('superuser', 'super@example.com', 'pass')
+        self.commissioner = User.objects.create_user('commissioner', email='commissioner@example.com')
+        UserProfile.objects.create(user=self.commissioner, is_commissioner=True)
+
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.member,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.admin_user,
+            role=FamilyMembership.Role.ADMIN,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.owner,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.inactive_user,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.INACTIVE,
+        )
+
+    def test_active_member_can_resolve_family_membership(self):
+        membership = require_family_membership(self.member, self.family)
+
+        self.assertEqual(membership.user, self.member)
+        self.assertEqual(membership.family, self.family)
+        self.assertEqual(membership.role, FamilyMembership.Role.MEMBER)
+
+    def test_role_hierarchy_allows_admin_and_owner_for_admin_requirement(self):
+        admin_membership = require_family_membership(
+            self.admin_user, self.family.slug, minimum_role=FamilyMembership.Role.ADMIN
+        )
+        owner_membership = require_family_membership(
+            self.owner, self.family.id, minimum_role=FamilyMembership.Role.ADMIN
+        )
+
+        self.assertEqual(admin_membership.role, FamilyMembership.Role.ADMIN)
+        self.assertEqual(owner_membership.role, FamilyMembership.Role.OWNER)
+
+    def test_member_is_denied_for_admin_requirement(self):
+        with self.assertRaises(PermissionDeniedForTenant):
+            require_family_membership(
+                self.member, self.family, minimum_role=FamilyMembership.Role.ADMIN
+            )
+
+    def test_inactive_and_outsider_memberships_are_not_found(self):
+        with self.assertRaises(TenantNotFound):
+            require_family_membership(self.inactive_user, self.family)
+
+        with self.assertRaises(TenantNotFound):
+            require_family_membership(self.outsider, self.family)
+
+    def test_anonymous_requires_authentication(self):
+        from django.contrib.auth.models import AnonymousUser
+
+        with self.assertRaises(AuthenticationRequired):
+            require_family_membership(AnonymousUser(), self.family)
+
+    def test_superuser_and_legacy_commissioner_do_not_bypass_membership(self):
+        with self.assertRaises(TenantNotFound):
+            require_family_membership(self.superuser, self.family)
+
+        with self.assertRaises(TenantNotFound):
+            require_family_membership(self.commissioner, self.family)
+
+    def test_pool_membership_requires_pool_to_belong_to_family(self):
+        membership = require_pool_membership(
+            self.member,
+            pool=self.pool.slug,
+            family=self.family.slug,
+        )
+
+        self.assertEqual(membership.family, self.family)
+
+        with self.assertRaises(TenantNotFound):
+            require_pool_membership(
+                self.member,
+                pool=self.other_pool,
+                family=self.family.slug,
+            )
+
+    def test_family_member_cannot_resolve_other_family_pool(self):
+        with self.assertRaises(TenantNotFound):
+            require_pool_membership(
+                self.member,
+                pool=self.other_pool,
+                family=self.other_family,
+            )
+
+    def test_legacy_default_pool_fallback_is_explicit(self):
+        legacy_family, _ = Family.objects.get_or_create(
+            slug='legacy-family-league',
+            defaults={'name': 'Legacy Family League'},
+        )
+        legacy_pool, _ = Pool.objects.get_or_create(
+            family=legacy_family,
+            slug='2526-pickem',
+            defaults={
+                'name': '2025 Pickem',
+                'season': 2526,
+                'is_default': True,
+            },
+        )
+        legacy_pool.is_default = True
+        legacy_pool.save()
+
+        self.assertEqual(get_legacy_default_pool(), legacy_pool)
+        with self.assertRaises(TenantNotFound):
+            resolve_pool_context(pool=None, family=None, allow_legacy_default=False)
+        self.assertEqual(
+            resolve_pool_context(pool=None, family=None, allow_legacy_default=True),
+            legacy_pool,
+        )
+
+    def test_legacy_default_pool_uses_fallback_slug_when_no_default_pool_exists(self):
+        legacy_family, _ = Family.objects.get_or_create(
+            name='Legacy Family League',
+            slug='legacy-family-league',
+        )
+        PoolSettings.objects.filter(pool__family=legacy_family).delete()
+        Pool.objects.filter(family=legacy_family).delete()
+        legacy_pool = Pool.objects.create(
+            family=legacy_family,
+            name='Legacy Pickem',
+            slug='legacy-pickem',
+            season=2024,
+        )
+
+        self.assertEqual(get_legacy_default_pool(), legacy_pool)
 
 
 class LegacyPoolScopeModelTest(TestCase):
