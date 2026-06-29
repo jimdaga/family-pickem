@@ -1,0 +1,57 @@
+{% extends 'pickem/base.html' %}
+
+{% block title %}{{ family.name }} - {{ pool.name }}{% endblock %}
+
+{% block content %}
+<main class="max-w-6xl mx-auto px-6 py-10">
+    <section class="mb-8">
+        <p class="text-sm font-semibold uppercase tracking-wide text-primary mb-3">Current pool</p>
+        <h1 class="text-3xl lg:text-4xl font-black text-text-dark dark:text-white mb-4">
+            {{ family.name }}
+        </h1>
+        <div class="flex flex-wrap items-center gap-3 text-sm text-text-secondary-light dark:text-text-secondary">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle">
+                <i class="fas fa-trophy text-primary"></i>
+                {{ pool.name }}
+            </span>
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle">
+                <i class="fas fa-user-shield text-primary"></i>
+                {{ membership.get_role_display }}
+            </span>
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle">
+                <i class="fas fa-calendar text-primary"></i>
+                {{ pool.season }}
+            </span>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href="/picks/" class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 hover:border-primary/40 transition-colors">
+            <i class="fas fa-edit text-primary text-2xl mb-3"></i>
+            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Picks</h2>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Go to the current weekly pick sheet.</p>
+        </a>
+        <a href="/standings/" class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 hover:border-primary/40 transition-colors">
+            <i class="fas fa-medal text-primary text-2xl mb-3"></i>
+            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Standings</h2>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary">View the leaderboard while tenant pages continue migrating.</p>
+        </a>
+        <a href="/scores/" class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 hover:border-primary/40 transition-colors">
+            <i class="fas fa-chart-line text-primary text-2xl mb-3"></i>
+            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Scores</h2>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Check NFL scores and game details.</p>
+        </a>
+    </section>
+
+    <section class="mt-6 flex flex-wrap gap-3">
+        <a href="{% url 'family_picker' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border-light dark:border-border-subtle text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors">
+            <i class="fas fa-exchange-alt"></i>
+            <span>Switch family</span>
+        </a>
+        <a href="/" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+    </section>
+</main>
+{% endblock %}
