@@ -1,7 +1,7 @@
 # Roadmap: Family Pickem Multi-Tenancy
 
 **Created:** 2026-06-28  
-**Current focus:** Phase 2: Authorization Foundation
+**Current focus:** Phase 3: Onboarding And Family Selection
 
 ## Phase 0: Discovery And Repo Readiness
 
@@ -75,6 +75,16 @@ Definition of done:
 ## Phase 3: Onboarding And Family Selection
 
 **Goal:** Let users create, join, and switch families/pools.
+
+**Plans:** 0/5 plans complete
+
+Plans:
+
+- [ ] 03-01-PLAN.md — Add post-login routing and onboarding shell.
+- [ ] 03-02-PLAN.md — Add create-family flow with default pool.
+- [ ] 03-03-PLAN.md — Add minimal invite creation and acceptance.
+- [ ] 03-04-PLAN.md — Add header/mobile family switcher.
+- [ ] 03-05-PLAN.md — Run final Phase 3 verification and handoff.
 
 Scope:
 
