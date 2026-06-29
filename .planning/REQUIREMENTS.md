@@ -15,7 +15,7 @@
 
 ### Authorization
 
-- [ ] **AUTHZ-01**: Every family/pool read path checks authenticated membership server-side.
+- [x] **AUTHZ-01**: Every family/pool read path checks authenticated membership server-side.
 - [ ] **AUTHZ-02**: Every family/pool write path checks authenticated membership server-side.
 - [ ] **AUTHZ-03**: Owner/admin actions require least-privilege role checks.
 - [ ] **AUTHZ-04**: Users outside a family cannot view or infer private family picks, standings, members, invitations, settings, dashboards, profiles, or message-board data.
@@ -25,8 +25,8 @@
 
 - [ ] **INV-01**: Owners/admins can create invite links or codes.
 - [ ] **INV-02**: Invite codes can expire, be revoked, and be regenerated.
-- [ ] **INV-03**: A signed-in user with no family sees onboarding to create or join a family.
-- [ ] **INV-04**: A signed-in user with multiple families can switch active family/pool context.
+- [x] **INV-03**: A signed-in user with no family sees onboarding to create or join a family.
+- [x] **INV-04**: A signed-in user with multiple families can switch active family/pool context.
 
 ### Pool Gameplay
 
@@ -81,15 +81,15 @@
 | TEN-03 | Phase 1 | Complete |
 | TEN-04 | Phase 1 | Complete |
 | TEN-05 | Phase 1 | Complete |
-| AUTHZ-01 | Phase 2, Phase 4 | Pending |
+| AUTHZ-01 | Phase 2, Phase 4 | Complete |
 | AUTHZ-02 | Phase 2, Phase 4 | Pending |
 | AUTHZ-03 | Phase 2, Phase 5 | Pending |
 | AUTHZ-04 | Phase 2, Phase 4 | Pending |
 | AUTHZ-05 | Phase 2, Phase 4, Phase 5 | Pending |
 | INV-01 | Phase 3, Phase 5 | Pending |
 | INV-02 | Phase 3, Phase 5 | Pending |
-| INV-03 | Phase 3 | Pending |
-| INV-04 | Phase 3 | Pending |
+| INV-03 | Phase 3 | Complete |
+| INV-04 | Phase 3 | Complete |
 | POOL-01 | Phase 1, Phase 4 | Complete |
 | POOL-02 | Phase 1, Phase 4, Phase 6 | Complete |
 | POOL-03 | Phase 4 | Pending |
