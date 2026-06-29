@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planned
-stopped_at: Phase 3 planned
-last_updated: "2026-06-29T02:30:00.000Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-06-29T13:01:01.389Z"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 12
-  completed_plans: 7
+  completed_plans: 8
   percent: 25
 ---
 
@@ -105,6 +105,9 @@ See: `.planning/PROJECT.md`
 - 03: Create-family creates one default current-season NFL pool and owner membership in the same flow.
 - 03: Join supports invite code/link; minimal owner-created member invites are in Phase 3, while full invite management remains Phase 5.
 - 03: Header switcher plus readable `/families/<family_slug>/pools/<pool_slug>/...` URLs are the Phase 3 tenant context model.
+- [Phase 03]: 03-01: Authenticated root requests now route by active family membership count before legacy global homepage data is queried.
+- [Phase 03]: 03-01: Tenant entry reuses family_member_required for membership and pool-family consistency checks.
+- [Phase 03]: 03-01: Create/join onboarding links remain shell entry paths for 03-02 and 03-03.
 
 ## Verification
 
@@ -142,6 +145,12 @@ Execute Phase 3: Onboarding And Family Selection.
 
 ## Session
 
-**Last session:** 2026-06-29T02:30:00.000Z
-**Stopped at:** Phase 3 planned
-**Resume file:** .planning/phases/03-onboarding-and-family-selection/03-01-PLAN.md
+**Last session:** 2026-06-29T13:01:01.385Z
+**Stopped at:** Completed 03-01-PLAN.md
+**Resume file:** None
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 03-onboarding-and-family-selection P01 | 201 | 3 tasks | 6 files |
