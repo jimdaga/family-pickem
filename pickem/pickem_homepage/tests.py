@@ -2,16 +2,19 @@ from io import StringIO
 from importlib import import_module
 
 from django.contrib import admin
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.core.management import call_command
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
-from django.test import TestCase, Client
+from django.http import Http404, HttpResponse
+from django.test import TestCase, Client, RequestFactory
 from django.utils import timezone
 
 from pickem.utils import get_season
-from pickem_api.models import currentSeason, Family, FamilyMembership, UserProfile
+from pickem_api.models import currentSeason, Family, FamilyMembership, Pool, UserProfile
+from pickem_homepage.authz import family_member_required
 from pickem_homepage.models import (
     MessageBoardPost,
     MessageBoardComment,
@@ -123,6 +126,84 @@ class IsCommissionerTests(TestCase):
             "admin", "admin@example.com", "pass"
         )
         self.assertTrue(is_commissioner(user))
+
+
+class TenantAuthorizationDecoratorTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.family = Family.objects.create(name="Smith Family", slug="smith-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="main",
+            season=2526,
+        )
+        self.member = User.objects.create_user("member", password="pass")
+        self.admin_user = User.objects.create_user("admin-member", password="pass")
+        self.owner = User.objects.create_user("owner-member", password="pass")
+        self.outsider = User.objects.create_user("outsider", password="pass")
+
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.member,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.admin_user,
+            role=FamilyMembership.Role.ADMIN,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.owner,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _request(self, user):
+        request = self.factory.get("/families/smith-family/pools/main/proof/")
+        request.user = user
+        return request
+
+    def _view(self, minimum_role=FamilyMembership.Role.MEMBER):
+        @family_member_required(minimum_role=minimum_role)
+        def guarded_view(request, family_slug, pool_slug):
+            return HttpResponse(request.tenant_context.membership.role)
+
+        return guarded_view
+
+    def test_anonymous_browser_request_redirects_to_login(self):
+        response = self._view()(self._request(AnonymousUser()), "smith-family", "main")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response["Location"])
+
+    def test_non_member_browser_request_raises_404(self):
+        with self.assertRaises(Http404):
+            self._view()(self._request(self.outsider), "smith-family", "main")
+
+    def test_member_browser_request_is_allowed_for_member_route(self):
+        response = self._view()(self._request(self.member), "smith-family", "main")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, FamilyMembership.Role.MEMBER.encode())
+
+    def test_member_browser_request_gets_403_for_admin_route(self):
+        response = self._view(FamilyMembership.Role.ADMIN)(
+            self._request(self.member), "smith-family", "main"
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_and_owner_browser_requests_are_allowed_for_admin_route(self):
+        for user in [self.admin_user, self.owner]:
+            response = self._view(FamilyMembership.Role.ADMIN)(
+                self._request(user), "smith-family", "main"
+            )
+
+            self.assertEqual(response.status_code, 200)
 
 
 class GetSeasonTests(TestCase):
