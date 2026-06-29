@@ -1,0 +1,63 @@
+{% extends 'pickem/base.html' %}
+
+{% block title %}Get Started - Family Pick'em{% endblock %}
+
+{% block content %}
+<main class="max-w-5xl mx-auto px-6 py-10">
+    <section class="mb-8">
+        <p class="text-sm font-semibold uppercase tracking-wide text-primary mb-3">Family setup</p>
+        <h1 class="text-3xl lg:text-4xl font-black text-text-dark dark:text-white mb-4">
+            Start your family pick'em league
+        </h1>
+        <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
+            Create a private family league or join one with an invite code before making picks.
+        </p>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white">
+                    <i class="fas fa-users"></i>
+                </span>
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Create a family</h2>
+            </div>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary mb-5">
+                Set up a private league for your group and become the owner.
+            </p>
+            <a href="/families/create/" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
+                <i class="fas fa-plus"></i>
+                <span>Create family</span>
+            </a>
+        </div>
+
+        <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700 text-white">
+                    <i class="fas fa-ticket"></i>
+                </span>
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Join with a code</h2>
+            </div>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary mb-5">
+                Use an invite from your family owner to enter their pool.
+            </p>
+            <form action="/families/join/" method="get" class="flex flex-col sm:flex-row gap-3">
+                <label class="sr-only" for="invite_code">Invite code</label>
+                <input id="invite_code" name="code" type="text" autocomplete="off"
+                       class="flex-1 rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface-hover px-3 py-2 text-text-dark dark:text-white"
+                       placeholder="Invite code">
+                <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold hover:bg-slate-700 transition-colors">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>Join</span>
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <section class="mt-6">
+        <a href="/logout" class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary hover:text-primary transition-colors">
+            Sign out
+        </a>
+    </section>
+</main>
+{% endblock %}
