@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planned
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-06-29T13:08:52.862Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-06-29T13:18:14.093Z"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 83
 ---
 
 # GSD State
@@ -93,6 +93,12 @@ See: `.planning/PROJECT.md`
   - Created `Family`, current-season default NFL `Pool`, `PoolSettings`, owner `FamilyMembership`, and `FamilyAuditLog` rows transactionally.
   - Added CSRF, slug collision, server-owned field, validation-error, onboarding-link, and success redirect tests.
   - Summary: `.planning/phases/03-onboarding-and-family-selection/03-02-SUMMARY.md`.
+- Phase 3 Plan 03 completed:
+  - Added owner-only minimal member invite creation from family/pool context.
+  - Added hash-only invite code storage with one-time raw-code/link display.
+  - Added authenticated manual-code and invite-link acceptance with transaction-scoped validation, membership create/reactivation, use counting, and audit logging.
+  - Added negative tests for admin/member/outsider invite creation, CSRF, revoked/expired/exhausted/invalid/inactive/mismatched invites, and generic invalid-invite errors.
+  - Summary: `.planning/phases/03-onboarding-and-family-selection/03-03-SUMMARY.md`.
 
 ## Decisions
 
@@ -120,6 +126,9 @@ See: `.planning/PROJECT.md`
 - [Phase 03]: 03-02: Create-family accepts only a family name; tenant, owner, role, status, season, and pool values are server-derived.
 - [Phase 03]: 03-02: Default create-family pool is `Main Pickem` / `main-pickem` for the current NFL season.
 - [Phase 03]: 03-02: Existing audit actions are reused for equivalent security-sensitive onboarding records because the audit enum has no family-created action.
+- [Phase 03]: 03-03: Phase 3 invite creation is owner-only; full invite management policy remains deferred to Phase 5.
+- [Phase 03]: 03-03: Invite links render a confirmation form and require POST for acceptance so membership mutation remains CSRF-protected.
+- [Phase 03]: 03-03: Invite codes are normalized for readability, hashed server-side, and stored only in `FamilyInvitation.code_hash`.
 
 ## Verification
 
@@ -154,15 +163,18 @@ Result:
   - `manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` passed with 58 tests.
   - `makemigrations --check --dry-run --settings=pickem.test_settings` reported `No changes detected`.
   - Both commands reported the 13 existing `pickem_api.userStats` `IntegerField(max_length=...)` warnings.
+- Phase 3 Plan 03 verification passed:
+  - `manage.py test pickem_homepage pickem_api --settings=pickem.test_settings --verbosity=2` passed with 113 tests.
+  - `manage.py check --settings=pickem.test_settings` passed with the 13 existing `pickem_api.userStats` `IntegerField(max_length=...)` warnings.
 
 ## Next Action
 
-Execute Phase 3 Plan 03: minimal invite creation and acceptance.
+Execute Phase 3 Plan 04: header/mobile family switcher.
 
 ## Session
 
-**Last session:** 2026-06-29T13:08:52.858Z
-**Stopped at:** Completed 03-02-PLAN.md
+**Last session:** 2026-06-29T13:18:14.089Z
+**Stopped at:** Completed 03-03-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -171,3 +183,4 @@ Execute Phase 3 Plan 03: minimal invite creation and acceptance.
 |-------|------|----------|-------|
 | Phase 03-onboarding-and-family-selection P01 | 201 | 3 tasks | 6 files |
 | Phase 03-onboarding-and-family-selection P02 | 250 | 3 tasks | 6 files |
+| Phase 03-onboarding-and-family-selection P03 | 346 | 3 tasks | 7 files |
