@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planned
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-06-29T13:18:14.093Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-06-29T13:37:27.897Z"
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 12
-  completed_plans: 10
-  percent: 83
+  completed_plans: 11
+  percent: 92
 ---
 
 # GSD State
@@ -99,6 +99,11 @@ See: `.planning/PROJECT.md`
   - Added authenticated manual-code and invite-link acceptance with transaction-scoped validation, membership create/reactivation, use counting, and audit logging.
   - Added negative tests for admin/member/outsider invite creation, CSRF, revoked/expired/exhausted/invalid/inactive/mismatched invites, and generic invalid-invite errors.
   - Summary: `.planning/phases/03-onboarding-and-family-selection/03-03-SUMMARY.md`.
+- Phase 3 Plan 04 completed:
+  - Added server-derived family switcher context for current family, current pool, current membership, and active family choices.
+  - Updated desktop and mobile header navigation to show current family/default pool and switch to explicit tenant URLs.
+  - Added isolation tests proving inactive memberships and outsider families do not appear in switcher context or markup.
+  - Summary: `.planning/phases/03-onboarding-and-family-selection/03-04-SUMMARY.md`.
 
 ## Decisions
 
@@ -129,6 +134,9 @@ See: `.planning/PROJECT.md`
 - [Phase 03]: 03-03: Phase 3 invite creation is owner-only; full invite management policy remains deferred to Phase 5.
 - [Phase 03]: 03-03: Invite links render a confirmation form and require POST for acceptance so membership mutation remains CSRF-protected.
 - [Phase 03]: 03-03: Invite codes are normalized for readability, hashed server-side, and stored only in `FamilyInvitation.code_hash`.
+- [Phase 03]: 03-04: Switcher choices are derived only from authenticated active memberships via get_user_family_memberships().
+- [Phase 03]: 03-04: Current tenant context is resolved through require_tenant_context() before templates receive it.
+- [Phase 03]: 03-04: Header switch targets remain default active pools with explicit family/pool URLs; multi-pool UI stays deferred.
 
 ## Verification
 
@@ -166,15 +174,19 @@ Result:
 - Phase 3 Plan 03 verification passed:
   - `manage.py test pickem_homepage pickem_api --settings=pickem.test_settings --verbosity=2` passed with 113 tests.
   - `manage.py check --settings=pickem.test_settings` passed with the 13 existing `pickem_api.userStats` `IntegerField(max_length=...)` warnings.
+- Phase 3 Plan 04 verification passed:
+  - `manage.py test pickem_homepage.tests.FamilySwitcherContextTests --settings=pickem.test_settings --verbosity=2` passed with 3 tests after implementation.
+  - `manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` passed with 69 tests.
+  - `curl -s --max-time 5 http://localhost:8000 | head -40` returned public homepage HTML.
 
 ## Next Action
 
-Execute Phase 3 Plan 04: header/mobile family switcher.
+Execute Phase 3 Plan 05: final Phase 3 verification and handoff.
 
 ## Session
 
-**Last session:** 2026-06-29T13:18:14.089Z
-**Stopped at:** Completed 03-03-PLAN.md
+**Last session:** 2026-06-29T13:37:27.894Z
+**Stopped at:** Completed 03-04-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -184,3 +196,4 @@ Execute Phase 3 Plan 04: header/mobile family switcher.
 | Phase 03-onboarding-and-family-selection P01 | 201 | 3 tasks | 6 files |
 | Phase 03-onboarding-and-family-selection P02 | 250 | 3 tasks | 6 files |
 | Phase 03-onboarding-and-family-selection P03 | 346 | 3 tasks | 7 files |
+| Phase 03-onboarding-and-family-selection P04 | 176 | 3 tasks | 4 files |
