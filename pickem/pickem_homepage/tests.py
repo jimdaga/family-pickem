@@ -1,3 +1,4 @@
+from datetime import timedelta
 from io import StringIO
 from importlib import import_module
 
@@ -18,6 +19,7 @@ from pickem_api.models import (
     currentSeason,
     Family,
     FamilyAuditLog,
+    FamilyInvitation,
     FamilyMembership,
     Pool,
     PoolSettings,
@@ -399,6 +401,334 @@ class CreateFamilyFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertFalse(Family.objects.filter(name="Smith Family").exists())
+
+
+class InviteFlowTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user(
+            "invite-owner", email="owner@example.com", password="pass"
+        )
+        self.admin_user = User.objects.create_user(
+            "invite-admin", email="admin@example.com", password="pass"
+        )
+        self.member = User.objects.create_user(
+            "invite-member", email="member@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "invite-outsider", email="outsider@example.com", password="pass"
+        )
+        self.joiner = User.objects.create_user(
+            "invite-joiner", email="joiner@example.com", password="pass"
+        )
+        self.family = Family.objects.create(name="Smith Family", slug="smith-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="main",
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.owner,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.admin_user,
+            role=FamilyMembership.Role.ADMIN,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.member,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _create_invite_url(self, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "create_family_invite",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def _join_url(self):
+        return reverse("join_family")
+
+    def _link_url(self, code):
+        return reverse("accept_invite_link", kwargs={"invite_code": code})
+
+    def _hash_code(self, raw_code):
+        from pickem_homepage.views import hash_invite_code
+
+        return hash_invite_code(raw_code)
+
+    def _invitation(self, raw_code="VALID-CODE", **overrides):
+        defaults = {
+            "family": self.family,
+            "pool": self.pool,
+            "code_hash": self._hash_code(raw_code),
+            "role": FamilyMembership.Role.MEMBER,
+            "expires_at": timezone.now() + timedelta(days=14),
+            "max_uses": 20,
+            "created_by": self.owner,
+        }
+        defaults.update(overrides)
+        return FamilyInvitation.objects.create(**defaults)
+
+    def test_owner_can_create_member_invite_hash_only_with_defaults_and_audit(self):
+        self.client.force_login(self.owner)
+        before = timezone.now()
+
+        response = self.client.post(self._create_invite_url())
+
+        invitation = FamilyInvitation.objects.get(family=self.family)
+        raw_code = response.context["invite_code"]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/family_pool_home.html")
+        self.assertEqual(invitation.pool, self.pool)
+        self.assertEqual(invitation.role, FamilyMembership.Role.MEMBER)
+        self.assertEqual(invitation.max_uses, 20)
+        self.assertEqual(invitation.use_count, 0)
+        self.assertFalse(invitation.is_revoked)
+        self.assertGreaterEqual(invitation.expires_at, before + timedelta(days=13, hours=23))
+        self.assertLessEqual(invitation.expires_at, timezone.now() + timedelta(days=14, minutes=1))
+        self.assertTrue(invitation.code_hash.startswith("sha256:"))
+        self.assertNotEqual(invitation.code_hash, raw_code)
+        self.assertFalse(
+            FamilyInvitation.objects.filter(code_hash__icontains=raw_code).exists()
+        )
+        self.assertFalse(hasattr(invitation, "code"))
+        self.assertFalse(hasattr(invitation, "raw_code"))
+        self.assertGreaterEqual(len(raw_code), 32)
+        self.assertContains(response, raw_code)
+        self.assertContains(response, self._link_url(raw_code))
+        self.assertTrue(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                pool=self.pool,
+                actor=self.owner,
+                action=FamilyAuditLog.Action.INVITATION_CREATED,
+                target_type="FamilyInvitation",
+                target_id=str(invitation.id),
+            ).exists()
+        )
+        audit = FamilyAuditLog.objects.get(
+            action=FamilyAuditLog.Action.INVITATION_CREATED,
+            target_id=str(invitation.id),
+        )
+        self.assertNotIn(raw_code, str(audit.metadata))
+
+    def test_non_owners_cannot_create_phase_three_invites(self):
+        for user, expected_status in [
+            (self.admin_user, 403),
+            (self.member, 403),
+            (self.outsider, 404),
+        ]:
+            self.client.force_login(user)
+
+            response = self.client.post(self._create_invite_url())
+
+            self.assertEqual(response.status_code, expected_status)
+            self.assertFalse(FamilyInvitation.objects.exists())
+
+    def test_invite_creation_is_post_only_and_csrf_protected(self):
+        self.client.force_login(self.owner)
+
+        get_response = self.client.get(self._create_invite_url())
+
+        self.assertEqual(get_response.status_code, 405)
+
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.owner)
+
+        response = csrf_client.post(self._create_invite_url())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(FamilyInvitation.objects.exists())
+
+    def test_manual_code_acceptance_creates_member_and_redirects_to_pool(self):
+        invite = self._invitation(raw_code="manual-code")
+        self.client.force_login(self.joiner)
+
+        response = self.client.post(self._join_url(), {"code": " manual code "})
+
+        membership = FamilyMembership.objects.get(family=self.family, user=self.joiner)
+        invite.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse(
+                "family_pool_home",
+                kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
+            ),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(membership.role, FamilyMembership.Role.MEMBER)
+        self.assertEqual(membership.status, FamilyMembership.Status.ACTIVE)
+        self.assertEqual(invite.use_count, 1)
+        self.assertTrue(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                pool=self.pool,
+                actor=self.joiner,
+                action=FamilyAuditLog.Action.MEMBERSHIP_CREATED,
+                target_type="FamilyMembership",
+                target_id=str(membership.id),
+                metadata__source="invite_acceptance",
+            ).exists()
+        )
+
+    def test_link_acceptance_requires_login_and_accepts_by_post(self):
+        self._invitation(raw_code="link-code")
+
+        anonymous = self.client.get(self._link_url("link-code"))
+
+        self.assertEqual(anonymous.status_code, 302)
+        self.assertIn("/accounts/login/", anonymous["Location"])
+        self.client.force_login(self.joiner)
+
+        get_response = self.client.get(self._link_url("link-code"))
+        post_response = self.client.post(self._link_url("link-code"))
+
+        self.assertEqual(get_response.status_code, 200)
+        self.assertTemplateUsed(get_response, "pickem/join_family.html")
+        self.assertRedirects(
+            post_response,
+            reverse(
+                "family_pool_home",
+                kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
+            ),
+            fetch_redirect_response=False,
+        )
+        self.assertTrue(
+            FamilyMembership.objects.filter(
+                family=self.family,
+                user=self.joiner,
+                status=FamilyMembership.Status.ACTIVE,
+            ).exists()
+        )
+
+    def test_valid_invite_reactivates_inactive_same_family_membership(self):
+        self._invitation(raw_code="reactivate-code")
+        membership = FamilyMembership.objects.create(
+            family=self.family,
+            user=self.joiner,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.INACTIVE,
+        )
+        self.client.force_login(self.joiner)
+
+        response = self.client.post(self._join_url(), {"code": "reactivate-code"})
+
+        membership.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(membership.status, FamilyMembership.Status.ACTIVE)
+        self.assertEqual(membership.role, FamilyMembership.Role.MEMBER)
+
+    def test_invite_acceptance_post_requires_csrf_token(self):
+        self._invitation(raw_code="csrf-code")
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.joiner)
+
+        response = csrf_client.post(self._join_url(), {"code": "csrf-code"})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(
+            FamilyMembership.objects.filter(family=self.family, user=self.joiner).exists()
+        )
+
+    def test_invalid_invite_failures_are_generic_and_do_not_create_membership(self):
+        cases = []
+        cases.append(("invalid code", "missing-family"))
+        cases.append(("revoked-code", self._invitation("revoked-code", is_revoked=True)))
+        cases.append((
+            "expired-code",
+            self._invitation(
+                "expired-code",
+                expires_at=timezone.now() - timedelta(minutes=1),
+            ),
+        ))
+        cases.append(("exhausted-code", self._invitation("exhausted-code", max_uses=1, use_count=1)))
+
+        inactive_family = Family.objects.create(
+            name="Inactive Family",
+            slug="inactive-family",
+            status=Family.Status.INACTIVE,
+        )
+        inactive_pool = Pool.objects.create(
+            family=inactive_family,
+            name="Inactive Main",
+            slug="inactive-main",
+            season=2526,
+            status=Pool.Status.ACTIVE,
+        )
+        cases.append((
+            "inactive-family-code",
+            self._invitation(
+                "inactive-family-code",
+                family=inactive_family,
+                pool=inactive_pool,
+            ),
+        ))
+
+        inactive_pool_same_family = Pool.objects.create(
+            family=self.family,
+            name="Inactive Pool",
+            slug="inactive-pool",
+            season=2526,
+            status=Pool.Status.INACTIVE,
+        )
+        cases.append((
+            "inactive-pool-code",
+            self._invitation("inactive-pool-code", pool=inactive_pool_same_family),
+        ))
+
+        other_family = Family.objects.create(name="Other Family", slug="other-family")
+        other_pool = Pool.objects.create(
+            family=other_family,
+            name="Other Main",
+            slug="other-main",
+            season=2526,
+            status=Pool.Status.ACTIVE,
+        )
+        cases.append((
+            "pool-mismatch-code",
+            self._invitation("pool-mismatch-code", pool=other_pool),
+        ))
+
+        for raw_code, _case in cases:
+            with self.subTest(raw_code=raw_code):
+                FamilyMembership.objects.filter(
+                    family__in=[self.family, inactive_family, other_family],
+                    user=self.joiner,
+                ).delete()
+                self.client.force_login(self.joiner)
+
+                response = self.client.post(self._join_url(), {"code": raw_code})
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "pickem/join_family.html")
+                self.assertContains(response, "Invite code is invalid or unavailable.")
+                self.assertNotContains(response, "Smith Family")
+                self.assertNotContains(response, "Inactive Family")
+                self.assertNotContains(response, "Other Family")
+                self.assertFalse(
+                    FamilyMembership.objects.filter(user=self.joiner).exists()
+                )
 
 
 class IsCommissionerTests(TestCase):
