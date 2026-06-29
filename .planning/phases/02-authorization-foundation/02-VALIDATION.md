@@ -32,12 +32,12 @@ created: 2026-06-28
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 02-01-01 | 01 | 1 | Central authz helpers | IDOR/BOLA | non-member and inactive member denied | unit | `cd pickem && ../venv/bin/python manage.py test pickem_api --settings=pickem.test_settings` | Yes | pending |
-| 02-01-02 | 01 | 1 | Role hierarchy | least privilege | member cannot perform admin/owner checks | unit | `cd pickem && ../venv/bin/python manage.py test pickem_api --settings=pickem.test_settings` | Yes | pending |
-| 02-01-03 | 01 | 1 | No global bypass | privilege escalation | superuser/commissioner without membership denied | unit | `cd pickem && ../venv/bin/python manage.py test pickem_api --settings=pickem.test_settings` | Yes | pending |
-| 02-02-01 | 02 | 2 | Browser guard | auth boundary | anonymous redirects; non-member 404; wrong role 403 | integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | pending |
-| 02-02-02 | 02 | 2 | API guard | auth boundary | API returns 401/403/404 without leaking tenants | integration | `cd pickem && ../venv/bin/python manage.py test pickem_api --settings=pickem.test_settings` | Yes | pending |
-| 02-03-01 | 03 | 3 | Regression | route safety | existing global behavior not accidentally broken | regression | `cd pickem && ../venv/bin/python manage.py test --settings=pickem.test_settings` | Yes | pending |
+| 02-01-01 | 01 | 1 | Central authz helpers | IDOR/BOLA | non-member and inactive member denied | unit | `cd pickem && ../venv/bin/python manage.py test pickem_api --settings=pickem.test_settings` | Yes | green |
+| 02-01-02 | 01 | 1 | Role hierarchy | least privilege | member cannot perform admin/owner checks | unit | `cd pickem && ../venv/bin/python manage.py test pickem_api --settings=pickem.test_settings` | Yes | green |
+| 02-01-03 | 01 | 1 | No global bypass | privilege escalation | superuser/commissioner without membership denied | unit | `cd pickem && ../venv/bin/python manage.py test pickem_api --settings=pickem.test_settings` | Yes | green |
+| 02-02-01 | 02 | 2 | Browser guard | auth boundary | anonymous redirects; non-member 404; wrong role 403 | integration | `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings` | Yes | green |
+| 02-02-02 | 02 | 2 | API guard | auth boundary | API returns 401/403/404 without leaking tenants | integration | `cd pickem && ../venv/bin/python manage.py test pickem_api --settings=pickem.test_settings` | Yes | green |
+| 02-03-01 | 03 | 3 | Regression | route safety | existing global behavior not accidentally broken | regression | `cd pickem && ../venv/bin/python manage.py test --settings=pickem.test_settings` | Yes | green |
 
 ## Wave 0 Requirements
 
