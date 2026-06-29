@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planned
-stopped_at: Phase 4 context gathered
-last_updated: "2026-06-29T17:56:48.223Z"
+stopped_at: Phase 4 planned
+last_updated: "2026-06-29T18:20:23Z"
 progress:
   total_phases: 8
   completed_phases: 3
-  total_plans: 12
+  total_plans: 18
   completed_plans: 12
   percent: 38
 ---
@@ -16,7 +16,7 @@ progress:
 # GSD State
 
 **Project:** Family Pickem Multi-Tenancy  
-**Updated:** 2026-06-29 after Phase 3 Plan 05 verification
+**Updated:** 2026-06-29 after Phase 4 planning
 
 ## Project Reference
 
@@ -109,6 +109,13 @@ See: `.planning/PROJECT.md`
   - Updated Phase 3 validation to reference `03-01-SUMMARY.md` through `03-05-SUMMARY.md` and document onboarding, create-family, invite, switcher, and negative authorization coverage.
   - Documented remaining Phase 4 risks for global gameplay pages: dashboard/home, picks, scores, standings, rules, profiles, and message board still need explicit tenant-scoped page/data migration.
   - Summary: `.planning/phases/03-onboarding-and-family-selection/03-05-SUMMARY.md`.
+- Phase 4 planned as six independently reviewable plans:
+  - `04-01-PLAN.md`: dashboard/home tenant context.
+  - `04-02-PLAN.md`: pick submit/edit tenant URLs and server-derived writes.
+  - `04-03-PLAN.md`: tenant scores, standings, weekly winners, and rules.
+  - `04-04-PLAN.md`: family-private profiles, players, and message-board AJAX.
+  - `04-05-PLAN.md`: shared navigation, shared context processors, dashboard, picks, and scores tenant-link cleanup.
+  - `04-06-PLAN.md`: final cross-family negative coverage and validation handoff.
 
 ## Decisions
 
@@ -144,6 +151,11 @@ See: `.planning/PROJECT.md`
 - [Phase 03]: 03-04: Header switch targets remain default active pools with explicit family/pool URLs; multi-pool UI stays deferred.
 - [Phase 03]: 03-05: Final verification passed with 116 focused homepage/API tests and 116 full-suite tests; the only warnings are the pre-existing `userStats` `IntegerField(max_length=...)` warnings.
 - [Phase 03]: 03-05: Phase 4 owns tenant-scoping of gameplay pages and data queries; Phase 3 completion does not mark dashboard/picks/scores/standings/rules/profile/message-board migration complete.
+- 04: Tenant gameplay URLs use `/families/<family_slug>/pools/<pool_slug>/...`; legacy signed-in gameplay routes redirect to a resolved tenant or deny private global rendering.
+- 04: Global NFL reference data remains global, but picks, pick counts, overlays, standings, winners, profiles, player lists, message-board content, and shared private footer stats are tenant scoped.
+- 04: Anonymous `/scores/` may remain public only as NFL-facts-only; signed-in users should use tenant scores.
+- 04: Lifetime/all-time stats in this phase are current-pool-only or hidden when they cannot be safely scoped.
+- 04: Shared context processors are part of the tenant isolation boundary; `footer_stats_context` and `site_banner_context` must not leak another pool/family.
 
 ## Verification
 
@@ -191,16 +203,19 @@ Result:
   - `manage.py test pickem_homepage pickem_api --settings=pickem.test_settings --verbosity=2` passed with 116 tests.
   - `manage.py test --settings=pickem.test_settings --verbosity=2` passed with 116 tests.
   - `curl -s --max-time 5 http://localhost:8000 | head -40` returned public homepage HTML.
+- Phase 4 plan checks passed locally:
+  - `verify.plan-structure` passed for `04-01-PLAN.md` through `04-06-PLAN.md`.
+  - `phase-plan-index 4` reported six autonomous plans across waves 1 through 6 with no checkpoints.
 
 ## Next Action
 
-Proceed to Phase 4: plan/execute family-scoped app pages for dashboard/home, scores, standings, picks, rules, profiles, and message board. Do not execute Phase 4 until its GSD plan is selected.
+Execute Phase 4 starting with `04-01-PLAN.md`.
 
 ## Session
 
-**Last session:** 2026-06-29T17:56:48.218Z
-**Stopped at:** Phase 4 context gathered
-**Resume file:** .planning/phases/04-family-scoped-app-pages/04-CONTEXT.md
+**Last session:** 2026-06-29T18:20:23Z
+**Stopped at:** Phase 4 planned
+**Resume file:** .planning/phases/04-family-scoped-app-pages/04-01-PLAN.md
 
 ## Performance Metrics
 

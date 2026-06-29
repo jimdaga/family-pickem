@@ -409,22 +409,19 @@ game = get_object_or_404(
 | A1 | A new service layer is not necessary for Phase 4; focused helpers in `views.py` are enough. | Standard Stack | If wrong, duplication may grow and planner should split helper extraction into an early task. |
 | A2 | Warning signs listed for tests are inferred from standard tenant-isolation failure modes. | Common Pitfalls | If wrong, test names may change but required negative coverage remains the same. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should tenant profiles live under pool or family route?**
    - What we know: Phase 4 says profile/stat views should show stats scoped to requested family/pool where applicable. [VERIFIED: 04-CONTEXT.md]
-   - What's unclear: Whether a member profile URL should be `/families/<family>/pools/<pool>/players/<id>/` or family-only.
-   - Recommendation: Use pool route for stats-heavy pages in Phase 4 because stats/picks/standings are pool-scoped; link text can still say "Players".
+   - Resolution: Use the explicit pool route for Phase 4 profile/stat pages, for example `/families/<family_slug>/pools/<pool_slug>/users/<user_id>/` or the local route-name equivalent. Stats-heavy pages are pool-scoped; link text can still say "Players" or "Profile".
 
 2. **Should anonymous `/scores/` remain public after tenant migration?**
    - What we know: Anonymous behavior for public/marketing routes may remain public, but private overlays require auth and membership. [VERIFIED: 04-CONTEXT.md]
-   - What's unclear: Whether public scores should retain the current full `scores.html` template if it contains pick overlays.
-   - Recommendation: Either strip overlays for anonymous legacy `/scores/` or redirect signed-in users and keep a public NFL-facts-only version.
+   - Resolution: Anonymous `/scores/` may remain public only as an NFL-facts-only surface. Signed-in users should redirect to tenant scores when a current/default tenant can be resolved. No pick overlays, member links, pick counts, or "my pick" state may render without tenant membership.
 
 3. **How should all-time/lifetime stats behave across pools?**
    - What we know: Phase 4 says profile stats should be scoped to requested family/pool where applicable. [VERIFIED: 04-CONTEXT.md]
-   - What's unclear: Whether all-time stats should mean all seasons in the current pool, all pools in the family, or current season only.
-   - Recommendation: Use current pool rows only in Phase 4; add copy/empty states instead of cross-pool aggregation.
+   - Resolution: Lifetime/all-time stats in Phase 4 mean current-pool rows only, or are hidden/suppressed when they cannot be safely scoped. Cross-pool or family-wide aggregation is out of scope until a later model decision.
 
 ## Environment Availability
 
