@@ -3,27 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planned
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-06-29T13:37:27.897Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-06-29T13:41:30Z"
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # GSD State
 
 **Project:** Family Pickem Multi-Tenancy  
-**Updated:** 2026-06-28 after Phase 1 Plan 04 verification
+**Updated:** 2026-06-29 after Phase 3 Plan 05 verification
 
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Families can run private pick'em pools with strict server-enforced data isolation.  
-**Current focus:** Phase 03 — onboarding-and-family-selection
+**Current focus:** Phase 04 — family-scoped app pages
 
 ## Completed
 
@@ -104,6 +104,11 @@ See: `.planning/PROJECT.md`
   - Updated desktop and mobile header navigation to show current family/default pool and switch to explicit tenant URLs.
   - Added isolation tests proving inactive memberships and outsider families do not appear in switcher context or markup.
   - Summary: `.planning/phases/03-onboarding-and-family-selection/03-04-SUMMARY.md`.
+- Phase 3 Plan 05 completed:
+  - Ran final Django check, migration dry-run, focused homepage/API tests, full Django test suite, and local public-home curl spot-check successfully.
+  - Updated Phase 3 validation to reference `03-01-SUMMARY.md` through `03-05-SUMMARY.md` and document onboarding, create-family, invite, switcher, and negative authorization coverage.
+  - Documented remaining Phase 4 risks for global gameplay pages: dashboard/home, picks, scores, standings, rules, profiles, and message board still need explicit tenant-scoped page/data migration.
+  - Summary: `.planning/phases/03-onboarding-and-family-selection/03-05-SUMMARY.md`.
 
 ## Decisions
 
@@ -137,6 +142,8 @@ See: `.planning/PROJECT.md`
 - [Phase 03]: 03-04: Switcher choices are derived only from authenticated active memberships via get_user_family_memberships().
 - [Phase 03]: 03-04: Current tenant context is resolved through require_tenant_context() before templates receive it.
 - [Phase 03]: 03-04: Header switch targets remain default active pools with explicit family/pool URLs; multi-pool UI stays deferred.
+- [Phase 03]: 03-05: Final verification passed with 116 focused homepage/API tests and 116 full-suite tests; the only warnings are the pre-existing `userStats` `IntegerField(max_length=...)` warnings.
+- [Phase 03]: 03-05: Phase 4 owns tenant-scoping of gameplay pages and data queries; Phase 3 completion does not mark dashboard/picks/scores/standings/rules/profile/message-board migration complete.
 
 ## Verification
 
@@ -178,15 +185,21 @@ Result:
   - `manage.py test pickem_homepage.tests.FamilySwitcherContextTests --settings=pickem.test_settings --verbosity=2` passed with 3 tests after implementation.
   - `manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` passed with 69 tests.
   - `curl -s --max-time 5 http://localhost:8000 | head -40` returned public homepage HTML.
+- Phase 3 Plan 05 final verification passed:
+  - `manage.py check --settings=pickem.test_settings` passed with the 13 existing `pickem_api.userStats` `IntegerField(max_length=...)` warnings.
+  - `manage.py makemigrations --check --dry-run --settings=pickem.test_settings` reported `No changes detected`.
+  - `manage.py test pickem_homepage pickem_api --settings=pickem.test_settings --verbosity=2` passed with 116 tests.
+  - `manage.py test --settings=pickem.test_settings --verbosity=2` passed with 116 tests.
+  - `curl -s --max-time 5 http://localhost:8000 | head -40` returned public homepage HTML.
 
 ## Next Action
 
-Execute Phase 3 Plan 05: final Phase 3 verification and handoff.
+Proceed to Phase 4: plan/execute family-scoped app pages for dashboard/home, scores, standings, picks, rules, profiles, and message board. Do not execute Phase 4 until its GSD plan is selected.
 
 ## Session
 
-**Last session:** 2026-06-29T13:37:27.894Z
-**Stopped at:** Completed 03-04-PLAN.md
+**Last session:** 2026-06-29T13:41:30Z
+**Stopped at:** Completed 03-05-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -197,3 +210,4 @@ Execute Phase 3 Plan 05: final Phase 3 verification and handoff.
 | Phase 03-onboarding-and-family-selection P02 | 250 | 3 tasks | 6 files |
 | Phase 03-onboarding-and-family-selection P03 | 346 | 3 tasks | 7 files |
 | Phase 03-onboarding-and-family-selection P04 | 176 | 3 tasks | 4 files |
+| Phase 03-onboarding-and-family-selection P05 | 130 | 3 tasks | 4 files |

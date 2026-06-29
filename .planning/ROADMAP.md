@@ -1,7 +1,7 @@
 # Roadmap: Family Pickem Multi-Tenancy
 
 **Created:** 2026-06-28  
-**Current focus:** Phase 3: Onboarding And Family Selection
+**Current focus:** Phase 4: Family-Scoped App Pages
 
 ## Phase 0: Discovery And Repo Readiness
 
@@ -76,7 +76,7 @@ Definition of done:
 
 **Goal:** Let users create, join, and switch families/pools.
 
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 
 Plans:
 
@@ -84,7 +84,7 @@ Plans:
 - [x] 03-02-PLAN.md — Add create-family flow with default pool.
 - [x] 03-03-PLAN.md — Add minimal invite creation and acceptance.
 - [x] 03-04-PLAN.md — Add header/mobile family switcher.
-- [ ] 03-05-PLAN.md — Run final Phase 3 verification and handoff.
+- [x] 03-05-PLAN.md — Run final Phase 3 verification and handoff. (completed 2026-06-29)
 
 Scope:
 
@@ -97,6 +97,12 @@ Scope:
 Definition of done:
 
 - Signed-in users can get into an authorized family/pool context without seeing global league data.
+
+Completion evidence:
+
+- Final summary: `.planning/phases/03-onboarding-and-family-selection/03-05-SUMMARY.md`.
+- Django check, migration dry-run, focused `pickem_homepage pickem_api` tests, full test suite, and local public-home curl spot-check passed.
+- Remaining global gameplay page migration is explicitly handed off to Phase 4.
 
 ## Phase 4: Family-Scoped App Pages
 
@@ -167,4 +173,4 @@ Definition of done:
 
 ## Current Recommendation
 
-Start with Phase 1. Do not begin by changing routes or UI filters; schema and migration foundations must come first so every later route has a real tenant key to enforce.
+Proceed to Phase 4: move dashboard/home, scores, standings, picks, rules, profiles, and message-board pages into explicit family/pool context. Do not claim gameplay tenant isolation complete until those pages and their data queries have tenant-scoped negative tests.
