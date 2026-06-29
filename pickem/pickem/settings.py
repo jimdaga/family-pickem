@@ -129,6 +129,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'pickem.context_processors.theme_context',
+                'pickem.context_processors.family_switcher_context',
                 'pickem.context_processors.site_banner_context',
                 'pickem.context_processors.footer_stats_context',
             ],
