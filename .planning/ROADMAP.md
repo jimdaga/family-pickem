@@ -1,7 +1,7 @@
 # Roadmap: Family Pickem Multi-Tenancy
 
 **Created:** 2026-06-28  
-**Current focus:** Phase 1: Domain Schema Foundation
+**Current focus:** Phase 2: Authorization Foundation
 
 ## Phase 0: Discovery And Repo Readiness
 
@@ -51,6 +51,14 @@ Definition of done:
 ## Phase 2: Authorization Foundation
 
 **Goal:** Centralize family/pool resolution, role checks, and tenant-scoped query helpers before moving pages.
+
+**Plans:** 0/3 plans complete
+
+Plans:
+
+- [ ] 02-01-PLAN.md — Create core tenant authorization helpers.
+- [ ] 02-02-PLAN.md — Add view/API guards and a proof integration.
+- [ ] 02-03-PLAN.md — Run final Phase 2 verification and handoff.
 
 Scope:
 

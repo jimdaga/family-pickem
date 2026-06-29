@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Phase 2 context gathered
-last_updated: "2026-06-28T19:44:24.710Z"
+status: planned
+stopped_at: Phase 2 planned
+last_updated: "2026-06-28T20:15:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 1
-  total_plans: 4
+  total_plans: 7
   completed_plans: 4
   percent: 13
 ---
@@ -23,7 +23,7 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** Families can run private pick'em pools with strict server-enforced data isolation.  
-**Current focus:** Phase 01 — domain-schema-foundation
+**Current focus:** Phase 02 — authorization-foundation
 
 ## Completed
 
@@ -61,6 +61,10 @@ See: `.planning/PROJECT.md`
   - Confirmed no pending migrations with `makemigrations --check --dry-run`.
   - Ran focused `pickem_api`, focused `pickem_homepage`, and full Django test suites successfully.
   - Summary: `.planning/phases/01-domain-schema-foundation/01-04-SUMMARY.md`.
+- Phase 2 planned as three independently reviewable plans:
+  - `02-01-PLAN.md`: core tenant authorization helpers.
+  - `02-02-PLAN.md`: view/API guards and proof integration.
+  - `02-03-PLAN.md`: final verification and handoff.
 
 ## Decisions
 
@@ -74,6 +78,9 @@ See: `.planning/PROJECT.md`
 - 01-03: Homepage message-board backfill runs after `pickem_api.0074_add_legacy_pool_scope` so Plan 02 owner/admin roles are preserved.
 - 01-03: Comment family scope derives from `post.family`; vote family scope derives from the vote's post or comment target.
 - 01-04: Phase 1 final verification passed with no pending migrations, 31 `pickem_api` tests, 40 `pickem_homepage` tests, and 71 full-suite tests passing.
+- 02: Tenant authorization helpers must not grant implicit access to `is_superuser` or legacy `UserProfile.is_commissioner`; explicit active `FamilyMembership` is required.
+- 02: Anonymous page requests redirect to login; anonymous API/helper denials are auth errors; authenticated non-members get 404; active members lacking role get 403.
+- 02: Phase 2 intentionally avoids broad product route migration; later phases own onboarding, page scoping, and family admin migration.
 
 ## Verification
 
@@ -99,12 +106,18 @@ Result:
   - owner fallback and role-preservation tests/tasks included in Plan 02;
   - final verification moved to dependent Wave 3 Plan 04.
 
+## Planned
+
+- Phase 2 Plan 01: `.planning/phases/02-authorization-foundation/02-01-PLAN.md`
+- Phase 2 Plan 02: `.planning/phases/02-authorization-foundation/02-02-PLAN.md`
+- Phase 2 Plan 03: `.planning/phases/02-authorization-foundation/02-03-PLAN.md`
+
 ## Next Action
 
-Begin Phase 2: Authorization Foundation.
+Execute Phase 2: Authorization Foundation.
 
 ## Session
 
-**Last session:** 2026-06-28T19:44:24.706Z
-**Stopped at:** Phase 2 context gathered
-**Resume file:** .planning/phases/02-authorization-foundation/02-CONTEXT.md
+**Last session:** 2026-06-28T20:15:00.000Z
+**Stopped at:** Phase 2 planned
+**Resume file:** .planning/phases/02-authorization-foundation/02-01-PLAN.md
