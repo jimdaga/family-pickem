@@ -3,6 +3,7 @@ import importlib
 
 from django.apps import apps
 from django.contrib import admin
+from django.test import Client
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.db import IntegrityError
@@ -366,6 +367,102 @@ class TenantAuthorizationHelperTest(TestCase):
         )
 
         self.assertEqual(get_legacy_default_pool(), legacy_pool)
+
+
+class TenantAuthorizationApiTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.family = Family.objects.create(name='Smith Family', slug='smith-family')
+        self.other_family = Family.objects.create(name='Jones Family', slug='jones-family')
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name='Main Pickem',
+            slug='main',
+            season=2526,
+        )
+        self.member = User.objects.create_user('member', email='member@example.com', password='pass')
+        self.admin_user = User.objects.create_user('admin-member', email='admin@example.com', password='pass')
+        self.owner = User.objects.create_user('owner-member', email='owner@example.com', password='pass')
+        self.outsider = User.objects.create_user('outsider', email='outsider@example.com', password='pass')
+
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.member,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.admin_user,
+            role=FamilyMembership.Role.ADMIN,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.owner,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _url(self, family_slug='smith-family', pool_slug='main'):
+        return f'/api/families/{family_slug}/pools/{pool_slug}/authz-check/'
+
+    def test_api_authz_check_requires_authentication(self):
+        response = self.client.get(self._url())
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['detail'], 'Authentication required.')
+
+    def test_api_authz_check_returns_404_for_non_member(self):
+        self.client.force_login(self.outsider)
+
+        response = self.client.get(self._url())
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()['detail'], 'Not found.')
+
+    def test_api_authz_check_returns_member_context_for_member(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                'family': 'smith-family',
+                'pool': 'main',
+                'role': FamilyMembership.Role.MEMBER,
+            },
+        )
+
+    def test_api_authz_check_returns_403_for_wrong_role(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._url() + '?minimum_role=admin')
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['detail'], 'Permission denied.')
+
+    def test_api_authz_check_allows_admin_and_owner_for_admin_role(self):
+        for user in [self.admin_user, self.owner]:
+            self.client.force_login(user)
+            response = self.client.get(self._url() + '?minimum_role=admin')
+
+            self.assertEqual(response.status_code, 200)
+
+    def test_api_authz_check_returns_404_for_pool_family_mismatch(self):
+        Pool.objects.create(
+            family=self.other_family,
+            name='Other Main',
+            slug='other-main',
+            season=2526,
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._url(pool_slug='other-main'))
+
+        self.assertEqual(response.status_code, 404)
 
 
 class LegacyPoolScopeModelTest(TestCase):
