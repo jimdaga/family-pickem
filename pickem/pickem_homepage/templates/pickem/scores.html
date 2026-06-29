@@ -294,7 +294,7 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="text-sm font-semibold text-text-dark dark:text-white px-3 py-1 bg-primary/90 rounded-lg">
-                            {{ time_group.grouper|date:"g:i A" }}
+                            {{ time_group.grouper|game_start_label }}
                         </span>
                         <i class="fas fa-chevron-down transition-transform duration-200" :class="{ 'rotate-180': open }"></i>
                     </div>

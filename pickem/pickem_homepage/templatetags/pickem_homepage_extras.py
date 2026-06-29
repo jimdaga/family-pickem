@@ -257,12 +257,14 @@ def game_lock_reason(game):
 def game_start_label(game):
     """Render a friendly game start label for scheduled games."""
     try:
-        start_local = timezone.localtime(game.startTimestamp)
-        if game.statusType == 'notstarted' and start_local.hour == 0 and start_local.minute == 0:
+        start_timestamp = getattr(game, 'startTimestamp', game)
+        status_type = getattr(game, 'statusType', 'notstarted')
+        start_local = timezone.localtime(start_timestamp)
+        if status_type == 'notstarted' and start_local.hour == 0 and start_local.minute == 0:
             return "Upcoming"
         return start_local.strftime("%I:%M %p").lstrip("0")
     except Exception:
-        return "Upcoming" if getattr(game, 'statusType', None) == 'notstarted' else ""
+        return "Upcoming" if getattr(game, 'statusType', 'notstarted') == 'notstarted' else ""
 
 @register.simple_tag
 def week_lock_status(games):
