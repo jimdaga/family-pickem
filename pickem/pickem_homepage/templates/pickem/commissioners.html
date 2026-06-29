@@ -357,7 +357,7 @@
                             <div class="manual-game-card border border-border-light dark:border-border-subtle rounded-xl p-4 bg-white dark:bg-surface hover:shadow-md transition-shadow" data-game-id="{{ game.id }}">
                                 <div class="flex justify-between items-center mb-3 pb-2 border-b border-border-light dark:border-border-subtle">
                                     <div class="text-sm font-medium text-text-secondary-light dark:text-text-secondary">
-                                        {{ game.startTimestamp|date:"M d @ g:i A" }}
+                                        {{ game.startTimestamp|date:"M d @ " }}{{ game|game_start_label }}
                                     </div>
                                     {% if game.statusType != 'notstarted' %}
                                     <div class="text-xs text-yellow-600 dark:text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded">

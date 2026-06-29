@@ -314,7 +314,7 @@
                                         <i class="fas {% if game.statusType == 'inprogress' %}fa-circle animate-pulse{% elif game.statusType == 'finished' %}fa-check-circle{% else %}fa-clock{% endif %}"></i>
                                         <span>{{ game.statusTitle }}</span>
                                     </div>
-                                    <span class="text-xs opacity-90">{{ game.startTimestamp|date:"g:i A" }}</span>
+                                    <span class="text-xs opacity-90">{{ game|game_start_label }}</span>
                                 </div>
 
                                 <!-- Game Info (Spread, Weather, etc.) -->

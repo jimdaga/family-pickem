@@ -109,7 +109,7 @@
                                             <span>{{ game.startTimestamp|date:"D, M d" }}</span>
                                         </div>
                                         <div class="text-sm font-medium text-text-dark dark:text-white">
-                                            {{ game.startTimestamp|date:"g:i A" }}
+                                            {{ game|game_start_label }}
                                         </div>
                                         {% if game.statusType != 'notstarted' %}
                                         <div class="px-3 py-1 bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold flex items-center gap-1">
