@@ -4,14 +4,22 @@ from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from pickem_api.models import GamePicks
 from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile
-from .forms import GamePicksForm, MessageBoardPostForm, MessageBoardCommentForm, QuickCommentForm
+from .forms import (
+    CreateFamilyForm,
+    GamePicksForm,
+    MessageBoardPostForm,
+    MessageBoardCommentForm,
+    QuickCommentForm,
+)
 from .models import MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner
 
 from django.shortcuts import render, get_object_or_404, redirect
+from django.db import transaction
 from django.db.models import Sum, Count, Q, Avg
 from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
+from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
@@ -26,7 +34,7 @@ from datetime import date
 from django.forms import formset_factory
 from pickem.utils import get_season as get_season_from_api
 from pickem_api.authz import get_user_family_memberships
-from pickem_api.models import Family, FamilyMembership, Pool
+from pickem_api.models import Family, FamilyAuditLog, FamilyMembership, Pool, PoolSettings
 from pickem_homepage.authz import family_member_required
 
 def get_season(display_name=False):
@@ -79,6 +87,20 @@ def get_default_active_pool_for_family(family):
     )
 
 
+def generate_unique_slug(model, value, *, scoped_filters=None, max_length=80):
+    base_slug = slugify(value)[:max_length].strip('-') or 'family'
+    scoped_filters = scoped_filters or {}
+    candidate = base_slug
+    suffix = 2
+
+    while model.objects.filter(slug=candidate, **scoped_filters).exists():
+        suffix_text = f"-{suffix}"
+        candidate = f"{base_slug[:max_length - len(suffix_text)]}{suffix_text}"
+        suffix += 1
+
+    return candidate
+
+
 def get_family_pool_choices(user):
     choices = []
     for membership in get_user_family_memberships(user):
@@ -100,6 +122,86 @@ def get_family_pool_choices(user):
 def onboarding(request):
     context = {'gameseason': get_season()}
     return render(request, 'pickem/onboarding.html', context)
+
+
+@login_required
+def create_family(request):
+    form = CreateFamilyForm(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            family = Family.objects.create(
+                name=form.cleaned_data['name'],
+                slug=generate_unique_slug(Family, form.cleaned_data['name']),
+                status=Family.Status.ACTIVE,
+            )
+            pool = Pool.objects.create(
+                family=family,
+                name='Main Pickem',
+                slug=generate_unique_slug(
+                    Pool,
+                    'Main Pickem',
+                    scoped_filters={'family': family},
+                ),
+                season=get_season(),
+                competition='nfl',
+                status=Pool.Status.ACTIVE,
+                is_default=True,
+            )
+            PoolSettings.objects.create(pool=pool)
+            membership = FamilyMembership.objects.create(
+                family=family,
+                user=request.user,
+                role=FamilyMembership.Role.OWNER,
+                status=FamilyMembership.Status.ACTIVE,
+            )
+
+            audit_context = {
+                'ip_address': request.META.get('REMOTE_ADDR'),
+                'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+            }
+            FamilyAuditLog.objects.create(
+                family=family,
+                pool=pool,
+                actor=request.user,
+                action=FamilyAuditLog.Action.MEMBERSHIP_CREATED,
+                target_type='FamilyMembership',
+                target_id=str(membership.id),
+                metadata={
+                    'role': membership.role,
+                    'status': membership.status,
+                    'source': 'create_family',
+                },
+                **audit_context,
+            )
+            FamilyAuditLog.objects.create(
+                family=family,
+                pool=pool,
+                actor=request.user,
+                action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                target_type='Pool',
+                target_id=str(pool.id),
+                metadata={
+                    'action': 'default_pool_created',
+                    'season': pool.season,
+                    'competition': pool.competition,
+                    'is_default': pool.is_default,
+                },
+                **audit_context,
+            )
+
+        messages.success(request, f"{family.name} is ready.")
+        return redirect(
+            'family_pool_home',
+            family_slug=family.slug,
+            pool_slug=pool.slug,
+        )
+
+    context = {
+        'form': form,
+        'gameseason': get_season(),
+    }
+    return render(request, 'pickem/create_family.html', context)
 
 
 @login_required
