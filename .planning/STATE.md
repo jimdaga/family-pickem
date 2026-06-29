@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executed
-stopped_at: Phase 3 context gathered
-last_updated: "2026-06-29T02:14:19.173Z"
+status: planned
+stopped_at: Phase 3 planned
+last_updated: "2026-06-29T02:30:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 7
+  total_plans: 12
   completed_plans: 7
   percent: 25
 ---
@@ -78,6 +78,12 @@ See: `.planning/PROJECT.md`
   - Confirmed no pending migrations.
   - Ran Django check, focused app suites, and full suite successfully.
   - Summary: `.planning/phases/02-authorization-foundation/02-03-SUMMARY.md`.
+- Phase 3 planned as five independently reviewable plans:
+  - `03-01-PLAN.md`: post-login routing and onboarding shell.
+  - `03-02-PLAN.md`: create-family flow with default pool.
+  - `03-03-PLAN.md`: minimal invite creation and acceptance.
+  - `03-04-PLAN.md`: header/mobile family switcher.
+  - `03-05-PLAN.md`: final verification and handoff.
 
 ## Decisions
 
@@ -95,6 +101,10 @@ See: `.planning/PROJECT.md`
 - 02: Anonymous page requests redirect to login; anonymous API/helper denials are auth errors; authenticated non-members get 404; active members lacking role get 403.
 - 02: Phase 2 intentionally avoids broad product route migration; later phases own onboarding, page scoping, and family admin migration.
 - 02: Proof endpoint is intentionally minimal and returns only family slug, pool slug, and current user's role.
+- 03: Signed-in post-login routing is based on active family membership count: zero goes to onboarding, one goes to that family's default pool, multiple goes to picker/switcher.
+- 03: Create-family creates one default current-season NFL pool and owner membership in the same flow.
+- 03: Join supports invite code/link; minimal owner-created member invites are in Phase 3, while full invite management remains Phase 5.
+- 03: Header switcher plus readable `/families/<family_slug>/pools/<pool_slug>/...` URLs are the Phase 3 tenant context model.
 
 ## Verification
 
@@ -128,10 +138,10 @@ Result:
 
 ## Next Action
 
-Plan Phase 3: Onboarding And Family Selection.
+Execute Phase 3: Onboarding And Family Selection.
 
 ## Session
 
-**Last session:** 2026-06-29T02:14:19.169Z
-**Stopped at:** Phase 3 context gathered
-**Resume file:** .planning/phases/03-onboarding-and-family-selection/03-CONTEXT.md
+**Last session:** 2026-06-29T02:30:00.000Z
+**Stopped at:** Phase 3 planned
+**Resume file:** .planning/phases/03-onboarding-and-family-selection/03-01-PLAN.md
