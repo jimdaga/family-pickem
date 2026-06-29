@@ -24,6 +24,25 @@ class CreateFamilyForm(forms.Form):
         return " ".join(name.split())
 
 
+class JoinFamilyForm(forms.Form):
+    code = forms.CharField(
+        label="Invite code",
+        max_length=200,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
+            'placeholder': 'Invite code',
+            'autocomplete': 'off',
+        }),
+    )
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code', '').strip()
+        if not code:
+            raise forms.ValidationError("Invite code is required.")
+        return code
+
+
 class GamePicksForm(forms.ModelForm):
 
     class Meta:

@@ -7,6 +7,7 @@ from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints
 from .forms import (
     CreateFamilyForm,
     GamePicksForm,
+    JoinFamilyForm,
     MessageBoardPostForm,
     MessageBoardCommentForm,
     QuickCommentForm,
@@ -27,14 +28,17 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from functools import wraps
 # from django_ratelimit.decorators import ratelimit  # Disabled for now
+import hashlib
 import json
+import secrets
 
-from datetime import date
+from datetime import date, timedelta
 
 from django.forms import formset_factory
+from django.utils import timezone
 from pickem.utils import get_season as get_season_from_api
 from pickem_api.authz import get_user_family_memberships
-from pickem_api.models import Family, FamilyAuditLog, FamilyMembership, Pool, PoolSettings
+from pickem_api.models import Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, Pool, PoolSettings
 from pickem_homepage.authz import family_member_required
 
 def get_season(display_name=False):
@@ -101,6 +105,24 @@ def generate_unique_slug(model, value, *, scoped_filters=None, max_length=80):
     return candidate
 
 
+def normalize_invite_code(raw_code):
+    return ''.join(
+        char.lower()
+        for char in (raw_code or '').strip()
+        if char.isalnum()
+    )
+
+
+def hash_invite_code(raw_code):
+    normalized_code = normalize_invite_code(raw_code)
+    digest = hashlib.sha256(normalized_code.encode('utf-8')).hexdigest()
+    return f"sha256:{digest}"
+
+
+def generate_invite_code():
+    return secrets.token_urlsafe(24)
+
+
 def get_family_pool_choices(user):
     choices = []
     for membership in get_user_family_memberships(user):
@@ -116,6 +138,110 @@ def get_family_pool_choices(user):
             ) if pool else None,
         })
     return choices
+
+
+def get_invite_audit_context(request):
+    return {
+        'ip_address': request.META.get('REMOTE_ADDR'),
+        'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+    }
+
+
+def get_valid_invitation_for_code(raw_code):
+    if not normalize_invite_code(raw_code):
+        return None
+
+    invitation = (
+        FamilyInvitation.objects.select_for_update()
+        .select_related('family', 'pool')
+        .filter(code_hash=hash_invite_code(raw_code))
+        .first()
+    )
+    if not invitation:
+        return None
+
+    now = timezone.now()
+    if invitation.is_revoked:
+        return None
+    if invitation.expires_at and invitation.expires_at <= now:
+        return None
+    if invitation.max_uses is not None and invitation.use_count >= invitation.max_uses:
+        return None
+    if invitation.family.status != Family.Status.ACTIVE:
+        return None
+
+    if invitation.pool:
+        if invitation.pool.status != Pool.Status.ACTIVE:
+            return None
+        if invitation.pool.family_id != invitation.family_id:
+            return None
+    elif not get_default_active_pool_for_family(invitation.family):
+        return None
+
+    return invitation
+
+
+def accept_invitation_for_user(request, raw_code):
+    with transaction.atomic():
+        invitation = get_valid_invitation_for_code(raw_code)
+        if not invitation:
+            return None, None, None
+
+        pool = invitation.pool or get_default_active_pool_for_family(invitation.family)
+        if not pool or pool.family_id != invitation.family_id:
+            return None, None, None
+
+        membership, created = FamilyMembership.objects.select_for_update().get_or_create(
+            family=invitation.family,
+            user=request.user,
+            defaults={
+                'role': invitation.role,
+                'status': FamilyMembership.Status.ACTIVE,
+            },
+        )
+        previous_role = membership.role
+        previous_status = membership.status
+        if not created:
+            membership.role = invitation.role
+            membership.status = FamilyMembership.Status.ACTIVE
+            membership.save(update_fields=['role', 'status', 'updated_at'])
+
+        invitation.use_count += 1
+        invitation.save(update_fields=['use_count', 'updated_at'])
+
+        FamilyAuditLog.objects.create(
+            family=invitation.family,
+            pool=pool,
+            actor=request.user,
+            action=(
+                FamilyAuditLog.Action.MEMBERSHIP_CREATED
+                if created else FamilyAuditLog.Action.MEMBERSHIP_UPDATED
+            ),
+            target_type='FamilyMembership',
+            target_id=str(membership.id),
+            metadata={
+                'source': 'invite_acceptance',
+                'invitation_id': invitation.id,
+                'role': membership.role,
+                'previous_role': previous_role,
+                'previous_status': previous_status,
+                'status': membership.status,
+            },
+            **get_invite_audit_context(request),
+        )
+
+    return invitation, pool, membership
+
+
+def render_invalid_invite(request, form=None, *, invite_code=''):
+    if form is None:
+        form = JoinFamilyForm(initial={'code': invite_code} if invite_code else None)
+    form.add_error('code', "Invite code is invalid or unavailable.")
+    return render(request, 'pickem/join_family.html', {
+        'form': form,
+        'invite_code': invite_code,
+        'gameseason': get_season(),
+    })
 
 
 @login_required
@@ -202,6 +328,108 @@ def create_family(request):
         'gameseason': get_season(),
     }
     return render(request, 'pickem/create_family.html', context)
+
+
+@login_required
+def join_family(request):
+    form = JoinFamilyForm(
+        request.POST or None,
+        initial={'code': request.GET.get('code', '')},
+    )
+
+    if request.method == 'POST' and form.is_valid():
+        invitation, pool, _membership = accept_invitation_for_user(
+            request,
+            form.cleaned_data['code'],
+        )
+        if invitation:
+            messages.success(request, f"You joined {invitation.family.name}.")
+            return redirect(
+                'family_pool_home',
+                family_slug=invitation.family.slug,
+                pool_slug=pool.slug,
+            )
+        return render_invalid_invite(request, form)
+
+    context = {
+        'form': form,
+        'gameseason': get_season(),
+    }
+    return render(request, 'pickem/join_family.html', context)
+
+
+@login_required
+def accept_invite_link(request, invite_code):
+    form = JoinFamilyForm(
+        initial={'code': invite_code},
+        data={'code': invite_code} if request.method == 'POST' else None,
+    )
+
+    if request.method == 'POST' and form.is_valid():
+        invitation, pool, _membership = accept_invitation_for_user(
+            request,
+            form.cleaned_data['code'],
+        )
+        if invitation:
+            messages.success(request, f"You joined {invitation.family.name}.")
+            return redirect(
+                'family_pool_home',
+                family_slug=invitation.family.slug,
+                pool_slug=pool.slug,
+            )
+        return render_invalid_invite(request, form, invite_code=invite_code)
+
+    context = {
+        'form': form,
+        'invite_code': invite_code,
+        'gameseason': get_season(),
+    }
+    return render(request, 'pickem/join_family.html', context)
+
+
+@require_http_methods(["POST"])
+@family_member_required(minimum_role=FamilyMembership.Role.OWNER)
+def create_family_invite(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    raw_code = generate_invite_code()
+
+    with transaction.atomic():
+        invitation = FamilyInvitation.objects.create(
+            family=tenant_context.family,
+            pool=tenant_context.pool,
+            code_hash=hash_invite_code(raw_code),
+            role=FamilyMembership.Role.MEMBER,
+            expires_at=timezone.now() + timedelta(days=14),
+            max_uses=20,
+            created_by=request.user,
+        )
+        FamilyAuditLog.objects.create(
+            family=tenant_context.family,
+            pool=tenant_context.pool,
+            actor=request.user,
+            action=FamilyAuditLog.Action.INVITATION_CREATED,
+            target_type='FamilyInvitation',
+            target_id=str(invitation.id),
+            metadata={
+                'role': invitation.role,
+                'expires_at': invitation.expires_at.isoformat(),
+                'max_uses': invitation.max_uses,
+            },
+            **get_invite_audit_context(request),
+        )
+
+    context = {
+        'family': tenant_context.family,
+        'pool': tenant_context.pool,
+        'membership': tenant_context.membership,
+        'invite_code': raw_code,
+        'invite_link': request.build_absolute_uri(
+            reverse('accept_invite_link', kwargs={'invite_code': raw_code})
+        ),
+        'gameseason': get_season(),
+    }
+    messages.success(request, "Invite created. Copy it now; it will not be shown again.")
+    return render(request, 'pickem/family_pool_home.html', context)
 
 
 @login_required

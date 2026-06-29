@@ -41,7 +41,7 @@
             <p class="text-sm text-text-secondary-light dark:text-text-secondary mb-5">
                 Use an invite from your family owner to enter their pool.
             </p>
-            <form action="/families/join/" method="get" class="flex flex-col sm:flex-row gap-3">
+            <form action="{% url 'join_family' %}" method="get" class="flex flex-col sm:flex-row gap-3">
                 <label class="sr-only" for="invite_code">Invite code</label>
                 <input id="invite_code" name="code" type="text" autocomplete="off"
                        class="flex-1 rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface-hover px-3 py-2 text-text-dark dark:text-white"

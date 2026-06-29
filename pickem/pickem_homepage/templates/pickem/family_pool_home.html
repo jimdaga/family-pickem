@@ -44,6 +44,15 @@
     </section>
 
     <section class="mt-6 flex flex-wrap gap-3">
+        {% if membership.role == 'owner' %}
+        <form method="post" action="{% url 'create_family_invite' family.slug pool.slug %}">
+            {% csrf_token %}
+            <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold hover:bg-slate-700 transition-colors">
+                <i class="fas fa-ticket"></i>
+                <span>Create invite</span>
+            </button>
+        </form>
+        {% endif %}
         <a href="{% url 'family_picker' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border-light dark:border-border-subtle text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors">
             <i class="fas fa-exchange-alt"></i>
             <span>Switch family</span>
@@ -53,5 +62,19 @@
             <span>Home</span>
         </a>
     </section>
+
+    {% if invite_code %}
+    <section class="mt-6 bg-surface-light dark:bg-surface border border-primary/30 rounded-lg p-5">
+        <p class="text-sm font-semibold uppercase tracking-wide text-primary mb-2">Invite created</p>
+        <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Copy this code now</h2>
+        <p class="text-sm text-text-secondary-light dark:text-text-secondary mb-4">
+            The raw invite code is shown only once.
+        </p>
+        <div class="grid grid-cols-1 gap-3">
+            <code class="block rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface-hover px-4 py-3 text-sm text-text-dark dark:text-white break-all">{{ invite_code }}</code>
+            <code class="block rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface-hover px-4 py-3 text-sm text-text-dark dark:text-white break-all">{{ invite_link }}</code>
+        </div>
+    </section>
+    {% endif %}
 </main>
 {% endblock %}
