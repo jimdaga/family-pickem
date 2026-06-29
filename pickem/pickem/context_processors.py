@@ -6,7 +6,16 @@ to all templates for consistent dark mode functionality.
 """
 
 from datetime import date
+from django.urls import reverse
+from pickem_api.authz import (
+    AuthenticationRequired,
+    PermissionDeniedForTenant,
+    TenantNotFound,
+    get_user_family_memberships,
+    require_tenant_context,
+)
 from pickem_api.models import UserProfile, GameWeeks, GamesAndScores, GamePicks, userSeasonPoints
+from pickem_api.models import Pool
 from pickem_homepage.models import SiteBanner
 from pickem.utils import get_season
 
@@ -49,6 +58,92 @@ def dark_mode_context(request):
     Delegates to theme_context.
     """
     return theme_context(request)
+
+
+def _default_active_pool_for_family(family):
+    default_pool = (
+        Pool.objects.filter(
+            family=family,
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        .order_by('-season', 'slug')
+        .first()
+    )
+    if default_pool:
+        return default_pool
+
+    return (
+        Pool.objects.filter(family=family, status=Pool.Status.ACTIVE)
+        .order_by('-season', 'slug')
+        .first()
+    )
+
+
+def _switcher_choice_for_membership(membership):
+    family = membership.family
+    pool = _default_active_pool_for_family(family)
+    return {
+        'membership': membership,
+        'family': family,
+        'pool': pool,
+        'url': reverse(
+            'family_pool_home',
+            kwargs={'family_slug': family.slug, 'pool_slug': pool.slug},
+        ) if pool else None,
+    }
+
+
+def family_switcher_context(request):
+    """
+    Context processor for authenticated tenant navigation.
+
+    Switcher choices are derived only from active memberships for the current
+    authenticated user. Explicit tenant URLs are resolved through the Phase 2
+    authorization helper before becoming current context.
+    """
+    context = {
+        'current_family': None,
+        'current_pool': None,
+        'current_membership': None,
+        'family_switcher_choices': [],
+        'has_family_memberships': False,
+    }
+
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return context
+
+    try:
+        choices = [
+            _switcher_choice_for_membership(membership)
+            for membership in get_user_family_memberships(request.user)
+        ]
+        context['family_switcher_choices'] = choices
+        context['has_family_memberships'] = bool(choices)
+
+        tenant_context = getattr(request, 'tenant_context', None)
+        if tenant_context is None:
+            resolver_match = getattr(request, 'resolver_match', None)
+            kwargs = resolver_match.kwargs if resolver_match else {}
+            family_slug = kwargs.get('family_slug')
+            pool_slug = kwargs.get('pool_slug')
+            if family_slug:
+                tenant_context = require_tenant_context(
+                    request.user,
+                    family=family_slug,
+                    pool=pool_slug,
+                )
+
+        if tenant_context is not None:
+            context['current_family'] = tenant_context.family
+            context['current_pool'] = tenant_context.pool
+            context['current_membership'] = tenant_context.membership
+    except (AuthenticationRequired, TenantNotFound, PermissionDeniedForTenant):
+        pass
+    except Exception:
+        pass
+
+    return context
 
 
 def site_banner_context(request):
