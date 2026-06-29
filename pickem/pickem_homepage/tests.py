@@ -224,6 +224,113 @@ class PostLoginTenantRoutingTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
+class FamilySwitcherContextTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            "switcher-user", email="switcher@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "switcher-outsider", email="switcher-outsider@example.com", password="pass"
+        )
+
+    def _family_with_pool(self, name, slug, *, pool_slug="main", status=Family.Status.ACTIVE):
+        family = Family.objects.create(name=name, slug=slug, status=status)
+        pool = Pool.objects.create(
+            family=family,
+            name="Main Pickem",
+            slug=pool_slug,
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        return family, pool
+
+    def _active_membership(self, user, family, role=FamilyMembership.Role.MEMBER):
+        return FamilyMembership.objects.create(
+            family=family,
+            user=user,
+            role=role,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _tenant_url(self, family, pool):
+        return reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def test_one_family_user_sees_current_family_and_pool_in_header_context(self):
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.user, family)
+        self.client.force_login(self.user)
+
+        response = self.client.get(self._tenant_url(family, pool))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["current_family"], family)
+        self.assertEqual(response.context["current_pool"], pool)
+        self.assertEqual(len(response.context["family_switcher_choices"]), 1)
+        self.assertContains(response, 'data-testid="family-context-switcher"')
+        self.assertContains(response, "Current family")
+        self.assertContains(response, "Smith Family")
+        self.assertContains(response, "Main Pickem")
+
+    def test_multi_family_switcher_lists_only_authenticated_active_memberships(self):
+        smith, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        jones, jones_pool = self._family_with_pool("Jones Family", "jones-family")
+        inactive, _inactive_pool = self._family_with_pool("Inactive Family", "inactive-family")
+        outsider_family, _outsider_pool = self._family_with_pool("Outsider Family", "outsider-family")
+        self._active_membership(self.user, smith)
+        self._active_membership(self.user, jones)
+        FamilyMembership.objects.create(
+            family=inactive,
+            user=self.user,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.INACTIVE,
+        )
+        self._active_membership(self.outsider, outsider_family)
+        self.client.force_login(self.user)
+
+        response = self.client.get(self._tenant_url(smith, smith_pool))
+
+        choice_names = [
+            choice["family"].name
+            for choice in response.context["family_switcher_choices"]
+        ]
+        self.assertEqual(choice_names, ["Jones Family", "Smith Family"])
+        self.assertContains(response, "Switch family")
+        self.assertContains(response, self._tenant_url(smith, smith_pool))
+        self.assertContains(response, self._tenant_url(jones, jones_pool))
+        self.assertContains(response, "Jones Family")
+        self.assertNotContains(response, "Inactive Family")
+        self.assertNotContains(response, "Outsider Family")
+
+    def test_no_family_user_sees_onboarding_actions_without_family_leakage(self):
+        outsider_family, _pool = self._family_with_pool("Outsider Family", "outsider-family")
+        self._active_membership(self.outsider, outsider_family)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("onboarding"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context["current_family"])
+        self.assertIsNone(response.context["current_pool"])
+        self.assertEqual(response.context["family_switcher_choices"], [])
+        self.assertContains(response, 'data-testid="family-onboarding-actions"')
+        self.assertContains(response, reverse("create_family"))
+        self.assertContains(response, reverse("join_family"))
+        self.assertNotContains(response, "Outsider Family")
+
+
 class CreateFamilyFlowTests(TestCase):
     @classmethod
     def setUpTestData(cls):
