@@ -4,6 +4,26 @@ from pickem_api.models import GamePicks, userSeasonPoints
 from .models import MessageBoardPost, MessageBoardComment, SiteBanner
 
 
+class CreateFamilyForm(forms.Form):
+    name = forms.CharField(
+        label="Family name",
+        max_length=200,
+        min_length=2,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
+            'placeholder': 'Smith Family',
+            'autocomplete': 'organization',
+        }),
+    )
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '').strip()
+        if not name:
+            raise forms.ValidationError("Family name is required.")
+        return " ".join(name.split())
+
+
 class GamePicksForm(forms.ModelForm):
 
     class Meta:

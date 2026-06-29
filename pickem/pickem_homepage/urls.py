@@ -8,6 +8,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('', views.index, name='index'),
     path('onboarding/', views.onboarding, name='onboarding'),
+    path('families/create/', views.create_family, name='create_family'),
     path('families/', views.family_picker, name='family_picker'),
     path(
         'families/<slug:family_slug>/pools/<slug:pool_slug>/',
