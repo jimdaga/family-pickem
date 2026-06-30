@@ -3,28 +3,19 @@
 {% load pickem_homepage_extras %}
 
 {% block content %}
-    <!-- Page Header (Responsive) -->
-    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 overflow-hidden shadow-xl">
-        <!-- Subtle background pattern -->
-        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
-        <div class="relative z-10">
-            <div class="flex items-center justify-center mb-3 lg:mb-4">
-                <i class="fas fa-football-ball text-4xl lg:text-6xl text-primary"></i>
+    <div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Compact Page Header -->
+    <div class="page-header-clean">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-football-ball text-2xl text-primary"></i>
+            <div>
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Submit Your Picks</h2>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                    {% if competition == 'nfl-preseason' %}Preseason — Week {{ week }}{% else %}Regular Season — Week {{ week }}{% endif %}
+                </p>
             </div>
-            <h2 class="text-3xl lg:text-5xl font-black tracking-tight mb-2 lg:mb-3" style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
-                Submit Your Picks
-            </h2>
-            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium">
-                {% if competition == 'nfl-preseason' %}
-                    Preseason - Week {{ week }}
-                {% else %}
-                    Regular Season - Week {{ week }}
-                {% endif %}
-            </p>
         </div>
     </div>
-
-    <div class="max-w-7xl mx-auto px-6 py-6">
         <!-- Pick Progress Summary -->
         <div class="section-container mb-6">
             {% with game_list|length as total_games %}
@@ -33,7 +24,7 @@
                 <!-- Stats Display -->
                 <div class="flex items-center justify-center gap-2 text-center">
                     <div class="flex-1">
-                        <div class="text-4xl font-bold text-primary">{{ submitted_picks }}</div>
+                        <div class="text-4xl font-bold text-text-dark dark:text-white">{{ submitted_picks }}</div>
                         <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Picks Submitted</div>
                     </div>
                     <div class="text-3xl text-text-secondary-light dark:text-text-secondary font-light">/</div>
@@ -46,7 +37,7 @@
                 <!-- Progress Bar -->
                 <div class="space-y-2">
                     <div class="w-full bg-surface-light dark:bg-surface-hover rounded-full h-4 overflow-hidden border border-border-light dark:border-border-subtle">
-                        <div class="h-full bg-gradient-to-r from-primary to-orange-600 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                        <div class="h-full bg-primary rounded-full transition-all duration-500 flex items-center justify-end pr-2"
                              style="width: {% widthratio submitted_picks total_games 100 %}%">
                             {% if submitted_picks > 0 %}
                             <span class="text-xs font-semibold text-white">{% widthratio submitted_picks total_games 100 %}%</span>
@@ -117,7 +108,7 @@
                                             <span>Locked</span>
                                         </div>
                                         {% else %}
-                                        <div class="px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg text-sm font-semibold flex items-center gap-1">
+                                        <div class="px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-text-dark dark:text-white rounded-lg text-sm font-semibold flex items-center gap-1">
                                             <i class="fas fa-check-circle"></i>
                                             <span>Available</span>
                                         </div>
@@ -357,7 +348,7 @@
                                             <i class="fas fa-spinner fa-spin"></i>
                                             <span>Saving...</span>
                                         </div>
-                                        <div class="save-indicator success flex items-center justify-center gap-2 px-4 py-2 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-xl border border-secondary-light/30 dark:border-secondary/40">
+                                        <div class="save-indicator success flex items-center justify-center gap-2 px-4 py-2 bg-secondary-light/20 dark:bg-secondary/20 text-text-dark dark:text-white rounded-xl border border-secondary-light/30 dark:border-secondary/40">
                                             <i class="fas fa-check-circle"></i>
                                             <span>Saved!</span>
                                         </div>
@@ -379,7 +370,7 @@
                 <h3 class="section-title">
                     <i class="fas fa-check-square mr-2"></i>
                     <span>Submitted Picks</span>
-                    <span class="ml-3 px-3 py-1 text-sm font-semibold bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-full">
+                    <span class="ml-3 px-3 py-1 text-sm font-semibold bg-secondary-light/20 dark:bg-secondary/20 text-text-dark dark:text-white rounded-full">
                         {{ pick_slugs|length }}
                     </span>
                 </h3>
@@ -390,13 +381,13 @@
                         {% if game.slug in pick_slugs %}
                             {% with user.id|addstr:"-"|addstr:game.id as template %}
                                 {% if template in pick_ids %}
-                                <div class="bg-surface-light dark:bg-surface rounded-xl p-5 border border-border-light dark:border-border-subtle hover:border-secondary-light/50 dark:hover:border-secondary/50 transition-all duration-200 space-y-4">
+                                <div class="bg-surface-light dark:bg-surface rounded-xl p-5 border border-border-light dark:border-border-subtle hover:border-primary/50 transition-all duration-200 space-y-4">
                                     <!-- Game Header -->
                                     <div class="flex items-center justify-between">
                                         <div class="text-sm text-text-secondary-light dark:text-text-secondary">
                                             {{ game.startTimestamp|date:"M d @ g:i A" }}
                                         </div>
-                                        <div class="px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg text-sm font-semibold flex items-center gap-1">
+                                        <div class="px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-text-dark dark:text-white rounded-lg text-sm font-semibold flex items-center gap-1">
                                             <i class="fas fa-check"></i>
                                             <span>Submitted</span>
                                         </div>
@@ -422,7 +413,7 @@
                                                     <div class="bg-surface-light dark:bg-surface-hover p-2 text-center">
                                                         <div class="font-bold text-sm text-text-dark dark:text-white">{{ game.awayTeamName }}</div>
                                                         {% if p.pick == game.awayTeamSlug %}
-                                                        <div class="flex items-center justify-center gap-1 mt-1 text-primary text-xs font-semibold">
+                                                        <div class="flex items-center justify-center gap-1 mt-1 text-text-secondary-light dark:text-text-secondary text-xs font-semibold">
                                                             <i class="fas fa-star"></i>
                                                             <span>Your Pick</span>
                                                         </div>
@@ -451,7 +442,7 @@
                                                     <div class="bg-surface-light dark:bg-surface-hover p-2 text-center">
                                                         <div class="font-bold text-sm text-text-dark dark:text-white">{{ game.homeTeamName }}</div>
                                                         {% if p.pick == game.homeTeamSlug %}
-                                                        <div class="flex items-center justify-center gap-1 mt-1 text-primary text-xs font-semibold">
+                                                        <div class="flex items-center justify-center gap-1 mt-1 text-text-secondary-light dark:text-text-secondary text-xs font-semibold">
                                                             <i class="fas fa-star"></i>
                                                             <span>Your Pick</span>
                                                         </div>
@@ -542,7 +533,7 @@
             <div class="section-container text-center py-12">
                 <i class="fas fa-calendar-times text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
                 {% if is_default_week %}
-                <h4 class="text-2xl font-bold text-primary mb-3">Ready for Week {{ week }}?</h4>
+                <h4 class="text-2xl font-bold text-text-dark dark:text-white mb-3">Ready for Week {{ week }}?</h4>
                 <p class="text-text-secondary-light dark:text-text-secondary mb-6 max-w-2xl mx-auto">
                     The NFL schedule for Week {{ week }} is being finalized. Games will appear here once released, but you can check back soon to start making your picks!
                 </p>
@@ -568,13 +559,13 @@
 
                 <div class="flex items-center justify-center gap-3 mt-6">
                     {% if is_tenant_pick_page %}
-                    <a href="{% url 'family_pool_home' family_slug=family.slug pool_slug=pool.slug %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all">
+                    <a href="{% url 'family_pool_scores' family_slug=family.slug pool_slug=pool.slug %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all">
                         <i class="fas fa-chart-line"></i>
-                        <span>Pool Dashboard</span>
+                        <span>View Scores</span>
                     </a>
-                    <a href="{% url 'family_pool_home' family_slug=family.slug pool_slug=pool.slug %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-border-light dark:border-border-subtle text-text-dark dark:text-white rounded-xl font-semibold hover:bg-surface-hover transition-all">
+                    <a href="{% url 'family_pool_standings' family_slug=family.slug pool_slug=pool.slug %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-border-light dark:border-border-subtle text-text-dark dark:text-white rounded-xl font-semibold hover:bg-surface-hover transition-all">
                         <i class="fas fa-trophy"></i>
-                        <span>Back to Pool</span>
+                        <span>Standings</span>
                     </a>
                     {% else %}
                     <a href="{% url 'scores' %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all">
