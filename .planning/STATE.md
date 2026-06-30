@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-family-scoped-app-pages-04-PLAN.md
-last_updated: "2026-06-30T01:35:39.416Z"
+stopped_at: Completed 04-family-scoped-app-pages-05-PLAN.md
+last_updated: "2026-06-30T20:03:06.016Z"
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 18
-  completed_plans: 16
-  percent: 89
+  completed_plans: 17
+  percent: 94
 current_phase: 04
 ---
 
@@ -191,6 +191,8 @@ See: `.planning/PROJECT.md`
 - [Phase 04]: 04-04: Tenant profile pages resolve viewed users through active current-family membership before profile data reads.
 - [Phase 04]: 04-04: Profile stats, recent picks, rankings, and userStats are scoped to the current tenant pool.
 - [Phase 04]: 04-04: Tenant message-board AJAX derives family server-side; cross-family IDs and legacy global AJAX return generic JSON not-found.
+- [Phase 04]: 04-05: Shared tenant context processors resolve current tenant before exposing footer stats or banners; private footer stats are pool-scoped or suppressed.
+- [Phase 04]: 04-05: Shared nav/dashboard/picks/scores links use tenant route names when current family/pool context exists, with public-safe fallbacks for anonymous pages.
 
 ## Verification
 
@@ -257,8 +259,8 @@ Execute Phase 4 Plan 05: `04-05-PLAN.md`.
 
 ## Session
 
-**Last session:** 2026-06-30T01:35:39.412Z
-**Stopped at:** Completed 04-family-scoped-app-pages-04-PLAN.md
+**Last session:** 2026-06-30T20:02:25.822Z
+**Stopped at:** Completed 04-family-scoped-app-pages-05-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -274,3 +276,4 @@ Execute Phase 4 Plan 05: `04-05-PLAN.md`.
 | Phase 04-family-scoped-app-pages P02 | 7min | 3 tasks | 5 files |
 | Phase 04-family-scoped-app-pages P03 | 6min 14s | 3 tasks | 6 files |
 | Phase 04-family-scoped-app-pages P04 | 46min | 3 tasks | 6 files |
+| Phase 04-family-scoped-app-pages P05 | 42min | 3 tasks | 7 files |
