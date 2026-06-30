@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-family-scoped-app-pages-02-PLAN.md
-last_updated: "2026-06-30T00:19:35.453Z"
+stopped_at: Completed 04-family-scoped-app-pages-03-PLAN.md
+last_updated: "2026-06-30T00:29:15.425Z"
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 18
-  completed_plans: 14
-  percent: 78
+  completed_plans: 15
+  percent: 83
 current_phase: 04
 ---
 
@@ -123,6 +123,13 @@ See: `.planning/PROJECT.md`
   - Converted signed-in legacy pick routes into redirects before private global pick rendering or mutation.
   - Added cross-family, cross-pool, and request-body tampering tests.
   - Summary: `.planning/phases/04-family-scoped-app-pages/04-02-SUMMARY.md`.
+- Phase 4 Plan 03 completed:
+  - Added tenant scores, selected-week scores, standings, and rules routes under explicit family/pool URLs.
+  - Scoped scores overlays, pick totals, player lists, user weekly stats, standings rows, season champions, and weekly winners to the current pool.
+  - Converted signed-in legacy scores, standings, and rules routes into tenant redirects before private global rendering.
+  - Rendered current family/pool rules settings display-only with no mutation controls.
+  - Added cross-family, outsider, legacy redirect, and query-param isolation tests.
+  - Summary: `.planning/phases/04-family-scoped-app-pages/04-03-SUMMARY.md`.
 
 ## Decisions
 
@@ -170,6 +177,9 @@ See: `.planning/PROJECT.md`
 - [Phase 04]: 04-02: Signed-in legacy /picks/ and /picks/edit/ redirect to the resolved tenant picks page before reading or mutating private picks.
 - [Phase 04]: 04-02: Tenant pick IDs include pool, user, and game to avoid cross-pool collisions for the same user/game.
 - [Phase 04]: 04-02: Until tenant scores/standings routes ship in Plan 04-03, tenant picks empty-state links stay inside the pool dashboard instead of linking to global pages.
+- [Phase 04]: 04-03: Signed-in legacy scores, standings, and rules routes redirect to tenant URLs before private global data renders.
+- [Phase 04]: 04-03: Scores keep global NFL game facts while all pick overlays, player lists, user weekly stats, and winners filter by request.tenant_context.pool.
+- [Phase 04]: 04-03: Rules are display-only in Phase 4 and show current PoolSettings without mutation controls.
 
 ## Verification
 
@@ -220,15 +230,19 @@ Result:
 - Phase 4 plan checks passed locally:
   - `verify.plan-structure` passed for `04-01-PLAN.md` through `04-06-PLAN.md`.
   - `phase-plan-index 4` reported six autonomous plans across waves 1 through 6 with no checkpoints.
+- Phase 4 Plan 03 verification passed:
+  - `manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` passed with 89 tests.
+  - `manage.py check --settings=pickem.test_settings` passed with no issues.
+  - `curl -s --max-time 5 http://localhost:8000/scores/ | head -40` returned anonymous scores HTML.
 
 ## Next Action
 
-Execute Phase 4 Plan 03: `04-03-PLAN.md`.
+Execute Phase 4 Plan 04: `04-04-PLAN.md`.
 
 ## Session
 
-**Last session:** 2026-06-30T00:19:35.449Z
-**Stopped at:** Completed 04-family-scoped-app-pages-02-PLAN.md
+**Last session:** 2026-06-30T00:29:15.421Z
+**Stopped at:** Completed 04-family-scoped-app-pages-03-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -242,3 +256,4 @@ Execute Phase 4 Plan 03: `04-03-PLAN.md`.
 | Phase 03-onboarding-and-family-selection P05 | 130 | 3 tasks | 4 files |
 | Phase 04-family-scoped-app-pages P01 | 4min 24s | 3 tasks | 3 files |
 | Phase 04-family-scoped-app-pages P02 | 7min | 3 tasks | 5 files |
+| Phase 04-family-scoped-app-pages P03 | 6min 14s | 3 tasks | 6 files |
