@@ -5,12 +5,13 @@ from .models import SiteBanner, MessageBoardPost, MessageBoardComment, MessageBo
 
 @admin.register(SiteBanner)
 class SiteBannerAdmin(admin.ModelAdmin):
-    list_display = ['title', 'banner_type', 'status_display', 'priority', 'start_date', 'end_date', 'created_at']
-    list_filter = ['banner_type', 'is_active', 'start_date', 'end_date']
-    search_fields = ['title', 'description']
+    list_display = ['title', 'family', 'banner_type', 'status_display', 'priority', 'start_date', 'end_date', 'created_at']
+    list_filter = ['family', 'banner_type', 'is_active', 'start_date', 'end_date']
+    search_fields = ['title', 'description', 'family__name', 'family__slug']
     ordering = ['-priority', '-created_at']
     
     fields = [
+        'family',
         'title', 
         'description', 
         'banner_type', 
@@ -62,13 +63,14 @@ class SiteBannerAdmin(admin.ModelAdmin):
 
 @admin.register(MessageBoardPost)
 class MessageBoardPostAdmin(admin.ModelAdmin):
-    list_display = ['title', 'user', 'score_display', 'comment_count', 'is_pinned', 'is_active', 'created_at']
-    list_filter = ['is_pinned', 'is_active', 'created_at', 'user']
-    search_fields = ['title', 'content', 'user__username']
+    list_display = ['title', 'family', 'user', 'score_display', 'comment_count', 'is_pinned', 'is_active', 'created_at']
+    list_filter = ['family', 'is_pinned', 'is_active', 'created_at', 'user']
+    search_fields = ['title', 'content', 'user__username', 'family__name', 'family__slug']
     ordering = ['-is_pinned', '-created_at']
     readonly_fields = ['upvotes', 'downvotes', 'created_at', 'updated_at']
     
     fields = [
+        'family',
         'user', 
         'title', 
         'content', 
@@ -100,13 +102,14 @@ class MessageBoardPostAdmin(admin.ModelAdmin):
 
 @admin.register(MessageBoardComment)
 class MessageBoardCommentAdmin(admin.ModelAdmin):
-    list_display = ['comment_preview', 'user', 'post', 'parent_comment', 'score_display', 'depth_display', 'is_active', 'created_at']
-    list_filter = ['is_active', 'created_at', 'user', 'post']
-    search_fields = ['content', 'user__username', 'post__title']
+    list_display = ['comment_preview', 'family', 'user', 'post', 'parent_comment', 'score_display', 'depth_display', 'is_active', 'created_at']
+    list_filter = ['family', 'is_active', 'created_at', 'user', 'post']
+    search_fields = ['content', 'user__username', 'post__title', 'family__name', 'family__slug']
     ordering = ['-created_at']
     readonly_fields = ['upvotes', 'downvotes', 'created_at', 'updated_at', 'depth']
     
     fields = [
+        'family',
         'post',
         'user', 
         'parent',
@@ -168,11 +171,12 @@ class MessageBoardCommentAdmin(admin.ModelAdmin):
 
 @admin.register(MessageBoardVote)
 class MessageBoardVoteAdmin(admin.ModelAdmin):
-    list_display = ['user', 'target_display', 'vote_type_display', 'created_at']
-    list_filter = ['vote_type', 'created_at']
-    search_fields = ['user__username', 'post__title', 'comment__content']
+    list_display = ['user', 'family', 'target_display', 'vote_type_display', 'created_at']
+    list_filter = ['family', 'vote_type', 'created_at']
+    search_fields = ['user__username', 'post__title', 'comment__content', 'family__name', 'family__slug']
     ordering = ['-created_at']
     readonly_fields = ['created_at']
+    fields = ['family', 'user', 'post', 'comment', 'vote_type', 'created_at']
     
     def target_display(self, obj):
         """Display what was voted on"""
