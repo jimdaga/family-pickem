@@ -21,6 +21,16 @@ urlpatterns = [
         views.create_family_invite,
         name='create_family_invite',
     ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/picks/',
+        views.tenant_submit_game_picks,
+        name='family_pool_game_picks',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/picks/edit/',
+        views.tenant_edit_game_pick,
+        name='family_pool_edit_game_pick',
+    ),
     path('invites/<str:invite_code>/', views.accept_invite_link, name='accept_invite_link'),
     path('scores/', views.scores, name='scores'),
     path('standings/', views.standings, name='standings'),

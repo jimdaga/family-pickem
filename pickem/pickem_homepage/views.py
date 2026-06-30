@@ -10,6 +10,7 @@ from .forms import (
     JoinFamilyForm,
     MessageBoardPostForm,
     MessageBoardCommentForm,
+    PickSubmissionForm,
     QuickCommentForm,
 )
 from .models import MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner
@@ -147,6 +148,56 @@ def get_current_week_context(gameseason):
         return str(week_obj.weekNumber), week_obj.competition
     except GameWeeks.DoesNotExist:
         return '1', 'nfl'
+
+
+def redirect_to_default_pool_route(request, route_name, **route_kwargs):
+    family_choices = get_family_pool_choices(request.user)
+    if not family_choices:
+        return redirect('onboarding')
+    if len(family_choices) > 1:
+        return redirect('family_picker')
+
+    choice = family_choices[0]
+    pool = choice.get('pool')
+    if not pool:
+        return redirect('onboarding')
+
+    return redirect(
+        route_name,
+        family_slug=choice['family'].slug,
+        pool_slug=pool.slug,
+        **route_kwargs,
+    )
+
+
+def build_pick_id(pool, user, game):
+    return f"{pool.id}-{user.id}-{game.id}"
+
+
+def save_server_derived_pick(*, user, pool, game, selected_pick, tiebreaker_score=None, tiebreaker_yards=None):
+    existing_pick = GamePicks.objects.filter(
+        pool=pool,
+        userID=str(user.id),
+        pick_game_id=game.id,
+    ).first()
+    pick = existing_pick or GamePicks(id=build_pick_id(pool, user, game))
+
+    pick.pool = pool
+    pick.userEmail = user.email
+    pick.userID = str(user.id)
+    pick.uid = user.id
+    pick.slug = game.slug
+    pick.competition = game.competition
+    pick.gameWeek = game.gameWeek
+    pick.gameyear = game.gameyear
+    pick.gameseason = game.gameseason
+    pick.pick_game_id = game.id
+    pick.pick = selected_pick
+    pick.tieBreakerScore = tiebreaker_score
+    pick.tieBreakerYards = tiebreaker_yards
+    pick.pick_correct = False
+    pick.save()
+    return pick
 
 
 def get_invite_audit_context(request):
@@ -1038,31 +1089,44 @@ def scores_long(request, competition, gameseason, week):
     return HttpResponse(template.render(context, request))
 
 def submit_game_picks(request):
-    today = date.today()
-    today_date = today.strftime("%Y-%m-%d")
+    if request.user.is_authenticated:
+        return redirect_to_default_pool_route(request, 'family_pool_game_picks')
 
-    # Track if we're defaulting to week 1 (before season starts)
+    return render_pick_page(request)
+
+
+@family_member_required
+def tenant_submit_game_picks(request, family_slug, pool_slug):
+    return render_pick_page(request, tenant_context=request.tenant_context)
+
+
+def render_pick_page(request, *, tenant_context=None):
     is_default_week = False
-    try:
-        week_obj = GameWeeks.objects.get(date=today_date)
-        game_week = week_obj.weekNumber
-        game_competition = week_obj.competition
-    except GameWeeks.DoesNotExist:
-        game_week = '1'
-        game_competition = 'nfl'
+    gameseason = tenant_context.pool.season if tenant_context else get_season()
+    game_week, game_competition = get_current_week_context(gameseason)
+    if not GameWeeks.objects.filter(
+        date=date.today(),
+        weekNumber=game_week,
+        competition=game_competition,
+    ).exists():
         is_default_week = True
+    if tenant_context:
+        game_competition = tenant_context.pool.competition
 
-    gameseason = get_season()
-
-    game_list = GamesAndScores.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition).distinct()
+    game_list = GamesAndScores.objects.filter(
+        gameseason=gameseason,
+        gameWeek=str(game_week),
+        competition=game_competition,
+    ).distinct()
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
     competition = game_list.values_list('competition', flat=True).distinct()
 
     # Handle unauthenticated users gracefully
-    if request.user.is_authenticated:
+    if tenant_context:
         picks = GamePicks.objects.filter(
+            pool=tenant_context.pool,
             gameseason=gameseason,
-            gameWeek=game_week,
+            gameWeek=str(game_week),
             competition=game_competition,
             userEmail=request.user.email,
         )
@@ -1087,23 +1151,78 @@ def submit_game_picks(request):
         'pick_slugs': pick_slugs,
         'pick_ids': pick_ids,
         'is_default_week': is_default_week,
-        'auth_required': not request.user.is_authenticated
+        'auth_required': not request.user.is_authenticated,
+        'family': tenant_context.family if tenant_context else None,
+        'pool': tenant_context.pool if tenant_context else None,
+        'is_tenant_pick_page': tenant_context is not None,
         
     }
 
     if request.method == 'POST':
-       form = GamePicksForm(request.POST)
-       if form.is_valid():
-           form.save()
-           return render(request, 'pickem/picks.html', context)
-    else:
-        form = GamePicksForm()
+        if not tenant_context:
+            return JsonResponse({'error': True, 'message': 'Authentication required'}, status=403)
+
+        form = PickSubmissionForm(request.POST)
+        if not form.is_valid():
+            return JsonResponse({'error': True, 'message': 'Invalid pick'}, status=400)
+
+        game = GamesAndScores.objects.filter(
+            id=form.cleaned_data['game_id'],
+            gameseason=tenant_context.pool.season,
+            gameWeek=str(game_week),
+            competition=tenant_context.pool.competition,
+        ).first()
+        if not game:
+            return JsonResponse({'error': True, 'message': 'Invalid pick'}, status=400)
+
+        selected_pick = form.cleaned_data['pick']
+        if selected_pick not in [game.awayTeamSlug, game.homeTeamSlug]:
+            return JsonResponse({'error': True, 'message': 'Invalid pick'}, status=400)
+
+        from pickem.utils import is_pick_locked
+
+        is_locked, lock_reason = is_pick_locked(game)
+        if is_locked:
+            return JsonResponse({
+                'error': True,
+                'message': f'Cannot submit pick: {lock_reason}',
+            }, status=400)
+
+        tiebreaker_score = form.cleaned_data.get('tieBreakerScore')
+        tiebreaker_yards = form.cleaned_data.get('tieBreakerYards')
+        if game.tieBreakerGame and (tiebreaker_score is None or tiebreaker_yards is None):
+            return JsonResponse({
+                'error': True,
+                'message': 'Tiebreaker fields are required for this game',
+            }, status=400)
+
+        pick = save_server_derived_pick(
+            user=request.user,
+            pool=tenant_context.pool,
+            game=game,
+            selected_pick=selected_pick,
+            tiebreaker_score=tiebreaker_score if game.tieBreakerGame else None,
+            tiebreaker_yards=tiebreaker_yards if game.tieBreakerGame else None,
+        )
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'pick_id': pick.id})
+        return redirect(
+            'family_pool_game_picks',
+            family_slug=tenant_context.family.slug,
+            pool_slug=tenant_context.pool.slug,
+        )
 
     return render(request, 'pickem/picks.html', context)
 
 
 @login_required
 def edit_game_pick(request):
+    if request.user.is_authenticated:
+        return redirect_to_default_pool_route(request, 'family_pool_game_picks')
+
+
+@family_member_required
+def tenant_edit_game_pick(request, family_slug, pool_slug):
     """Handle editing of existing game picks"""
     from pickem.utils import is_pick_locked
     from django.http import JsonResponse
@@ -1120,15 +1239,25 @@ def edit_game_pick(request):
         if not pick_id or not new_pick:
             return JsonResponse({'error': True, 'message': 'Missing required fields'}, status=400)
         
-        # Get the existing pick
+        tenant_context = request.tenant_context
+
+        # Get the existing pick through current pool and user scope before any lock/team checks.
         try:
-            existing_pick = GamePicks.objects.get(id=pick_id, userEmail=request.user.email)
+            existing_pick = GamePicks.objects.get(
+                id=pick_id,
+                pool=tenant_context.pool,
+                userID=str(request.user.id),
+            )
         except GamePicks.DoesNotExist:
             return JsonResponse({'error': True, 'message': 'Pick not found or unauthorized'}, status=404)
         
         # Get the game to check if it's locked
         try:
-            game = GamesAndScores.objects.get(id=existing_pick.pick_game_id)
+            game = GamesAndScores.objects.get(
+                id=existing_pick.pick_game_id,
+                gameseason=tenant_context.pool.season,
+                competition=tenant_context.pool.competition,
+            )
         except GamesAndScores.DoesNotExist:
             return JsonResponse({'error': True, 'message': 'Game not found'}, status=404)
         
@@ -1166,20 +1295,25 @@ def edit_game_pick(request):
                     'message': 'Tiebreaker values must be numbers'
                 }, status=400)
         
-        # Update the pick
-        existing_pick.pick = new_pick
-        if game.tieBreakerGame:
-            existing_pick.tieBreakerScore = int(tiebreaker_score) if tiebreaker_score else None
-            existing_pick.tieBreakerYards = int(tiebreaker_yards) if tiebreaker_yards else None
-        
-        existing_pick.save()
+        save_server_derived_pick(
+            user=request.user,
+            pool=tenant_context.pool,
+            game=game,
+            selected_pick=new_pick,
+            tiebreaker_score=int(tiebreaker_score) if game.tieBreakerGame and tiebreaker_score else None,
+            tiebreaker_yards=int(tiebreaker_yards) if game.tieBreakerGame and tiebreaker_yards else None,
+        )
         
         # Return success response
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'message': 'Pick updated successfully'})
         else:
             # For non-AJAX requests, redirect back to picks page
-            return redirect('game_picks')
+            return redirect(
+                'family_pool_game_picks',
+                family_slug=tenant_context.family.slug,
+                pool_slug=tenant_context.pool.slug,
+            )
             
     except Exception as e:
         error_msg = f'Error updating pick: {str(e)}'

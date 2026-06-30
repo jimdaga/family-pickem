@@ -65,6 +65,13 @@ class GamePicksForm(forms.ModelForm):
         )
 
 
+class PickSubmissionForm(forms.Form):
+    game_id = forms.IntegerField(required=True)
+    pick = forms.CharField(max_length=250, required=True, strip=True)
+    tieBreakerScore = forms.IntegerField(required=False, min_value=0, max_value=200)
+    tieBreakerYards = forms.IntegerField(required=False, min_value=0, max_value=2000)
+
+
 class MessageBoardPostForm(forms.ModelForm):
     """Form for creating and editing message board posts"""
     
