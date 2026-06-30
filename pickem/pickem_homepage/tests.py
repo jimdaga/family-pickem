@@ -775,6 +775,310 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertFalse(GamePicks.objects.exists())
 
 
+class TenantScoresStandingsRulesIsolationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        GameWeeks.objects.create(
+            weekNumber=1,
+            competition="nfl",
+            date=timezone.localdate(),
+            season=2526,
+        )
+        GameWeeks.objects.create(
+            weekNumber=2,
+            competition="nfl",
+            date=timezone.localdate() + timedelta(days=7),
+            season=2526,
+        )
+        cls.week_one_game = GamesAndScores.objects.create(
+            id=3001,
+            slug="ari-atl-2025-week-1",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now() - timedelta(hours=1),
+            statusType="inprogress",
+            statusTitle="In Progress",
+            homeTeamId=1,
+            homeTeamSlug="atl",
+            homeTeamName="Atlanta Falcons",
+            awayTeamId=2,
+            awayTeamSlug="ari",
+            awayTeamName="Arizona Cardinals",
+        )
+        cls.week_two_game = GamesAndScores.objects.create(
+            id=3002,
+            slug="buf-mia-2025-week-2",
+            competition="nfl",
+            gameWeek="2",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now() + timedelta(days=7),
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=3,
+            homeTeamSlug="mia",
+            homeTeamName="Miami Dolphins",
+            awayTeamId=4,
+            awayTeamSlug="buf",
+            awayTeamName="Buffalo Bills",
+        )
+        for team_id, slug, name in [
+            (1, "atl", "Atlanta Falcons"),
+            (2, "ari", "Arizona Cardinals"),
+            (3, "mia", "Miami Dolphins"),
+            (4, "buf", "Buffalo Bills"),
+        ]:
+            Teams.objects.create(
+                id=team_id,
+                gameseason=2526,
+                teamNameSlug=slug,
+                teamNameName=name,
+                color="333333",
+                alternateColor="666666",
+            )
+
+    def setUp(self):
+        self.client = Client()
+        self.smith_member = User.objects.create_user(
+            "smith-score-member", email="smith-score@example.com", password="pass"
+        )
+        self.smith_player = User.objects.create_user(
+            "smith-score-player", email="smith-player@example.com", password="pass"
+        )
+        self.jones_player = User.objects.create_user(
+            "jones-score-player", email="jones-player@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "scores-outsider", email="scores-outsider@example.com", password="pass"
+        )
+        self.smith_family, self.smith_pool = self._family_with_pool(
+            "Smith Family", "smith-family"
+        )
+        self.jones_family, self.jones_pool = self._family_with_pool(
+            "Jones Family", "jones-family"
+        )
+        self._active_membership(self.smith_member, self.smith_family)
+        self._active_membership(self.smith_player, self.smith_family)
+        self._active_membership(self.jones_player, self.jones_family)
+        PoolSettings.objects.create(
+            pool=self.smith_pool,
+            picks_lock_at_kickoff=False,
+            allow_tiebreaker=True,
+        )
+        PoolSettings.objects.create(
+            pool=self.jones_pool,
+            picks_lock_at_kickoff=True,
+            allow_tiebreaker=False,
+        )
+
+    def _family_with_pool(self, name, slug, *, pool_slug="main"):
+        family = Family.objects.create(name=name, slug=slug)
+        pool = Pool.objects.create(
+            family=family,
+            name="Main Pickem",
+            slug=pool_slug,
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        return family, pool
+
+    def _active_membership(self, user, family, role=FamilyMembership.Role.MEMBER):
+        return FamilyMembership.objects.create(
+            family=family,
+            user=user,
+            role=role,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _tenant_url(self, route_name, family=None, pool=None, **kwargs):
+        family = family or self.smith_family
+        pool = pool or self.smith_pool
+        route_kwargs = {"family_slug": family.slug, "pool_slug": pool.slug}
+        route_kwargs.update(kwargs)
+        return reverse(route_name, kwargs=route_kwargs)
+
+    def _seed_private_pool_data(self):
+        GamePicks.objects.create(
+            id=f"{self.smith_pool.id}-{self.smith_player.id}-{self.week_one_game.id}",
+            pool=self.smith_pool,
+            userEmail=self.smith_player.email,
+            uid=self.smith_player.id,
+            userID=str(self.smith_player.id),
+            slug=self.week_one_game.slug,
+            competition=self.week_one_game.competition,
+            gameWeek=self.week_one_game.gameWeek,
+            gameyear=self.week_one_game.gameyear,
+            gameseason=self.week_one_game.gameseason,
+            pick_game_id=self.week_one_game.id,
+            pick=self.week_one_game.homeTeamSlug,
+            pick_correct=True,
+        )
+        GamePicks.objects.create(
+            id=f"{self.jones_pool.id}-{self.jones_player.id}-{self.week_one_game.id}",
+            pool=self.jones_pool,
+            userEmail=self.jones_player.email,
+            uid=self.jones_player.id,
+            userID=str(self.jones_player.id),
+            slug=self.week_one_game.slug,
+            competition=self.week_one_game.competition,
+            gameWeek=self.week_one_game.gameWeek,
+            gameyear=self.week_one_game.gameyear,
+            gameseason=self.week_one_game.gameseason,
+            pick_game_id=self.week_one_game.id,
+            pick=self.week_one_game.awayTeamSlug,
+            pick_correct=True,
+        )
+        userSeasonPoints.objects.create(
+            pool=self.smith_pool,
+            userEmail=self.smith_player.email,
+            userID=str(self.smith_player.id),
+            gameseason=2526,
+            gameyear="2025",
+            week_1_points=1,
+            week_1_winner=True,
+            total_points=11,
+            year_winner=True,
+        )
+        userSeasonPoints.objects.create(
+            pool=self.jones_pool,
+            userEmail=self.jones_player.email,
+            userID=str(self.jones_player.id),
+            gameseason=2526,
+            gameyear="2025",
+            week_1_points=1,
+            week_1_winner=True,
+            total_points=99,
+            year_winner=True,
+        )
+
+    def test_tenant_scores_current_week_keeps_global_games_but_scopes_private_overlays(self):
+        self._seed_private_pool_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/scores.html")
+        self.assertContains(response, "Atlanta Falcons")
+        self.assertContains(response, "Arizona Cardinals")
+        self.assertContains(response, "smith-score-player")
+        self.assertNotContains(response, "jones-score-player")
+        self.assertEqual(response.context["picks"].count(), 1)
+        self.assertEqual(response.context["picks"].first().pool, self.smith_pool)
+        self.assertEqual(list(response.context["week_winner"]), list(userSeasonPoints.objects.filter(pool=self.smith_pool)))
+
+    def test_tenant_scores_selected_week_uses_global_week_facts_with_pool_only_overlays(self):
+        self._seed_private_pool_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(
+            self._tenant_url(
+                "family_pool_scores_long",
+                competition=1,
+                gameseason=2526,
+                week=2,
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Miami Dolphins")
+        self.assertContains(response, "Buffalo Bills")
+        self.assertNotContains(response, "jones-score-player")
+        self.assertEqual(response.context["picks"].count(), 0)
+
+    def test_tenant_standings_and_weekly_winners_are_current_pool_only(self):
+        self._seed_private_pool_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/standings.html")
+        self.assertContains(response, "smith-score-player")
+        self.assertNotContains(response, "jones-score-player")
+        self.assertEqual(list(response.context["player_points"]), list(userSeasonPoints.objects.filter(pool=self.smith_pool)))
+        self.assertEqual(response.context["weekly_winners"][1][0].pool, self.smith_pool)
+
+    def test_tenant_rules_display_current_context_settings_and_no_editing_form(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_rules"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/rules.html")
+        self.assertContains(response, "Smith Family")
+        self.assertContains(response, "Main Pickem")
+        self.assertContains(response, "Game locking: Off")
+        self.assertContains(response, "Tiebreakers: On")
+        self.assertNotContains(response, "<form")
+        self.assertNotContains(response, "Save settings")
+        self.assertEqual(response.context["pool_settings"], self.smith_pool.settings)
+
+    def test_legacy_signed_in_scores_standings_and_rules_redirect_before_private_rendering(self):
+        self.client.force_login(self.smith_member)
+
+        self.assertRedirects(
+            self.client.get(reverse("scores")),
+            self._tenant_url("family_pool_scores"),
+            fetch_redirect_response=False,
+        )
+        self.assertRedirects(
+            self.client.get(reverse("scores_long", kwargs={"competition": 1, "gameseason": 2526, "week": 2})),
+            self._tenant_url(
+                "family_pool_scores_long",
+                competition=1,
+                gameseason=2526,
+                week=2,
+            ),
+            fetch_redirect_response=False,
+        )
+        self.assertRedirects(
+            self.client.get(reverse("standings")),
+            self._tenant_url("family_pool_standings"),
+            fetch_redirect_response=False,
+        )
+        self.assertRedirects(
+            self.client.get(reverse("rules")),
+            self._tenant_url("family_pool_rules"),
+            fetch_redirect_response=False,
+        )
+
+    def test_outsider_direct_tenant_scores_standings_and_rules_are_denied(self):
+        self.client.force_login(self.outsider)
+
+        self.assertEqual(self.client.get(self._tenant_url("family_pool_scores")).status_code, 404)
+        self.assertEqual(self.client.get(self._tenant_url("family_pool_standings")).status_code, 404)
+        self.assertEqual(self.client.get(self._tenant_url("family_pool_rules")).status_code, 404)
+
+    def test_query_params_do_not_switch_standings_pool_or_rules_context(self):
+        self._seed_private_pool_data()
+        self.client.force_login(self.smith_member)
+
+        standings_response = self.client.get(
+            self._tenant_url("family_pool_standings"),
+            {"season": "2526", "pool": self.jones_pool.id, "family": self.jones_family.slug},
+        )
+        rules_response = self.client.get(
+            self._tenant_url("family_pool_rules"),
+            {"pool": self.jones_pool.id, "family": self.jones_family.slug},
+        )
+
+        self.assertContains(standings_response, "smith-score-player")
+        self.assertNotContains(standings_response, "jones-score-player")
+        self.assertContains(rules_response, "Game locking: Off")
+        self.assertContains(rules_response, "Tiebreakers: On")
+        self.assertNotContains(rules_response, "Game locking: On")
+        self.assertNotContains(rules_response, "Tiebreakers: Off")
+
+
 class FamilySwitcherContextTests(TestCase):
     @classmethod
     def setUpTestData(cls):
