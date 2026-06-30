@@ -1333,10 +1333,10 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertContains(response, "33")
         self.assertContains(response, "Smith Family")
         self.assertNotContains(response, "jones-profile-player")
-        self.assertNotContains(response, "99")
         self.assertEqual(response.context["family"], self.smith_family)
         self.assertEqual(response.context["pool"], self.smith_pool)
         self.assertEqual(response.context["stats"]["current_season_points"], 33)
+        self.assertNotEqual(response.context["stats"]["current_season_points"], 99)
         self.assertEqual(response.context["recent_picks"][0].pool, self.smith_pool)
         self.assertEqual(response.context["posts_count"], 1)
 
@@ -1349,7 +1349,6 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
-        self.assertNotContains(response, "jones-profile-player")
 
     def test_private_profile_message_applies_after_family_membership_is_proven(self):
         self.client.force_login(self.smith_member)

@@ -1,4 +1,4 @@
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.template import loader
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
@@ -1108,6 +1108,37 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
     }
     return HttpResponse(template.render(context, request))
 
+
+@family_member_required
+def tenant_players(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    member_user_ids = FamilyMembership.objects.filter(
+        family=tenant_context.family,
+        status=FamilyMembership.Status.ACTIVE,
+        user__is_active=True,
+    ).values_list('user_id', flat=True)
+    players = (
+        User.objects.filter(id__in=member_user_ids, is_active=True)
+        .order_by('username')
+    )
+    standings = {
+        points.userID: points
+        for points in userSeasonPoints.objects.filter(
+            pool=tenant_context.pool,
+            gameseason=tenant_context.pool.season,
+            userID__in=[str(user_id) for user_id in member_user_ids],
+        )
+    }
+    context = {
+        'family': tenant_context.family,
+        'pool': tenant_context.pool,
+        'membership': tenant_context.membership,
+        'players': players,
+        'standings_by_user_id': standings,
+        'gameseason': tenant_context.pool.season,
+    }
+    return render(request, 'pickem/players.html', context)
+
 def scores_long(request, competition, gameseason, week):
     if request.user.is_authenticated:
         return redirect_to_default_pool_route(
@@ -1572,35 +1603,70 @@ def profile(request):
 
 
 def user_profile(request, user_id):
-    """Public user profile page showing stats and achievements"""
-    # Get the user whose profile we're viewing
-    profile_user = get_object_or_404(User, id=user_id)
-    gameseason = get_season()
+    """Legacy profile route. Signed-in users are bridged into tenant context."""
+    if request.user.is_authenticated:
+        return redirect_to_default_pool_route(
+            request,
+            'family_pool_user_profile',
+            user_id=user_id,
+        )
+    return render_user_profile(request, user_id)
+
+
+@family_member_required
+def tenant_user_profile(request, family_slug, pool_slug, user_id):
+    return render_user_profile(request, user_id, tenant_context=request.tenant_context)
+
+
+def render_user_profile(request, user_id, *, tenant_context=None):
+    if tenant_context:
+        profile_user = get_object_or_404(
+            User,
+            id=user_id,
+            is_active=True,
+            family_memberships__family=tenant_context.family,
+            family_memberships__status=FamilyMembership.Status.ACTIVE,
+        )
+        gameseason = tenant_context.pool.season
+        points_scope = userSeasonPoints.objects.filter(pool=tenant_context.pool)
+        picks_scope = GamePicks.objects.filter(pool=tenant_context.pool)
+        stats_scope = userStats.objects.filter(pool=tenant_context.pool)
+        posts_scope = MessageBoardPost.objects.filter(family=tenant_context.family)
+    else:
+        profile_user = get_object_or_404(User, id=user_id)
+        gameseason = get_season()
+        points_scope = userSeasonPoints.objects.all()
+        picks_scope = GamePicks.objects.all()
+        stats_scope = userStats.objects.all()
+        posts_scope = MessageBoardPost.objects.all()
+
     gameseason_display = get_season(display_name=True)
-    
-    # Get or create user profile
-    user_profile, created = UserProfile.objects.get_or_create(user=profile_user)
-    
-    # Check if profile is private (only show to the owner)
+    user_profile, _created = UserProfile.objects.get_or_create(user=profile_user)
+
     if user_profile.private_profile and request.user != profile_user:
-        # Get teams data for the private profile page
-        teams = Teams.objects.values('teamNameSlug', 'teamNameName', 'teamLogo').distinct().order_by('teamNameName')
+        teams = Teams.objects.values(
+            'teamNameSlug',
+            'teamNameName',
+            'teamLogo',
+        ).distinct().order_by('teamNameName')
         return render(request, 'pickem/user_profile_private.html', {
             'profile_user': profile_user,
             'user_profile': user_profile,
-            'teams': teams
+            'teams': teams,
+            'family': tenant_context.family if tenant_context else None,
+            'pool': tenant_context.pool if tenant_context else None,
+            'gameseason': gameseason,
         })
-    
-    # Get user's season points data
-    season_points = userSeasonPoints.objects.filter(userID=str(user_id), gameseason=gameseason).first()
-    all_season_points = userSeasonPoints.objects.filter(userID=str(user_id))
-    
-    # Get user stats
-    user_stats_obj = userStats.objects.filter(userID=str(user_id)).first()
-    
-    # Calculate fun stats
+
+    season_points = points_scope.filter(
+        userID=str(user_id),
+        gameseason=gameseason,
+    ).first()
+    all_season_points = points_scope.filter(userID=str(user_id))
+    user_stats_obj = stats_scope.filter(userID=str(user_id)).first()
+
     stats = {
-        'seasons_won': 0,
+        'seasons_won': all_season_points.filter(year_winner=True).count(),
         'weeks_won_current_season': 0,
         'weeks_won_total': 0,
         'current_season_points': 0,
@@ -1617,299 +1683,128 @@ def user_profile(request, user_id):
         'current_season_rank': 'N/A',
         'perfect_weeks': 0,
     }
-    
-    # Seasons won
-    seasons_won = userSeasonPoints.objects.filter(userID=str(user_id), year_winner=True).count()
-    stats['seasons_won'] = seasons_won
-    
-    # Current season data
+
     if season_points:
         stats['current_season_points'] = season_points.total_points or 0
-        
-        # Count weeks won this season
-        weeks_won_this_season = 0
-        for week in range(1, 19):  # NFL has up to 18 weeks
-            if hasattr(season_points, f'week_{week}_winner'):
-                if getattr(season_points, f'week_{week}_winner', False):
-                    weeks_won_this_season += 1
-        stats['weeks_won_current_season'] = weeks_won_this_season
-        
-        # Get perfect weeks from userStats (authoritative source)
-        if user_stats_obj:
-            stats['perfect_weeks'] = user_stats_obj.perfectWeeksSeason or 0
-        else:
-            stats['perfect_weeks'] = 0
-    
-    # Lifetime stats
+        stats['weeks_won_current_season'] = sum(
+            1
+            for week in range(1, 19)
+            if getattr(season_points, f'week_{week}_winner', False)
+        )
+
     if all_season_points.exists():
-        # Total lifetime points
-        total_points = all_season_points.aggregate(
+        stats['total_lifetime_points'] = all_season_points.aggregate(
             total=Coalesce(Sum('total_points'), 0)
         )['total']
-        stats['total_lifetime_points'] = total_points
-        
-        # Best season
         best_season = all_season_points.order_by('-total_points').first()
         if best_season:
             stats['best_season_points'] = best_season.total_points or 0
-            
-            # Calculate best rank achieved
-            # Get all users' points for the same season to determine ranking
-            season_standings = userSeasonPoints.objects.filter(
-                gameseason=best_season.gameseason
-            ).order_by('-total_points')
-            
-            best_rank = None
+            season_standings = points_scope.filter(
+                gameseason=best_season.gameseason,
+            ).order_by('-total_points', 'userID')
             for rank, standing in enumerate(season_standings, 1):
                 if standing.userID == str(user_id):
-                    best_rank = rank
+                    stats['best_rank'] = rank
                     break
-            
-            stats['best_rank'] = best_rank
-        
-        # Total weeks won across all seasons
-        total_weeks_won = 0
-        for season in all_season_points:
-            for week in range(1, 19):
-                if hasattr(season, f'week_{week}_winner'):
-                    if getattr(season, f'week_{week}_winner', False):
-                        total_weeks_won += 1
-        stats['weeks_won_total'] = total_weeks_won
-        
-        # Years playing
+        stats['weeks_won_total'] = sum(
+            1
+            for season in all_season_points
+            for week in range(1, 19)
+            if getattr(season, f'week_{week}_winner', False)
+        )
         stats['years_playing'] = all_season_points.values('gameseason').distinct().count()
-    
-    # Calculate team pick statistics for pie chart (current season only to match stats page)
-    user_picks = GamePicks.objects.filter(userID=str(user_id), gameseason=gameseason)
+
+    if user_stats_obj:
+        stats['perfect_weeks'] = user_stats_obj.perfectWeeksSeason or 0
+        stats['pick_accuracy_current'] = user_stats_obj.pickPercentSeason or 0
+        stats['pick_accuracy_lifetime'] = user_stats_obj.pickPercentTotal or 0
+        stats['total_picks_made'] = user_stats_obj.totalPicksTotal or 0
+        stats['correct_picks'] = user_stats_obj.correctPickTotalTotal or 0
+
+    user_picks = picks_scope.filter(userID=str(user_id), gameseason=gameseason)
     team_pick_stats = user_picks.values('pick').annotate(
         count=Count('pick')
     ).order_by('-count')
-    
-    # Convert to percentage and format for chart
     total_picks = user_picks.count()
+    modern_colors = [
+        'rgba(99, 102, 241, 0.8)',
+        'rgba(168, 85, 247, 0.8)',
+        'rgba(236, 72, 153, 0.8)',
+        'rgba(245, 158, 11, 0.8)',
+        'rgba(34, 197, 94, 0.8)',
+        'rgba(6, 182, 212, 0.8)',
+    ]
     team_chart_data = []
     team_chart_labels = []
     team_chart_colors = []
     team_chart_slugs = []
     team_chart_logos = []
-    
-    # Debug print
-    print(f"DEBUG: User {user_id} has {total_picks} total picks")
-    print(f"DEBUG: Team pick stats: {list(team_pick_stats)}")
-    
-    # NFL team slug to abbreviation mapping
     team_abbreviations = {
         'arizona-cardinals': 'ARI',
         'atlanta-falcons': 'ATL',
-        'baltimore-ravens': 'BAL',
-        'buffalo-bills': 'BUF',
-        'carolina-panthers': 'CAR',
-        'chicago-bears': 'CHI',
-        'cincinnati-bengals': 'CIN',
-        'cleveland-browns': 'CLE',
-        'dallas-cowboys': 'DAL',
-        'denver-broncos': 'DEN',
-        'detroit-lions': 'DET',
-        'green-bay-packers': 'GB',
-        'houston-texans': 'HOU',
-        'indianapolis-colts': 'IND',
-        'jacksonville-jaguars': 'JAX',
-        'kansas-city-chiefs': 'KC',
-        'las-vegas-raiders': 'LV',
-        'los-angeles-chargers': 'LAC',
-        'los-angeles-rams': 'LAR',
-        'miami-dolphins': 'MIA',
-        'minnesota-vikings': 'MIN',
-        'new-england-patriots': 'NE',
-        'new-orleans-saints': 'NO',
-        'new-york-giants': 'NYG',
-        'new-york-jets': 'NYJ',
-        'philadelphia-eagles': 'PHI',
-        'pittsburgh-steelers': 'PIT',
-        'san-francisco-49ers': 'SF',
-        'seattle-seahawks': 'SEA',
-        'tampa-bay-buccaneers': 'TB',
-        'tennessee-titans': 'TEN',
-        'washington-commanders': 'WAS',
+        'atl': 'ATL',
+        'ari': 'ARI',
     }
-    
-    # NFL team colors mapping (simplified)
-    team_colors = {
-        'arizona-cardinals': '#97233F',
-        'atlanta-falcons': '#A71930',
-        'baltimore-ravens': '#241773',
-        'buffalo-bills': '#00338D',
-        'carolina-panthers': '#0085CA',
-        'chicago-bears': '#0B162A',
-        'cincinnati-bengals': '#FB4F14',
-        'cleveland-browns': '#311D00',
-        'dallas-cowboys': '#003594',
-        'denver-broncos': '#FB4F14',
-        'detroit-lions': '#0076B6',
-        'green-bay-packers': '#203731',
-        'houston-texans': '#03202F',
-        'indianapolis-colts': '#002C5F',
-        'jacksonville-jaguars': '#006778',
-        'kansas-city-chiefs': '#E31837',
-        'las-vegas-raiders': '#000000',
-        'los-angeles-chargers': '#0080C6',
-        'los-angeles-rams': '#003594',
-        'miami-dolphins': '#008E97',
-        'minnesota-vikings': '#4F2683',
-        'new-england-patriots': '#002244',
-        'new-orleans-saints': '#D3BC8D',
-        'new-york-giants': '#0B2265',
-        'new-york-jets': '#125740',
-        'philadelphia-eagles': '#004C54',
-        'pittsburgh-steelers': '#FFB612',
-        'san-francisco-49ers': '#AA0000',
-        'seattle-seahawks': '#002244',
-        'tampa-bay-buccaneers': '#D50A0A',
-        'tennessee-titans': '#0C2340',
-        'washington-commanders': '#5A1414',
-    }
-    
-    # Modern gradient color palette for glassmorphism design
-    modern_colors = [
-        'rgba(99, 102, 241, 0.8)',   # Indigo
-        'rgba(168, 85, 247, 0.8)',   # Purple  
-        'rgba(236, 72, 153, 0.8)',   # Pink
-        'rgba(245, 158, 11, 0.8)',   # Amber
-        'rgba(34, 197, 94, 0.8)',    # Green
-        'rgba(6, 182, 212, 0.8)',    # Cyan
-        'rgba(239, 68, 68, 0.8)',    # Red
-        'rgba(139, 92, 246, 0.8)',   # Violet
-        'rgba(14, 165, 233, 0.8)',   # Blue
-        'rgba(251, 146, 60, 0.8)',   # Orange
-        'rgba(16, 185, 129, 0.8)',   # Emerald
-        'rgba(244, 63, 94, 0.8)',    # Rose
-        'rgba(124, 58, 237, 0.8)',   # Indigo Variant
-        'rgba(59, 130, 246, 0.8)',   # Blue Variant
-        'rgba(34, 197, 94, 0.8)',    # Green Variant
-        'rgba(249, 115, 22, 0.8)'    # Orange Variant
-    ]
-    
-    # Corresponding border colors with full opacity
-    modern_border_colors = [
-        'rgb(99, 102, 241)',   # Indigo
-        'rgb(168, 85, 247)',   # Purple  
-        'rgb(236, 72, 153)',   # Pink
-        'rgb(245, 158, 11)',   # Amber
-        'rgb(34, 197, 94)',    # Green
-        'rgb(6, 182, 212)',    # Cyan
-        'rgb(239, 68, 68)',    # Red
-        'rgb(139, 92, 246)',   # Violet
-        'rgb(14, 165, 233)',   # Blue
-        'rgb(251, 146, 60)',   # Orange
-        'rgb(16, 185, 129)',   # Emerald
-        'rgb(244, 63, 94)',    # Rose
-        'rgb(124, 58, 237)',   # Indigo Variant
-        'rgb(59, 130, 246)',   # Blue Variant
-        'rgb(34, 197, 94)',    # Green Variant
-        'rgb(249, 115, 22)'    # Orange Variant
-    ]
-    
-    if total_picks > 0:
-        for i, team_stat in enumerate(team_pick_stats):
-            team_slug = team_stat['pick']
-            pick_count = team_stat['count']
-            percentage = round((pick_count / total_picks) * 100, 1)
-            
-            # Get team abbreviation from mapping, fallback to cleaned name if not found
-            display_name = team_abbreviations.get(team_slug, team_slug.replace('-', ' ').title())
-            
-            # Get team logo URL and resize it
-            try:
-                team_obj = Teams.objects.get(teamNameSlug=team_slug)
-                if team_obj.teamLogo:
-                    # Convert ESPN 500px logos to smaller 64px versions for better performance
-                    logo_url = team_obj.teamLogo.replace('/500/', '/64/') if '/500/' in team_obj.teamLogo else team_obj.teamLogo
-                else:
-                    logo_url = '/static/images/nfl.svg'
-            except Teams.DoesNotExist:
-                logo_url = '/static/images/nfl.svg'
-            
-            team_chart_data.append(percentage)
-            team_chart_labels.append(display_name)
-            team_chart_slugs.append(team_slug)
-            team_chart_logos.append(logo_url)
-            # Use modern colors cycling through the palette
-            color_index = i % len(modern_colors)
-            team_chart_colors.append(modern_colors[color_index])
-    else:
-        # Add sample data for testing when user has no picks yet
-        print(f"DEBUG: No picks found for user {user_id}, adding sample data")
-        team_chart_data = [35.2, 18.7, 15.3, 12.8, 8.5, 9.5]
-        team_chart_labels = ['NE', 'DAL', 'GB', 'KC', 'BUF', 'Other']
-        team_chart_slugs = ['new-england-patriots', 'dallas-cowboys', 'green-bay-packers', 'kansas-city-chiefs', 'buffalo-bills', 'other']
-        team_chart_logos = ['/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg', '/static/images/nfl.svg']
-        team_chart_colors = modern_colors[:6]  # Use first 6 modern colors
-    
-    # Find teams tied for most picked (same percentage)
+    for i, team_stat in enumerate(team_pick_stats):
+        team_slug = team_stat['pick']
+        pick_count = team_stat['count']
+        percentage = round((pick_count / total_picks) * 100, 1) if total_picks else 0
+        team = Teams.objects.filter(teamNameSlug=team_slug).first()
+        display_name = team_abbreviations.get(team_slug, team_slug.replace('-', ' ').title())
+        team_chart_data.append(percentage)
+        team_chart_labels.append(display_name)
+        team_chart_slugs.append(team_slug)
+        team_chart_logos.append(team.teamLogo if team and team.teamLogo else '/static/images/nfl.svg')
+        team_chart_colors.append(modern_colors[i % len(modern_colors)])
+
     most_picked_teams = []
     if team_chart_data:
-        max_percentage = team_chart_data[0]  # Highest percentage (first in sorted list)
+        max_percentage = team_chart_data[0]
         for i, percentage in enumerate(team_chart_data):
-            if percentage == max_percentage:
-                most_picked_teams.append({
-                    'slug': team_chart_slugs[i],
-                    'label': team_chart_labels[i],
-                    'percentage': percentage
-                })
-            else:
-                break  # Since it's sorted, we can stop at first lower percentage
-    
-    # User stats data
-    if user_stats_obj:
-        stats['pick_accuracy_current'] = user_stats_obj.pickPercentSeason or 0
-        stats['pick_accuracy_lifetime'] = user_stats_obj.pickPercentTotal or 0
-        stats['total_picks_made'] = user_stats_obj.totalPicksTotal or 0
-        stats['correct_picks'] = user_stats_obj.correctPickTotalTotal or 0
-    
-    # Favorite team info
+            if percentage != max_percentage:
+                break
+            most_picked_teams.append({
+                'slug': team_chart_slugs[i],
+                'label': team_chart_labels[i],
+                'percentage': percentage,
+            })
+
     if user_profile.favorite_team:
-        try:
-            favorite_team = Teams.objects.filter(teamNameSlug=user_profile.favorite_team).first()
-            if favorite_team:
-                stats['favorite_team'] = favorite_team.teamNameName
-                stats['favorite_team_logo'] = favorite_team.teamLogo
-        except Teams.DoesNotExist:
-            pass
-    
-    # Current season ranking
+        favorite_team = Teams.objects.filter(teamNameSlug=user_profile.favorite_team).first()
+        if favorite_team:
+            stats['favorite_team'] = favorite_team.teamNameName
+            stats['favorite_team_logo'] = favorite_team.teamLogo
+
     if season_points:
-        current_rank = userSeasonPoints.objects.filter(
+        stats['current_season_rank'] = points_scope.filter(
             gameseason=gameseason,
-            total_points__gt=season_points.total_points
+            total_points__gt=season_points.total_points,
         ).count() + 1
-        stats['current_season_rank'] = current_rank
-    
-    # Recent activity - last 5 weeks of picks
-    recent_picks = GamePicks.objects.filter(
-        userID=str(user_id),
-        gameseason=gameseason
-    ).select_related().order_by('-gameWeek')[:5]
-    
-    # Get user's message board posts count
-    posts_count = MessageBoardPost.objects.filter(user_id=user_id).count()
-    
+
+    recent_picks = user_picks.select_related().order_by('-gameWeek')[:5]
+    posts_count = posts_scope.filter(user_id=user_id, is_active=True).count()
+
     context = {
         'profile_user': profile_user,
         'user_profile': user_profile,
+        'user_stats_obj': user_stats_obj,
         'stats': stats,
         'recent_picks': recent_picks,
         'posts_count': posts_count,
         'gameseason': gameseason,
         'gameseason_display': gameseason_display,
         'is_own_profile': request.user == profile_user,
-        'team_chart_data': team_chart_data,
-        'team_chart_labels': team_chart_labels,
-        'team_chart_colors': team_chart_colors,
-        'team_chart_slugs': team_chart_slugs,
-        'team_chart_logos': team_chart_logos,
+        'team_chart_data': json.dumps(team_chart_data),
+        'team_chart_labels': json.dumps(team_chart_labels),
+        'team_chart_colors': json.dumps(team_chart_colors),
+        'team_chart_slugs': json.dumps(team_chart_slugs),
+        'team_chart_logos': json.dumps(team_chart_logos),
         'most_picked_teams': most_picked_teams,
+        'family': tenant_context.family if tenant_context else None,
+        'pool': tenant_context.pool if tenant_context else None,
+        'membership': tenant_context.membership if tenant_context else None,
     }
-    
+
     return render(request, 'pickem/user_profile.html', context)
 
 
