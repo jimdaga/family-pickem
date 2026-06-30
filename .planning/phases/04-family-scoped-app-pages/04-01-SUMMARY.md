@@ -161,7 +161,7 @@ None. No new endpoints, file access patterns, schema changes, cache layers, or a
 
 ## Verification
 
-- `cd pickem && ../venv/bin/python manage.py test pickem_homepage.tests.TenantDashboardIsolationTests --settings=pickem.test_settings --verbosity=2` - failed before implementation on missing scoped dashboard content, then passed after implementation, 5 tests.
+- `cd pickem && ../venv/bin/python manage.py test pickem_homepage.tests.TenantDashboardIsolationTests --settings=pickem.test_settings --verbosity=2` - produced the expected red state before implementation on missing scoped dashboard content, then passed after implementation, 5 tests.
 - `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` - passed after Task 2, 74 tests.
 - `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` - passed after Task 3 and final verification, 75 tests.
 - `cd pickem && ../venv/bin/python manage.py check --settings=pickem.test_settings` - passed with the pre-existing 13 `pickem_api.userStats` `IntegerField(max_length=...)` warnings.

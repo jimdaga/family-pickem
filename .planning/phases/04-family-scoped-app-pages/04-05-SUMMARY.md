@@ -137,7 +137,7 @@ Shared navigation, footer stats, banners, dashboard links, picks links, and scor
 
 **1. Test-first task produced expected red coverage before implementation**
 - **Found during:** Task 1
-- **Issue:** Task 1 required regression tests for behavior fixed by Tasks 2 and 3, so the focused class failed before implementation.
+- **Issue:** Task 1 required regression tests for behavior fixed by Tasks 2 and 3, so the focused class produced the expected red state before implementation.
 - **Fix:** Committed the test-only regression coverage, then implemented context/template changes and reran the focused and full suites to green.
 - **Files modified:** `pickem/pickem_homepage/tests.py`
 - **Verification:** `Phase4SharedContextScopeTests` passed after Tasks 2 and 3.
@@ -164,7 +164,7 @@ Shared navigation, footer stats, banners, dashboard links, picks links, and scor
 
 ## Issues Encountered
 
-None blocking. The planned tests exposed the expected pre-implementation failures and passed after implementation.
+None blocking. The planned tests exposed the expected pre-implementation red states and passed after implementation.
 
 ## User Setup Required
 
@@ -180,7 +180,7 @@ None. No new endpoint, schema, file access, or authentication surface was introd
 
 ## Verification
 
-- `cd pickem && ../venv/bin/python manage.py test pickem_homepage.tests.Phase4SharedContextScopeTests --settings=pickem.test_settings --verbosity=2` - failed before implementation with 7 expected regression failures; passed after implementation with 7 tests.
+- `cd pickem && ../venv/bin/python manage.py test pickem_homepage.tests.Phase4SharedContextScopeTests --settings=pickem.test_settings --verbosity=2` - produced the expected red state before implementation with 7 regression assertions, then passed after implementation with 7 tests.
 - `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` - passed with 107 tests.
 - `cd pickem && ../venv/bin/python manage.py check --settings=pickem.test_settings` - passed with no issues.
 - `cd pickem && ../venv/bin/python manage.py makemigrations --check --dry-run --settings=pickem.test_settings` - passed with `No changes detected`.
