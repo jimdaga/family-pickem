@@ -1,6 +1,7 @@
 from datetime import timedelta
 from io import StringIO
 from importlib import import_module
+import json
 
 from django.contrib import admin
 from django.contrib.auth.models import AnonymousUser
@@ -28,6 +29,7 @@ from pickem_api.models import (
     PoolSettings,
     Teams,
     userSeasonPoints,
+    userStats,
     UserProfile,
 )
 from pickem_homepage.authz import family_member_required
@@ -1077,6 +1079,411 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertContains(rules_response, "Tiebreakers: On")
         self.assertNotContains(rules_response, "Game locking: On")
         self.assertNotContains(rules_response, "Tiebreakers: Off")
+
+
+class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        GameWeeks.objects.create(
+            weekNumber=1,
+            competition="nfl",
+            date=timezone.localdate(),
+            season=2526,
+        )
+        cls.game = GamesAndScores.objects.create(
+            id=4001,
+            slug="ari-atl-2025-week-1",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now() + timedelta(days=1),
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=1,
+            homeTeamSlug="atl",
+            homeTeamName="Atlanta Falcons",
+            awayTeamId=2,
+            awayTeamSlug="ari",
+            awayTeamName="Arizona Cardinals",
+        )
+        for team_id, slug, name in [
+            (1, "atl", "Atlanta Falcons"),
+            (2, "ari", "Arizona Cardinals"),
+        ]:
+            Teams.objects.create(
+                id=team_id,
+                gameseason=2526,
+                teamNameSlug=slug,
+                teamNameName=name,
+                teamLogo=f"https://example.test/{slug}.png",
+                color="333333",
+                alternateColor="666666",
+            )
+
+    def setUp(self):
+        self.client = Client()
+        self.smith_member = User.objects.create_user(
+            "smith-profile-member", email="smith-member@example.com", password="pass"
+        )
+        self.smith_player = User.objects.create_user(
+            "smith-profile-player", email="smith-player@example.com", password="pass"
+        )
+        self.smith_private = User.objects.create_user(
+            "smith-private-player", email="smith-private@example.com", password="pass"
+        )
+        self.jones_player = User.objects.create_user(
+            "jones-profile-player", email="jones-player@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "profile-outsider", email="profile-outsider@example.com", password="pass"
+        )
+        self.smith_family, self.smith_pool = self._family_with_pool(
+            "Smith Family", "smith-family"
+        )
+        self.jones_family, self.jones_pool = self._family_with_pool(
+            "Jones Family", "jones-family"
+        )
+        self._active_membership(self.smith_member, self.smith_family)
+        self._active_membership(self.smith_player, self.smith_family)
+        self._active_membership(self.smith_private, self.smith_family)
+        self._active_membership(self.jones_player, self.jones_family)
+        UserProfile.objects.create(user=self.smith_private, private_profile=True)
+
+    def _family_with_pool(self, name, slug, *, pool_slug="main"):
+        family = Family.objects.create(name=name, slug=slug)
+        pool = Pool.objects.create(
+            family=family,
+            name="Main Pickem",
+            slug=pool_slug,
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        return family, pool
+
+    def _active_membership(self, user, family, role=FamilyMembership.Role.MEMBER):
+        return FamilyMembership.objects.create(
+            family=family,
+            user=user,
+            role=role,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _tenant_url(self, route_name, family=None, pool=None, **kwargs):
+        family = family or self.smith_family
+        pool = pool or self.smith_pool
+        route_kwargs = {"family_slug": family.slug, "pool_slug": pool.slug}
+        route_kwargs.update(kwargs)
+        return reverse(route_name, kwargs=route_kwargs)
+
+    def _create_pick(self, *, user, pool, pick_id):
+        return GamePicks.objects.create(
+            id=pick_id,
+            pool=pool,
+            userEmail=user.email,
+            uid=user.id,
+            userID=str(user.id),
+            slug=self.game.slug,
+            competition=self.game.competition,
+            gameWeek=self.game.gameWeek,
+            gameyear=self.game.gameyear,
+            gameseason=self.game.gameseason,
+            pick_game_id=self.game.id,
+            pick=self.game.homeTeamSlug,
+            pick_correct=True,
+        )
+
+    def _seed_profile_data(self):
+        userSeasonPoints.objects.create(
+            pool=self.smith_pool,
+            userEmail=self.smith_player.email,
+            userID=str(self.smith_player.id),
+            gameseason=2526,
+            gameyear="2025",
+            week_1_points=3,
+            week_1_winner=True,
+            total_points=33,
+        )
+        userSeasonPoints.objects.create(
+            pool=self.jones_pool,
+            userEmail=self.jones_player.email,
+            userID=str(self.jones_player.id),
+            gameseason=2526,
+            gameyear="2025",
+            week_1_points=9,
+            week_1_winner=True,
+            total_points=99,
+        )
+        self._create_pick(
+            user=self.smith_player,
+            pool=self.smith_pool,
+            pick_id=f"{self.smith_pool.id}-{self.smith_player.id}-{self.game.id}",
+        )
+        self._create_pick(
+            user=self.jones_player,
+            pool=self.jones_pool,
+            pick_id=f"{self.jones_pool.id}-{self.jones_player.id}-{self.game.id}",
+        )
+        userStats.objects.create(
+            pool=self.smith_pool,
+            userEmail=self.smith_player.email,
+            userID=str(self.smith_player.id),
+            pickPercentSeason=67,
+            pickPercentTotal=67,
+            correctPickTotalSeason=2,
+            correctPickTotalTotal=2,
+            totalPicksSeason=3,
+            totalPicksTotal=3,
+            mostPickedSeason=self.game.homeTeamSlug,
+            perfectWeeksSeason=1,
+        )
+        userStats.objects.create(
+            pool=self.jones_pool,
+            userEmail=self.jones_player.email,
+            userID=str(self.jones_player.id),
+            pickPercentSeason=99,
+            pickPercentTotal=99,
+            correctPickTotalSeason=99,
+            correctPickTotalTotal=99,
+            totalPicksSeason=100,
+            totalPicksTotal=100,
+            mostPickedSeason=self.game.awayTeamSlug,
+            perfectWeeksSeason=9,
+        )
+        MessageBoardPost.objects.create(
+            family=self.smith_family,
+            user=self.smith_player,
+            title="Smith profile post",
+            content="Smith family post",
+        )
+        MessageBoardPost.objects.create(
+            family=self.jones_family,
+            user=self.jones_player,
+            title="Jones profile post",
+            content="Jones family post",
+        )
+
+    def _seed_message_board_data(self):
+        smith_post = MessageBoardPost.objects.create(
+            family=self.smith_family,
+            user=self.smith_player,
+            title="Smith thread",
+            content="Smith family only",
+        )
+        smith_comment = MessageBoardComment.objects.create(
+            family=self.smith_family,
+            post=smith_post,
+            user=self.smith_member,
+            content="Smith comment",
+        )
+        jones_post = MessageBoardPost.objects.create(
+            family=self.jones_family,
+            user=self.jones_player,
+            title="Jones thread",
+            content="Jones family only",
+        )
+        jones_comment = MessageBoardComment.objects.create(
+            family=self.jones_family,
+            post=jones_post,
+            user=self.jones_player,
+            content="Jones comment",
+        )
+        return smith_post, smith_comment, jones_post, jones_comment
+
+    def _json_post(self, url, payload):
+        return self.client.post(
+            url,
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+    def test_tenant_players_list_contains_only_current_family_active_members(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_players"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/players.html")
+        self.assertContains(response, "smith-profile-member")
+        self.assertContains(response, "smith-profile-player")
+        self.assertNotContains(response, "jones-profile-player")
+        self.assertQuerysetEqual(
+            response.context["players"].values_list("id", flat=True).order_by("id"),
+            sorted([self.smith_member.id, self.smith_player.id, self.smith_private.id]),
+        )
+
+    def test_tenant_profile_scopes_stats_picks_posts_and_links_to_current_pool(self):
+        self._seed_profile_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=self.smith_player.id)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/user_profile.html")
+        self.assertContains(response, "smith-profile-player")
+        self.assertContains(response, "33")
+        self.assertContains(response, "Smith Family")
+        self.assertNotContains(response, "jones-profile-player")
+        self.assertNotContains(response, "99")
+        self.assertEqual(response.context["family"], self.smith_family)
+        self.assertEqual(response.context["pool"], self.smith_pool)
+        self.assertEqual(response.context["stats"]["current_season_points"], 33)
+        self.assertEqual(response.context["recent_picks"][0].pool, self.smith_pool)
+        self.assertEqual(response.context["posts_count"], 1)
+
+    def test_tenant_profile_requires_target_user_current_family_membership(self):
+        self._seed_profile_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=self.jones_player.id)
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertNotContains(response, "jones-profile-player")
+
+    def test_private_profile_message_applies_after_family_membership_is_proven(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=self.smith_private.id)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/user_profile_private.html")
+        self.assertContains(response, "This Profile is Private")
+
+    def test_legacy_signed_in_profile_redirects_to_default_tenant_profile(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(reverse("user_profile", kwargs={"user_id": self.smith_player.id}))
+
+        self.assertRedirects(
+            response,
+            self._tenant_url("family_pool_user_profile", user_id=self.smith_player.id),
+            fetch_redirect_response=False,
+        )
+
+    def test_outsider_direct_tenant_profiles_and_players_are_denied(self):
+        self.client.force_login(self.outsider)
+
+        self.assertEqual(
+            self.client.get(
+                self._tenant_url("family_pool_user_profile", user_id=self.smith_player.id)
+            ).status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.get(self._tenant_url("family_pool_players")).status_code,
+            404,
+        )
+
+    def test_tenant_create_post_assigns_current_family_server_side(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.post(
+            self._tenant_url("family_pool_create_post"),
+            {
+                "title": "Forged family",
+                "content": "Smith server scoped",
+                "family": self.jones_family.id,
+                "family_id": self.jones_family.id,
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        post = MessageBoardPost.objects.get(content="Smith server scoped")
+        self.assertEqual(post.family, self.smith_family)
+        self.assertEqual(post.user, self.smith_member)
+
+    def test_tenant_create_comment_denies_cross_family_post_and_parent_ids_generically(self):
+        _smith_post, _smith_comment, jones_post, jones_comment = self._seed_message_board_data()
+        self.client.force_login(self.smith_member)
+
+        response = self._json_post(
+            self._tenant_url("family_pool_create_comment"),
+            {
+                "post_id": jones_post.id,
+                "parent_id": jones_comment.id,
+                "content": "tampered",
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+        payload = response.json()
+        self.assertFalse(payload["success"])
+        self.assertIn("not found", payload["error"].lower())
+        self.assertNotIn("Jones", json.dumps(payload))
+        self.assertFalse(MessageBoardComment.objects.filter(content="tampered").exists())
+
+    def test_tenant_vote_post_and_comment_deny_cross_family_ids_generically(self):
+        _smith_post, _smith_comment, jones_post, jones_comment = self._seed_message_board_data()
+        self.client.force_login(self.smith_member)
+
+        post_response = self._json_post(
+            self._tenant_url("family_pool_vote_post"),
+            {"post_id": jones_post.id, "vote_type": 1},
+        )
+        comment_response = self._json_post(
+            self._tenant_url("family_pool_vote_comment"),
+            {"comment_id": jones_comment.id, "vote_type": 1},
+        )
+
+        for response in [post_response, comment_response]:
+            self.assertEqual(response.status_code, 404)
+            payload = response.json()
+            self.assertFalse(payload["success"])
+            self.assertIn("not found", payload["error"].lower())
+            self.assertNotIn("Jones", json.dumps(payload))
+        self.assertFalse(MessageBoardVote.objects.filter(family=self.jones_family).exists())
+
+    def test_tenant_get_comments_serializes_only_current_family_post_comments(self):
+        smith_post, smith_comment, jones_post, jones_comment = self._seed_message_board_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(
+            self._tenant_url("family_pool_get_post_comments", post_id=smith_post.id),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        tamper_response = self.client.get(
+            self._tenant_url("family_pool_get_post_comments", post_id=jones_post.id),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["comments"][0]["id"], smith_comment.id)
+        self.assertNotIn(str(jones_comment.id), json.dumps(payload))
+        self.assertEqual(tamper_response.status_code, 404)
+        tamper_payload = tamper_response.json()
+        self.assertFalse(tamper_payload["success"])
+        self.assertNotIn("Jones", json.dumps(tamper_payload))
+
+    def test_tenant_homepage_message_board_uses_tenant_ajax_urls_only(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self._tenant_url("family_pool_create_post"))
+        self.assertContains(response, self._tenant_url("family_pool_create_comment"))
+        self.assertContains(response, self._tenant_url("family_pool_vote_post"))
+        self.assertContains(response, self._tenant_url("family_pool_vote_comment"))
+        self.assertNotContains(response, "/message-board/create-post/")
+        self.assertNotContains(response, "/message-board/create-comment/")
+        self.assertNotContains(response, "/message-board/vote-post/")
+        self.assertNotContains(response, "/message-board/vote-comment/")
 
 
 class FamilySwitcherContextTests(TestCase):
