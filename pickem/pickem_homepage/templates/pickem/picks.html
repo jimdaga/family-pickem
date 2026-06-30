@@ -345,16 +345,7 @@
                                     <!-- Hidden Form Data -->
                                     <form class="pick-form" style="display: none;">
                                         {% csrf_token %}
-                                        <input type="hidden" name="id" value="{{ user.id }}-{{ game.id }}">
-                                        <input type="hidden" name="userEmail" value="{{ user.email }}">
-                                        <input type="hidden" name="userID" value="{{ user.id }}">
-                                        <input type="hidden" name="uid" value="{{ user.id }}">
-                                        <input type="hidden" name="slug" value="{{ game.slug }}">
-                                        <input type="hidden" name="competition" value="{{ game.competition }}">
-                                        <input type="hidden" name="gameWeek" value="{{ game.gameWeek }}">
-                                        <input type="hidden" name="gameyear" value="{{ game.gameyear }}">
-                                        <input type="hidden" name="gameseason" value="{{ game.gameseason }}">
-                                        <input type="hidden" name="pick_game_id" value="{{ game.id }}">
+                                        <input type="hidden" name="game_id" value="{{ game.id }}">
                                         <input type="hidden" name="pick" value="">
                                         <input type="hidden" name="tieBreakerScore" value="">
                                         <input type="hidden" name="tieBreakerYards" value="">
@@ -576,6 +567,16 @@
                 </div>
 
                 <div class="flex items-center justify-center gap-3 mt-6">
+                    {% if is_tenant_pick_page %}
+                    <a href="{% url 'family_pool_home' family_slug=family.slug pool_slug=pool.slug %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Pool Dashboard</span>
+                    </a>
+                    <a href="{% url 'family_pool_home' family_slug=family.slug pool_slug=pool.slug %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-border-light dark:border-border-subtle text-text-dark dark:text-white rounded-xl font-semibold hover:bg-surface-hover transition-all">
+                        <i class="fas fa-trophy"></i>
+                        <span>Back to Pool</span>
+                    </a>
+                    {% else %}
                     <a href="{% url 'scores' %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all">
                         <i class="fas fa-chart-line"></i>
                         <span>View Scores</span>
@@ -584,6 +585,7 @@
                         <i class="fas fa-trophy"></i>
                         <span>Standings</span>
                     </a>
+                    {% endif %}
                 </div>
                 {% else %}
                 <h4 class="text-2xl font-bold text-text-secondary-light dark:text-text-secondary mb-3">No games available for this week</h4>
@@ -621,11 +623,6 @@
                     <form id="editPickForm">
                         {% csrf_token %}
                         <input type="hidden" id="editPickId" name="pick_id">
-                        <input type="hidden" id="editGameId" name="game_id">
-                        <input type="hidden" id="editGameSlug" name="slug">
-                        <input type="hidden" name="userEmail" value="{{ user.email }}">
-                        <input type="hidden" name="userID" value="{{ user.id }}">
-                        <input type="hidden" name="uid" value="{{ user.id }}">
 
                         <!-- Game Info -->
                         <div class="mb-6 text-center">
@@ -764,6 +761,9 @@
 
     <!-- Auto-save JavaScript -->
     <script>
+    const pickSubmitUrl = "{% if is_tenant_pick_page %}{% url 'family_pool_game_picks' family_slug=family.slug pool_slug=pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}";
+    const pickEditUrl = "{% if is_tenant_pick_page %}{% url 'family_pool_edit_game_pick' family_slug=family.slug pool_slug=pool.slug %}{% else %}{% url 'edit_game_pick' %}{% endif %}";
+
     // Modal helper functions
     function openEditModal() {
         const modal = document.getElementById('editPickModal');
@@ -909,7 +909,7 @@
             console.log('About to submit form data:', formData);
             
             // Submit the pick
-            fetch('/picks/', {
+            fetch(pickSubmitUrl, {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -950,9 +950,7 @@
         // Edit Pick Functionality
         document.querySelectorAll('.edit-pick-btn').forEach(button => {
             button.addEventListener('click', function() {
-                const gameId = this.dataset.gameId;
                 const pickId = this.dataset.pickId;
-                const gameSlug = this.dataset.gameSlug;
                 const currentPick = this.dataset.currentPick;
                 const awayTeam = this.dataset.awayTeam;
                 const awayName = this.dataset.awayName;
@@ -980,8 +978,6 @@
 
                 // Populate modal with game data
                 document.getElementById('editPickId').value = pickId;
-                document.getElementById('editGameId').value = gameId;
-                document.getElementById('editGameSlug').value = gameSlug;
                 document.getElementById('editGameTitle').textContent = `${awayName} @ ${homeName}`;
                 
                 // Set team information
@@ -1182,7 +1178,7 @@
             this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
 
             // Submit update
-            fetch('/picks/edit/', {
+            fetch(pickEditUrl, {
                 method: 'POST',
                 body: formData,
                 headers: {
