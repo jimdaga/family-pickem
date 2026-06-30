@@ -26,6 +26,7 @@ from pickem_api.models import (
     GameWeeks,
     Pool,
     PoolSettings,
+    Teams,
     userSeasonPoints,
     UserProfile,
 )
@@ -442,6 +443,336 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertNotIn('href="/scores/"', dashboard_markup)
         self.assertNotIn('href="/standings/"', dashboard_markup)
         self.assertNotIn('href="/rules/"', dashboard_markup)
+
+
+class TenantPickFlowIsolationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        GameWeeks.objects.create(
+            weekNumber=1,
+            competition="nfl",
+            date=timezone.localdate(),
+            season=2526,
+        )
+        cls.game = GamesAndScores.objects.create(
+            id=2001,
+            slug="ari-atl-2025-week-1",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now() + timedelta(days=1),
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=1,
+            homeTeamSlug="atl",
+            homeTeamName="Atlanta Falcons",
+            awayTeamId=2,
+            awayTeamSlug="ari",
+            awayTeamName="Arizona Cardinals",
+        )
+        cls.other_game = GamesAndScores.objects.create(
+            id=2002,
+            slug="buf-mia-2025-week-2",
+            competition="nfl",
+            gameWeek="2",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now() + timedelta(days=8),
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=3,
+            homeTeamSlug="mia",
+            homeTeamName="Miami Dolphins",
+            awayTeamId=4,
+            awayTeamSlug="buf",
+            awayTeamName="Buffalo Bills",
+        )
+        for team_id, slug, name in [
+            (1, "atl", "Atlanta Falcons"),
+            (2, "ari", "Arizona Cardinals"),
+            (3, "mia", "Miami Dolphins"),
+            (4, "buf", "Buffalo Bills"),
+        ]:
+            Teams.objects.create(
+                id=team_id,
+                gameseason=2526,
+                teamNameSlug=slug,
+                teamNameName=name,
+                color="333333",
+                alternateColor="666666",
+            )
+
+    def setUp(self):
+        self.client = Client()
+        self.member = User.objects.create_user(
+            "pick-member", email="pick-member@example.com", password="pass"
+        )
+        self.other_member = User.objects.create_user(
+            "other-pick-member", email="other-pick-member@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "pick-outsider", email="pick-outsider@example.com", password="pass"
+        )
+        self.smith_family, self.smith_pool = self._family_with_pool(
+            "Smith Family", "smith-family"
+        )
+        self.jones_family, self.jones_pool = self._family_with_pool(
+            "Jones Family", "jones-family"
+        )
+        self._active_membership(self.member, self.smith_family)
+        self._active_membership(self.other_member, self.jones_family)
+
+    def _family_with_pool(self, name, slug, *, pool_slug="main"):
+        family = Family.objects.create(name=name, slug=slug)
+        pool = Pool.objects.create(
+            family=family,
+            name="Main Pickem",
+            slug=pool_slug,
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        return family, pool
+
+    def _active_membership(self, user, family, role=FamilyMembership.Role.MEMBER):
+        return FamilyMembership.objects.create(
+            family=family,
+            user=user,
+            role=role,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _tenant_picks_url(self, family=None, pool=None):
+        family = family or self.smith_family
+        pool = pool or self.smith_pool
+        return reverse(
+            "family_pool_game_picks",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def _tenant_edit_url(self, family=None, pool=None):
+        family = family or self.smith_family
+        pool = pool or self.smith_pool
+        return reverse(
+            "family_pool_edit_game_pick",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def _pick_payload(self, **overrides):
+        payload = {
+            "game_id": str(self.game.id),
+            "pick": self.game.homeTeamSlug,
+            "tieBreakerScore": "",
+            "tieBreakerYards": "",
+        }
+        payload.update(overrides)
+        return payload
+
+    def _create_pick(self, *, user=None, pool=None, game=None, pick=None, pick_id=None):
+        user = user or self.member
+        pool = pool or self.smith_pool
+        game = game or self.game
+        pick = pick or game.homeTeamSlug
+        return GamePicks.objects.create(
+            id=pick_id or f"{pool.id}-{user.id}-{game.id}",
+            pool=pool,
+            userEmail=user.email,
+            uid=user.id,
+            userID=str(user.id),
+            slug=game.slug,
+            competition=game.competition,
+            gameWeek=game.gameWeek,
+            gameyear=game.gameyear,
+            gameseason=game.gameseason,
+            pick_game_id=game.id,
+            pick=pick,
+            pick_correct=True,
+        )
+
+    def test_tenant_get_picks_reads_only_current_pool_user_state(self):
+        self._create_pick(user=self.member, pool=self.smith_pool, pick=self.game.homeTeamSlug)
+        self._create_pick(
+            user=self.other_member,
+            pool=self.jones_pool,
+            pick=self.game.awayTeamSlug,
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_picks_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/picks.html")
+        self.assertEqual(list(response.context["picks"].values_list("pool_id", flat=True)), [self.smith_pool.id])
+        self.assertEqual(list(response.context["picks"].values_list("userEmail", flat=True)), [self.member.email])
+        self.assertContains(response, "Submitted Picks")
+        self.assertNotContains(response, self.other_member.email)
+
+    def test_tenant_post_creates_server_derived_pick_and_ignores_forged_fields(self):
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_picks_url(),
+            self._pick_payload(
+                id="attacker-controlled-id",
+                userEmail=self.other_member.email,
+                userID=str(self.other_member.id),
+                uid=str(self.other_member.id),
+                pool=str(self.jones_pool.id),
+                pool_id=str(self.jones_pool.id),
+                family=str(self.jones_family.id),
+                family_id=str(self.jones_family.id),
+                slug=self.other_game.slug,
+                competition="nfl-preseason",
+                gameWeek=self.other_game.gameWeek,
+                gameyear=self.other_game.gameyear,
+                gameseason=str(self.other_game.gameseason),
+                pick_game_id=str(self.other_game.id),
+                pick_correct="True",
+            ),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        pick = GamePicks.objects.get(pool=self.smith_pool, userEmail=self.member.email)
+        self.assertEqual(pick.id, f"{self.smith_pool.id}-{self.member.id}-{self.game.id}")
+        self.assertEqual(pick.userEmail, self.member.email)
+        self.assertEqual(pick.userID, str(self.member.id))
+        self.assertEqual(pick.uid, self.member.id)
+        self.assertEqual(pick.pool, self.smith_pool)
+        self.assertEqual(pick.slug, self.game.slug)
+        self.assertEqual(pick.competition, self.game.competition)
+        self.assertEqual(pick.gameWeek, self.game.gameWeek)
+        self.assertEqual(pick.gameyear, self.game.gameyear)
+        self.assertEqual(pick.gameseason, self.game.gameseason)
+        self.assertEqual(pick.pick_game_id, self.game.id)
+        self.assertEqual(pick.pick, self.game.homeTeamSlug)
+        self.assertFalse(pick.pick_correct)
+        self.assertFalse(GamePicks.objects.filter(pool=self.jones_pool, userEmail=self.other_member.email).exists())
+
+    def test_tenant_post_rejects_game_outside_current_week_context(self):
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_picks_url(),
+            self._pick_payload(game_id=str(self.other_game.id), pick=self.other_game.homeTeamSlug),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(GamePicks.objects.filter(pool=self.smith_pool).exists())
+
+    def test_tenant_ajax_edit_uses_current_pool_and_user_lookup(self):
+        pick = self._create_pick(
+            user=self.member,
+            pool=self.smith_pool,
+            pick=self.game.homeTeamSlug,
+        )
+        jones_pick = self._create_pick(
+            user=self.other_member,
+            pool=self.jones_pool,
+            pick=self.game.awayTeamSlug,
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_edit_url(),
+            {
+                "pick_id": pick.id,
+                "pick": self.game.awayTeamSlug,
+                "pool": self.jones_pool.id,
+                "userEmail": self.other_member.email,
+                "userID": self.other_member.id,
+                "uid": self.other_member.id,
+                "game_id": self.other_game.id,
+                "pick_game_id": self.other_game.id,
+                "pick_correct": "True",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        pick.refresh_from_db()
+        jones_pick.refresh_from_db()
+        self.assertEqual(pick.pick, self.game.awayTeamSlug)
+        self.assertEqual(pick.pool, self.smith_pool)
+        self.assertEqual(pick.userEmail, self.member.email)
+        self.assertEqual(pick.pick_game_id, self.game.id)
+        self.assertFalse(pick.pick_correct)
+        self.assertEqual(jones_pick.pick, self.game.awayTeamSlug)
+
+    def test_cross_pool_pick_id_edit_is_denied_before_lock_or_team_validation(self):
+        jones_pick = self._create_pick(
+            user=self.other_member,
+            pool=self.jones_pool,
+            pick=self.game.awayTeamSlug,
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_edit_url(),
+            {"pick_id": jones_pick.id, "pick": self.game.homeTeamSlug},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        jones_pick.refresh_from_db()
+        self.assertEqual(jones_pick.pick, self.game.awayTeamSlug)
+
+    def test_outsider_cannot_get_or_post_tenant_picks_by_url_slug_tampering(self):
+        self.client.force_login(self.outsider)
+
+        get_response = self.client.get(self._tenant_picks_url())
+        post_response = self.client.post(
+            self._tenant_picks_url(),
+            self._pick_payload(),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(get_response.status_code, 404)
+        self.assertEqual(post_response.status_code, 404)
+        self.assertFalse(GamePicks.objects.exists())
+
+    def test_legacy_signed_in_pick_routes_redirect_without_mutating_global_picks(self):
+        self.client.force_login(self.member)
+
+        get_response = self.client.get(reverse("game_picks"))
+        post_response = self.client.post(
+            reverse("game_picks"),
+            self._pick_payload(
+                id="legacy-forged-id",
+                userEmail=self.other_member.email,
+                uid=self.other_member.id,
+                userID=self.other_member.id,
+                pick_correct="True",
+            ),
+        )
+        edit_response = self.client.post(
+            reverse("edit_game_pick"),
+            {"pick_id": "legacy-forged-id", "pick": self.game.awayTeamSlug},
+        )
+
+        self.assertRedirects(
+            get_response,
+            self._tenant_picks_url(),
+            fetch_redirect_response=False,
+        )
+        self.assertRedirects(
+            post_response,
+            self._tenant_picks_url(),
+            fetch_redirect_response=False,
+        )
+        self.assertRedirects(
+            edit_response,
+            self._tenant_picks_url(),
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(GamePicks.objects.exists())
 
 
 class FamilySwitcherContextTests(TestCase):
