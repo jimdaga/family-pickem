@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planned
-stopped_at: Phase 4 planned
-last_updated: "2026-06-29T18:20:23Z"
+current_phase: 04
+status: completed
+stopped_at: Completed 04-family-scoped-app-pages-01-PLAN.md
+last_updated: "2026-06-30T00:09:12.372Z"
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 18
-  completed_plans: 12
+  completed_plans: 13
   percent: 38
 ---
 
@@ -156,6 +157,9 @@ See: `.planning/PROJECT.md`
 - 04: Anonymous `/scores/` may remain public only as NFL-facts-only; signed-in users should use tenant scores.
 - 04: Lifetime/all-time stats in this phase are current-pool-only or hidden when they cannot be safely scoped.
 - 04: Shared context processors are part of the tenant isolation boundary; `footer_stats_context` and `site_banner_context` must not leak another pool/family.
+- [Phase 04]: 04-01: Dashboard private widgets read from request.tenant_context.pool or request.tenant_context.family; global NFL week/game facts remain global reference data.
+- [Phase 04]: 04-01: Unbuilt tenant gameplay destinations stay disabled in the dashboard instead of linking users to legacy global gameplay pages.
+- [Phase 04]: 04-01: Shared base navigation global-link cleanup remains deferred to the planned Phase 4 shared navigation cleanup.
 
 ## Verification
 
@@ -213,9 +217,9 @@ Execute Phase 4 starting with `04-01-PLAN.md`.
 
 ## Session
 
-**Last session:** 2026-06-29T18:20:23Z
-**Stopped at:** Phase 4 planned
-**Resume file:** .planning/phases/04-family-scoped-app-pages/04-01-PLAN.md
+**Last session:** 2026-06-30T00:08:41.959Z
+**Stopped at:** Completed 04-family-scoped-app-pages-01-PLAN.md
+**Resume file:** None
 
 ## Performance Metrics
 
@@ -226,3 +230,4 @@ Execute Phase 4 starting with `04-01-PLAN.md`.
 | Phase 03-onboarding-and-family-selection P03 | 346 | 3 tasks | 7 files |
 | Phase 03-onboarding-and-family-selection P04 | 176 | 3 tasks | 4 files |
 | Phase 03-onboarding-and-family-selection P05 | 130 | 3 tasks | 4 files |
+| Phase 04-family-scoped-app-pages P01 | 4min 24s | 3 tasks | 3 files |

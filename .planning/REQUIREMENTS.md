@@ -18,7 +18,7 @@
 - [x] **AUTHZ-01**: Every family/pool read path checks authenticated membership server-side.
 - [ ] **AUTHZ-02**: Every family/pool write path checks authenticated membership server-side.
 - [ ] **AUTHZ-03**: Owner/admin actions require least-privilege role checks.
-- [ ] **AUTHZ-04**: Users outside a family cannot view or infer private family picks, standings, members, invitations, settings, dashboards, profiles, or message-board data.
+- [x] **AUTHZ-04**: Users outside a family cannot view or infer private family picks, standings, members, invitations, settings, dashboards, profiles, or message-board data.
 - [ ] **AUTHZ-05**: Client-provided family, pool, user, season, week, and game identifiers are validated against server-resolved membership and allowed objects.
 
 ### Invitations And Onboarding
@@ -32,7 +32,7 @@
 
 - [x] **POOL-01**: Picks are scoped to a pool.
 - [x] **POOL-02**: Standings and weekly winners are scoped to a pool.
-- [ ] **POOL-03**: Scores can use global NFL game data while showing only pool-scoped pick overlays.
+- [x] **POOL-03**: Scores can use global NFL game data while showing only pool-scoped pick overlays.
 - [ ] **POOL-04**: Rules/settings are visible and editable in the appropriate family/pool context.
 - [ ] **POOL-05**: Background scoring jobs update only the intended pool data.
 
@@ -47,7 +47,7 @@
 - [x] **SEC-01**: Security-sensitive admin actions are audit logged.
 - [ ] **SEC-02**: Session-authenticated JSON mutations use CSRF protection or a documented secure alternative.
 - [ ] **SEC-03**: Cross-family isolation has automated negative tests.
-- [ ] **SEC-04**: Cache keys and precomputed data are family/pool scoped.
+- [x] **SEC-04**: Cache keys and precomputed data are family/pool scoped.
 - [ ] **SEC-05**: Production migration has backup, rollback, and verification steps.
 
 ## v2 Requirements
@@ -84,7 +84,7 @@
 | AUTHZ-01 | Phase 2, Phase 4 | Complete |
 | AUTHZ-02 | Phase 2, Phase 4 | Pending |
 | AUTHZ-03 | Phase 2, Phase 5 | Pending |
-| AUTHZ-04 | Phase 2, Phase 4 | Pending |
+| AUTHZ-04 | Phase 2, Phase 4 | Complete |
 | AUTHZ-05 | Phase 2, Phase 4, Phase 5 | Pending |
 | INV-01 | Phase 3, Phase 5 | Complete |
 | INV-02 | Phase 3, Phase 5 | Pending |
@@ -92,7 +92,7 @@
 | INV-04 | Phase 3 | Complete |
 | POOL-01 | Phase 1, Phase 4 | Complete |
 | POOL-02 | Phase 1, Phase 4, Phase 6 | Complete |
-| POOL-03 | Phase 4 | Pending |
+| POOL-03 | Phase 4 | Complete |
 | POOL-04 | Phase 4, Phase 5 | Pending |
 | POOL-05 | Phase 6 | Pending |
 | COMM-01 | Phase 1, Phase 4 | Complete |
@@ -101,7 +101,7 @@
 | SEC-01 | Phase 1, Phase 5 | Complete |
 | SEC-02 | Phase 6 | Pending |
 | SEC-03 | Phase 2, Phase 4, Phase 7 | Pending |
-| SEC-04 | Phase 4, Phase 6 | Pending |
+| SEC-04 | Phase 4, Phase 6 | Complete |
 | SEC-05 | Phase 6 | Pending |
 
 **Coverage:**
