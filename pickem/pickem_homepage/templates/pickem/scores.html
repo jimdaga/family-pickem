@@ -10,36 +10,19 @@
 
 {% block content %}
 
-    <!-- Hero Header -->
-    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 shadow-xl animate-fade-in">
-        <!-- Subtle background pattern -->
-        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
-
-        <!-- Content -->
-        <div class="relative z-10">
-            <!-- Icon -->
-            <div class="flex items-center justify-center mb-3 lg:mb-4">
-                <i class="fas fa-chart-line text-4xl lg:text-6xl text-primary"></i>
+<div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
+    <!-- Compact Page Header -->
+    <div class="page-header-clean">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-chart-line text-2xl text-primary"></i>
+            <div>
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Live Scores</h2>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                    {% if competition == 'nfl-preseason' %}Preseason — Week {{ week }}{% else %}Regular Season — Week {{ week }}{% endif %}
+                </p>
             </div>
-
-            <!-- Title -->
-            <h2 class="text-3xl lg:text-5xl font-black tracking-tight mb-2 lg:mb-3"
-                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
-                Live Scores
-            </h2>
-
-            <!-- Subtitle -->
-            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium">
-                {% if competition == 'nfl-preseason' %}
-                    Preseason - Week {{ week }}
-                {% else %}
-                    Regular Season - Week {{ week }}
-                {% endif %}
-            </p>
         </div>
     </div>
-
-<div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
 
 
     <!-- Your Weekly Performance Section -->
@@ -98,7 +81,7 @@
         <div class="flex items-center justify-center gap-6 py-6">
             {% with player.userID|lookupname as username %}
             {% with player.userID|lookupavatar as avatar %}
-            <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="group">
+            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="group">
                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                      alt="Profile picture for {{ username }}"
                      class="w-24 h-24 rounded-full border-4 border-yellow-500 shadow-glow-primary group-hover:scale-110 transition-transform">
@@ -138,17 +121,17 @@
                             {% with player.uid|lookupname as username %}
                             {% with player.uid|lookupavatar as avatar %}
                             <div class="flex items-center gap-3 min-w-0 flex-1">
-                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="flex-shrink-0 group">
+                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.uid %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="flex-shrink-0 group">
                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                          alt="Profile picture for {{ username }}"
                                          class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:scale-110 transition-transform">
                                 </a>
                                 <div class="min-w-0 flex-1">
-                                    <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
+                                    <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.uid %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
                                 </div>
                             </div>
                             <div class="flex items-baseline gap-1 flex-shrink-0">
-                                <span class="text-2xl font-black text-secondary-light dark:text-secondary">{{ player.wins }}</span>
+                                <span class="text-2xl font-black text-text-dark dark:text-white">{{ player.wins }}</span>
                                 <span class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
                             </div>
                             {% endwith %}
@@ -162,17 +145,17 @@
                             {% with player|lookupname as username %}
                             {% with player|lookupavatar as avatar %}
                             <div class="flex items-center gap-3 min-w-0 flex-1">
-                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player %}{% endif %}" class="flex-shrink-0 group">
+                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player %}{% else %}{% url 'user_profile' player %}{% endif %}" class="flex-shrink-0 group">
                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                          alt="Profile picture for {{ username }}"
                                          class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:scale-110 transition-transform">
                                 </a>
                                 <div class="min-w-0 flex-1">
-                                    <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player %}{% endif %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
+                                    <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player %}{% else %}{% url 'user_profile' player %}{% endif %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
                                 </div>
                             </div>
                             <div class="flex items-baseline gap-1 flex-shrink-0">
-                                <span class="text-2xl font-black text-secondary-light dark:text-secondary">0</span>
+                                <span class="text-2xl font-black text-text-dark dark:text-white">0</span>
                                 <span class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
                             </div>
                             {% endwith %}
@@ -293,7 +276,7 @@
                         <span>{{ time_group.grouper|date:"l, F j" }}</span>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span class="text-sm font-semibold text-text-dark dark:text-white px-3 py-1 bg-primary/90 rounded-lg">
+                        <span class="text-sm font-semibold text-white px-3 py-1 bg-primary/90 rounded-lg">
                             {{ time_group.grouper|game_start_label }}
                         </span>
                         <i class="fas fa-chevron-down transition-transform duration-200" :class="{ 'rotate-180': open }"></i>
@@ -307,7 +290,7 @@
                      class="games-grid px-1 sm:px-2 lg:px-4 pt-1 pb-4 grid grid-cols-1 md:grid-cols-2 gap-6"
                      id="games-{{ time_group.grouper|date:'Y-m-d-Hi' }}">
                             {% for game in time_group.list %}
-                            <div class="game-score-card bg-surface-light dark:bg-surface rounded-xl overflow-hidden border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 flex flex-col" data-game-status="{{ game.statusType|lower }}">
+                            <div class="game-score-card bg-surface-light dark:bg-slate-800 rounded-xl overflow-hidden border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 flex flex-col" data-game-status="{{ game.statusType|lower }}">
                                 <!-- Game Status Header -->
                                 <div class="flex items-center justify-between px-3 py-1 text-sm font-semibold text-white {% if game.statusType == 'inprogress' %}bg-gradient-to-r from-green-600 to-green-700{% elif game.statusType == 'finished' %}bg-gradient-to-r from-blue-600 to-blue-700{% else %}bg-gradient-to-r from-gray-600 to-gray-700 dark:from-gray-700 dark:to-gray-800{% endif %}">
                                     <div class="flex items-center gap-2">
@@ -381,8 +364,7 @@
                                 <div class="teams-matchup">
                                     <!-- Away Team -->
                                     {% with game.awayTeamSlug|lookuplogo as away_team %}
-                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}winning-team{% endif %}"
-                                         {% if away_team.color %}style="background: linear-gradient(135deg, #{{ away_team.color }}15 0%, #{{ away_team.alternateColor|default:away_team.color }}08 100%);"{% endif %}>
+                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}winning-team{% endif %}">
                                         <div class="team-info">
                                             <img src="{{ away_team.teamLogo|default:'/static/images/nfl.svg' }}"
                                                  alt="{{ game.awayTeamName }} logo"
@@ -430,7 +412,7 @@
                                                     <span class="quarter-score">{{ game.awayTeamPeriod3|default:"—" }}</span>
                                                     <span class="quarter-score">{{ game.awayTeamPeriod4|default:"—" }}</span>
                                                 </div>
-                                                <div class="total-score text-3xl md:text-4xl font-black text-primary pl-3">{{ game.awayTeamScore|default:"0" }}</div>
+                                                <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3">{{ game.awayTeamScore|default:"0" }}</div>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -439,8 +421,7 @@
 
                                     <!-- Home Team -->
                                     {% with game.homeTeamSlug|lookuplogo as home_team %}
-                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}winning-team{% endif %}"
-                                         {% if home_team.color %}style="background: linear-gradient(135deg, #{{ home_team.color }}15 0%, #{{ home_team.alternateColor|default:home_team.color }}08 100%);"{% endif %}>
+                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}winning-team{% endif %}">
                                         <div class="team-info">
                                             <img src="{{ home_team.teamLogo|default:'/static/images/nfl.svg' }}"
                                                  alt="{{ game.homeTeamName }} logo"
@@ -488,7 +469,7 @@
                                                     <span class="quarter-score">{{ game.homeTeamPeriod3|default:"—" }}</span>
                                                     <span class="quarter-score">{{ game.homeTeamPeriod4|default:"—" }}</span>
                                                 </div>
-                                                <div class="total-score text-3xl md:text-4xl font-black text-primary pl-3">{{ game.homeTeamScore|default:"0" }}</div>
+                                                <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3">{{ game.homeTeamScore|default:"0" }}</div>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -502,7 +483,7 @@
                                     {% if game.gamecastUrl %}
                                     <a href="{{ game.gamecastUrl }}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1 bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 rounded-lg transition-colors">
                                         <i class="fas fa-external-link-alt text-primary"></i>
-                                        <span class="text-sm font-semibold text-primary">Game Preview</span>
+                                        <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Game Preview</span>
                                     </a>
                                     {% else %}
                                     <div></div>
@@ -559,7 +540,7 @@
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
                                                             <div class="flex flex-col items-center gap-1">
-                                                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
@@ -573,7 +554,7 @@
                                                             </div>
                                                         {% else %}
                                                             <div class="flex flex-col items-center gap-1 opacity-60">
-                                                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
@@ -588,7 +569,7 @@
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
                                                         <div class="flex flex-col items-center gap-1">
-                                                            <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                      alt="{{ username|default:'Unknown' }}"
                                                                      class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
@@ -631,7 +612,7 @@
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
                                                             <div class="flex flex-col items-center gap-1">
-                                                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
@@ -645,7 +626,7 @@
                                                             </div>
                                                         {% else %}
                                                             <div class="flex flex-col items-center gap-1 opacity-60">
-                                                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
@@ -660,7 +641,7 @@
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
                                                         <div class="flex flex-col items-center gap-1">
-                                                            <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                      alt="{{ username|default:'Unknown' }}"
                                                                      class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
@@ -841,7 +822,7 @@
                         {% with player.userID|lookupname as username %}
                         {% with player.userID|lookupavatar as avatar %}
                         <div class="winner-profile">
-                            <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="winner-avatar-link">
+                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="winner-avatar-link">
                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
                                      alt="Profile picture for {{ username }}" 
                                      class="winner-avatar">

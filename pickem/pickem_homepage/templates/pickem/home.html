@@ -6,47 +6,35 @@
 
 {% block content %}
 
-    <!-- Hero Welcome Section -->
-    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 shadow-xl animate-fade-in">
-        <!-- Subtle background pattern -->
-        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjQ2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
-        <!-- Content -->
-        <div class="relative z-10">
-            <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="max-w-[120px] h-auto mx-auto mb-3 filter drop-shadow-lg">
-            <h1 class="text-3xl lg:text-5xl font-black tracking-tight mb-2"
-                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
-                Family Pickem
-            </h1>
-            <p class="text-base text-white/90 dark:text-text-secondary mb-4">
-                Your ultimate NFL pick 'em league experience
-            </p>
-
-            {% if user.is_authenticated %}
-                <div class="flex items-center justify-center gap-3">
-                    <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
-                         alt="Your profile picture"
-                         class="w-12 h-12 rounded-full border-2 border-blue-600">
-                    <div class="text-left">
-                        <h4 class="text-lg font-bold text-white dark:text-white">
-                            Welcome back, <span class="text-yellow-300 dark:text-blue-400">{{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}</span>!
-                        </h4>
-                        <p class="text-sm text-white/80 dark:text-text-secondary">Ready to make your Week {{ current_week }} picks?</p>
-                    </div>
+    <div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Compact Page Header -->
+    <div class="page-header-clean" data-deploy-marker="phase1-2026-06-28.1">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex items-center gap-3">
+                <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="w-10 h-10 object-contain">
+                <div>
+                    <h1 class="text-xl font-bold text-text-dark dark:text-white">Family Pickem</h1>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary">NFL Pick 'em League</p>
                 </div>
-            {% else %}
-                <div class="mt-4">
-                    <h4 class="text-xl font-bold text-white dark:text-white mb-2">Join the Family League</h4>
-                    <p class="text-sm text-white/80 dark:text-text-secondary">Sign in to start making picks and compete with friends!</p>
-                </div>
-            {% endif %}
-
-            <div class="mt-4 text-xs font-semibold uppercase tracking-wide text-white/70" data-deploy-marker="phase1-2026-06-28.1">
-                Deploy marker: phase1-2026-06-28.1
             </div>
+            {% if user.is_authenticated %}
+            <div class="flex items-center gap-3">
+                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                     alt="Your profile picture"
+                     class="w-9 h-9 rounded-full border-2 border-primary">
+                <div>
+                    <p class="text-sm font-semibold text-text-dark dark:text-white">Welcome back, {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}!</p>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Ready for Week {{ current_week }}?</p>
+                </div>
+            </div>
+            {% else %}
+            <div>
+                <p class="text-sm font-semibold text-text-dark dark:text-white">Join the Family League</p>
+                <p class="text-xs text-text-secondary-light dark:text-text-secondary">Sign in to start making picks!</p>
+            </div>
+            {% endif %}
         </div>
     </div>
-
-    <div class="max-w-7xl mx-auto px-6 py-6">
         <!-- Today's Games Section -->
         {% if today_games %}
         <div class="section-container mb-6">
@@ -106,7 +94,7 @@
                                 </div>
                             </div>
                             {% if game.statusType != 'notstarted' %}
-                            <div class="text-2xl font-black text-text-dark dark:text-white ml-3 {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}text-primary{% endif %}">
+                            <div class="text-2xl font-black text-text-dark dark:text-white ml-3">
                                 {{ game.awayTeamScore|default:"0" }}
                             </div>
                             {% endif %}
@@ -134,7 +122,7 @@
                                 </div>
                             </div>
                             {% if game.statusType != 'notstarted' %}
-                            <div class="text-2xl font-black text-text-dark dark:text-white ml-3 {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}text-primary{% endif %}">
+                            <div class="text-2xl font-black text-text-dark dark:text-white ml-3">
                                 {{ game.homeTeamScore|default:"0" }}
                             </div>
                             {% endif %}
@@ -183,7 +171,7 @@
 
                     <!-- Action Footer -->
                     <div class="px-4 py-2 bg-surface-light/50 dark:bg-surface/50 border-t border-border-light dark:border-border-subtle">
-                        <a href="/scores/" class="text-xs text-primary hover:text-primary/80 font-semibold transition-colors flex items-center justify-center gap-1">
+                        <a href="{% if family and pool %}{% url 'family_pool_scores' family.slug pool.slug %}{% else %}{% url 'scores' %}{% endif %}" class="text-xs text-primary hover:text-primary/80 font-semibold transition-colors flex items-center justify-center gap-1">
                             <span>View Details</span>
                             <i class="fas fa-arrow-right text-[10px]"></i>
                         </a>
@@ -201,7 +189,7 @@
                 <h3 class="section-title mb-0">
                     <i class="fas fa-list-ol mr-2"></i>Week {{ current_week }} Points
                 </h3>
-                <a href="/scores/" class="text-sm text-primary hover:text-primary/80 font-semibold transition-colors flex items-center gap-1">
+                <a href="{% if family and pool %}{% url 'family_pool_scores' family.slug pool.slug %}{% else %}{% url 'scores' %}{% endif %}" class="text-sm text-primary hover:text-primary/80 font-semibold transition-colors flex items-center gap-1">
                     <span>View All</span>
                     <i class="fas fa-arrow-right text-xs"></i>
                 </a>
@@ -214,19 +202,19 @@
                     {% with player.uid|lookupavatar as avatar %}
                     {% with player.uid|lookupname as username %}
                     {% with all_user_ranks|lookup:player.uid as rank %}
-                    <a href="{% url 'user_profile' player.uid %}" class="group">
+                    <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.uid %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="group">
                         <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                              alt="{{ username }}"
                              class="w-10 h-10 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:border-primary group-hover:scale-110 transition-all">
                     </a>
                     <span class="text-xs font-semibold text-text-dark dark:text-white mt-1.5 text-center truncate w-full uppercase">{{ username|default:"Unknown"|truncatechars:10 }}</span>
                     <div class="flex items-baseline gap-0.5 mt-0.5">
-                        <span class="text-lg font-black text-secondary-light dark:text-secondary">{{ player.wins }}</span>
+                        <span class="text-lg font-black text-text-dark dark:text-white">{{ player.wins }}</span>
                         <span class="text-[10px] text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
                     </div>
                     {% if rank %}
                     <div class="text-[10px] text-text-secondary-light dark:text-text-secondary mt-1">
-                        Rank: <span class="font-bold {% if rank == 1 %}text-yellow-500{% elif rank == 2 %}text-gray-400{% elif rank == 3 %}text-amber-600{% else %}text-blue-500{% endif %}">#{{ rank }}</span>
+                        Rank: <span class="font-bold {% if rank == 1 %}text-yellow-500{% elif rank == 2 %}text-gray-400{% elif rank == 3 %}text-amber-600{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">#{{ rank }}</span>
                     </div>
                     {% endif %}
                     {% endwith %}
@@ -242,19 +230,19 @@
                     {% with player_id|lookupavatar as avatar %}
                     {% with player_id|lookupname as username %}
                     {% with all_user_ranks|lookup:player_id as rank %}
-                    <a href="{% url 'user_profile' player_id %}" class="group">
+                    <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player_id %}{% else %}{% url 'user_profile' player_id %}{% endif %}" class="group">
                         <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                              alt="{{ username }}"
                              class="w-10 h-10 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:border-primary group-hover:scale-110 transition-all">
                     </a>
                     <span class="text-xs font-semibold text-text-dark dark:text-white mt-1.5 text-center truncate w-full uppercase">{{ username|default:"Unknown"|truncatechars:10 }}</span>
                     <div class="flex items-baseline gap-0.5 mt-0.5">
-                        <span class="text-lg font-black text-secondary-light dark:text-secondary">0</span>
+                        <span class="text-lg font-black text-text-dark dark:text-white">0</span>
                         <span class="text-[10px] text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
                     </div>
                     {% if rank %}
                     <div class="text-[10px] text-text-secondary-light dark:text-text-secondary mt-1">
-                        Rank: <span class="font-bold {% if rank == 1 %}text-yellow-500{% elif rank == 2 %}text-gray-400{% elif rank == 3 %}text-amber-600{% else %}text-blue-500{% endif %}">#{{ rank }}</span>
+                        Rank: <span class="font-bold {% if rank == 1 %}text-yellow-500{% elif rank == 2 %}text-gray-400{% elif rank == 3 %}text-amber-600{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">#{{ rank }}</span>
                     </div>
                     {% endif %}
                     {% endwith %}
@@ -340,7 +328,7 @@
                     <!-- Progress bar for partial completion -->
                     {% if user_pick_status == 'partial' %}
                     <div class="mt-3 w-full bg-surface-light dark:bg-surface-hover rounded-full h-2 overflow-hidden border border-border-light dark:border-border-subtle">
-                        <div class="h-full bg-gradient-to-r from-primary to-orange-600 rounded-full transition-all duration-500"
+                        <div class="h-full bg-primary rounded-full transition-all duration-500"
                              style="width: {% widthratio user_picks_count current_games 100 %}%">
                         </div>
                     </div>
@@ -361,7 +349,7 @@
 
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {% if user.is_authenticated %}
-                <a href="/picks/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
+                <a href="{% if family and pool %}{% url 'family_pool_game_picks' family.slug pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
                     <div class="text-3xl text-red-600 dark:text-red-500 mb-2 group-hover:scale-110 transition-transform">
                         <i class="fas fa-edit"></i>
                     </div>
@@ -381,7 +369,7 @@
                 </a>
                 {% endif %}
 
-                <a href="/scores/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-blue-600 dark:hover:border-blue-500 transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
+                <a href="{% if family and pool %}{% url 'family_pool_scores' family.slug pool.slug %}{% else %}{% url 'scores' %}{% endif %}" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
                     <div class="text-3xl text-blue-600 dark:text-blue-500 mb-2 group-hover:scale-110 transition-transform">
                         <i class="fas fa-chart-line"></i>
                     </div>
@@ -389,7 +377,7 @@
                     <p class="text-xs text-text-secondary-light dark:text-text-secondary">Track current week results</p>
                 </a>
 
-                <a href="/standings/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-yellow-500 dark:hover:border-yellow-400 transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
+                <a href="{% if family and pool %}{% url 'family_pool_standings' family.slug pool.slug %}{% else %}{% url 'standings' %}{% endif %}" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
                     <div class="text-3xl text-yellow-600 dark:text-yellow-500 mb-2 group-hover:scale-110 transition-transform">
                         <i class="fas fa-medal"></i>
                     </div>
@@ -397,7 +385,7 @@
                     <p class="text-xs text-text-secondary-light dark:text-text-secondary">View league leaderboard</p>
                 </a>
 
-                <a href="/rules/" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-purple-600 dark:hover:border-purple-500 transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
+                <a href="{% if family and pool %}{% url 'family_pool_rules' family.slug pool.slug %}{% else %}{% url 'rules' %}{% endif %}" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
                     <div class="text-3xl text-purple-600 dark:text-purple-500 mb-2 group-hover:scale-110 transition-transform">
                         <i class="fas fa-gavel"></i>
                     </div>
@@ -414,7 +402,7 @@
                     <h3 class="section-title mb-0">
                         <i class="fas fa-trophy mr-2"></i>Top Players
                     </h3>
-                    <a href="/standings/" class="text-sm text-primary hover:text-primary/80 font-semibold transition-colors">View All →</a>
+                    <a href="{% if family and pool %}{% url 'family_pool_standings' family.slug pool.slug %}{% else %}{% url 'standings' %}{% endif %}" class="text-sm text-primary hover:text-primary/80 font-semibold transition-colors">View All →</a>
                 </div>
 
                 <div class="space-y-3">
@@ -430,7 +418,7 @@
                             </div>
                             {% with player.userID|lookupavatar as avatar %}
                             {% with player.userID|safe_username as username %}
-                            <a href="{% url 'user_profile' player.userID %}" class="flex-shrink-0">
+                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="flex-shrink-0">
                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                      alt="Profile picture for {{ username }}"
                                      class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:border-primary transition-colors">
@@ -550,7 +538,7 @@
                     <div class="flex items-start justify-between mb-3">
                         <div class="flex items-center gap-3 flex-wrap">
                             {% with post.user.id|lookupavatar as avatar %}
-                            <a href="{% url 'user_profile' post.user.id %}" class="flex-shrink-0">
+                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug post.user.id %}{% else %}{% url 'user_profile' post.user.id %}{% endif %}" class="flex-shrink-0">
                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                      alt="Profile picture for {{ post.user.username }}"
                                      class="w-10 h-10 rounded-full border-2 border-border-light dark:border-border-subtle hover:border-primary transition-colors">
@@ -593,7 +581,7 @@
 
                                     <!-- Weekly Winner Badge -->
                                     {% if ranking.weekly_wins %}
-                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg"
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-secondary-light/20 dark:bg-secondary/20 text-text-dark dark:text-white rounded-lg"
                                               title="Won Week{{ ranking.weekly_wins|length|pluralize }} {{ ranking.weekly_wins|join:', ' }}">
                                             <i class="fas fa-star"></i> <span class="hidden sm:inline">Week Winner ({{ ranking.weekly_wins|length }})</span>
                                         </span>
