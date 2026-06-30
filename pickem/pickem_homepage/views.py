@@ -140,6 +140,15 @@ def get_family_pool_choices(user):
     return choices
 
 
+def get_current_week_context(gameseason):
+    today = date.today()
+    try:
+        week_obj = GameWeeks.objects.get(date=today)
+        return str(week_obj.weekNumber), week_obj.competition
+    except GameWeeks.DoesNotExist:
+        return '1', 'nfl'
+
+
 def get_invite_audit_context(request):
     return {
         'ip_address': request.META.get('REMOTE_ADDR'),
@@ -448,11 +457,102 @@ def family_picker(request):
 @family_member_required
 def family_pool_home(request, family_slug, pool_slug):
     tenant_context = request.tenant_context
+    family = tenant_context.family
+    pool = tenant_context.pool
+    gameseason = pool.season or get_season()
+    current_week, current_competition = get_current_week_context(gameseason)
+
+    standings_qs = (
+        userSeasonPoints.objects.filter(pool=pool, gameseason=gameseason)
+        .order_by('-total_points', 'userID')
+    )
+    top_standings = list(standings_qs[:5])
+    standing_user_ids = [
+        int(points.userID)
+        for points in top_standings
+        if str(points.userID).isdigit()
+    ]
+    standing_users = User.objects.in_bulk(standing_user_ids)
+    standings = [
+        {
+            'rank': rank,
+            'points': points,
+            'user': standing_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
+        }
+        for rank, points in enumerate(top_standings, 1)
+    ]
+
+    recent_winners = []
+    for week_num in range(1, 19):
+        winner_field = f"week_{week_num}_winner"
+        winner = (
+            userSeasonPoints.objects.filter(
+                pool=pool,
+                gameseason=gameseason,
+                **{winner_field: True},
+            )
+            .order_by('-total_points', 'userID')
+            .first()
+        )
+        if winner:
+            winner_user = None
+            if str(winner.userID).isdigit():
+                winner_user = User.objects.filter(id=int(winner.userID)).first()
+            recent_winners.append({
+                'week': week_num,
+                'winner': winner,
+                'user': winner_user,
+            })
+    recent_winners = recent_winners[-3:]
+
+    current_games = GamesAndScores.objects.filter(
+        gameseason=gameseason,
+        gameWeek=current_week,
+        competition=current_competition,
+    ).count()
+    user_picks_count = GamePicks.objects.filter(
+        pool=pool,
+        gameseason=gameseason,
+        gameWeek=current_week,
+        competition=current_competition,
+        userEmail=request.user.email,
+    ).count()
+    if user_picks_count == 0:
+        user_pick_status = 'pending'
+    elif user_picks_count < current_games:
+        user_pick_status = 'partial'
+    else:
+        user_pick_status = 'complete'
+
+    message_posts = (
+        MessageBoardPost.objects.filter(family=family, is_active=True)
+        .select_related('user')
+        .order_by('-is_pinned', '-created_at')[:5]
+    )
+    active_members = (
+        FamilyMembership.objects.filter(
+            family=family,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+        )
+        .select_related('user')
+        .order_by('user__username')[:10]
+    )
+
     context = {
-        'family': tenant_context.family,
-        'pool': tenant_context.pool,
+        'family': family,
+        'pool': pool,
         'membership': tenant_context.membership,
-        'gameseason': get_season(),
+        'gameseason': gameseason,
+        'current_week': current_week,
+        'current_competition': current_competition,
+        'standings': standings,
+        'recent_winners': recent_winners,
+        'current_games': current_games,
+        'user_picks_count': user_picks_count,
+        'user_pick_status': user_pick_status,
+        'message_posts': message_posts,
+        'active_members': active_members,
     }
     return render(request, 'pickem/family_pool_home.html', context)
 
