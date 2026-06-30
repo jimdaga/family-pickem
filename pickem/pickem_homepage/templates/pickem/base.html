@@ -41,7 +41,7 @@
     {% load socialaccount %}
     
     <!-- Main Navigation -->
-    <nav class="fixed top-0 w-full bg-slate-800/95 dark:bg-surface/80 backdrop-blur-lg border-b border-border-light dark:border-border-subtle z-50 transition-colors duration-200" role="navigation" aria-label="Main navigation">
+    <nav class="fixed top-0 w-full bg-slate-800/95 backdrop-blur-lg border-b border-slate-700 z-50 transition-colors duration-200" role="navigation" aria-label="Main navigation">
         <div class="max-w-7xl mx-auto px-6">
             <div class="flex items-center justify-between h-16">
                 <!-- Brand Logo -->
@@ -56,7 +56,7 @@
                 </div>
 
                 <!-- Mobile Toggle Button -->
-                <button id="mobile-menu-btn" class="lg:hidden p-2 text-white hover:bg-slate-700 dark:hover:bg-surface-hover rounded-lg transition-colors" type="button"
+                <button id="mobile-menu-btn" class="lg:hidden p-2 text-gray-300 hover:bg-slate-700 rounded-lg transition-colors" type="button"
                         aria-controls="navbarContent"
                         aria-expanded="false"
                         aria-label="Toggle navigation">
@@ -65,7 +65,7 @@
 
                 <!-- Desktop Navigation -->
                 <div class="hidden lg:flex items-center space-x-1 absolute left-1/2 transform -translate-x-1/2">
-                    <a class="nav-link-base" href="/" aria-label="Home">
+                    <a class="nav-link-base" href="{% if current_family and current_pool %}{% url 'family_pool_home' current_family.slug current_pool.slug %}{% else %}/{% endif %}" aria-label="Home">
                         <i class="fas fa-home"></i>
                     </a>
 
@@ -76,34 +76,26 @@
                             <i class="fas fa-chevron-down ml-1 text-xs"></i>
                         </button>
                         <div class="nav-dropdown absolute left-0 mt-2 w-48 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle hidden z-50 py-2">
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores">Current Week</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}">Current Week</a>
                             <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/1">Week 1</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/2">Week 2</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/3">Week 3</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/4">Week 4</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/5">Week 5</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/6">Week 6</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/7">Week 7</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/8">Week 8</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/9">Week 9</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/10">Week 10</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/11">Week 11</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/12">Week 12</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/13">Week 13</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/14">Week 14</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/15">Week 15</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/16">Week 16</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/17">Week 17</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/18">Week 18</a>
+                            {% for week_number in "123456789"|make_list %}<a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason week_number %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/{{ week_number }}{% endif %}">Week {{ week_number }}</a>{% endfor %}
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 10 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/10{% endif %}">Week 10</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 11 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/11{% endif %}">Week 11</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 12 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/12{% endif %}">Week 12</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 13 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/13{% endif %}">Week 13</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 14 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/14{% endif %}">Week 14</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 15 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/15{% endif %}">Week 15</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 16 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/16{% endif %}">Week 16</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 17 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/17{% endif %}">Week 17</a>
+                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 18 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/18{% endif %}">Week 18</a>
                         </div>
                     </div>
 
-                    <a class="nav-link-base" href="/standings/" aria-label="Standings">
+                    <a class="nav-link-base" href="{% if current_family and current_pool %}{% url 'family_pool_standings' current_family.slug current_pool.slug %}{% else %}{% url 'standings' %}{% endif %}" aria-label="Standings">
                         <i class="fas fa-medal"></i>
                     </a>
 
-                    <a class="nav-link-base" href="/rules/" aria-label="Rules">
+                    <a class="nav-link-base" href="{% if current_family and current_pool %}{% url 'family_pool_rules' current_family.slug current_pool.slug %}{% else %}{% url 'rules' %}{% endif %}" aria-label="Rules">
                         <i class="fas fa-gavel"></i>
                     </a>
 
@@ -119,16 +111,16 @@
                     {% if user.is_authenticated %}
                         {% if current_family and current_pool %}
                         <div class="relative dropdown-container" data-testid="family-context-switcher">
-                            <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 dark:border-border-subtle dark:hover:bg-surface-hover transition-colors"
+                            <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors"
                                     aria-label="Switch family" onclick="toggleDropdown(event, this)">
                                 <i class="fas fa-users text-primary"></i>
                                 <span class="text-left">
-                                    <span class="block text-[11px] font-semibold uppercase text-slate-300">Current family</span>
+                                    <span class="block text-[11px] font-semibold uppercase text-slate-400">Current family</span>
                                     <span class="block max-w-44 truncate text-sm font-semibold text-white">{{ current_family.name }}</span>
-                                    <span class="block max-w-44 truncate text-xs text-slate-300">{{ current_pool.name }}</span>
+                                    <span class="block max-w-44 truncate text-xs text-slate-400">{{ current_pool.name }}</span>
                                 </span>
                                 {% if family_switcher_choices|length > 1 %}
-                                <i class="fas fa-chevron-down text-xs text-white"></i>
+                                <i class="fas fa-chevron-down text-xs text-slate-400"></i>
                                 {% endif %}
                             </button>
 
@@ -149,7 +141,7 @@
                             </div>
                         </div>
                         {% elif family_switcher_choices %}
-                        <a data-testid="family-context-switcher" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-600 text-white hover:bg-slate-700 dark:border-border-subtle dark:hover:bg-surface-hover transition-colors" href="{% url 'family_picker' %}">
+                        <a data-testid="family-context-switcher" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-600 text-white hover:bg-slate-700 transition-colors" href="{% url 'family_picker' %}">
                             <i class="fas fa-users text-primary"></i>
                             <span class="text-sm font-semibold">Switch family</span>
                         </a>
@@ -159,7 +151,7 @@
                                 <i class="fas fa-plus"></i>
                                 <span>Create family</span>
                             </a>
-                            <a class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-600 text-white text-sm font-semibold hover:bg-slate-700 dark:border-border-subtle dark:hover:bg-surface-hover transition-colors" href="{% url 'join_family' %}">
+                            <a class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-600 text-white text-sm font-semibold hover:bg-slate-700 transition-colors" href="{% url 'join_family' %}">
                                 <i class="fas fa-ticket"></i>
                                 <span>Join</span>
                             </a>
@@ -167,7 +159,7 @@
                         {% endif %}
                         <!-- User Profile Dropdown -->
                         <div class="relative dropdown-container">
-                            <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 dark:border-border-subtle dark:hover:bg-surface-hover transition-colors"
+                            <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors"
                                     aria-label="User menu" onclick="toggleDropdown(event, this)">
                                 <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
                                      alt="Profile picture"
@@ -175,11 +167,11 @@
                                 <span class="text-white font-medium">
                                     {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
                                 </span>
-                                <i class="fas fa-chevron-down text-xs text-white"></i>
+                                <i class="fas fa-chevron-down text-xs text-slate-400"></i>
                             </button>
 
                             <div class="nav-dropdown absolute right-0 mt-2 w-64 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle hidden z-50 py-2">
-                                <a class="flex items-center px-4 py-3 hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% url 'user_profile' user.id %}">
+                                <a class="flex items-center px-4 py-3 hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_user_profile' current_family.slug current_pool.slug user.id %}{% else %}{% url 'user_profile' user.id %}{% endif %}">
                                     <i class="fas fa-user-circle text-xl mr-3 text-text-dark dark:text-white"></i>
                                     <div>
                                         <div class="font-bold text-text-dark dark:text-white">
@@ -200,91 +192,84 @@
                         </div>
                     {% else %}
                         <!-- Login Button -->
-                        <a class="btn-gradient p-2.5" href="{% provider_login_url 'google' %}" aria-label="Sign in with Google">
+                        <a class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all" href="{% provider_login_url 'google' %}" aria-label="Sign in with Google">
                             <i class="fab fa-google"></i>
+                            <span>Sign in</span>
                         </a>
                     {% endif %}
                 </div>
             </div>
 
             <!-- Mobile Menu (Hidden by default) -->
-            <div id="mobile-menu" class="hidden lg:hidden absolute top-16 left-0 right-0 bg-surface-light dark:bg-surface border-b border-border-light dark:border-border-subtle shadow-lg">
+            <div id="mobile-menu" class="hidden lg:hidden absolute top-16 left-0 right-0 bg-slate-800 border-b border-slate-700 shadow-lg">
                 <div class="px-4 py-4 space-y-2">
                     <!-- Mobile Navigation Links -->
-                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="/">
+                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_home' current_family.slug current_pool.slug %}{% else %}/{% endif %}">
                         <i class="fas fa-home mr-3"></i>Home
                     </a>
 
                     <!-- Mobile Scores Dropdown -->
                     <div class="mobile-dropdown-container">
-                        <button class="w-full flex items-center justify-between px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors mobile-dropdown-trigger" onclick="toggleMobileDropdown(this)">
+                        <button class="w-full flex items-center justify-between px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors mobile-dropdown-trigger" onclick="toggleMobileDropdown(this)">
                             <span><i class="fas fa-chart-line mr-3"></i>Scores</span>
                             <i class="fas fa-chevron-down transition-transform duration-200"></i>
                         </button>
                         <div class="mobile-dropdown-menu hidden pl-8 pr-4 py-2 space-y-1">
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores">Current Week</a>
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}">Current Week</a>
                             <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/1">Week 1</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/2">Week 2</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/3">Week 3</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/4">Week 4</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/5">Week 5</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/6">Week 6</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/7">Week 7</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/8">Week 8</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/9">Week 9</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/10">Week 10</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/11">Week 11</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/12">Week 12</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/13">Week 13</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/14">Week 14</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/15">Week 15</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/16">Week 16</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/17">Week 17</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="/scores/competition/1/season/{{ gameseason }}/week/18">Week 18</a>
+                            {% for week_number in "123456789"|make_list %}<a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason week_number %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/{{ week_number }}{% endif %}">Week {{ week_number }}</a>{% endfor %}
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 10 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/10{% endif %}">Week 10</a>
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 11 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/11{% endif %}">Week 11</a>
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 12 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/12{% endif %}">Week 12</a>
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 13 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/13{% endif %}">Week 13</a>
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 14 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/14{% endif %}">Week 14</a>
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 15 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/15{% endif %}">Week 15</a>
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 16 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/16{% endif %}">Week 16</a>
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 17 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/17{% endif %}">Week 17</a>
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 18 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/18{% endif %}">Week 18</a>
                         </div>
                     </div>
 
-                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="/standings/">
+                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_standings' current_family.slug current_pool.slug %}{% else %}{% url 'standings' %}{% endif %}">
                         <i class="fas fa-medal mr-3"></i>Standings
                     </a>
-                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="/rules/">
+                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_rules' current_family.slug current_pool.slug %}{% else %}{% url 'rules' %}{% endif %}">
                         <i class="fas fa-gavel mr-3"></i>Rules
                     </a>
 
                     {% if user_is_commissioner %}
-                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="{% url 'commissioners' %}">
+                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% url 'commissioners' %}">
                         <i class="fas fa-crown mr-3"></i>Commissioners Dashboard
                     </a>
                     {% endif %}
 
                     {% if user.is_authenticated %}
-                    <div class="border-t border-border-light dark:border-border-subtle my-2"></div>
+                    <div class="border-t border-slate-700 my-2"></div>
                     {% if current_family and current_pool %}
-                    <div class="px-4 py-3 rounded-lg bg-border-light dark:bg-surface-hover" data-testid="family-context-switcher">
-                        <div class="text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Current family</div>
-                        <div class="mt-1 font-bold text-text-dark dark:text-white">{{ current_family.name }}</div>
-                        <div class="text-sm text-text-secondary-light dark:text-text-secondary">{{ current_pool.name }}</div>
+                    <div class="px-4 py-3 rounded-lg bg-slate-700" data-testid="family-context-switcher">
+                        <div class="text-xs font-semibold uppercase text-slate-400">Current family</div>
+                        <div class="mt-1 font-bold text-white">{{ current_family.name }}</div>
+                        <div class="text-sm text-slate-400">{{ current_pool.name }}</div>
                     </div>
                     <div class="mobile-dropdown-container">
-                        <button class="w-full flex items-center justify-between px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors mobile-dropdown-trigger" onclick="toggleMobileDropdown(this)">
+                        <button class="w-full flex items-center justify-between px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors mobile-dropdown-trigger" onclick="toggleMobileDropdown(this)">
                             <span><i class="fas fa-exchange-alt mr-3"></i>Switch family</span>
                             <i class="fas fa-chevron-down transition-transform duration-200"></i>
                         </button>
                         <div class="mobile-dropdown-menu hidden pl-8 pr-4 py-2 space-y-1">
                             {% for choice in family_switcher_choices %}
                                 {% if choice.url %}
-                                <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="{{ choice.url }}">
+                                <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{{ choice.url }}">
                                     <span class="block font-semibold">{{ choice.family.name }}</span>
-                                    <span class="block text-xs text-text-secondary-light dark:text-text-secondary">{{ choice.pool.name }}</span>
+                                    <span class="block text-xs text-slate-400">{{ choice.pool.name }}</span>
                                 </a>
                                 {% endif %}
                             {% endfor %}
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded transition-colors" href="{% url 'family_picker' %}">All families</a>
+                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% url 'family_picker' %}">All families</a>
                         </div>
                     </div>
                     {% elif family_switcher_choices %}
-                    <a data-testid="family-context-switcher" class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="{% url 'family_picker' %}">
+                    <a data-testid="family-context-switcher" class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% url 'family_picker' %}">
                         <i class="fas fa-users mr-3"></i>Switch family
                     </a>
                     {% else %}
@@ -292,25 +277,25 @@
                         <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="{% url 'create_family' %}">
                             <i class="fas fa-plus mr-2"></i>Create
                         </a>
-                        <a class="block px-4 py-3 border border-border-light dark:border-border-subtle text-text-dark dark:text-white rounded-lg font-semibold text-center" href="{% url 'join_family' %}">
+                        <a class="block px-4 py-3 border border-slate-600 text-white rounded-lg font-semibold text-center" href="{% url 'join_family' %}">
                             <i class="fas fa-ticket mr-2"></i>Join
                         </a>
                     </div>
                     {% endif %}
-                    <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="/picks">
+                    <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="{% if current_family and current_pool %}{% url 'family_pool_game_picks' current_family.slug current_pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}">
                         <i class="fas fa-edit mr-2"></i>Submit Weekly Picks
                     </a>
-                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="{% url 'user_profile' user.id %}">
+                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_user_profile' current_family.slug current_pool.slug user.id %}{% else %}{% url 'user_profile' user.id %}{% endif %}">
                         <i class="fas fa-user-circle mr-3"></i>My Profile
                     </a>
-                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="{% url 'profile' %}">
+                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% url 'profile' %}">
                         <i class="fas fa-edit mr-3"></i>Settings
                     </a>
-                    <a class="block px-4 py-3 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover rounded-lg transition-colors" href="/logout">
+                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="/logout">
                         <i class="fas fa-sign-out-alt mr-3"></i>Sign Out
                     </a>
                     {% else %}
-                    <div class="border-t border-border-light dark:border-border-subtle my-2"></div>
+                    <div class="border-t border-slate-700 my-2"></div>
                     <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="{% provider_login_url 'google' %}">
                         <i class="fab fa-google mr-2"></i>Sign In with Google
                     </a>
@@ -379,7 +364,7 @@
 
     <!-- Fixed Bottom Status Bar (for authenticated users) -->
     {% if user.is_authenticated %}
-    <div class="fixed bottom-0 left-0 right-0 bg-slate-800/95 dark:bg-surface/80 backdrop-blur-lg border-t border-border-light dark:border-border-subtle z-40 shadow-lg">
+    <div class="fixed bottom-0 left-0 right-0 bg-slate-800/95 backdrop-blur-lg border-t border-slate-700 z-40 shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-4 grid grid-cols-3 items-center gap-4 text-base">
             <!-- Left: User Info -->
             <div class="flex items-center gap-3">
@@ -407,7 +392,7 @@
 
             <!-- Right: Submit Picks Button -->
             <div class="flex justify-end">
-                <a href="/picks/" class="px-4 py-1.5 bg-primary hover:bg-primary/80 text-white rounded-lg font-semibold transition-colors flex items-center gap-2">
+                <a href="{% if current_family and current_pool %}{% url 'family_pool_game_picks' current_family.slug current_pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}" class="px-4 py-1.5 bg-primary hover:bg-primary/80 text-white rounded-lg font-semibold transition-colors flex items-center gap-2">
                     <i class="fas fa-check-circle"></i>
                     <span>Submit Picks</span>
                 </a>

@@ -6,7 +6,9 @@ to all templates for consistent dark mode functionality.
 """
 
 from datetime import date
+from django.db.models import Q
 from django.urls import reverse
+from django.utils import timezone
 from pickem_api.authz import (
     AuthenticationRequired,
     PermissionDeniedForTenant,
@@ -94,6 +96,33 @@ def _switcher_choice_for_membership(membership):
     }
 
 
+def _tenant_context_from_request(request):
+    tenant_context = getattr(request, 'tenant_context', None)
+    if tenant_context is not None:
+        return tenant_context
+
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return None
+
+    resolver_match = getattr(request, 'resolver_match', None)
+    kwargs = resolver_match.kwargs if resolver_match else {}
+    family_slug = kwargs.get('family_slug')
+    pool_slug = kwargs.get('pool_slug')
+    if not family_slug:
+        return None
+
+    try:
+        return require_tenant_context(
+            request.user,
+            family=family_slug,
+            pool=pool_slug,
+        )
+    except (AuthenticationRequired, TenantNotFound, PermissionDeniedForTenant):
+        return None
+    except Exception:
+        return None
+
+
 def family_switcher_context(request):
     """
     Context processor for authenticated tenant navigation.
@@ -121,18 +150,7 @@ def family_switcher_context(request):
         context['family_switcher_choices'] = choices
         context['has_family_memberships'] = bool(choices)
 
-        tenant_context = getattr(request, 'tenant_context', None)
-        if tenant_context is None:
-            resolver_match = getattr(request, 'resolver_match', None)
-            kwargs = resolver_match.kwargs if resolver_match else {}
-            family_slug = kwargs.get('family_slug')
-            pool_slug = kwargs.get('pool_slug')
-            if family_slug:
-                tenant_context = require_tenant_context(
-                    request.user,
-                    family=family_slug,
-                    pool=pool_slug,
-                )
+        tenant_context = _tenant_context_from_request(request)
 
         if tenant_context is not None:
             context['current_family'] = tenant_context.family
@@ -154,7 +172,21 @@ def site_banner_context(request):
     - active_banner: The currently active SiteBanner object (or None if no active banner)
     """
     try:
-        active_banner = SiteBanner.get_active_banner()
+        tenant_context = _tenant_context_from_request(request)
+        if tenant_context:
+            now = timezone.now()
+            active_banner = (
+                SiteBanner.objects.filter(
+                    is_active=True,
+                    start_date__lte=now,
+                )
+                .filter(Q(end_date__isnull=True) | Q(end_date__gt=now))
+                .filter(Q(family=tenant_context.family) | Q(family__isnull=True))
+                .order_by('-family_id', '-priority', '-created_at')
+                .first()
+            )
+        else:
+            active_banner = SiteBanner.get_active_banner()
     except Exception:
         # If there's any database error (e.g., during migrations), return None
         active_banner = None
@@ -197,11 +229,16 @@ def footer_stats_context(request):
 
         # Get user's stored rank and stats
         if request.user.is_authenticated:
+            tenant_context = _tenant_context_from_request(request)
+            if tenant_context is None or tenant_context.pool is None:
+                return context
+
             try:
                 # Get user's season points record with stored rank
                 user_season = userSeasonPoints.objects.get(
                     userID=str(request.user.id),
-                    gameseason=gameseason
+                    gameseason=gameseason,
+                    pool=tenant_context.pool,
                 )
                 context['user_current_rank'] = user_season.current_rank
             except userSeasonPoints.DoesNotExist:
@@ -220,7 +257,8 @@ def footer_stats_context(request):
                     gameseason=gameseason,
                     gameWeek=current_week,
                     competition=game_competition,
-                    userEmail=request.user.email
+                    userEmail=request.user.email,
+                    pool=tenant_context.pool,
                 )
 
                 # Count correct picks for finished games only
