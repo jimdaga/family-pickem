@@ -13,6 +13,14 @@ class SiteBanner(models.Model):
     ]
     
     title = models.CharField(max_length=200, help_text="Banner title/message")
+    family = models.ForeignKey(
+        "pickem_api.Family",
+        on_delete=models.SET_NULL,
+        related_name='banners',
+        blank=True,
+        null=True,
+        help_text="Optional family scope; blank keeps the banner site-wide",
+    )
     description = models.TextField(blank=True, help_text="Optional additional description")
     banner_type = models.CharField(
         max_length=20, 
@@ -50,6 +58,9 @@ class SiteBanner(models.Model):
         ordering = ['-priority', '-created_at']
         verbose_name = "Site Banner"
         verbose_name_plural = "Site Banners"
+        indexes = [
+            models.Index(fields=['family', 'is_active', 'created_at'], name='banner_family_active_idx'),
+        ]
     
     def __str__(self):
         status = "Active" if self.is_currently_active() else "Inactive"
@@ -86,6 +97,13 @@ class SiteBanner(models.Model):
 class MessageBoardPost(models.Model):
     """Model for main message board posts"""
     
+    family = models.ForeignKey(
+        "pickem_api.Family",
+        on_delete=models.SET_NULL,
+        related_name='message_board_posts',
+        blank=True,
+        null=True,
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
     title = models.CharField(max_length=200, help_text="Post title")
     content = models.TextField(help_text="Post content")
@@ -102,6 +120,9 @@ class MessageBoardPost(models.Model):
         ordering = ['-is_pinned', '-created_at']
         verbose_name = "Message Board Post"
         verbose_name_plural = "Message Board Posts"
+        indexes = [
+            models.Index(fields=['family', 'is_active', 'created_at'], name='post_family_active_idx'),
+        ]
     
     def __str__(self):
         return f"{self.title} by {self.user.username}"
@@ -124,6 +145,13 @@ class MessageBoardPost(models.Model):
 class MessageBoardComment(models.Model):
     """Model for nested comments on message board posts"""
     
+    family = models.ForeignKey(
+        "pickem_api.Family",
+        on_delete=models.SET_NULL,
+        related_name='message_board_comments',
+        blank=True,
+        null=True,
+    )
     post = models.ForeignKey(MessageBoardPost, on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
@@ -140,6 +168,9 @@ class MessageBoardComment(models.Model):
         ordering = ['-created_at']
         verbose_name = "Message Board Comment"
         verbose_name_plural = "Message Board Comments"
+        indexes = [
+            models.Index(fields=['family', 'created_at'], name='comment_family_created_idx'),
+        ]
     
     def __str__(self):
         return f"Comment by {self.user.username} on {self.post.title}"
@@ -169,6 +200,13 @@ class MessageBoardVote(models.Model):
         (-1, 'Downvote'),
     ]
     
+    family = models.ForeignKey(
+        "pickem_api.Family",
+        on_delete=models.SET_NULL,
+        related_name='message_board_votes',
+        blank=True,
+        null=True,
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     post = models.ForeignKey(MessageBoardPost, on_delete=models.CASCADE, null=True, blank=True, related_name='votes')
     comment = models.ForeignKey(MessageBoardComment, on_delete=models.CASCADE, null=True, blank=True, related_name='votes')
@@ -183,6 +221,9 @@ class MessageBoardVote(models.Model):
         ]
         verbose_name = "Message Board Vote"
         verbose_name_plural = "Message Board Votes"
+        indexes = [
+            models.Index(fields=['family', 'created_at'], name='vote_family_created_idx'),
+        ]
     
     def __str__(self):
         target = self.post.title if self.post else f"comment on {self.comment.post.title}"
