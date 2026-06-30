@@ -980,6 +980,36 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
 
     def test_tenant_scores_selected_week_uses_global_week_facts_with_pool_only_overlays(self):
         self._seed_private_pool_data()
+        GamePicks.objects.create(
+            id=f"{self.smith_pool.id}-{self.smith_player.id}-{self.week_two_game.id}",
+            pool=self.smith_pool,
+            userEmail=self.smith_player.email,
+            uid=self.smith_player.id,
+            userID=str(self.smith_player.id),
+            slug=self.week_two_game.slug,
+            competition=self.week_two_game.competition,
+            gameWeek=self.week_two_game.gameWeek,
+            gameyear=self.week_two_game.gameyear,
+            gameseason=self.week_two_game.gameseason,
+            pick_game_id=self.week_two_game.id,
+            pick=self.week_two_game.homeTeamSlug,
+            pick_correct=False,
+        )
+        GamePicks.objects.create(
+            id=f"{self.jones_pool.id}-{self.jones_player.id}-{self.week_two_game.id}",
+            pool=self.jones_pool,
+            userEmail=self.jones_player.email,
+            uid=self.jones_player.id,
+            userID=str(self.jones_player.id),
+            slug=self.week_two_game.slug,
+            competition=self.week_two_game.competition,
+            gameWeek=self.week_two_game.gameWeek,
+            gameyear=self.week_two_game.gameyear,
+            gameseason=self.week_two_game.gameseason,
+            pick_game_id=self.week_two_game.id,
+            pick=self.week_two_game.awayTeamSlug,
+            pick_correct=False,
+        )
         self.client.force_login(self.smith_member)
 
         response = self.client.get(
@@ -994,8 +1024,11 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Miami Dolphins")
         self.assertContains(response, "Buffalo Bills")
+        self.assertContains(response, "smith-score-player")
         self.assertNotContains(response, "jones-score-player")
-        self.assertEqual(response.context["picks"].count(), 0)
+        self.assertEqual(list(response.context["picks"].values_list("pool_id", flat=True)), [self.smith_pool.id])
+        self.assertEqual(list(response.context["players_names"]), [self.smith_player.id])
+        self.assertNotIn(self.jones_player.id, list(response.context["players_ids"]))
 
     def test_tenant_standings_and_weekly_winners_are_current_pool_only(self):
         self._seed_private_pool_data()
@@ -1080,6 +1113,40 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertContains(rules_response, "Tiebreakers: On")
         self.assertNotContains(rules_response, "Game locking: On")
         self.assertNotContains(rules_response, "Tiebreakers: Off")
+
+    def test_final_slug_query_and_overlay_tampering_do_not_cross_family_scores_standings_or_rules(self):
+        self._seed_private_pool_data()
+        self.client.force_login(self.smith_member)
+
+        wrong_slug_response = self.client.get(
+            self._tenant_url(
+                "family_pool_scores",
+                family=self.jones_family,
+                pool=self.jones_pool,
+            )
+        )
+        scores_response = self.client.get(
+            self._tenant_url("family_pool_scores"),
+            {"family_slug": self.jones_family.slug, "pool_slug": self.jones_pool.slug, "pool": self.jones_pool.id},
+        )
+        standings_response = self.client.get(
+            self._tenant_url("family_pool_standings"),
+            {"family": self.jones_family.slug, "pool": self.jones_pool.id, "season": "2526"},
+        )
+        rules_response = self.client.get(
+            self._tenant_url("family_pool_rules"),
+            {"family": self.jones_family.slug, "pool": self.jones_pool.id},
+        )
+
+        self.assertEqual(wrong_slug_response.status_code, 404)
+        for response in [scores_response, standings_response]:
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "smith-score-player")
+            self.assertNotContains(response, "jones-score-player")
+        self.assertContains(rules_response, "Smith Family")
+        self.assertContains(rules_response, "Game locking: Off")
+        self.assertNotContains(rules_response, "Jones Family")
+        self.assertNotContains(rules_response, "Game locking: On")
 
 
 class Phase4SharedContextScopeTests(TestCase):
@@ -1345,6 +1412,70 @@ class Phase4SharedContextScopeTests(TestCase):
 
         self.assertEqual(response.context["active_banner"], site_banner)
         self.assertNotContains(response, "Jones private banner")
+
+    def test_final_standings_rules_profile_footer_and_banner_links_preserve_tenant_context(self):
+        userSeasonPoints.objects.create(
+            pool=self.smith_pool,
+            userEmail=self.member.email,
+            userID=str(self.member.id),
+            gameseason=2526,
+            gameyear="2025",
+            total_points=40,
+            current_rank=4,
+            week_1_winner=True,
+            year_winner=True,
+        )
+        userSeasonPoints.objects.create(
+            pool=self.jones_pool,
+            userEmail=self.other_member.email,
+            userID=str(self.other_member.id),
+            gameseason=2526,
+            gameyear="2025",
+            total_points=90,
+            current_rank=1,
+            week_1_winner=True,
+            year_winner=True,
+        )
+        SiteBanner.objects.create(
+            title="Jones final private banner",
+            family=self.jones_family,
+            is_active=True,
+            priority=100,
+            start_date=timezone.now() - timedelta(hours=1),
+        )
+        smith_banner = SiteBanner.objects.create(
+            title="Smith final private banner",
+            family=self.smith_family,
+            is_active=True,
+            priority=10,
+            start_date=timezone.now() - timedelta(hours=1),
+        )
+        self.client.force_login(self.member)
+
+        standings_response = self.client.get(self._tenant_url("family_pool_standings"))
+        rules_response = self.client.get(self._tenant_url("family_pool_rules"))
+        profile_response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=self.member.id)
+        )
+
+        tenant_profile_href = f'href="{self._tenant_prefix()}user/{self.member.id}/"'
+        for response in [standings_response, rules_response, profile_response]:
+            self.assertEqual(response.status_code, 200)
+            markup = response.content.decode()
+            self.assertIn(f'href="{self._tenant_prefix()}scores/"', markup)
+            self.assertIn(f'href="{self._tenant_prefix()}standings/"', markup)
+            self.assertIn(f'href="{self._tenant_prefix()}rules/"', markup)
+            self.assertNotIn('href="/scores"', markup)
+            self.assertNotIn('href="/standings/"', markup)
+            self.assertNotIn('href="/rules/"', markup)
+            self.assertNotIn(f'href="/user/{self.member.id}/"', markup)
+
+        self.assertIn(tenant_profile_href, standings_response.content.decode())
+        self.assertEqual(standings_response.context["user_current_rank"], 4)
+        self.assertEqual(standings_response.context["active_banner"], smith_banner)
+        self.assertNotContains(standings_response, "Jones final private banner")
+        self.assertEqual(profile_response.context["stats"]["current_season_points"], 40)
+        self.assertNotEqual(profile_response.context["stats"]["current_season_points"], 90)
 
 
 class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
@@ -1749,6 +1880,81 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertNotContains(response, "fetch('/message-board/create-comment/'")
         self.assertNotContains(response, "fetch('/message-board/vote-post/'")
         self.assertNotContains(response, "fetch('/message-board/vote-comment/'")
+
+    def test_final_object_id_body_and_slug_tampering_do_not_cross_family_profiles_players_or_message_board(self):
+        self._seed_profile_data()
+        smith_post, _smith_comment, jones_post, jones_comment = self._seed_message_board_data()
+        self.client.force_login(self.smith_member)
+
+        players_response = self.client.get(
+            self._tenant_url(
+                "family_pool_players",
+                family=self.jones_family,
+                pool=self.jones_pool,
+            )
+        )
+        profile_response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=self.jones_player.id),
+            {"family": self.jones_family.slug, "pool": self.jones_pool.id},
+        )
+        comments_response = self.client.get(
+            self._tenant_url("family_pool_get_post_comments", post_id=jones_post.id),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        create_comment_response = self._json_post(
+            self._tenant_url("family_pool_create_comment"),
+            {
+                "post_id": jones_post.id,
+                "parent_id": jones_comment.id,
+                "content": "cross-family body tamper",
+                "family": self.jones_family.id,
+                "pool": self.jones_pool.id,
+            },
+        )
+        vote_post_response = self._json_post(
+            self._tenant_url("family_pool_vote_post"),
+            {"post_id": jones_post.id, "vote_type": 1, "family": self.jones_family.id},
+        )
+        vote_comment_response = self._json_post(
+            self._tenant_url("family_pool_vote_comment"),
+            {"comment_id": jones_comment.id, "vote_type": 1, "family": self.jones_family.id},
+        )
+        create_post_response = self.client.post(
+            self._tenant_url("family_pool_create_post"),
+            {
+                "title": "Forged family target",
+                "content": "server-derived family target",
+                "family": self.jones_family.id,
+                "pool": self.jones_pool.id,
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(players_response.status_code, 404)
+        self.assertEqual(profile_response.status_code, 404)
+        for response in [
+            comments_response,
+            create_comment_response,
+            vote_post_response,
+            vote_comment_response,
+        ]:
+            self.assertEqual(response.status_code, 404)
+            self.assertFalse(response.json()["success"])
+            self.assertNotIn("Jones", json.dumps(response.json()))
+
+        self.assertEqual(create_post_response.status_code, 200)
+        created_post = MessageBoardPost.objects.get(content="server-derived family target")
+        self.assertEqual(created_post.family, self.smith_family)
+        self.assertEqual(created_post.user, self.smith_member)
+        self.assertFalse(
+            MessageBoardComment.objects.filter(content="cross-family body tamper").exists()
+        )
+        self.assertFalse(
+            MessageBoardVote.objects.filter(family=self.jones_family, user=self.smith_member).exists()
+        )
+        self.assertTrue(
+            MessageBoardPost.objects.filter(id=smith_post.id, family=self.smith_family).exists()
+        )
 
 
 class FamilySwitcherContextTests(TestCase):
