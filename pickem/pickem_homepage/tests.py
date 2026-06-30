@@ -427,6 +427,22 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertNotContains(response, "Jones family secret")
         self.assertNotContains(response, "2 of 1")
 
+    def test_dashboard_empty_states_do_not_link_to_global_gameplay_pages(self):
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, family)
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url(family, pool))
+
+        self.assertEqual(response.status_code, 200)
+        dashboard_markup = response.content.decode().split("<main", 1)[1].split("</main>", 1)[0]
+        self.assertIn(f'href="{self._tenant_url(family, pool)}"', dashboard_markup)
+        self.assertEqual(dashboard_markup.count('aria-disabled="true"'), 3)
+        self.assertNotIn('href="/picks/"', dashboard_markup)
+        self.assertNotIn('href="/scores/"', dashboard_markup)
+        self.assertNotIn('href="/standings/"', dashboard_markup)
+        self.assertNotIn('href="/rules/"', dashboard_markup)
+
 
 class FamilySwitcherContextTests(TestCase):
     @classmethod
