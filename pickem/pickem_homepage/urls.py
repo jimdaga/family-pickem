@@ -61,6 +61,31 @@ urlpatterns = [
         views.tenant_user_profile,
         name='family_pool_user_profile',
     ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/create-post/',
+        views.tenant_create_post,
+        name='family_pool_create_post',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/create-comment/',
+        views.tenant_create_comment,
+        name='family_pool_create_comment',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/vote-post/',
+        views.tenant_vote_post,
+        name='family_pool_vote_post',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/vote-comment/',
+        views.tenant_vote_comment,
+        name='family_pool_vote_comment',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/comments/<int:post_id>/',
+        views.tenant_get_post_comments,
+        name='family_pool_get_post_comments',
+    ),
     path('invites/<str:invite_code>/', views.accept_invite_link, name='accept_invite_link'),
     path('scores/', views.scores, name='scores'),
     path('standings/', views.standings, name='standings'),
