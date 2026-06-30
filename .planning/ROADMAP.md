@@ -108,7 +108,7 @@ Completion evidence:
 
 **Goal:** Move user-facing gameplay pages into explicit tenant context.
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 
@@ -117,7 +117,7 @@ Plans:
 - [x] 04-03-PLAN.md — Scope scores, standings, weekly winners, and rules.
 - [x] 04-04-PLAN.md — Make profiles, player lists, and message-board AJAX family-private.
 - [x] 04-05-PLAN.md — Clean shared navigation, shared context processors, dashboard, picks, and scores links.
-- [ ] 04-06-PLAN.md — Complete final link cleanup, negative tests, and validation handoff.
+- [x] 04-06-PLAN.md — Complete final link cleanup, negative tests, and validation handoff.
 
 Scope:
 
@@ -184,4 +184,4 @@ Definition of done:
 
 ## Current Recommendation
 
-Proceed to Phase 4: move dashboard/home, scores, standings, picks, rules, profiles, and message-board pages into explicit family/pool context. Do not claim gameplay tenant isolation complete until those pages and their data queries have tenant-scoped negative tests.
+Proceed to Phase 5: replace global commissioner behavior with family owner/admin management. Phase 4 completed tenant-scoped user-facing gameplay pages and cross-family negative coverage, but family admin editing, cron/scoring hardening, and production migration hardening remain later-phase work.
