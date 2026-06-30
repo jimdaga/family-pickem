@@ -33,6 +33,7 @@ from pickem_api.models import (
     UserProfile,
 )
 from pickem_homepage.authz import family_member_required
+from pickem.context_processors import footer_stats_context, site_banner_context
 from pickem_homepage.models import (
     MessageBoardPost,
     MessageBoardComment,
@@ -1079,6 +1080,271 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertContains(rules_response, "Tiebreakers: On")
         self.assertNotContains(rules_response, "Game locking: On")
         self.assertNotContains(rules_response, "Tiebreakers: Off")
+
+
+class Phase4SharedContextScopeTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        GameWeeks.objects.create(
+            weekNumber=1,
+            competition="nfl",
+            date=timezone.localdate(),
+            season=2526,
+        )
+        cls.finished_game = GamesAndScores.objects.create(
+            id=3501,
+            slug="ari-atl-2025-week-1",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now() - timedelta(days=1),
+            statusType="finished",
+            statusTitle="Final",
+            homeTeamId=1,
+            homeTeamSlug="atl",
+            homeTeamName="Atlanta Falcons",
+            awayTeamId=2,
+            awayTeamSlug="ari",
+            awayTeamName="Arizona Cardinals",
+            gameWinner="atl",
+        )
+        for team_id, slug, name in [
+            (1, "atl", "Atlanta Falcons"),
+            (2, "ari", "Arizona Cardinals"),
+        ]:
+            Teams.objects.create(
+                id=team_id,
+                gameseason=2526,
+                teamNameSlug=slug,
+                teamNameName=name,
+                color="333333",
+                alternateColor="666666",
+            )
+
+    def setUp(self):
+        self.client = Client()
+        self.request_factory = RequestFactory()
+        self.member = User.objects.create_user(
+            "shared-member", email="shared@example.com", password="pass"
+        )
+        self.other_member = User.objects.create_user(
+            "shared-other", email="shared-other@example.com", password="pass"
+        )
+        self.smith_family, self.smith_pool = self._family_with_pool(
+            "Smith Family", "smith-family"
+        )
+        self.jones_family, self.jones_pool = self._family_with_pool(
+            "Jones Family", "jones-family"
+        )
+        self._active_membership(self.member, self.smith_family)
+        self._active_membership(self.other_member, self.jones_family)
+
+    def _family_with_pool(self, name, slug, *, pool_slug="main"):
+        family = Family.objects.create(name=name, slug=slug)
+        pool = Pool.objects.create(
+            family=family,
+            name="Main Pickem",
+            slug=pool_slug,
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        return family, pool
+
+    def _active_membership(self, user, family, role=FamilyMembership.Role.MEMBER):
+        return FamilyMembership.objects.create(
+            family=family,
+            user=user,
+            role=role,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _tenant_url(self, route_name, family=None, pool=None, **kwargs):
+        family = family or self.smith_family
+        pool = pool or self.smith_pool
+        route_kwargs = {"family_slug": family.slug, "pool_slug": pool.slug}
+        route_kwargs.update(kwargs)
+        return reverse(route_name, kwargs=route_kwargs)
+
+    def _tenant_prefix(self):
+        return f"/families/{self.smith_family.slug}/pools/{self.smith_pool.slug}/"
+
+    def _create_pick(self, *, user, pool, pick_id, pick_correct=True):
+        return GamePicks.objects.create(
+            id=pick_id,
+            pool=pool,
+            userEmail=user.email,
+            uid=user.id,
+            userID=str(user.id),
+            slug=self.finished_game.slug,
+            competition=self.finished_game.competition,
+            gameWeek=self.finished_game.gameWeek,
+            gameyear=self.finished_game.gameyear,
+            gameseason=self.finished_game.gameseason,
+            pick_game_id=self.finished_game.id,
+            pick=self.finished_game.homeTeamSlug,
+            pick_correct=pick_correct,
+        )
+
+    def test_shared_header_links_preserve_current_family_pool_context(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertEqual(response.status_code, 200)
+        markup = response.content.decode()
+        self.assertIn(f'href="{self._tenant_prefix()}scores/"', markup)
+        self.assertIn(f'href="{self._tenant_prefix()}standings/"', markup)
+        self.assertIn(f'href="{self._tenant_prefix()}rules/"', markup)
+        self.assertIn(f'href="{self._tenant_prefix()}picks/"', markup)
+        self.assertIn(f'href="{self._tenant_prefix()}user/{self.member.id}/"', markup)
+        self.assertNotIn('href="/picks"', markup)
+        self.assertNotIn('href="/scores"', markup)
+        self.assertNotIn('href="/standings/"', markup)
+        self.assertNotIn('href="/rules/"', markup)
+        self.assertNotIn(f'href="/user/{self.member.id}/"', markup)
+
+    def test_tenant_pick_empty_links_and_ajax_urls_preserve_context(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url("family_pool_game_picks"))
+
+        self.assertEqual(response.status_code, 200)
+        markup = response.content.decode()
+        self.assertIn(f'href="{self._tenant_prefix()}', markup)
+        self.assertIn(f'const pickSubmitUrl = "{self._tenant_prefix()}picks/";', markup)
+        self.assertIn(f'const pickEditUrl = "{self._tenant_prefix()}picks/edit/";', markup)
+        self.assertNotIn('href="/scores/"', markup)
+        self.assertNotIn('href="/standings/"', markup)
+
+    def test_tenant_scores_private_links_preserve_context(self):
+        self._create_pick(
+            user=self.member,
+            pool=self.smith_pool,
+            pick_id=f"{self.smith_pool.id}-{self.member.id}-{self.finished_game.id}",
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertEqual(response.status_code, 200)
+        markup = response.content.decode()
+        self.assertIn(f'href="{self._tenant_prefix()}user/{self.member.id}/"', markup)
+        self.assertIn(f'href="{self._tenant_prefix()}picks/"', markup)
+        self.assertNotIn(f'href="/user/{self.member.id}/"', markup)
+        self.assertNotIn('href="/picks/"', markup)
+
+    def test_footer_stats_context_scopes_private_stats_to_current_pool(self):
+        userSeasonPoints.objects.create(
+            pool=self.smith_pool,
+            userEmail=self.member.email,
+            userID=str(self.member.id),
+            gameseason=2526,
+            gameyear="2025",
+            total_points=40,
+            current_rank=4,
+        )
+        userSeasonPoints.objects.create(
+            pool=self.jones_pool,
+            userEmail=self.member.email,
+            userID=str(self.member.id),
+            gameseason=2526,
+            gameyear="2025",
+            total_points=90,
+            current_rank=1,
+        )
+        self._create_pick(
+            user=self.member,
+            pool=self.smith_pool,
+            pick_id=f"{self.smith_pool.id}-{self.member.id}-{self.finished_game.id}",
+            pick_correct=True,
+        )
+        self._create_pick(
+            user=self.member,
+            pool=self.jones_pool,
+            pick_id=f"{self.jones_pool.id}-{self.member.id}-{self.finished_game.id}",
+            pick_correct=True,
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertEqual(response.context["user_current_rank"], 4)
+        self.assertEqual(response.context["user_correct_picks_week"], 1)
+
+    def test_footer_stats_context_suppresses_private_stats_without_safe_pool(self):
+        userSeasonPoints.objects.create(
+            pool=self.jones_pool,
+            userEmail=self.member.email,
+            userID=str(self.member.id),
+            gameseason=2526,
+            gameyear="2025",
+            total_points=90,
+            current_rank=1,
+        )
+        self._create_pick(
+            user=self.member,
+            pool=self.jones_pool,
+            pick_id=f"{self.jones_pool.id}-{self.member.id}-{self.finished_game.id}",
+            pick_correct=True,
+        )
+        request = self.request_factory.get("/")
+        request.user = self.member
+
+        context = footer_stats_context(request)
+
+        self.assertIsNone(context["user_current_rank"])
+        self.assertIsNone(context["user_correct_picks_week"])
+
+    def test_site_banner_context_does_not_show_another_family_banner_on_tenant_page(self):
+        SiteBanner.objects.create(
+            title="Jones private banner",
+            family=self.jones_family,
+            is_active=True,
+            priority=100,
+            start_date=timezone.now() - timedelta(hours=1),
+        )
+        smith_banner = SiteBanner.objects.create(
+            title="Smith private banner",
+            family=self.smith_family,
+            is_active=True,
+            priority=10,
+            start_date=timezone.now() - timedelta(hours=1),
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertEqual(response.context["active_banner"], smith_banner)
+        self.assertNotContains(response, "Jones private banner")
+
+    def test_site_banner_context_allows_site_wide_banner_when_current_family_has_none(self):
+        SiteBanner.objects.create(
+            title="Jones private banner",
+            family=self.jones_family,
+            is_active=True,
+            priority=100,
+            start_date=timezone.now() - timedelta(hours=1),
+        )
+        site_banner = SiteBanner.objects.create(
+            title="Site-wide banner",
+            family=None,
+            is_active=True,
+            priority=1,
+            start_date=timezone.now() - timedelta(hours=1),
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertEqual(response.context["active_banner"], site_banner)
+        self.assertNotContains(response, "Jones private banner")
 
 
 class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
