@@ -36,60 +36,319 @@ class UserProfile(models.Model):
         ordering = ['user__username']
 
 
+class Family(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        INACTIVE = 'inactive', 'Inactive'
+
+    name = models.CharField(max_length=200, help_text="Family display name")
+    slug = models.SlugField(max_length=80, unique=True, help_text="Stable family URL slug")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        help_text="Family lifecycle status",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Family"
+        verbose_name_plural = "Families"
+        ordering = ['name', 'slug']
+        indexes = [
+            models.Index(fields=['slug'], name='family_slug_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(status__in=['active', 'inactive']),
+                name='family_status_valid',
+            ),
+        ]
+
+
+class Pool(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        INACTIVE = 'inactive', 'Inactive'
+        ARCHIVED = 'archived', 'Archived'
+
+    family = models.ForeignKey(Family, on_delete=models.PROTECT, related_name='pools')
+    name = models.CharField(max_length=200, help_text="Pool display name")
+    slug = models.SlugField(max_length=80, help_text="Stable pool slug within a family")
+    season = models.IntegerField(help_text="Season in YYZZ format, e.g. 2526")
+    competition = models.CharField(max_length=50, default='nfl', help_text="Competition identifier")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        help_text="Pool lifecycle status",
+    )
+    is_default = models.BooleanField(default=False, help_text="Default pool for this family")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.family.name} - {self.name}"
+
+    class Meta:
+        verbose_name = "Pool"
+        verbose_name_plural = "Pools"
+        ordering = ['family__name', 'season', 'name']
+        indexes = [
+            models.Index(fields=['family', 'slug', 'status'], name='pool_family_slug_status_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['family', 'slug'], name='unique_pool_family_slug'),
+            models.CheckConstraint(
+                check=models.Q(status__in=['active', 'inactive', 'archived']),
+                name='pool_status_valid',
+            ),
+        ]
+
+
+class FamilyMembership(models.Model):
+    class Role(models.TextChoices):
+        OWNER = 'owner', 'Owner'
+        ADMIN = 'admin', 'Admin'
+        MEMBER = 'member', 'Member'
+
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        INACTIVE = 'inactive', 'Inactive'
+
+    family = models.ForeignKey(Family, on_delete=models.PROTECT, related_name='memberships')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='family_memberships')
+    role = models.CharField(
+        max_length=20,
+        choices=Role.choices,
+        default=Role.MEMBER,
+        help_text="Family-level role",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        help_text="Membership lifecycle status",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} in {self.family.name} ({self.role})"
+
+    class Meta:
+        verbose_name = "Family Membership"
+        verbose_name_plural = "Family Memberships"
+        ordering = ['family__name', 'user__username']
+        indexes = [
+            models.Index(fields=['family', 'user', 'status'], name='member_family_user_status_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['family', 'user'], name='unique_family_membership_user'),
+            models.CheckConstraint(
+                check=models.Q(role__in=['owner', 'admin', 'member']),
+                name='family_membership_role_valid',
+            ),
+            models.CheckConstraint(
+                check=models.Q(status__in=['active', 'inactive']),
+                name='family_membership_status_valid',
+            ),
+        ]
+
+
+class PoolSettings(models.Model):
+    pool = models.OneToOneField(Pool, on_delete=models.PROTECT, related_name='settings')
+    picks_lock_at_kickoff = models.BooleanField(
+        default=True,
+        help_text="Lock picks when each game starts",
+    )
+    allow_tiebreaker = models.BooleanField(
+        default=True,
+        help_text="Allow tiebreaker predictions",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Settings for {self.pool}"
+
+    class Meta:
+        verbose_name = "Pool Settings"
+        verbose_name_plural = "Pool Settings"
+        ordering = ['pool__family__name', 'pool__name']
+
+
+class FamilyInvitation(models.Model):
+    family = models.ForeignKey(Family, on_delete=models.PROTECT, related_name='invitations')
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='invitations',
+        blank=True,
+        null=True,
+    )
+    code_hash = models.CharField(max_length=128, unique=True, help_text="Hashed invite code")
+    role = models.CharField(
+        max_length=20,
+        choices=FamilyMembership.Role.choices,
+        default=FamilyMembership.Role.MEMBER,
+        help_text="Role assigned when invite is accepted",
+    )
+    expires_at = models.DateTimeField(blank=True, null=True)
+    is_revoked = models.BooleanField(default=False)
+    max_uses = models.PositiveIntegerField(blank=True, null=True)
+    use_count = models.PositiveIntegerField(default=0)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='created_family_invitations',
+        blank=True,
+        null=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Invitation for {self.family.name}"
+
+    class Meta:
+        verbose_name = "Family Invitation"
+        verbose_name_plural = "Family Invitations"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['code_hash'], name='invitation_code_hash_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(role__in=['owner', 'admin', 'member']),
+                name='family_invitation_role_valid',
+            ),
+        ]
+
+
+class FamilyAuditLog(models.Model):
+    class Action(models.TextChoices):
+        INVITATION_CREATED = 'invitation_created', 'Invitation created'
+        INVITATION_REVOKED = 'invitation_revoked', 'Invitation revoked'
+        MEMBERSHIP_CREATED = 'membership_created', 'Membership created'
+        MEMBERSHIP_UPDATED = 'membership_updated', 'Membership updated'
+        POOL_SETTINGS_UPDATED = 'pool_settings_updated', 'Pool settings updated'
+        MANUAL_PICK_UPDATED = 'manual_pick_updated', 'Manual pick updated'
+        WEEK_WINNER_UPDATED = 'week_winner_updated', 'Week winner updated'
+
+    family = models.ForeignKey(Family, on_delete=models.PROTECT, related_name='audit_logs')
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='audit_logs',
+        blank=True,
+        null=True,
+    )
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='family_audit_logs',
+        blank=True,
+        null=True,
+    )
+    action = models.CharField(max_length=50, choices=Action.choices)
+    target_type = models.CharField(max_length=100, blank=True)
+    target_id = models.CharField(max_length=100, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    user_agent = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.family.name}: {self.action} at {self.created_at}"
+
+    class Meta:
+        verbose_name = "Family Audit Log"
+        verbose_name_plural = "Family Audit Logs"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['family', 'created_at'], name='audit_family_created_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(action__in=[
+                    'invitation_created',
+                    'invitation_revoked',
+                    'membership_created',
+                    'membership_updated',
+                    'pool_settings_updated',
+                    'manual_pick_updated',
+                    'week_winner_updated',
+                ]),
+                name='family_audit_log_action_valid',
+            ),
+        ]
+
+
 class Teams(models.Model):
     id = models.IntegerField(primary_key=True)
     gameseason = models.IntegerField(blank=True, null=True)
-    teamNameSlug = models.CharField(max_length=250)
-    teamNameName = models.CharField(max_length=250)
-    teamLogo = models.CharField(max_length=250, blank=True, null=True)
-    teamWins = models.IntegerField(default=0)
-    teamLosses = models.IntegerField(default=0)
-    teamTies = models.IntegerField(default=0)
+    teamNameSlug = models.CharField(max_length=250, db_column='teamnameslug')
+    teamNameName = models.CharField(max_length=250, db_column='teamnamename')
+    teamLogo = models.CharField(max_length=250, blank=True, null=True, db_column='teamlogo')
+    teamWins = models.IntegerField(default=0, db_column='teamwins')
+    teamLosses = models.IntegerField(default=0, db_column='teamlosses')
+    teamTies = models.IntegerField(default=0, db_column='teamties')
+    color = models.CharField(max_length=6, blank=True, null=True)
+    alternateColor = models.CharField(max_length=6, blank=True, null=True, db_column='alternatecolor')
 
 class GamesAndScores(models.Model):
     id = models.IntegerField(primary_key=True)
     slug = models.SlugField(max_length=250)
     competition = models.CharField(max_length=250)
-    gameWeek = models.CharField(max_length=2)
+    gameWeek = models.CharField(max_length=2, db_column='gameweek')
     gameyear = models.CharField(max_length=4)
     gameseason = models.IntegerField(blank=True, null=True)
-    startTimestamp = models.DateTimeField()
-    gameWinner = models.CharField(max_length=250, blank=True, null=True)
-    statusType = models.CharField(max_length=250)
-    statusTitle = models.CharField(max_length=250)
-    homeTeamId = models.IntegerField()
-    homeTeamSlug = models.CharField(max_length=250)
-    homeTeamName = models.CharField(max_length=250)
-    homeTeamScore = models.IntegerField(blank=True, null=True)
-    homeTeamPeriod1 = models.IntegerField(blank=True, null=True)
-    homeTeamPeriod2 = models.IntegerField(blank=True, null=True)
-    homeTeamPeriod3 = models.IntegerField(blank=True, null=True)
-    homeTeamPeriod4 = models.IntegerField(blank=True, null=True)
-    homeTeamPeriodOT = models.IntegerField(blank=True, null=True)
-    awayTeamId = models.IntegerField()
-    awayTeamSlug = models.CharField(max_length=250)
-    awayTeamName = models.CharField(max_length=250)
-    awayTeamScore = models.IntegerField(blank=True, null=True)
-    awayTeamPeriod1 = models.IntegerField(blank=True, null=True)
-    awayTeamPeriod2 = models.IntegerField(blank=True, null=True)
-    awayTeamPeriod3 = models.IntegerField(blank=True, null=True)
-    awayTeamPeriod4 = models.IntegerField(blank=True, null=True)
-    awayTeamPeriodOT = models.IntegerField(blank=True, null=True)
-    tieBreakerGame = models.BooleanField(default=False)
-    gameAdded = models.DateTimeField(auto_now_add=True)
-    gameUpdated = models.DateTimeField(auto_now=True)
-    gameScored = models.BooleanField(default=False)
-    
+    startTimestamp = models.DateTimeField(db_column='starttimestamp')
+    gameWinner = models.CharField(max_length=250, blank=True, null=True, db_column='gamewinner')
+    statusType = models.CharField(max_length=250, db_column='statustype')
+    statusTitle = models.CharField(max_length=250, db_column='statustitle')
+    homeTeamId = models.IntegerField(db_column='hometeamid')
+    homeTeamSlug = models.CharField(max_length=250, db_column='hometeamslug')
+    homeTeamName = models.CharField(max_length=250, db_column='hometeamname')
+    homeTeamScore = models.IntegerField(blank=True, null=True, db_column='hometeamscore')
+    homeTeamPeriod1 = models.IntegerField(blank=True, null=True, db_column='hometeamperiod1')
+    homeTeamPeriod2 = models.IntegerField(blank=True, null=True, db_column='hometeamperiod2')
+    homeTeamPeriod3 = models.IntegerField(blank=True, null=True, db_column='hometeamperiod3')
+    homeTeamPeriod4 = models.IntegerField(blank=True, null=True, db_column='hometeamperiod4')
+    homeTeamPeriodOT = models.IntegerField(blank=True, null=True, db_column='hometeamperiodot')
+    awayTeamId = models.IntegerField(db_column='awayteamid')
+    awayTeamSlug = models.CharField(max_length=250, db_column='awayteamslug')
+    awayTeamName = models.CharField(max_length=250, db_column='awayteamname')
+    awayTeamScore = models.IntegerField(blank=True, null=True, db_column='awayteamscore')
+    awayTeamPeriod1 = models.IntegerField(blank=True, null=True, db_column='awayteamperiod1')
+    awayTeamPeriod2 = models.IntegerField(blank=True, null=True, db_column='awayteamperiod2')
+    awayTeamPeriod3 = models.IntegerField(blank=True, null=True, db_column='awayteamperiod3')
+    awayTeamPeriod4 = models.IntegerField(blank=True, null=True, db_column='awayteamperiod4')
+    awayTeamPeriodOT = models.IntegerField(blank=True, null=True, db_column='awayteamperiodot')
+    tieBreakerGame = models.BooleanField(default=False, db_column='tiebreakergame')
+    gameAdded = models.DateTimeField(auto_now_add=True, db_column='gameadded')
+    gameUpdated = models.DateTimeField(auto_now=True, db_column='gameupdated')
+    gameScored = models.BooleanField(default=False, db_column='gamescored')
+
     # Betting and Odds Information
-    homeTeamWinProbability = models.FloatField(blank=True, null=True, help_text="Home team win probability as percentage (0-100)")
-    awayTeamWinProbability = models.FloatField(blank=True, null=True, help_text="Away team win probability as percentage (0-100)")
+    homeTeamWinProbability = models.FloatField(blank=True, null=True, help_text="Home team win probability as percentage (0-100)", db_column='hometeamwinprobability')
+    awayTeamWinProbability = models.FloatField(blank=True, null=True, help_text="Away team win probability as percentage (0-100)", db_column='awayteamwinprobability')
     spread = models.FloatField(blank=True, null=True, help_text="Point spread (positive favors home team)")
-    overUnder = models.FloatField(blank=True, null=True, help_text="Over/under total points line")
-    
+    overUnder = models.FloatField(blank=True, null=True, help_text="Over/under total points line", db_column='overunder')
+
     # Weather and Venue Information
     temperature = models.IntegerField(blank=True, null=True, help_text="Game temperature in Fahrenheit")
-    weatherCondition = models.CharField(max_length=100, blank=True, null=True, help_text="Weather condition description")
-    venueIndoor = models.BooleanField(default=False, help_text="Whether the game is played indoors")
+    weatherCondition = models.CharField(max_length=100, blank=True, null=True, help_text="Weather condition description", db_column='weathercondition')
+    venueIndoor = models.BooleanField(default=False, help_text="Whether the game is played indoors", db_column='venueindoor')
+
+    # Broadcast and Links
+    broadcast = models.CharField(max_length=50, blank=True, null=True, help_text="TV network broadcasting the game (e.g., CBS, FOX, ESPN)")
+    gamecastUrl = models.URLField(max_length=500, blank=True, null=True, help_text="ESPN Gamecast URL for the game", db_column='gamecasturl')
 
     class Meta:
         ordering = ['startTimestamp']
@@ -97,30 +356,49 @@ class GamesAndScores(models.Model):
 
 class GamePicks(models.Model):
     id = models.CharField(max_length=250, primary_key=True)
-    userEmail = models.EmailField(blank=True)
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='game_picks',
+        blank=True,
+        null=True,
+    )
+    userEmail = models.EmailField(blank=True, db_column='useremail')
     uid = models.IntegerField(blank=True, null=True)
-    userID = models.CharField(max_length=250, blank=True)
+    userID = models.CharField(max_length=250, blank=True, db_column='userid')
     slug = models.SlugField(max_length=250, blank=True)
     competition = models.CharField(max_length=250, blank=True)
-    gameWeek = models.CharField(max_length=2, blank=True)
+    gameWeek = models.CharField(max_length=2, blank=True, db_column='gameweek')
     gameyear = models.CharField(max_length=4, blank=True)
     gameseason = models.IntegerField(blank=True, null=True)
     pick_game_id = models.IntegerField(blank=True)
     pick = models.CharField(max_length=250, blank=True)
-    tieBreakerScore = models.IntegerField(blank=True, null=True)
-    tieBreakerYards = models.IntegerField(blank=True, null=True)
+    tieBreakerScore = models.IntegerField(blank=True, null=True, db_column='tiebreakerscore')
+    tieBreakerYards = models.IntegerField(blank=True, null=True, db_column='tiebreakeryards')
     pick_correct = models.BooleanField(default=False, blank=True)
-    pickAdded = models.DateTimeField(auto_now_add=True)
-    pickUpdated = models.DateTimeField(auto_now=True)
+    pickAdded = models.DateTimeField(auto_now_add=True, db_column='pickadded')
+    pickUpdated = models.DateTimeField(auto_now=True, db_column='pickupdated')
 
     class Meta:
         ordering = ['gameWeek']
+        indexes = [
+            models.Index(fields=['pool', 'gameseason'], name='gp_pool_season_idx'),
+            models.Index(fields=['pool', 'gameseason', 'gameWeek'], name='gp_pool_season_week_idx'),
+            models.Index(fields=['pool', 'userID'], name='gp_pool_userid_idx'),
+        ]
 
 
 class userSeasonPoints(models.Model):
     id = models.AutoField(primary_key=True)
-    userEmail = models.EmailField(blank=True)
-    userID = models.CharField(max_length=250, blank=True)
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='season_points',
+        blank=True,
+        null=True,
+    )
+    userEmail = models.EmailField(blank=True, db_column='useremail')
+    userID = models.CharField(max_length=250, blank=True, db_column='userid')
     gameyear = models.CharField(max_length=4, blank=True)
     gameseason = models.IntegerField(blank=True, null=True)
     week_1_points = models.IntegerField(blank=True, null=True)
@@ -196,20 +474,32 @@ class userSeasonPoints(models.Model):
     week_18_winner = models.BooleanField(default=False, blank=True)
 
     total_points = models.IntegerField(blank=True, null=True)
+    current_rank = models.IntegerField(blank=True, null=True, help_text='Current ranking position (handles ties)')
 
     year_winner = models.BooleanField(default=False, blank=True)
 
-    playerAdded = models.DateTimeField(auto_now_add=True)
-    playerUpdated = models.DateTimeField(auto_now=True)
+    playerAdded = models.DateTimeField(auto_now_add=True, db_column='playeradded')
+    playerUpdated = models.DateTimeField(auto_now=True, db_column='playerupdated')
 
     class Meta:
         ordering = ['total_points']
+        indexes = [
+            models.Index(fields=['pool', 'gameseason'], name='usp_pool_season_idx'),
+            models.Index(fields=['pool', 'userID'], name='usp_pool_userid_idx'),
+        ]
 
 
 class userPoints(models.Model):
     id = models.CharField(max_length=250, primary_key=True)
-    userEmail = models.EmailField(blank=True)
-    userID = models.CharField(max_length=250, blank=True)
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='legacy_user_points',
+        blank=True,
+        null=True,
+    )
+    userEmail = models.EmailField(blank=True, db_column='useremail')
+    userID = models.CharField(max_length=250, blank=True, db_column='userid')
     gameyear = models.CharField(max_length=4, blank=True)
     gameseason = models.IntegerField(blank=True, null=True)
     week_1_points = models.IntegerField(blank=True, null=True)
@@ -288,49 +578,65 @@ class userPoints(models.Model):
 
     year_winner = models.BooleanField(default=False, blank=True)
 
-    playerAdded = models.DateTimeField(auto_now_add=True)
-    playerUpdated = models.DateTimeField(auto_now=True)
+    playerAdded = models.DateTimeField(auto_now_add=True, db_column='playeradded')
+    playerUpdated = models.DateTimeField(auto_now=True, db_column='playerupdated')
 
     class Meta:
         ordering = ['total_points']
+        indexes = [
+            models.Index(fields=['pool', 'gameseason'], name='up_pool_season_idx'),
+            models.Index(fields=['pool', 'userID'], name='up_pool_userid_idx'),
+        ]
 
 
 class GameWeeks(models.Model):
-    weekNumber = models.IntegerField()
+    weekNumber = models.IntegerField(db_column='weeknumber')
     competition = models.CharField(max_length=250)
     date = models.DateField()
     season = models.IntegerField(blank=True, null=True)
 
 class userStats(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    userEmail = models.EmailField(blank=True)
-    userID = models.CharField(max_length=250, blank=True)
+    pool = models.ForeignKey(
+        Pool,
+        on_delete=models.SET_NULL,
+        related_name='user_stats',
+        blank=True,
+        null=True,
+    )
+    userEmail = models.EmailField(blank=True, db_column='useremail')
+    userID = models.CharField(max_length=250, blank=True, db_column='userid')
     # Number of Weeks Won (Season / All Time)
-    weeksWonSeason = models.IntegerField(max_length=250, blank=True, null=True)
-    weeksWonTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    weeksWonSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='weekswonseason')
+    weeksWonTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='weekswontotal')
     # Correct Pick Percentage (Season / All Time)
-    pickPercentSeason = models.IntegerField(max_length=250, blank=True, null=True)
-    pickPercentTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    pickPercentSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='pickpercentseason')
+    pickPercentTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='pickpercenttotal')
     # Total Number of Correct Picks (Season / All Time)
-    correctPickTotalSeason = models.IntegerField(max_length=250, blank=True, null=True)
-    correctPickTotalTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    correctPickTotalSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='correctpicktotalseason')
+    correctPickTotalTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='correctpicktotaltotal')
     # Total Number of Picks (Season / All Time)
-    totalPicksSeason = models.IntegerField(max_length=250, blank=True, null=True)
-    totalPicksTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    totalPicksSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='totalpicksseason')
+    totalPicksTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='totalpickstotal')
     # Most Picked Team (Season / All Time)
-    mostPickedSeason = models.TextField(blank=True, null=True)
-    mostPickedTotal = models.TextField(blank=True, null=True)
+    mostPickedSeason = models.TextField(blank=True, null=True, db_column='mostpickedseason')
+    mostPickedTotal = models.TextField(blank=True, null=True, db_column='mostpickedtotal')
     # Least Picked Team (Season / All Time)
-    leastPickedSeason = models.TextField(blank=True, null=True)
-    leastPickedTotal = models.TextField(blank=True, null=True)
+    leastPickedSeason = models.TextField(blank=True, null=True, db_column='leastpickedseason')
+    leastPickedTotal = models.TextField(blank=True, null=True, db_column='leastpickedtotal')
     # Number of seasons won (All Time)
-    seasonsWon = models.IntegerField(max_length=250, blank=True, null=True)
+    seasonsWon = models.IntegerField(max_length=250, blank=True, null=True, db_column='seasonswon')
     # Missed Picks (Season / All Time)
-    missedPicksSeason = models.IntegerField(max_length=250, blank=True, null=True)
-    missedPicksTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    missedPicksSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='missedpicksseason')
+    missedPicksTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='missedpickstotal')
     # Perfect Weeks (Season / All Time)
-    perfectWeeksSeason = models.IntegerField(max_length=250, blank=True, null=True)
-    perfectWeeksTotal = models.IntegerField(max_length=250, blank=True, null=True)
+    perfectWeeksSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='perfectweeksseason')
+    perfectWeeksTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='perfectweekstotal')
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['pool', 'userID'], name='us_pool_userid_idx'),
+        ]
 
 class currentSeason(models.Model):
     season = models.IntegerField(blank=True, null=True)

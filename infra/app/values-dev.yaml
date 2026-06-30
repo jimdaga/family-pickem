@@ -1,33 +1,62 @@
-# Default values for family-pickem.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# Dev values for family-pickem
+# Used by ArgoCD Application: pickem-dev
 
+fullnameOverride: "family-pickem-dev"
 replicaCount: 1
 
 image:
   repository: familypickem/pickem-django
+  tag: ""  # Tracks latest from main
   pullPolicy: Always
-
-fullnameOverride: "family-pickem-dev"
 
 ingress:
   enabled: true
   className: "nginx"
   annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
   hosts:
     - host: dev.family-pickem.com
       paths:
         - path: /
           pathType: ImplementationSpecific
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
+  tls:
+    - secretName: pickem-dev-tls
+      hosts:
+        - dev.family-pickem.com
 
-app:
-  env:
-    DJANGO_DEBUG: "False"
-    # SECRET_KEY: "" # You must set this 
+postgresql:
+  enabled: true
+  global:
+    postgresql:
+      auth:
+        database: "pickem"
+  primary:
+    persistence:
+      storageClass: "manual"
+      size: 10Gi
 
+cron:
+  schedule: "*/5 * * * *"
+  command: "/code/pickem_api/cron.sh"
+  suspend: false
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+
+pickemctl:
+  enabled: true
+  image:
+    repository: familypickem/pickemctl
+    tag: "0.0.9"
+    pullPolicy: IfNotPresent
+
+externalSecrets:
+  enabled: true
+  clusterSecretStore: aws-secrets-manager
+  envvarsKey: family-pickem/dev/envvars
+  pickemctlKey: family-pickem/dev/pickemctl
+
+backup:
+  enabled: false
+
+healthchecks:
+  enabled: true

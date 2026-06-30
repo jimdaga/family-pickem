@@ -7,7 +7,7 @@ from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userP
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ['id', 'username', 'first_name', 'last_name', 'is_active']
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -34,6 +34,18 @@ class GameWeeksSerializer(serializers.ModelSerializer):
 
 
 class GamePicksSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GamePicks
+        fields = ['id', 'uid', 'userID', 'slug', 'competition', 'gameWeek',
+                  'gameyear', 'gameseason', 'pick_game_id', 'pick',
+                  'tieBreakerScore', 'tieBreakerYards', 'pick_correct',
+                  'pickAdded', 'pickUpdated']
+        extra_kwargs = {
+            'name': {'validators': []},
+        }
+
+
+class GamePicksAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = GamePicks
         fields = '__all__'

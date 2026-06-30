@@ -107,6 +107,29 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
+pickemctl:
+  enabled: false
+  image:
+    repository: familypickem/pickemctl
+    tag: "0.0.9"
+    pullPolicy: IfNotPresent
+  config: ""
+  resources: {}
+
+externalSecrets:
+  enabled: false
+  clusterSecretStore: aws-secrets-manager
+  envvarsKey: ""
+  pickemctlKey: ""
+
+backup:
+  enabled: false
+  schedule: "0 2 * * *"
+  s3Bucket: family-pickem-backups
+  s3Prefix: postgres
+  keepCount: 5
+  image: "postgres:15"
+
 nodeSelector: {}
 
 tolerations: []

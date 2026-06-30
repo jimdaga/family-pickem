@@ -2,7 +2,9 @@ from functools import partial
 from itertools import count
 from .serializers import GameSerializer, GameWeeksSerializer, GamePicksSerializer, TeamsSerializer, UserSeasonPointsSerializer, UserSerializer, currentSeasonSerializer
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from .permissions import IsAdminOrReadOnly
 from django.contrib.auth.models import User
 from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userSeasonPoints, currentSeason
 from django.db.models import Q
@@ -32,6 +34,7 @@ def get_season():
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_current_season_api(request):
     """
     API endpoint to get the current configured season.
@@ -40,12 +43,15 @@ def get_current_season_api(request):
     return JsonResponse({'current_season': current_season})
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def index(request):
     # return HttpResponse(")
     return JsonResponse({'message': 'Family Pickem API'})
 
 
 @api_view(['GET', 'POST', 'DELETE'])
+@permission_classes([IsAdminOrReadOnly])
 def game_list(request):
     """
     GET list of games, POST a new game, DELETE all games
@@ -77,10 +83,11 @@ def game_list(request):
 
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([IsAdminOrReadOnly])
 def game_detail(request, pk):
     """
     GET / PUT / DELETE games
-    find game by pk (id) 
+    find game by pk (id)
     """
     try:
         game = GamesAndScores.objects.get(pk=pk)
@@ -114,6 +121,7 @@ def game_detail(request, pk):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def user_info(request, pk):
     """
     GET user details from id
@@ -122,7 +130,7 @@ def user_info(request, pk):
     if request.method == 'GET':
         try:
             user_details = User.objects.get(pk=pk)
-        except:
+        except Exception:
             return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND)
 
         user_serializer = UserSerializer(user_details)
@@ -130,6 +138,7 @@ def user_info(request, pk):
     
 
 @api_view(['GET', 'POST', 'DELETE'])
+@permission_classes([IsAdminOrReadOnly])
 def week_list(request):
     """
     GET list of game weeks, POST a new date, DELETE all games
@@ -162,6 +171,7 @@ def week_list(request):
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([AllowAny])
 def week_detail(request, date):
     """
     GET / PUT / DELETE games
@@ -196,10 +206,11 @@ def week_detail(request, date):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def games_unscored(request):
     """
     GET unscored games
-    find unscored games 
+    find unscored games
     """
     gameseason = get_season()
 
@@ -215,6 +226,7 @@ def games_unscored(request):
 
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAdminOrReadOnly])
 def game_picks_week_all(request, game_season, game_week):
     """
     GET user picks
@@ -232,6 +244,7 @@ def game_picks_week_all(request, game_season, game_week):
 
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAdminOrReadOnly])
 def game_picks(request, pick_game_id):
     """
     GET user picks
@@ -257,6 +270,7 @@ def game_picks(request, pick_game_id):
 
 
 @api_view(['GET', 'PATCH'])
+@permission_classes([IsAdminOrReadOnly])
 def user_picks(request, pick_id):
     """
     GET user picks
@@ -284,6 +298,7 @@ def user_picks(request, pick_id):
 
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAdminOrReadOnly])
 def get_teams(request):
     """
     GET team names
@@ -305,6 +320,7 @@ def get_teams(request):
 
 
 @api_view(['GET', 'POST', 'PATCH'])
+@permission_classes([IsAdminOrReadOnly])
 def get_teams_detail(request, team_id):
     """
     GET team names by ID
@@ -339,6 +355,7 @@ def get_teams_detail(request, team_id):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_active_games(request):
     """
     GET active games (bool)
@@ -362,6 +379,7 @@ def get_active_games(request):
 
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAdminOrReadOnly])
 def user_points_all(request):
     """
     GET user season points
@@ -388,10 +406,10 @@ def user_points_all(request):
 
 
 @api_view(['DELETE'])
+@permission_classes([IsAdminUser])
 def delete_user_record(request, game_season, id):
     """
-    GET user season points
-    Find user points for a given year
+    DELETE user season points record
     """
     if request.method == 'DELETE':
         cleanup = userSeasonPoints.objects.get(userID=id, gameseason=game_season).delete()
@@ -399,6 +417,7 @@ def delete_user_record(request, game_season, id):
     
 
 @api_view(['GET', 'POST', 'PATCH'])
+@permission_classes([IsAdminOrReadOnly])
 def user_points(request, game_season, id):
     """
     GET user season points
@@ -439,6 +458,7 @@ def user_points(request, game_season, id):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def correct_user_picks(request, game_season, game_week, uid):
     """
     GET user season points

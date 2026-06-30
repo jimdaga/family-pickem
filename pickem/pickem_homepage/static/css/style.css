@@ -1321,13 +1321,14 @@ tr.spaceUnder>td {
 }
 
 /* Section Containers */
-.section-container {
+/* MIGRATED TO TAILWIND - See input.css */
+/*.section-container {
     background: #f8f9fa;
     border-radius: 15px;
     padding: 1rem;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
     border: 1px solid #dee2e6;
-}
+}*/
 
 .section-header {
     margin-bottom: 1rem;
@@ -3655,7 +3656,7 @@ body:has(.site-banner) .homepage-main-container {
     
     .game-score-card {
         margin-bottom: 0;
-        border-radius: 0;
+        /* border-radius: 0; */ /* COMMENTED OUT - Using Tailwind rounded classes now */
         border-left: none;
         border-right: none;
         box-shadow: none;
@@ -3666,36 +3667,37 @@ body:has(.site-banner) .homepage-main-container {
         border-bottom: none;
     }
     
-    .section-container {
+    /* MIGRATED TO TAILWIND - See input.css */
+    /*.section-container {
         border-radius: 0;
         margin-bottom: 0;
         border-left: none;
         border-right: none;
         box-shadow: none;
-    }
+    }*/
     
     .teams-matchup {
-        padding: 1rem;
+        padding: 0.75rem; /* Reduced for more compact mobile cards */
         background: white;
         margin: 0;
     }
-    
+
     .team-score-row {
         margin: 0 -1.5rem;
-        padding: 1rem;
+        padding: 0.75rem; /* Reduced for more compact mobile cards */
     }
     
     .team-score-row:first-child,
     .team-score-row:last-child,
     .team-score-row:only-child {
-        border-radius: 0;
+        /* border-radius: 0; */ /* COMMENTED OUT - Using Tailwind rounded classes now */
     }
     
     .picks-section,
     .user-pick-section,
     .missing-picks-section {
         margin: 0;
-        padding: 0.75rem 1rem;
+        padding: 0.5rem 1rem; /* Reduced vertical padding for mobile */
     }
     
     .team-picks-group {
@@ -4607,7 +4609,7 @@ body:has(.site-banner) .homepage-main-container {
     background: #f8f9fa;
     border: 3px solid #e9ecef;
     border-radius: 15px;
-    padding: 1rem;
+    padding: 0;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -4615,8 +4617,8 @@ body:has(.site-banner) .homepage-main-container {
     min-height: 150px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    justify-content: flex-start;
+    align-items: stretch;
     width: 100%;
 }
 
@@ -5110,32 +5112,25 @@ body:has(.site-banner) .homepage-main-container {
 
 .team-option-edit {
     flex: 1;
-    background: #f8f9fa;
-    border: 3px solid #e9ecef;
-    border-radius: 15px;
-    padding: 1.5rem 1rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75rem;
-    max-width: 200px;
 }
 
 .team-option-edit:hover {
-    border-color: #007bff;
-    background: #e3f2fd;
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0,123,255,0.2);
 }
 
 .team-option-edit.selected {
     border-color: #28a745 !important;
-    background: linear-gradient(135deg, #d4edda, #c3e6cb) !important;
     box-shadow: 0 5px 20px rgba(40,167,69,0.3) !important;
+}
+
+.team-option-edit.selected .selection-indicator {
+    opacity: 1 !important;
+    background: #28a745 !important;
 }
 
 .team-logo-edit {
@@ -5151,24 +5146,7 @@ body:has(.site-banner) .homepage-main-container {
     text-align: center;
 }
 
-.team-option-edit .selection-indicator {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #28a745;
-    color: white;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-}
-
-.team-option-edit.selected .selection-indicator {
-    display: flex;
-}
+/* Selection indicator styles handled by Tailwind classes in template */
 
 .vs-divider-edit {
     color: #6c757d;
@@ -5246,7 +5224,7 @@ body:has(.site-banner) .homepage-main-container {
     
     .team-option {
         min-height: 100px;
-        padding: 1rem;
+        padding: 0;
     }
     
     .team-logo {
@@ -5304,7 +5282,7 @@ body:has(.site-banner) .homepage-main-container {
     
     .team-option {
         min-height: 80px;
-        padding: 0.75rem;
+        padding: 0;
     }
     
     .team-logo {
@@ -5434,10 +5412,11 @@ body:has(.site-banner) .homepage-main-container {
         margin-bottom: 1rem;
     }
     
-    .section-container {
+    /* MIGRATED TO TAILWIND - See input.css */
+    /*.section-container {
         padding: 1rem;
         margin-bottom: 1rem;
-    }
+    }*/
     
     .week-winners-grid {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

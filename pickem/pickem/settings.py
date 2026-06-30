@@ -30,7 +30,7 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL='https'
 DEBUG='True'
 
 # Allowed Host(s)
-ALLOWED_HOSTS = ['localhost']
+ALLOWED_HOSTS = ['localhost', 'corticolous-unarbitrarily-noel.ngrok-free.dev']
 
 if 'DJANGO_ALLOWED_HOSTS' in os.environ:
     django_allowed_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS')
@@ -50,7 +50,7 @@ if 'RDS_DB_NAME' in os.environ:
         pass
 
 # CSRF Origins 
-CSRF_TRUSTED_ORIGINS = ['https://*.localhost']
+CSRF_TRUSTED_ORIGINS = ['https://*.localhost', 'https://*.corticolous-unarbitrarily-noel.ngrok-free.dev']
 
 if 'CSRF_TRUSTED_ORIGINS' in os.environ:
     CSRF_TRUSTED_ORIGINS.append(os.environ["CSRF_TRUSTED_ORIGINS"])
@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'bootstrap5',
     # 'django_ratelimit',  # Disabled for now - enable later when ready
     'allauth',
@@ -129,6 +130,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'pickem.context_processors.theme_context',
                 'pickem.context_processors.site_banner_context',
+                'pickem.context_processors.footer_stats_context',
             ],
         },
     },
@@ -244,8 +246,15 @@ STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
 
 
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10
+    'PAGE_SIZE': 10,
 }
 
 CORS_ORIGIN_ALLOW_ALL = False

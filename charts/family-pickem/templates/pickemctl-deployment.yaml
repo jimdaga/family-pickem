@@ -1,0 +1,55 @@
+{{- if .Values.pickemctl.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "family-pickem.fullname" . }}-pickemctl
+  labels:
+    {{- include "family-pickem.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pickemctl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "family-pickem.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: pickemctl
+  template:
+    metadata:
+      labels:
+        {{- include "family-pickem.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: pickemctl
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "family-pickem.serviceAccountName" . }}
+      containers:
+        - name: pickemctl
+          image: "{{ .Values.pickemctl.image.repository }}:{{ .Values.pickemctl.image.tag }}"
+          imagePullPolicy: {{ .Values.pickemctl.image.pullPolicy | default "IfNotPresent" }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+              readOnly: true
+          {{- with .Values.pickemctl.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ include "family-pickem.fullname" . }}-pickemctl
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

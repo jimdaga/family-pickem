@@ -4,6 +4,20 @@ import requests
 import json
 from datetime import datetime
 from datetime import date
+import argparse
+
+parser = argparse.ArgumentParser(description='Add User Standings')
+parser.add_argument("--url", default="localhost:8000", help="Specify the API url.")
+parser.add_argument("--token", help="API authentication token.")
+args, leftovers = parser.parse_known_args()
+
+
+def get_api_headers():
+    """Build common headers for API requests, including auth token if provided."""
+    headers = {"Content-Type": "application/json"}
+    if args.token:
+        headers["Authorization"] = "Token {}".format(args.token)
+    return headers
 
 
 def unique_list(list):
@@ -23,17 +37,13 @@ def get_pick_user_ids(game_year, game_week):
     """
     Get a list of all ID's that have made picks
     """
-    url = "http://localhost:8000/api/userpickids/{}/{}".format(
-        game_year, game_week)
-
-    headers = {
-        "Content-Type": "application/json",
-    }
+    url = "http://{}/api/userpickids/{}/{}".format(
+        args.url, game_year, game_week)
 
     id_list = []
 
     try:
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=get_api_headers())
         json_response = json.loads(response.text)
 
         for pick in json_response:
@@ -50,18 +60,14 @@ def get_user_info(game_year, game_week, uid):
     """
     Get user email/userid
     """
-    url = "http://localhost:8000/api/userpicks/{}/{}/{}".format(
-        game_year, game_week, uid)
-
-    headers = {
-        "Content-Type": "application/json",
-    }
+    url = "http://{}/api/userpicks/{}/{}/{}".format(
+        args.url, game_year, game_week, uid)
 
     email_list = []
     userid_list = []
 
     try:
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=get_api_headers())
         json_response = json.loads(response.text)
 
         for pick in json_response:
@@ -80,13 +86,9 @@ def get_game_week(game_date):
     Check week number for a date
     """
     try:
-        url = "http://localhost:8000/api/weeks/{}".format(game_date)
+        url = "http://{}/api/weeks/{}".format(args.url, game_date)
 
-        headers = {
-            "Content-Type": "application/json",
-        }
-
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=get_api_headers())
         json_response = json.loads(response.text)
         return json_response['weekNumber']
     except:
@@ -95,13 +97,11 @@ def get_game_week(game_date):
 
 def post_entry(game_year, game_week, uid):
     """
-    Create a user record 
+    Create a user record
     """
-    url = "http://localhost:8000/api/userpoints/add"
+    url = "http://{}/api/userpoints/add".format(args.url)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
+    headers = get_api_headers()
 
     user_email, user_id = get_user_info(game_year, game_week, uid)
 
@@ -131,15 +131,11 @@ def post_entry(game_year, game_week, uid):
 
 def add_user_record(game_year, game_week, uid):
     """
-    Check if a user has a entry 
+    Check if a user has a entry
     """
-    url = "http://localhost:8000/api/userpoints/{}/{}".format(game_year, uid)
+    url = "http://{}/api/userpoints/{}/{}".format(args.url, game_year, uid)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
-
-    response = requests.request("GET", url, headers=headers)
+    response = requests.request("GET", url, headers=get_api_headers())
     json_response = json.loads(response.text)
 
     if len(json_response) > 1:

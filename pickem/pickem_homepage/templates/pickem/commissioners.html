@@ -4,527 +4,512 @@
 
 {% block title %}Commissioners Dashboard - Family Pickem{% endblock %}
 
-{% block mobile_title %}Commissioners{% endblock %}
+{% block mobile_title %}
+    <div class="mobile-subtitle">
+        <i class="fas fa-shield-alt mr-2"></i>Commissioners
+    </div>
+{% endblock %}
 
 {% block content %}
-<div class="container commissioners-main-container">
-    
-    <!-- Page Header -->
-    <div class="page-header-section text-center mb-5">
-        <div class="row">
-            <div class="col-12">
-                <div class="page-header-content">
-                    <h1 class="page-title">Commissioners Dashboard</h1>
-                    <p class="page-subtitle">Classified operations center - authorized personnel only</p>
+    <!-- Hero Section -->
+    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-2 border-yellow-500 dark:border-yellow-600 shadow-xl rounded-2xl">
+        <!-- Subtle background pattern -->
+        <div class="absolute inset-0 opacity-20 dark:opacity-5 pointer-events-none"></div>
 
-                    <img src="{% static 'images/comish.png' %}" alt="Commissioner's Badge" class="page-header-icon commissioner-badge">
-                    {% if user.is_authenticated %}
-                        <div class="welcome-section mb-4">
-                            <h2 class="welcome-message">
-                                Welcome, Agent {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
-                            </h2>
-                            <p class="mission-brief">
-                                Your mission: Command the league with precision and authority. 
-                                The fate of weekly standings rests in your capable hands.
-                            </p>
-                        </div>
-                    {% endif %}
-                </div>
+        <!-- Content -->
+        <div class="relative z-10">
+            <!-- Commissioner Badge -->
+            <img src="{% static 'images/comish.png' %}" alt="Commissioner's Badge" class="w-48 h-48 lg:w-64 lg:h-64 mx-auto mb-4 drop-shadow-lg opacity-95">
+
+            <!-- Title -->
+            <h1 class="text-3xl lg:text-5xl font-black tracking-tight mb-2"
+                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
+                Commissioners Dashboard
+            </h1>
+
+            <!-- Subtitle -->
+            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium mb-4">
+                Classified operations center - authorized personnel only
+            </p>
+
+            <!-- Welcome Message -->
+            {% if user.is_authenticated %}
+            <div class="mt-6">
+                <h2 class="text-2xl lg:text-3xl font-bold text-primary dark:text-blue-400 mb-2">
+                    Welcome, Agent {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
+                </h2>
+                <p class="text-sm lg:text-base text-white/90 dark:text-text-secondary italic">
+                    Your mission: Command the league with precision and authority.
+                    The fate of weekly standings rests in your capable hands.
+                </p>
             </div>
+            {% endif %}
         </div>
     </div>
 
+<div class="max-w-7xl mx-auto px-6 py-6">
     <!-- Alert Messages -->
     {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-                <i class="fas fa-{{ message.tags|default:'info'|message_icon }} me-2"></i>
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
+        <div class="mb-6 space-y-3">
+            {% for message in messages %}
+                <div class="relative px-4 py-3 rounded-xl border {% if message.tags == 'success' %}bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200{% elif message.tags == 'error' or message.tags == 'danger' %}bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200{% elif message.tags == 'warning' %}bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200{% else %}bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200{% endif %}" role="alert">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                        <span class="flex-1">{{ message }}</span>
+                        <button type="button" class="text-current opacity-50 hover:opacity-100 transition-opacity" onclick="this.closest('[role=alert]').remove()" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
     {% endif %}
 
     <!-- Main Dashboard Grid -->
-    <div class="row g-4">
-        
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
         <!-- Week Winner Selection -->
-        <div class="col-12 col-lg-6">
-            <div class="card commissioner-card h-100">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-trophy me-2"></i>
-                        Winner Selection: Week {{ current_week }}
-                    </h3>
-                </div>
-                <div class="card-body">
-                    {% if current_week_winner %}
-                        <div class="alert alert-success" role="alert">
-                            <i class="fas fa-check-circle me-2"></i>
-                            <strong>Week {{ current_week }} Winner Already Set:</strong>
-                            {% with current_week_winner.userID|safe_username as winner_name %}
-                                {{ winner_name }}
-                            {% endwith %}
+        <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden hover:shadow-lg transition-all">
+            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800 border-b border-border-light dark:border-border-subtle">
+                <h3 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
+                    <i class="fas fa-trophy text-primary"></i>
+                    Winner Selection: Week {{ current_week }}
+                </h3>
+            </div>
+            <div class="p-6">
+                {% if current_week_winner %}
+                    <div class="px-4 py-3 rounded-xl border bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200" role="alert">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        <strong>Week {{ current_week }} Winner Already Set:</strong>
+                        {% with current_week_winner.userID|safe_username as winner_name %}
+                            {{ winner_name }}
+                        {% endwith %}
+                    </div>
+                {% elif week_candidates %}
+                    <p class="text-text-secondary-light dark:text-text-secondary mb-4">
+                        Select the winner for Week {{ current_week }}. They will receive 2 bonus points.
+                    </p>
+
+                    <!-- Candidates Table -->
+                    <div class="mb-4">
+                        <h5 class="mb-3 font-semibold text-text-dark dark:text-white">Top Performers for Week {{ current_week }}:</h5>
+                        <div class="overflow-x-auto rounded-xl shadow-md">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="bg-primary text-white">
+                                        <th class="px-4 py-3 text-left font-semibold">Player</th>
+                                        <th class="px-4 py-3 text-left font-semibold">Correct Picks</th>
+                                        <th class="px-4 py-3 text-left font-semibold">Tiebreaker</th>
+                                        <th class="px-4 py-3 text-left font-semibold">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-surface divide-y divide-border-light dark:divide-border-subtle">
+                                    {% for candidate in week_candidates %}
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-surface-hover transition-colors">
+                                            <td class="px-4 py-3">
+                                                {% with candidate.uid|lookupname as player_name %}
+                                                    <strong class="text-text-dark dark:text-white">{{ player_name }}</strong>
+                                                {% endwith %}
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <span class="inline-block px-2 py-1 bg-primary text-white rounded-md text-sm font-semibold">{{ candidate.wins }}</span>
+                                            </td>
+                                            <td class="px-4 py-3 text-text-dark dark:text-white">
+                                                {% if candidate.tiebreaker_score %}
+                                                    {{ candidate.tiebreaker_score }} pts
+                                                    {% if candidate.tiebreaker_yards %}
+                                                        , {{ candidate.tiebreaker_yards }} yds
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-text-secondary-light dark:text-text-secondary">None</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <button type="button"
+                                                        class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-md flex items-center gap-1 set-winner-btn"
+                                                        data-uid="{{ candidate.uid }}"
+                                                        data-week="{{ current_week }}"
+                                                        data-gameseason="{{ gameseason }}"
+                                                        data-username="{% with candidate.uid|lookupname as player_name %}{{ player_name }}{% endwith %}">
+                                                    <i class="fas fa-crown"></i>
+                                                    Set Winner
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                    {% elif week_candidates %}
-                        <div class="week-winner-section">
-                            <p class="section-description">
-                                Select the winner for Week {{ current_week }}. They will receive 2 bonus points.
-                            </p>
-                            
-                            <!-- Candidates Table -->
-                            <div class="candidates-table-container mb-4">
-                                <h5 class="mb-3">Top Performers for Week {{ current_week }}:</h5>
-                                <div class="table-responsive">
-                                    <table class="table table-striped candidates-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Player</th>
-                                                <th>Correct Picks</th>
-                                                <th>Tiebreaker</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for candidate in week_candidates %}
-                                                <tr>
-                                                    <td>
-                                                        {% with candidate.uid|lookupname as player_name %}
-                                                            <strong>{{ player_name }}</strong>
-                                                        {% endwith %}
-                                                    </td>
-                                                    <td>
-                                                        <span class="badge bg-primary">{{ candidate.wins }}</span>
-                                                    </td>
-                                                    <td>
-                                                        {% if candidate.tiebreaker_score %}
-                                                            {{ candidate.tiebreaker_score }} pts
-                                                            {% if candidate.tiebreaker_yards %}
-                                                                , {{ candidate.tiebreaker_yards }} yds
-                                                            {% endif %}
-                                                        {% else %}
-                                                            <span class="text-muted">None</span>
-                                                        {% endif %}
-                                                    </td>
-                                                    <td>
-                                                        <button type="button" 
-                                                                class="btn btn-success btn-sm set-winner-btn"
-                                                                data-uid="{{ candidate.uid }}"
-                                                                data-week="{{ current_week }}"
-                                                                data-gameseason="{{ gameseason }}"
-                                                                data-username="{% with candidate.uid|lookupname as player_name %}{{ player_name }}{% endwith %}">
-                                                            <i class="fas fa-crown me-1"></i>
-                                                            Set Winner
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    {% else %}
-                        <div class="alert alert-info" role="alert">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No candidates available for Week {{ current_week }}. Games may not be completed yet.
-                        </div>
-                    {% endif %}
-                </div>
+                    </div>
+                {% else %}
+                    <div class="px-4 py-3 rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200" role="alert">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        No candidates available for Week {{ current_week }}. Games may not be completed yet.
+                    </div>
+                {% endif %}
             </div>
         </div>
 
         <!-- Banner Management -->
-        <div class="col-12 col-lg-6">
-            <div class="card commissioner-card h-100">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-bullhorn me-2"></i>
-                        Site Banner Management
-                    </h3>
-                </div>
-                <div class="card-body">
-                    
-                    <!-- Current Banner Status -->
-                    {% if active_banner %}
-                        <div class="current-banner-section mb-4">
-                            <h5 class="mb-3">Current Active Banner:</h5>
-                            <div class="alert alert-{{ active_banner.banner_type }} d-flex align-items-center" role="alert">
-                                <i class="{{ active_banner.icon }} me-2"></i>
-                                <div class="flex-grow-1">
-                                    <strong>{{ active_banner.title }}</strong>
-                                    {% if active_banner.description %}
-                                        <br><small>{{ active_banner.description }}</small>
-                                    {% endif %}
-                                </div>
+        <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden hover:shadow-lg transition-all">
+            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800 border-b border-border-light dark:border-border-subtle">
+                <h3 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
+                    <i class="fas fa-bullhorn text-primary"></i>
+                    Site Banner Management
+                </h3>
+            </div>
+            <div class="p-6">
+
+                <!-- Current Banner Status -->
+                {% if active_banner %}
+                    <div class="mb-4">
+                        <h5 class="mb-3 font-semibold text-text-dark dark:text-white">Current Active Banner:</h5>
+                        <div class="flex items-center gap-2 px-4 py-3 rounded-xl border {% if active_banner.banner_type == 'success' %}bg-green-600 border-green-700{% elif active_banner.banner_type == 'danger' %}bg-red-600 border-red-700{% elif active_banner.banner_type == 'warning' %}bg-yellow-600 border-yellow-700{% else %}bg-blue-600 border-blue-700{% endif %} text-white" role="alert">
+                            <i class="{{ active_banner.icon }}"></i>
+                            <div class="flex-1">
+                                <strong>{{ active_banner.title }}</strong>
+                                {% if active_banner.description %}
+                                    <br><small class="opacity-90">{{ active_banner.description }}</small>
+                                {% endif %}
                             </div>
-                            <div class="banner-actions mb-3">
-                                <button type="button" class="btn btn-secondary btn-sm" id="edit-banner-btn">
-                                    <i class="fas fa-edit me-1"></i>
-                                    Edit Banner
+                        </div>
+                        <div class="flex gap-2 mt-3">
+                            <button type="button" class="px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-1" id="edit-banner-btn">
+                                <i class="fas fa-edit"></i>
+                                Edit Banner
+                            </button>
+                            <form method="post" action="{% url 'deactivate_banner' %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="px-3 py-1.5 border-2 border-gray-400 dark:border-gray-500 text-text-dark dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1"
+                                        onclick="return confirm('Are you sure you want to deactivate the current banner?')">
+                                    <i class="fas fa-times"></i>
+                                    Deactivate
                                 </button>
-                                <form method="post" action="{% url 'deactivate_banner' %}" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-secondary btn-sm" 
-                                            onclick="return confirm('Are you sure you want to deactivate the current banner?')">
-                                        <i class="fas fa-times me-1"></i>
-                                        Deactivate
-                                    </button>
-                                </form>
+                            </form>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="px-4 py-3 rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 mb-4" role="alert">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        No active banner currently displayed.
+                    </div>
+                {% endif %}
+
+                <!-- Banner Form -->
+                <div id="banner-form-section" {% if not banner_form.errors and active_banner %}class="hidden"{% endif %}>
+                    <h5 class="mb-3 font-semibold text-text-dark dark:text-white">
+                        {% if active_banner %}Edit Banner{% else %}Create New Banner{% endif %}
+                    </h5>
+
+                    <form method="post" action="{% url 'manage_banner' %}" id="banner-form">
+                        {% csrf_token %}
+                        {% if active_banner %}
+                            <input type="hidden" name="banner_id" value="{{ active_banner.id }}">
+                        {% endif %}
+
+                        <div class="space-y-4">
+                            <!-- Title -->
+                            <div>
+                                <label for="{{ banner_form.title.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
+                                    {{ banner_form.title.label }}
+                                </label>
+                                {{ banner_form.title }}
+                                {% if banner_form.title.help_text %}
+                                    <small class="block mt-1 text-xs text-text-secondary-light dark:text-text-secondary">{{ banner_form.title.help_text }}</small>
+                                {% endif %}
+                                {% if banner_form.title.errors %}
+                                    <div class="mt-1 text-sm text-red-600 dark:text-red-400">
+                                        {{ banner_form.title.errors.0 }}
+                                    </div>
+                                {% endif %}
                             </div>
-                        </div>
-                    {% else %}
-                        <div class="alert alert-info mb-4" role="alert">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No active banner currently displayed.
-                        </div>
-                    {% endif %}
 
-                    <!-- Banner Form -->
-                    <div class="banner-form-section" id="banner-form-section" {% if not banner_form.errors and active_banner %}style="display: none;"{% endif %}>
-                        <h5 class="mb-3">
-                            {% if active_banner %}Edit Banner{% else %}Create New Banner{% endif %}
-                        </h5>
-                        
-                        <form method="post" action="{% url 'manage_banner' %}" id="banner-form">
-                            {% csrf_token %}
-                            {% if active_banner %}
-                                <input type="hidden" name="banner_id" value="{{ active_banner.id }}">
-                            {% endif %}
-                            
-                            <div class="row g-3">
-                                <!-- Title -->
-                                <div class="col-12">
-                                    <label for="{{ banner_form.title.id_for_label }}" class="form-label">
-                                        {{ banner_form.title.label }}
-                                    </label>
-                                    {{ banner_form.title }}
-                                    {% if banner_form.title.help_text %}
-                                        <small class="form-text text-muted">{{ banner_form.title.help_text }}</small>
-                                    {% endif %}
-                                    {% if banner_form.title.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {{ banner_form.title.errors.0 }}
-                                        </div>
-                                    {% endif %}
-                                </div>
+                            <!-- Description -->
+                            <div>
+                                <label for="{{ banner_form.description.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
+                                    {{ banner_form.description.label }}
+                                </label>
+                                {{ banner_form.description }}
+                                {% if banner_form.description.help_text %}
+                                    <small class="block mt-1 text-xs text-text-secondary-light dark:text-text-secondary">{{ banner_form.description.help_text }}</small>
+                                {% endif %}
+                            </div>
 
-                                <!-- Description -->
-                                <div class="col-12">
-                                    <label for="{{ banner_form.description.id_for_label }}" class="form-label">
-                                        {{ banner_form.description.label }}
-                                    </label>
-                                    {{ banner_form.description }}
-                                    {% if banner_form.description.help_text %}
-                                        <small class="form-text text-muted">{{ banner_form.description.help_text }}</small>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Banner Type and Icon -->
-                                <div class="col-md-6">
-                                    <label for="{{ banner_form.banner_type.id_for_label }}" class="form-label">
+                            <!-- Banner Type and Icon -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="{{ banner_form.banner_type.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
                                         {{ banner_form.banner_type.label }}
                                     </label>
                                     {{ banner_form.banner_type }}
                                 </div>
-                                <div class="col-md-6">
-                                    <label for="{{ banner_form.icon.id_for_label }}" class="form-label">
+                                <div>
+                                    <label for="{{ banner_form.icon.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
                                         {{ banner_form.icon.label }}
                                     </label>
                                     {{ banner_form.icon }}
                                     {% if banner_form.icon.help_text %}
-                                        <small class="form-text text-muted">{{ banner_form.icon.help_text }}</small>
+                                        <small class="block mt-1 text-xs text-text-secondary-light dark:text-text-secondary">{{ banner_form.icon.help_text }}</small>
                                     {% endif %}
                                 </div>
+                            </div>
 
-                                <!-- Dates -->
-                                <div class="col-md-6">
-                                    <label for="{{ banner_form.start_date.id_for_label }}" class="form-label">
+                            <!-- Dates -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="{{ banner_form.start_date.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
                                         {{ banner_form.start_date.label }}
                                     </label>
                                     {{ banner_form.start_date }}
                                 </div>
-                                <div class="col-md-6">
-                                    <label for="{{ banner_form.end_date.id_for_label }}" class="form-label">
+                                <div>
+                                    <label for="{{ banner_form.end_date.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
                                         {{ banner_form.end_date.label }}
                                     </label>
                                     {{ banner_form.end_date }}
                                 </div>
+                            </div>
 
-                                <!-- Options -->
-                                <div class="col-md-6">
-                                    <label for="{{ banner_form.priority.id_for_label }}" class="form-label">
+                            <!-- Options -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="{{ banner_form.priority.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
                                         {{ banner_form.priority.label }}
                                     </label>
                                     {{ banner_form.priority }}
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-check mt-4">
+                                <div class="flex items-center pt-8">
+                                    <label class="flex items-center gap-2 cursor-pointer">
                                         {{ banner_form.show_close_button }}
-                                        <label class="form-check-label" for="{{ banner_form.show_close_button.id_for_label }}">
-                                            {{ banner_form.show_close_button.label }}
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Submit Button -->
-                                <div class="col-12">
-                                    <div class="d-flex gap-2">
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="fas fa-save me-1"></i>
-                                            {% if active_banner %}Update Banner{% else %}Create Banner{% endif %}
-                                        </button>
-                                        {% if active_banner %}
-                                            <button type="button" class="btn btn-secondary" id="cancel-edit-btn">
-                                                <i class="fas fa-times me-1"></i>
-                                                Cancel
-                                            </button>
-                                        {% endif %}
-                                    </div>
+                                        <span class="text-sm font-medium text-text-dark dark:text-white">{{ banner_form.show_close_button.label }}</span>
+                                    </label>
                                 </div>
                             </div>
-                        </form>
-                    </div>
+
+                            <!-- Submit Button -->
+                            <div class="flex gap-2 pt-2">
+                                <button type="submit" class="px-6 py-2.5 bg-primary hover:bg-primary/80 text-white rounded-lg font-semibold transition-colors flex items-center gap-2">
+                                    <i class="fas fa-save"></i>
+                                    {% if active_banner %}Update Banner{% else %}Create Banner{% endif %}
+                                </button>
+                                {% if active_banner %}
+                                    <button type="button" class="px-6 py-2.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors flex items-center gap-2" id="cancel-edit-btn">
+                                        <i class="fas fa-times"></i>
+                                        Cancel
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
 
         <!-- Manual Pick Submission -->
-        <div class="col-12">
-            <div class="card commissioner-card">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-user-edit me-2"></i>
-                        Manual Pick Submission
-                    </h3>
+        <div class="lg:col-span-2 bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden">
+            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800 border-b border-border-light dark:border-border-subtle">
+                <h3 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
+                    <i class="fas fa-user-edit text-primary"></i>
+                    Manual Pick Submission
+                </h3>
+            </div>
+            <div class="p-6">
+                <p class="text-text-secondary-light dark:text-text-secondary mb-6">
+                    Submit picks on behalf of users who missed the deadline or can't get online.
+                    Commissioners can submit picks even for locked games.
+                </p>
+
+                <!-- User Selection -->
+                <div class="mb-4">
+                    <label for="userSelect" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
+                        <i class="fas fa-user mr-1"></i>
+                        Select User:
+                    </label>
+                    <select id="userSelect" class="w-full px-4 py-2.5 bg-white dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                        <option value="">Choose a user...</option>
+                        {% for user in active_users %}
+                            <option value="{{ user.id }}" data-username="{{ user.username }}" data-email="{{ user.email }}">
+                                {{ user.username }}
+                                {% if user.first_name or user.last_name %}
+                                    ({{ user.first_name }} {{ user.last_name }})
+                                {% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
-                <div class="card-body">
-                    <div class="manual-picks-section">
-                        <p class="section-description">
-                            Submit picks on behalf of users who missed the deadline or can't get online. 
-                            Commissioners can submit picks even for locked games.
-                        </p>
-                        
-                        <!-- User Selection -->
-                        <div class="user-selection-section mb-4">
-                            <label for="userSelect" class="form-label">
-                                <i class="fas fa-user me-1"></i>
-                                Select User:
-                            </label>
-                            <select id="userSelect" class="form-select">
-                                <option value="">Choose a user...</option>
-                                {% for user in active_users %}
-                                    <option value="{{ user.id }}" data-username="{{ user.username }}" data-email="{{ user.email }}">
-                                        {{ user.username }}
-                                        {% if user.first_name or user.last_name %}
-                                            ({{ user.first_name }} {{ user.last_name }})
-                                        {% endif %}
-                                    </option>
-                                {% endfor %}
-                            </select>
+
+                <!-- Current User Info -->
+                <div id="currentUserInfo" class="hidden mb-4">
+                    <div class="px-4 py-3 rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong>Submitting picks for:</strong> <span id="selectedUserName"></span>
+                        <br><small>Week {{ current_week }} - {{ current_competition|title }}</small>
+                    </div>
+                </div>
+
+                <!-- Games List -->
+                <div id="gamesList" class="hidden">
+                    <h5 class="mb-3 font-semibold text-text-dark dark:text-white">Week {{ current_week }} Games:</h5>
+
+                    {% if current_week_games %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            {% for game in current_week_games %}
+                            <div class="manual-game-card border border-border-light dark:border-border-subtle rounded-xl p-4 bg-white dark:bg-surface hover:shadow-md transition-shadow" data-game-id="{{ game.id }}">
+                                <div class="flex justify-between items-center mb-3 pb-2 border-b border-border-light dark:border-border-subtle">
+                                    <div class="text-sm font-medium text-text-secondary-light dark:text-text-secondary">
+                                        {{ game.startTimestamp|date:"M d @ g:i A" }}
+                                    </div>
+                                    {% if game.statusType != 'notstarted' %}
+                                    <div class="text-xs text-yellow-600 dark:text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded">
+                                        <i class="fas fa-lock mr-1"></i>
+                                        Started
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="flex items-center gap-3 mb-3">
+                                    <!-- Away Team -->
+                                    <div class="team-option-manual flex-1 flex items-center gap-2 p-3 border-2 border-border-light dark:border-border-subtle rounded-lg cursor-pointer hover:border-primary dark:hover:border-primary transition-all relative" data-team="{{ game.awayTeamSlug }}" data-team-name="{{ game.awayTeamName }}">
+                                        <div class="flex items-center gap-2 flex-1">
+                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                 alt="{{ game.awayTeamName }} logo"
+                                                 class="w-8 h-8 object-contain">
+                                            {% endwith %}
+                                            <div class="flex-1">
+                                                <div class="text-sm font-semibold text-text-dark dark:text-white leading-tight">{{ game.awayTeamName }}</div>
+                                                <div class="text-xs text-text-secondary-light dark:text-text-secondary">
+                                                    {% for team in team_records %}
+                                                        {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                            {% if team.teamTies > 0 %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                            {% else %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="pick-indicator-manual absolute -top-2 -right-2 w-5 h-5 bg-green-600 text-white rounded-full hidden items-center justify-center text-xs">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary">@</div>
+
+                                    <!-- Home Team -->
+                                    <div class="team-option-manual flex-1 flex items-center gap-2 p-3 border-2 border-border-light dark:border-border-subtle rounded-lg cursor-pointer hover:border-primary dark:hover:border-primary transition-all relative" data-team="{{ game.homeTeamSlug }}" data-team-name="{{ game.homeTeamName }}">
+                                        <div class="flex items-center gap-2 flex-1">
+                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                 alt="{{ game.homeTeamName }} logo"
+                                                 class="w-8 h-8 object-contain">
+                                            {% endwith %}
+                                            <div class="flex-1">
+                                                <div class="text-sm font-semibold text-text-dark dark:text-white leading-tight">{{ game.homeTeamName }}</div>
+                                                <div class="text-xs text-text-secondary-light dark:text-text-secondary">
+                                                    {% for team in team_records %}
+                                                        {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                            {% if team.teamTies > 0 %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
+                                                            {% else %}
+                                                                ({{ team.teamWins }}-{{ team.teamLosses }})
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="pick-indicator-manual absolute -top-2 -right-2 w-5 h-5 bg-green-600 text-white rounded-full hidden items-center justify-center text-xs">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tiebreaker Section -->
+                                {% if game.tieBreakerGame %}
+                                <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 mb-3">
+                                    <div class="text-sm font-semibold text-primary mb-2 flex items-center gap-1">
+                                        <i class="fas fa-balance-scale"></i>
+                                        Tiebreakers Required
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-text-dark dark:text-white mb-1">Total Points:</label>
+                                            <input type="number"
+                                                   class="w-full px-3 py-1.5 text-sm bg-white dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary tiebreaker-score"
+                                                   placeholder="e.g. 45"
+                                                   min="0"
+                                                   max="200">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-text-dark dark:text-white mb-1">Total Yards:</label>
+                                            <input type="number"
+                                                   class="w-full px-3 py-1.5 text-sm bg-white dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary tiebreaker-yards"
+                                                   placeholder="e.g. 750"
+                                                   min="0"
+                                                   max="2000">
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Pick Status -->
+                                <div class="text-center text-xs mt-2">
+                                    <span class="no-pick-indicator text-text-secondary-light dark:text-text-secondary">No pick selected</span>
+                                    <span class="pick-saved-indicator text-green-600 dark:text-green-400 font-medium hidden">
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                        Pick saved
+                                    </span>
+                                </div>
+
+                                <!-- Hidden data -->
+                                <input type="hidden" class="game-slug" value="{{ game.slug }}">
+                                <input type="hidden" class="game-competition" value="{{ game.competition }}">
+                                <input type="hidden" class="game-week" value="{{ game.gameWeek }}">
+                                <input type="hidden" class="game-year" value="{{ game.gameyear }}">
+                                <input type="hidden" class="game-season" value="{{ game.gameseason }}">
+                                <input type="hidden" class="is-tiebreaker" value="{{ game.tieBreakerGame|yesno:'true,false' }}">
+                            </div>
+                            {% endfor %}
                         </div>
 
-                        <!-- Current User Info -->
-                        <div id="currentUserInfo" class="current-user-info mb-4" style="display: none;">
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                <strong>Submitting picks for:</strong> <span id="selectedUserName"></span>
-                                <br><small>Week {{ current_week }} - {{ current_competition|title }}</small>
+                        <!-- Submit All Button -->
+                        <div class="flex items-center gap-3 pt-4 border-t border-border-light dark:border-border-subtle">
+                            <button type="button" id="submitAllPicks" class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                <i class="fas fa-save"></i>
+                                Submit All Picks
+                            </button>
+                            <button type="button" id="clearAllPicks" class="px-6 py-2.5 border-2 border-gray-400 dark:border-gray-500 text-text-dark dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-semibold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                <i class="fas fa-times"></i>
+                                Clear All
+                            </button>
+                            <div class="submission-status hidden ml-3">
+                                <span class="submitting-indicator text-primary hidden">
+                                    <i class="fas fa-spinner fa-spin mr-1"></i>
+                                    Submitting picks...
+                                </span>
+                                <span class="success-indicator text-green-600 dark:text-green-400 hidden">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    All picks submitted successfully!
+                                </span>
+                                <span class="error-indicator text-red-600 dark:text-red-400 hidden">
+                                    <i class="fas fa-exclamation-circle mr-1"></i>
+                                    Error submitting picks
+                                </span>
                             </div>
                         </div>
-
-                        <!-- Games List -->
-                        <div id="gamesList" class="games-list" style="display: none;">
-                            <h5 class="mb-3">Week {{ current_week }} Games:</h5>
-                            
-                            {% if current_week_games %}
-                                <div class="games-grid-manual">
-                                    {% for game in current_week_games %}
-                                    <div class="manual-game-card" data-game-id="{{ game.id }}">
-                                        <div class="game-header-manual">
-                                            <div class="game-time-manual">
-                                                {{ game.startTimestamp|date:"M d @ g:i A" }}
-                                            </div>
-                                            {% if game.statusType != 'notstarted' %}
-                                            <div class="game-status-locked">
-                                                <i class="fas fa-lock me-1"></i>
-                                                Started
-                                            </div>
-                                            {% endif %}
-                                        </div>
-
-                                        <div class="teams-selection-manual">
-                                            <!-- Away Team -->
-                                            <div class="team-option-manual" data-team="{{ game.awayTeamSlug }}" data-team-name="{{ game.awayTeamName }}">
-                                                <div class="team-info-manual">
-                                                    {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                         alt="{{ game.awayTeamName }} logo" 
-                                                         class="team-logo-manual">
-                                                    {% endwith %}
-                                                    <div class="team-details-manual">
-                                                        <div class="team-name-manual">{{ game.awayTeamName }}</div>
-                                                        <div class="team-record-manual">
-                                                            {% for team in team_records %}
-                                                                {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
-                                                                    {% else %}
-                                                                        ({{ team.teamWins }}-{{ team.teamLosses }})
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="pick-indicator-manual">
-                                                    <i class="fas fa-check"></i>
-                                                </div>
-                                            </div>
-
-                                            <div class="vs-divider-manual">@</div>
-
-                                            <!-- Home Team -->
-                                            <div class="team-option-manual" data-team="{{ game.homeTeamSlug }}" data-team-name="{{ game.homeTeamName }}">
-                                                <div class="team-info-manual">
-                                                    {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" 
-                                                         alt="{{ game.homeTeamName }} logo" 
-                                                         class="team-logo-manual">
-                                                    {% endwith %}
-                                                    <div class="team-details-manual">
-                                                        <div class="team-name-manual">{{ game.homeTeamName }}</div>
-                                                        <div class="team-record-manual">
-                                                            {% for team in team_records %}
-                                                                {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                                    {% if team.teamTies > 0 %}
-                                                                        ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
-                                                                    {% else %}
-                                                                        ({{ team.teamWins }}-{{ team.teamLosses }})
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="pick-indicator-manual">
-                                                    <i class="fas fa-check"></i>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Tiebreaker Section -->
-                                        {% if game.tieBreakerGame %}
-                                        <div class="tiebreaker-section-manual">
-                                            <div class="tiebreaker-header-manual">
-                                                <i class="fas fa-balance-scale me-2"></i>
-                                                Tiebreakers Required
-                                            </div>
-                                            <div class="tiebreaker-inputs-manual">
-                                                <div class="tiebreaker-input-group-manual">
-                                                    <label>Total Points:</label>
-                                                    <input type="number" 
-                                                           class="form-control form-control-sm tiebreaker-score" 
-                                                           placeholder="e.g. 45"
-                                                           min="0" 
-                                                           max="200">
-                                                </div>
-                                                <div class="tiebreaker-input-group-manual">
-                                                    <label>Total Yards:</label>
-                                                    <input type="number" 
-                                                           class="form-control form-control-sm tiebreaker-yards" 
-                                                           placeholder="e.g. 750"
-                                                           min="0" 
-                                                           max="2000">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% endif %}
-
-                                        <!-- Pick Status -->
-                                        <div class="pick-status-manual">
-                                            <span class="no-pick-indicator">No pick selected</span>
-                                            <span class="pick-saved-indicator" style="display: none;">
-                                                <i class="fas fa-check-circle me-1"></i>
-                                                Pick saved
-                                            </span>
-                                        </div>
-
-                                        <!-- Hidden data -->
-                                        <input type="hidden" class="game-slug" value="{{ game.slug }}">
-                                        <input type="hidden" class="game-competition" value="{{ game.competition }}">
-                                        <input type="hidden" class="game-week" value="{{ game.gameWeek }}">
-                                        <input type="hidden" class="game-year" value="{{ game.gameyear }}">
-                                        <input type="hidden" class="game-season" value="{{ game.gameseason }}">
-                                        <input type="hidden" class="is-tiebreaker" value="{{ game.tieBreakerGame|yesno:'true,false' }}">
-                                    </div>
-                                    {% endfor %}
-                                </div>
-
-                                <!-- Submit All Button -->
-                                <div class="submit-section mt-4">
-                                    <button type="button" id="submitAllPicks" class="btn btn-success" disabled>
-                                        <i class="fas fa-save me-2"></i>
-                                        Submit All Picks
-                                    </button>
-                                    <button type="button" id="clearAllPicks" class="btn btn-outline-secondary ms-2" disabled>
-                                        <i class="fas fa-times me-2"></i>
-                                        Clear All
-                                    </button>
-                                    <div class="submission-status ms-3" style="display: none;">
-                                        <span class="submitting-indicator">
-                                            <i class="fas fa-spinner fa-spin me-1"></i>
-                                            Submitting picks...
-                                        </span>
-                                        <span class="success-indicator text-success">
-                                            <i class="fas fa-check-circle me-1"></i>
-                                            All picks submitted successfully!
-                                        </span>
-                                        <span class="error-indicator text-danger">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            Error submitting picks
-                                        </span>
-                                    </div>
-                                </div>
-                            {% else %}
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    No games available for Week {{ current_week }}.
-                                </div>
-                            {% endif %}
+                    {% else %}
+                        <div class="px-4 py-3 rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            No games available for Week {{ current_week }}.
                         </div>
-                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Additional Commissioner Features (Future) -->
-    {% comment %} <div class="row g-4 mt-2">
-        <div class="col-12">
-            <div class="card commissioner-card">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-cogs me-2"></i>
-                        Additional Features
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <div class="feature-suggestions">
-                        <p class="mb-3">Suggested additional commissioner features:</p>
-                        <ul class="list-unstyled feature-list">
-                            <li><i class="fas fa-users me-2 text-primary"></i>User management and role assignment</li>
-                            <li><i class="fas fa-chart-bar me-2 text-primary"></i>Advanced analytics and reporting</li>
-                            <li><i class="fas fa-calendar-alt me-2 text-primary"></i>Season schedule management</li>
-                            <li><i class="fas fa-envelope me-2 text-primary"></i>Email notification system</li>
-                            <li><i class="fas fa-trophy me-2 text-primary"></i>Custom scoring rules configuration</li>
-                            <li><i class="fas fa-download me-2 text-primary"></i>Data export and backup tools</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div> {% endcomment %}
 </div>
 
 <!-- Scripts -->
@@ -584,16 +569,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Banner form toggle
     if (editBannerBtn) {
         editBannerBtn.addEventListener('click', function() {
-            bannerFormSection.style.display = 'block';
-            this.style.display = 'none';
+            bannerFormSection.classList.remove('hidden');
+            this.classList.add('hidden');
         });
     }
 
     if (cancelEditBtn) {
         cancelEditBtn.addEventListener('click', function() {
-            bannerFormSection.style.display = 'none';
+            bannerFormSection.classList.add('hidden');
             if (editBannerBtn) {
-                editBannerBtn.style.display = 'inline-block';
+                editBannerBtn.classList.remove('hidden');
             }
         });
     }
@@ -628,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (userSelect) {
         userSelect.addEventListener('change', function() {
             selectedUserId = this.value;
-            
+
             if (selectedUserId) {
                 const selectedOption = this.options[this.selectedIndex];
                 selectedUserData = {
@@ -636,16 +621,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     username: selectedOption.dataset.username,
                     email: selectedOption.dataset.email
                 };
-                
+
                 selectedUserName.textContent = selectedUserData.username;
-                currentUserInfo.style.display = 'block';
-                gamesList.style.display = 'block';
-                
+                currentUserInfo.classList.remove('hidden');
+                gamesList.classList.remove('hidden');
+
                 // Load existing picks for this user
                 loadUserPicks(selectedUserId);
             } else {
-                currentUserInfo.style.display = 'none';
-                gamesList.style.display = 'none';
+                currentUserInfo.classList.add('hidden');
+                gamesList.classList.add('hidden');
                 clearAllSelections();
             }
         });
@@ -675,36 +660,42 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.manual-game-card').forEach(card => {
             const gameId = card.dataset.gameId;
             const existingPick = userPicks[gameId];
-            
+
             // Clear previous selections
             card.querySelectorAll('.team-option-manual').forEach(option => {
-                option.classList.remove('selected');
+                option.classList.remove('border-green-600', 'bg-green-50', 'dark:bg-green-900/20');
+                option.classList.add('border-border-light', 'dark:border-border-subtle');
+                option.querySelector('.pick-indicator-manual').classList.add('hidden');
+                option.querySelector('.pick-indicator-manual').classList.remove('flex');
             });
-            
+
             if (existingPick) {
                 // Select the team that was picked
                 const teamOption = card.querySelector(`[data-team="${existingPick.pick}"]`);
                 if (teamOption) {
-                    teamOption.classList.add('selected');
+                    teamOption.classList.remove('border-border-light', 'dark:border-border-subtle');
+                    teamOption.classList.add('border-green-600', 'bg-green-50', 'dark:bg-green-900/20');
+                    teamOption.querySelector('.pick-indicator-manual').classList.remove('hidden');
+                    teamOption.querySelector('.pick-indicator-manual').classList.add('flex');
                 }
-                
+
                 // Fill in tiebreaker values if they exist
                 const tiebreakerScore = card.querySelector('.tiebreaker-score');
                 const tiebreakerYards = card.querySelector('.tiebreaker-yards');
-                
+
                 if (tiebreakerScore && existingPick.tiebreaker_score) {
                     tiebreakerScore.value = existingPick.tiebreaker_score;
                 }
                 if (tiebreakerYards && existingPick.tiebreaker_yards) {
                     tiebreakerYards.value = existingPick.tiebreaker_yards;
                 }
-                
+
                 updatePickStatus(card, true);
             } else {
                 updatePickStatus(card, false);
             }
         });
-        
+
         updateSubmitButtonState();
     }
 
@@ -713,15 +704,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.closest('.team-option-manual') && selectedUserId) {
             const teamOption = e.target.closest('.team-option-manual');
             const gameCard = teamOption.closest('.manual-game-card');
-            
+
             // Clear selection from other teams in this game
             gameCard.querySelectorAll('.team-option-manual').forEach(option => {
-                option.classList.remove('selected');
+                option.classList.remove('border-green-600', 'bg-green-50', 'dark:bg-green-900/20');
+                option.classList.add('border-border-light', 'dark:border-border-subtle');
+                option.querySelector('.pick-indicator-manual').classList.add('hidden');
+                option.querySelector('.pick-indicator-manual').classList.remove('flex');
             });
-            
+
             // Select this team
-            teamOption.classList.add('selected');
-            
+            teamOption.classList.remove('border-border-light', 'dark:border-border-subtle');
+            teamOption.classList.add('border-green-600', 'bg-green-50', 'dark:bg-green-900/20');
+            teamOption.querySelector('.pick-indicator-manual').classList.remove('hidden');
+            teamOption.querySelector('.pick-indicator-manual').classList.add('flex');
+
             // Update pick status
             updatePickStatus(gameCard, true);
             updateSubmitButtonState();
@@ -732,8 +729,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('input', function(e) {
         if (e.target.matches('.tiebreaker-score, .tiebreaker-yards')) {
             const gameCard = e.target.closest('.manual-game-card');
-            const selectedTeam = gameCard.querySelector('.team-option-manual.selected');
-            
+            const selectedTeam = gameCard.querySelector('.team-option-manual.border-green-600');
+
             if (selectedTeam) {
                 updatePickStatus(gameCard, true);
                 updateSubmitButtonState();
@@ -745,19 +742,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function updatePickStatus(gameCard, hasPick) {
         const noPick = gameCard.querySelector('.no-pick-indicator');
         const pickSaved = gameCard.querySelector('.pick-saved-indicator');
-        
+
         if (hasPick) {
-            noPick.style.display = 'none';
-            pickSaved.style.display = 'inline';
+            noPick.classList.add('hidden');
+            pickSaved.classList.remove('hidden');
         } else {
-            noPick.style.display = 'inline';
-            pickSaved.style.display = 'none';
+            noPick.classList.remove('hidden');
+            pickSaved.classList.add('hidden');
         }
     }
 
     // Update submit button state
     function updateSubmitButtonState() {
-        const hasSelections = document.querySelectorAll('.team-option-manual.selected').length > 0;
+        const hasSelections = document.querySelectorAll('.team-option-manual.border-green-600').length > 0;
         submitAllPicks.disabled = !hasSelections;
         clearAllPicks.disabled = !hasSelections;
     }
@@ -765,7 +762,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Clear all selections
     function clearAllSelections() {
         document.querySelectorAll('.team-option-manual').forEach(option => {
-            option.classList.remove('selected');
+            option.classList.remove('border-green-600', 'bg-green-50', 'dark:bg-green-900/20');
+            option.classList.add('border-border-light', 'dark:border-border-subtle');
+            option.querySelector('.pick-indicator-manual').classList.add('hidden');
+            option.querySelector('.pick-indicator-manual').classList.remove('flex');
         });
         document.querySelectorAll('.tiebreaker-score, .tiebreaker-yards').forEach(input => {
             input.value = '';
@@ -793,7 +793,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            const selectedGames = document.querySelectorAll('.team-option-manual.selected');
+            const selectedGames = document.querySelectorAll('.team-option-manual.border-green-600');
             if (selectedGames.length === 0) {
                 alert('Please make at least one pick.');
                 return;
@@ -825,11 +825,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (picks.length === 0) return;
 
             // Show submitting status
-            submissionStatus.style.display = 'inline-block';
-            submissionStatus.querySelector('.submitting-indicator').style.display = 'inline';
-            submissionStatus.querySelector('.success-indicator').style.display = 'none';
-            submissionStatus.querySelector('.error-indicator').style.display = 'none';
-            
+            submissionStatus.classList.remove('hidden');
+            submissionStatus.querySelector('.submitting-indicator').classList.remove('hidden');
+            submissionStatus.querySelector('.success-indicator').classList.add('hidden');
+            submissionStatus.querySelector('.error-indicator').classList.add('hidden');
+
             submitAllPicks.disabled = true;
 
             // Submit picks one by one
@@ -841,14 +841,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function submitPicksSequentially(picks, index) {
         if (index >= picks.length) {
             // All picks submitted successfully
-            submissionStatus.querySelector('.submitting-indicator').style.display = 'none';
-            submissionStatus.querySelector('.success-indicator').style.display = 'inline';
-            
+            submissionStatus.querySelector('.submitting-indicator').classList.add('hidden');
+            submissionStatus.querySelector('.success-indicator').classList.remove('hidden');
+
             setTimeout(() => {
-                submissionStatus.style.display = 'none';
+                submissionStatus.classList.add('hidden');
                 submitAllPicks.disabled = false;
             }, 3000);
-            
+
             return;
         }
 
@@ -880,571 +880,15 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error submitting pick:', error);
-            submissionStatus.querySelector('.submitting-indicator').style.display = 'none';
-            submissionStatus.querySelector('.error-indicator').style.display = 'inline';
-            
+            submissionStatus.querySelector('.submitting-indicator').classList.add('hidden');
+            submissionStatus.querySelector('.error-indicator').classList.remove('hidden');
+
             setTimeout(() => {
-                submissionStatus.style.display = 'none';
+                submissionStatus.classList.add('hidden');
                 submitAllPicks.disabled = false;
             }, 3000);
         });
     }
 });
 </script>
-
-<!-- Custom Styles -->
-<style>
-.commissioners-main-container {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-}
-
-.page-header-section {
-    border-radius: 1rem;
-    padding: 3rem 2rem;
-    margin-bottom: 2rem;
-    border: 3px solid #D4AF37;
-    background: var(--bs-body-bg);
-    position: relative;
-    overflow: hidden;
-}
-
-.page-header-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--bs-light);
-    opacity: 0.3;
-    pointer-events: none;
-}
-
-.page-header-content {
-    position: relative;
-    z-index: 1;
-}
-
-.page-header-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    color: var(--bs-warning);
-    opacity: 0.9;
-}
-
-.commissioner-badge {
-    width: 250px;
-    height: 250px;
-    margin-bottom: 1rem;
-    opacity: 0.95;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-}
-
-.welcome-message {
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: var(--bs-primary);
-    margin-bottom: 0.5rem;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.mission-brief {
-    font-size: 1rem;
-    color: var(--bs-body-color);
-    opacity: 0.8;
-    font-style: italic;
-    margin-bottom: 0;
-}
-
-.page-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: var(--bs-body-color);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.page-subtitle {
-    font-size: 1.2rem;
-    color: var(--bs-body-color);
-    opacity: 0.7;
-    margin-bottom: 0;
-}
-
-.commissioner-card {
-    border: none;
-    border-radius: 1rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.commissioner-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.commissioner-card .card-header {
-    background: var(--bs-light);
-    border-bottom: 1px solid var(--bs-border-color);
-    border-radius: 1rem 1rem 0 0 !important;
-    padding: 1.25rem;
-}
-
-.commissioner-card .card-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 0;
-    color: var(--bs-dark);
-}
-
-.commissioner-card .card-body {
-    padding: 1.5rem;
-}
-
-.candidates-table {
-    border-radius: 0.5rem;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.candidates-table thead th {
-    background: var(--bs-primary);
-    color: white;
-    border: none;
-    font-weight: 600;
-    padding: 0.75rem;
-}
-
-.candidates-table tbody td {
-    padding: 0.75rem;
-    vertical-align: middle;
-}
-
-.set-winner-btn {
-    border-radius: 0.375rem;
-    font-weight: 500;
-    transition: all 0.15s ease;
-}
-
-.set-winner-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(25, 135, 84, 0.3);
-}
-
-.feature-list li {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--bs-border-color);
-}
-
-.feature-list li:last-child {
-    border-bottom: none;
-}
-
-.section-description {
-    color: var(--bs-secondary);
-    margin-bottom: 1.5rem;
-}
-
-.banner-actions .btn {
-    margin-right: 0.5rem;
-}
-
-/* Dark mode adjustments */
-[data-bs-theme="dark"] .page-header-section {
-    background: var(--bs-dark);
-    border-color: #D4AF37;
-}
-
-[data-bs-theme="dark"] .page-header-section::before {
-    background: var(--bs-gray-800);
-    opacity: 0.5;
-}
-
-[data-bs-theme="dark"] .welcome-message {
-    color: var(--bs-info);
-}
-
-[data-bs-theme="dark"] .mission-brief {
-    color: var(--bs-light);
-    opacity: 0.9;
-}
-
-[data-bs-theme="dark"] .page-title {
-    color: var(--bs-light);
-}
-
-[data-bs-theme="dark"] .page-subtitle {
-    color: var(--bs-light);
-    opacity: 0.8;
-}
-
-[data-bs-theme="dark"] .page-header-icon {
-    color: var(--bs-warning);
-}
-
-[data-bs-theme="dark"] .commissioner-badge {
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
-    opacity: 1;
-}
-
-[data-bs-theme="dark"] .commissioner-card {
-    background: var(--bs-dark);
-    border: 1px solid var(--bs-gray-600);
-}
-
-[data-bs-theme="dark"] .commissioner-card .card-header {
-    background: var(--bs-gray-800);
-    border-bottom-color: var(--bs-gray-600);
-}
-
-[data-bs-theme="dark"] .commissioner-card .card-title {
-    color: var(--bs-light);
-}
-
-[data-bs-theme="dark"] .candidates-table thead th {
-    background: var(--bs-primary);
-}
-
-[data-bs-theme="dark"] .candidates-table tbody td {
-    border-color: var(--bs-gray-600);
-    color: var(--bs-light);
-}
-
-[data-bs-theme="dark"] .feature-list li {
-    border-bottom-color: var(--bs-gray-600);
-    color: var(--bs-light);
-}
-
-[data-bs-theme="dark"] .section-description {
-    color: var(--bs-light);
-    opacity: 0.8;
-}
-
-[data-bs-theme="dark"] .alert-info {
-    background-color: var(--bs-gray-800);
-    border-color: var(--bs-gray-600);
-    color: var(--bs-light);
-}
-
-[data-bs-theme="dark"] .alert-info .fas {
-    color: var(--bs-info);
-}
-
-/* Active banner display styling */
-.current-banner-section .alert {
-    color: white !important;
-}
-
-.current-banner-section .alert strong,
-.current-banner-section .alert small {
-    color: white !important;
-}
-
-[data-bs-theme="dark"] .current-banner-section .alert {
-    color: white !important;
-}
-
-[data-bs-theme="dark"] .current-banner-section .alert strong,
-[data-bs-theme="dark"] .current-banner-section .alert small {
-    color: white !important;
-}
-
-/* Success/Error message styling */
-.alert-success,
-.alert-error,
-.alert-warning,
-.alert-danger {
-    color: white !important;
-}
-
-[data-bs-theme="dark"] .alert-success,
-[data-bs-theme="dark"] .alert-error,
-[data-bs-theme="dark"] .alert-warning,
-[data-bs-theme="dark"] .alert-danger {
-    color: white !important;
-}
-
-/* Manual Pick Submission Styles */
-.manual-picks-section {
-    padding: 0;
-}
-
-.games-grid-manual {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.manual-game-card {
-    border: 1px solid var(--bs-border-color);
-    border-radius: 0.5rem;
-    padding: 1rem;
-    background: var(--bs-body-bg);
-    transition: all 0.2s ease;
-}
-
-.manual-game-card:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.game-header-manual {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--bs-border-color);
-}
-
-.game-time-manual {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--bs-secondary);
-}
-
-.game-status-locked {
-    font-size: 0.8rem;
-    color: var(--bs-warning);
-    background: rgba(255, 193, 7, 0.1);
-    padding: 0.2rem 0.5rem;
-    border-radius: 0.25rem;
-}
-
-.teams-selection-manual {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-}
-
-.team-option-manual {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    padding: 0.75rem;
-    border: 2px solid var(--bs-border-color);
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
-}
-
-.team-option-manual:hover {
-    border-color: var(--bs-primary);
-    background: rgba(13, 110, 253, 0.05);
-}
-
-.team-option-manual.selected {
-    border-color: var(--bs-success);
-    background: rgba(25, 135, 84, 0.1);
-}
-
-.team-info-manual {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-}
-
-.team-logo-manual {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-}
-
-.team-details-manual {
-    flex: 1;
-}
-
-.team-name-manual {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--bs-body-color);
-    line-height: 1.2;
-}
-
-.team-record-manual {
-    font-size: 0.8rem;
-    color: var(--bs-secondary);
-}
-
-.pick-indicator-manual {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 20px;
-    height: 20px;
-    background: var(--bs-success);
-    color: white;
-    border-radius: 50%;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-}
-
-.team-option-manual.selected .pick-indicator-manual {
-    display: flex;
-}
-
-.vs-divider-manual {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--bs-secondary);
-    text-align: center;
-    min-width: 20px;
-}
-
-.tiebreaker-section-manual {
-    background: var(--bs-light);
-    border-radius: 0.375rem;
-    padding: 0.75rem;
-    margin-bottom: 0.75rem;
-}
-
-.tiebreaker-header-manual {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--bs-primary);
-    margin-bottom: 0.5rem;
-}
-
-.tiebreaker-inputs-manual {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-}
-
-.tiebreaker-input-group-manual label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--bs-body-color);
-    margin-bottom: 0.25rem;
-    display: block;
-}
-
-.pick-status-manual {
-    text-align: center;
-    font-size: 0.8rem;
-    margin-top: 0.5rem;
-}
-
-.no-pick-indicator {
-    color: var(--bs-secondary);
-}
-
-.pick-saved-indicator {
-    color: var(--bs-success);
-    font-weight: 500;
-}
-
-.submit-section {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--bs-border-color);
-}
-
-.submission-status {
-    font-size: 0.9rem;
-}
-
-.submitting-indicator {
-    color: var(--bs-primary);
-}
-
-.success-indicator {
-    color: var(--bs-success);
-}
-
-.error-indicator {
-    color: var(--bs-danger);
-}
-
-/* Dark mode adjustments for manual picks */
-[data-bs-theme="dark"] .manual-game-card {
-    background: var(--bs-dark);
-    border-color: var(--bs-gray-600);
-}
-
-[data-bs-theme="dark"] .game-header-manual {
-    border-bottom-color: var(--bs-gray-600);
-}
-
-[data-bs-theme="dark"] .team-option-manual {
-    border-color: var(--bs-gray-600);
-    background: var(--bs-dark);
-}
-
-[data-bs-theme="dark"] .team-option-manual:hover {
-    background: rgba(13, 110, 253, 0.1);
-}
-
-[data-bs-theme="dark"] .team-option-manual.selected {
-    background: rgba(25, 135, 84, 0.2);
-}
-
-[data-bs-theme="dark"] .tiebreaker-section-manual {
-    background: var(--bs-gray-800);
-}
-
-[data-bs-theme="dark"] .submit-section {
-    border-top-color: var(--bs-gray-600);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .page-title {
-        font-size: 2rem;
-    }
-    
-    .page-subtitle {
-        font-size: 1rem;
-    }
-    
-    .page-header-icon {
-        font-size: 2.5rem;
-    }
-    
-    .page-header-section {
-        padding: 2rem 1rem;
-    }
-    
-    .commissioners-main-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-    
-    .games-grid-manual {
-        grid-template-columns: 1fr;
-    }
-    
-    .teams-selection-manual {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .vs-divider-manual {
-        order: -1;
-        margin: 0.25rem 0;
-    }
-    
-    .tiebreaker-inputs-manual {
-        grid-template-columns: 1fr;
-    }
-    
-    .submit-section {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .submit-section .btn {
-        width: 100%;
-    }
-}
-</style>
 {% endblock %}

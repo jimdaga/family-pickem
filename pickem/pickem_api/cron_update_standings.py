@@ -8,7 +8,16 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Update Pickem User Records')
 parser.add_argument("--url", help="Specify the API url.")
+parser.add_argument("--token", help="API authentication token.")
 args, leftovers = parser.parse_known_args()
+
+
+def get_api_headers():
+    """Build common headers for API requests, including auth token if provided."""
+    headers = {"Content-Type": "application/json"}
+    if args.token:
+        headers["Authorization"] = "Token {}".format(args.token)
+    return headers
 
 def get_season():
     """
@@ -49,16 +58,12 @@ def unique_list(list):
 
 def get_user_email(uid):
     """
-    Get user email 
+    Get user email
     """
     url = "http://{}/api/userinfo/{}".format(args.url, uid)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
-
     try:
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=get_api_headers())
         json_response = json.loads(response.text)
     except requests.exceptions.RequestException:
         print(response.text)
@@ -72,14 +77,10 @@ def get_pick_user_ids(game_season, game_week):
     url = "http://{}/api/userpickids/{}/{}".format(
         args.url, game_season, game_week)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
-
     id_list = []
 
     try:
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=get_api_headers())
         json_response = json.loads(response.text)
 
         for pick in json_response:
@@ -99,11 +100,7 @@ def get_game_week(game_date):
     try:
         url = "http://{}/api/weeks/{}".format(args.url, game_date)
 
-        headers = {
-            "Content-Type": "application/json",
-        }
-
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=get_api_headers())
         json_response = json.loads(response.text)
         return json_response['weekNumber']
     except:
@@ -112,13 +109,11 @@ def get_game_week(game_date):
 
 def patch_picks(game_season, game_week, uid, points_total):
     """
-    Update users record with correct picks 
+    Update users record with correct picks
     """
     url = "http://{}/api/userpoints/{}/{}".format(args.url, game_season, uid)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
+    headers = get_api_headers()
 
     week_points = "week_{}_points".format(game_week)
 
@@ -165,9 +160,7 @@ def patch_total_points(game_season, uid):
     patch_url = "http://{}/api/userpoints/{}/{}".format(
         args.url, game_season, uid)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
+    headers = get_api_headers()
 
     response = requests.request("GET", get_url, headers=headers)
     json_response = json.loads(response.text)
@@ -199,11 +192,7 @@ def update_correct_picks(game_season, game_week, uid):
     picks_url = "http://{}/api/userpicks/{}/{}/{}".format(
         args.url, game_season, game_week, uid)
 
-    headers = {
-        "Content-Type": "application/json",
-    }
-
-    response = requests.request("GET", picks_url, headers=headers)
+    response = requests.request("GET", picks_url, headers=get_api_headers())
     json_response = json.loads(response.text)
 
     points_total = 0

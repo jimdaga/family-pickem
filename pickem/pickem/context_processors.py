@@ -5,8 +5,10 @@ Provides theme preferences and user authentication status
 to all templates for consistent dark mode functionality.
 """
 
-from pickem_api.models import UserProfile
+from datetime import date
+from pickem_api.models import UserProfile, GameWeeks, GamesAndScores, GamePicks, userSeasonPoints
 from pickem_homepage.models import SiteBanner
+from pickem.utils import get_season
 
 
 def theme_context(request):
@@ -52,7 +54,7 @@ def dark_mode_context(request):
 def site_banner_context(request):
     """
     Context processor to inject active site banner into all templates.
-    
+
     Provides:
     - active_banner: The currently active SiteBanner object (or None if no active banner)
     """
@@ -61,7 +63,82 @@ def site_banner_context(request):
     except Exception:
         # If there's any database error (e.g., during migrations), return None
         active_banner = None
-    
+
     return {
         'active_banner': active_banner
-    } 
+    }
+
+
+def footer_stats_context(request):
+    """
+    Context processor to inject footer stats into all templates.
+
+    Provides:
+    - current_week: Current week number
+    - user_current_rank: User's stored rank from database
+    - user_correct_picks_week: Number of correct picks for current user this week
+    """
+    context = {
+        'current_week': None,
+        'user_current_rank': None,
+        'user_correct_picks_week': None,
+    }
+
+    try:
+        # Get current week
+        today = date.today()
+        today_date = today.strftime("%Y-%m-%d")
+        gameseason = get_season()
+
+        try:
+            week_obj = GameWeeks.objects.get(date=today_date)
+            current_week = week_obj.weekNumber
+            game_competition = week_obj.competition
+        except GameWeeks.DoesNotExist:
+            current_week = '1'
+            game_competition = 'nfl'
+
+        context['current_week'] = current_week
+
+        # Get user's stored rank and stats
+        if request.user.is_authenticated:
+            try:
+                # Get user's season points record with stored rank
+                user_season = userSeasonPoints.objects.get(
+                    userID=str(request.user.id),
+                    gameseason=gameseason
+                )
+                context['user_current_rank'] = user_season.current_rank
+            except userSeasonPoints.DoesNotExist:
+                context['user_current_rank'] = None
+
+            try:
+                # Get all games for current week
+                game_list = GamesAndScores.objects.filter(
+                    gameseason=gameseason,
+                    gameWeek=current_week,
+                    competition=game_competition
+                )
+
+                # Get user's picks for current week
+                picks = GamePicks.objects.filter(
+                    gameseason=gameseason,
+                    gameWeek=current_week,
+                    competition=game_competition,
+                    userEmail=request.user.email
+                )
+
+                # Count correct picks for finished games only
+                finished_games_slugs = game_list.filter(statusType='finished').values_list('slug', flat=True)
+                user_picks_for_finished_games = picks.filter(slug__in=finished_games_slugs)
+                correct_graded_picks = user_picks_for_finished_games.filter(pick_correct=True).count()
+
+                context['user_correct_picks_week'] = correct_graded_picks
+            except Exception:
+                context['user_correct_picks_week'] = 0
+
+    except Exception:
+        # If there's any error, return default values
+        pass
+
+    return context 

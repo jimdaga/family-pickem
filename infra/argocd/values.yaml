@@ -1,0 +1,41 @@
+# ArgoCD Helm chart values for single-node cluster
+# Install: helm install argocd argo/argo-cd -n argocd --create-namespace -f infra/argocd/values.yaml
+
+global:
+  domain: argocd.family-pickem.com
+
+configs:
+  params:
+    # Run insecure (TLS terminated at ingress)
+    server.insecure: true
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    hosts:
+      - argocd.family-pickem.com
+    tls:
+      - secretName: argocd-server-tls
+        hosts:
+          - argocd.family-pickem.com
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+applicationSet:
+  enabled: false
+
+# Single-node: no HA needed
+controller:
+  replicas: 1
+
+repoServer:
+  replicas: 1

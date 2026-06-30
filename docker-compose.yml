@@ -11,11 +11,12 @@ services:
   #   restart: unless-stopped
 
   postgresql:
-    image: docker.io/bitnami/postgresql:14
+    image: docker.io/bitnami/postgresql:15
     ports:
       - '5432:5432'
     volumes:
       - 'postgresql_data:/bitnami/postgresql'
+      - './docker/postgres/init:/docker-entrypoint-initdb.d'
     expose:
       - 5432/tcp
     networks:

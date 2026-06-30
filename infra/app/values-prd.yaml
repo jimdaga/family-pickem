@@ -1,0 +1,65 @@
+# Production values for family-pickem
+# Used by ArgoCD Application: pickem-prd
+
+fullnameOverride: "family-pickem-prd"
+replicaCount: 1
+
+image:
+  repository: familypickem/pickem-django
+  tag: ""  # Set by chart appVersion (from GitHub Release)
+  pullPolicy: IfNotPresent
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: family-pickem.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls:
+    - secretName: pickem-prd-tls
+      hosts:
+        - family-pickem.com
+
+postgresql:
+  enabled: true
+  global:
+    postgresql:
+      auth:
+        database: "pickem"
+  primary:
+    persistence:
+      existingClaim: postgres-prd-pvc
+cron:
+  schedule: "* * * * *"
+  command: "/code/pickem_api/cron.sh"
+  suspend: false
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+
+pickemctl:
+  enabled: true
+  image:
+    repository: familypickem/pickemctl
+    tag: "0.0.9"
+    pullPolicy: IfNotPresent
+
+externalSecrets:
+  enabled: true
+  clusterSecretStore: aws-secrets-manager
+  envvarsKey: family-pickem/prd/envvars
+  pickemctlKey: family-pickem/prd/pickemctl
+
+backup:
+  enabled: true
+  schedule: "0 2 * * *"
+  s3Bucket: family-pickem-backups
+  s3Prefix: postgres
+  keepCount: 5
+
+healthchecks:
+  enabled: true
