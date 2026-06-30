@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-family-scoped-app-pages-03-PLAN.md
-last_updated: "2026-06-30T00:29:15.425Z"
+stopped_at: Completed 04-family-scoped-app-pages-04-PLAN.md
+last_updated: "2026-06-30T01:35:39.416Z"
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 18
-  completed_plans: 15
-  percent: 83
+  completed_plans: 16
+  percent: 89
 current_phase: 04
 ---
 
@@ -130,6 +130,14 @@ See: `.planning/PROJECT.md`
   - Rendered current family/pool rules settings display-only with no mutation controls.
   - Added cross-family, outsider, legacy redirect, and query-param isolation tests.
   - Summary: `.planning/phases/04-family-scoped-app-pages/04-03-SUMMARY.md`.
+- Phase 4 Plan 04 completed:
+  - Added tenant player and profile routes under explicit family/pool URLs.
+  - Resolved viewed profile users only through active current-family membership.
+  - Scoped profile points, ranks, recent picks, team-pick stats, userStats, and message counts to the current pool/family.
+  - Added tenant message-board create/comment/vote/read AJAX routes that derive family server-side and use scoped lookups.
+  - Converted legacy signed-in message-board AJAX endpoints to generic JSON not-found instead of writing family-null private rows.
+  - Added cross-family profile/player/message-board IDOR tests.
+  - Summary: `.planning/phases/04-family-scoped-app-pages/04-04-SUMMARY.md`.
 
 ## Decisions
 
@@ -180,6 +188,9 @@ See: `.planning/PROJECT.md`
 - [Phase 04]: 04-03: Signed-in legacy scores, standings, and rules routes redirect to tenant URLs before private global data renders.
 - [Phase 04]: 04-03: Scores keep global NFL game facts while all pick overlays, player lists, user weekly stats, and winners filter by request.tenant_context.pool.
 - [Phase 04]: 04-03: Rules are display-only in Phase 4 and show current PoolSettings without mutation controls.
+- [Phase 04]: 04-04: Tenant profile pages resolve viewed users through active current-family membership before profile data reads.
+- [Phase 04]: 04-04: Profile stats, recent picks, rankings, and userStats are scoped to the current tenant pool.
+- [Phase 04]: 04-04: Tenant message-board AJAX derives family server-side; cross-family IDs and legacy global AJAX return generic JSON not-found.
 
 ## Verification
 
@@ -234,15 +245,20 @@ Result:
   - `manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` passed with 89 tests.
   - `manage.py check --settings=pickem.test_settings` passed with no issues.
   - `curl -s --max-time 5 http://localhost:8000/scores/ | head -40` returned anonymous scores HTML.
+- Phase 4 Plan 04 verification passed:
+  - `manage.py test pickem_homepage.tests.TenantProfilesPlayersMessageBoardIsolationTests --settings=pickem.test_settings --verbosity=2` passed with 11 tests.
+  - `manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` passed with 100 tests.
+  - `manage.py check --settings=pickem.test_settings` passed with no issues.
+  - `curl -s --max-time 5 http://localhost:8000 | head -40` returned public homepage HTML.
 
 ## Next Action
 
-Execute Phase 4 Plan 04: `04-04-PLAN.md`.
+Execute Phase 4 Plan 05: `04-05-PLAN.md`.
 
 ## Session
 
-**Last session:** 2026-06-30T00:29:15.421Z
-**Stopped at:** Completed 04-family-scoped-app-pages-03-PLAN.md
+**Last session:** 2026-06-30T01:35:39.412Z
+**Stopped at:** Completed 04-family-scoped-app-pages-04-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -257,3 +273,4 @@ Execute Phase 4 Plan 04: `04-04-PLAN.md`.
 | Phase 04-family-scoped-app-pages P01 | 4min 24s | 3 tasks | 3 files |
 | Phase 04-family-scoped-app-pages P02 | 7min | 3 tasks | 5 files |
 | Phase 04-family-scoped-app-pages P03 | 6min 14s | 3 tasks | 6 files |
+| Phase 04-family-scoped-app-pages P04 | 46min | 3 tasks | 6 files |

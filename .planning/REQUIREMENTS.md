@@ -39,7 +39,7 @@
 ### Community And Profiles
 
 - [x] **COMM-01**: Message-board posts, comments, and votes are scoped to a family or pool.
-- [ ] **COMM-02**: Family members can see member/profile stats only within allowed family context.
+- [x] **COMM-02**: Family members can see member/profile stats only within allowed family context.
 - [x] **COMM-03**: Site/family banners do not leak across families.
 
 ### Audit And Hardening
@@ -96,7 +96,7 @@
 | POOL-04 | Phase 4, Phase 5 | Complete |
 | POOL-05 | Phase 6 | Pending |
 | COMM-01 | Phase 1, Phase 4 | Complete |
-| COMM-02 | Phase 4 | Pending |
+| COMM-02 | Phase 4 | Complete |
 | COMM-03 | Phase 1, Phase 5 | Complete |
 | SEC-01 | Phase 1, Phase 5 | Complete |
 | SEC-02 | Phase 6 | Pending |
