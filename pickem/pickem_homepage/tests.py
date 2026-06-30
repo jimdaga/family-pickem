@@ -21,8 +21,12 @@ from pickem_api.models import (
     FamilyAuditLog,
     FamilyInvitation,
     FamilyMembership,
+    GamePicks,
+    GamesAndScores,
+    GameWeeks,
     Pool,
     PoolSettings,
+    userSeasonPoints,
     UserProfile,
 )
 from pickem_homepage.authz import family_member_required
@@ -222,6 +226,206 @@ class PostLoginTenantRoutingTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+
+class TenantDashboardIsolationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        GameWeeks.objects.create(
+            weekNumber=1,
+            competition="nfl",
+            date=timezone.localdate(),
+            season=2526,
+        )
+        cls.game = GamesAndScores.objects.create(
+            id=1001,
+            slug="ari-atl-2025-week-1",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now() + timedelta(days=1),
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=1,
+            homeTeamSlug="atl",
+            homeTeamName="Atlanta Falcons",
+            awayTeamId=2,
+            awayTeamSlug="ari",
+            awayTeamName="Arizona Cardinals",
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.member = User.objects.create_user(
+            "smith-member", email="smith@example.com", password="pass"
+        )
+        self.smith_player = User.objects.create_user(
+            "smith-player", email="smith-player@example.com", password="pass"
+        )
+        self.jones_player = User.objects.create_user(
+            "jones-player", email="jones-player@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "dashboard-outsider", email="outsider@example.com", password="pass"
+        )
+
+    def _family_with_pool(self, name, slug, *, pool_slug="main"):
+        family = Family.objects.create(name=name, slug=slug)
+        pool = Pool.objects.create(
+            family=family,
+            name="Main Pickem",
+            slug=pool_slug,
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        return family, pool
+
+    def _active_membership(self, user, family, role=FamilyMembership.Role.MEMBER):
+        return FamilyMembership.objects.create(
+            family=family,
+            user=user,
+            role=role,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _tenant_url(self, family, pool):
+        return reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def _seed_dashboard_data(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        jones_family, jones_pool = self._family_with_pool("Jones Family", "jones-family")
+        self._active_membership(self.member, smith_family)
+        self._active_membership(self.smith_player, smith_family)
+        self._active_membership(self.jones_player, jones_family)
+
+        userSeasonPoints.objects.create(
+            pool=smith_pool,
+            userEmail=self.smith_player.email,
+            userID=str(self.smith_player.id),
+            gameseason=2526,
+            gameyear="2025",
+            week_1_points=1,
+            week_1_winner=True,
+            total_points=11,
+        )
+        userSeasonPoints.objects.create(
+            pool=jones_pool,
+            userEmail=self.jones_player.email,
+            userID=str(self.jones_player.id),
+            gameseason=2526,
+            gameyear="2025",
+            week_1_points=1,
+            week_1_winner=True,
+            total_points=99,
+        )
+        GamePicks.objects.create(
+            id="smith-pick-1",
+            pool=smith_pool,
+            userEmail=self.member.email,
+            uid=self.member.id,
+            userID=str(self.member.id),
+            slug=self.game.slug,
+            competition=self.game.competition,
+            gameWeek=self.game.gameWeek,
+            gameyear=self.game.gameyear,
+            gameseason=self.game.gameseason,
+            pick_game_id=self.game.id,
+            pick=self.game.homeTeamSlug,
+        )
+        GamePicks.objects.create(
+            id="jones-pick-1",
+            pool=jones_pool,
+            userEmail=self.jones_player.email,
+            uid=self.jones_player.id,
+            userID=str(self.jones_player.id),
+            slug=self.game.slug,
+            competition=self.game.competition,
+            gameWeek=self.game.gameWeek,
+            gameyear=self.game.gameyear,
+            gameseason=self.game.gameseason,
+            pick_game_id=self.game.id,
+            pick=self.game.awayTeamSlug,
+        )
+        MessageBoardPost.objects.create(
+            family=smith_family,
+            user=self.smith_player,
+            title="Smith family update",
+            content="Smith only message",
+        )
+        MessageBoardPost.objects.create(
+            family=jones_family,
+            user=self.jones_player,
+            title="Jones family secret",
+            content="Jones only message",
+        )
+        return smith_family, smith_pool, jones_family, jones_pool
+
+    def test_anonymous_root_keeps_public_home_behavior(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/home.html")
+        self.assertContains(response, "Family Pickem")
+
+    def test_signed_in_root_redirects_to_default_tenant_dashboard(self):
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, family)
+        self.client.force_login(self.member)
+
+        response = self.client.get("/")
+
+        self.assertRedirects(
+            response,
+            self._tenant_url(family, pool),
+            fetch_redirect_response=False,
+        )
+
+    def test_signed_in_root_with_multiple_families_routes_to_picker(self):
+        smith, _smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        jones, _jones_pool = self._family_with_pool("Jones Family", "jones-family")
+        self._active_membership(self.member, smith)
+        self._active_membership(self.member, jones)
+        self.client.force_login(self.member)
+
+        response = self.client.get("/")
+
+        self.assertRedirects(response, reverse("family_picker"), fetch_redirect_response=False)
+
+    def test_direct_tenant_dashboard_requires_membership(self):
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, family)
+        self.client.force_login(self.outsider)
+
+        response = self.client.get(self._tenant_url(family, pool))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_dashboard_scopes_private_widgets_to_current_family_and_pool(self):
+        smith_family, smith_pool, _jones_family, _jones_pool = self._seed_dashboard_data()
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Smith Family")
+        self.assertContains(response, "Main Pickem")
+        self.assertContains(response, "smith-player")
+        self.assertContains(response, "Smith family update")
+        self.assertContains(response, "1 of 1")
+        self.assertNotContains(response, "Jones Family")
+        self.assertNotContains(response, "jones-player")
+        self.assertNotContains(response, "Jones family secret")
+        self.assertNotContains(response, "2 of 1")
 
 
 class FamilySwitcherContextTests(TestCase):
