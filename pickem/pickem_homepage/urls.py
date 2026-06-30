@@ -51,6 +51,16 @@ urlpatterns = [
         views.tenant_rules,
         name='family_pool_rules',
     ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/players/',
+        views.tenant_players,
+        name='family_pool_players',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/user/<int:user_id>/',
+        views.tenant_user_profile,
+        name='family_pool_user_profile',
+    ),
     path('invites/<str:invite_code>/', views.accept_invite_link, name='accept_invite_link'),
     path('scores/', views.scores, name='scores'),
     path('standings/', views.standings, name='standings'),
