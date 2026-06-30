@@ -31,6 +31,26 @@ urlpatterns = [
         views.tenant_edit_game_pick,
         name='family_pool_edit_game_pick',
     ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/scores/',
+        views.tenant_scores,
+        name='family_pool_scores',
+    ),
+    re_path(
+        r'^families/(?P<family_slug>[-a-zA-Z0-9_]+)/pools/(?P<pool_slug>[-a-zA-Z0-9_]+)/scores/competition/(?P<competition>[0-9]+)/season/(?P<gameseason>[0-9]+)/week/(?P<week>[0-9]+)$',
+        views.tenant_scores_long,
+        name='family_pool_scores_long',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/standings/',
+        views.tenant_standings,
+        name='family_pool_standings',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/rules/',
+        views.tenant_rules,
+        name='family_pool_rules',
+    ),
     path('invites/<str:invite_code>/', views.accept_invite_link, name='accept_invite_link'),
     path('scores/', views.scores, name='scores'),
     path('standings/', views.standings, name='standings'),

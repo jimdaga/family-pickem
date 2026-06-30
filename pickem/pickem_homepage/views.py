@@ -853,17 +853,49 @@ def index(request):
 
 
 def standings(request):
+    if request.user.is_authenticated:
+        return redirect_to_default_pool_route(request, 'family_pool_standings')
+    return render_standings_page(request)
+
+
+@family_member_required
+def tenant_standings(request, family_slug, pool_slug):
+    return render_standings_page(request, tenant_context=request.tenant_context)
+
+
+def render_standings_page(request, *, tenant_context=None):
     # Get all unique seasons from the database
     all_seasons = GamesAndScores.objects.values_list('gameseason', flat=True).distinct().order_by('-gameseason')
     
     # Determine the selected season
-    selected_season = str(request.GET.get('season', get_season()))
+    default_season = tenant_context.pool.season if tenant_context else get_season()
+    selected_season = str(request.GET.get('season', default_season))
     
     # Filter player points based on the selected season
-    player_points = userSeasonPoints.objects.filter(gameseason=selected_season).order_by('-total_points')
+    player_points = userSeasonPoints.objects.filter(gameseason=selected_season)
+    if tenant_context:
+        player_points = player_points.filter(pool=tenant_context.pool)
+    player_points = player_points.order_by('-total_points', 'userID')
     
     # Get season winner for the selected season
-    season_winner = userSeasonPoints.objects.filter(year_winner=True, gameseason=selected_season).first()
+    season_winner_qs = userSeasonPoints.objects.filter(
+        year_winner=True,
+        gameseason=selected_season,
+    )
+    if tenant_context:
+        season_winner_qs = season_winner_qs.filter(pool=tenant_context.pool)
+    season_winner = season_winner_qs.order_by('-total_points', 'userID').first()
+
+    weekly_winners = {}
+    for week_num in range(1, 19):
+        winner_field = f"week_{week_num}_winner"
+        winner_qs = userSeasonPoints.objects.filter(
+            gameseason=selected_season,
+            **{winner_field: True},
+        )
+        if tenant_context:
+            winner_qs = winner_qs.filter(pool=tenant_context.pool)
+        weekly_winners[week_num] = list(winner_qs.order_by('-total_points', 'userID'))
     
     # Format seasons for the dropdown
     formatted_seasons = []
@@ -877,48 +909,103 @@ def standings(request):
             })
     
     User = get_user_model()
-    players = User.objects.filter(is_active=True)
+    if tenant_context:
+        member_user_ids = FamilyMembership.objects.filter(
+            family=tenant_context.family,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+        ).values_list('user_id', flat=True)
+        players = User.objects.filter(id__in=member_user_ids, is_active=True)
+    else:
+        players = User.objects.filter(is_active=True)
 
     context = {
         'players': players,
         'player_points': player_points,
         'season_winner': season_winner,
+        'weekly_winners': weekly_winners,
         'all_seasons': formatted_seasons,
         'selected_season': selected_season,
-        'gameseason': selected_season
+        'gameseason': selected_season,
+        'family': tenant_context.family if tenant_context else None,
+        'pool': tenant_context.pool if tenant_context else None,
+        'membership': tenant_context.membership if tenant_context else None,
+        'is_tenant_page': tenant_context is not None,
     }
     return render(request, 'pickem/standings.html', context)
 
 
 def rules(request):
-    gameseason = get_season()
-    context = {'gameseason': gameseason}
+    if request.user.is_authenticated:
+        return redirect_to_default_pool_route(request, 'family_pool_rules')
+    return render_rules_page(request)
+
+
+@family_member_required
+def tenant_rules(request, family_slug, pool_slug):
+    return render_rules_page(request, tenant_context=request.tenant_context)
+
+
+def render_rules_page(request, *, tenant_context=None):
+    gameseason = tenant_context.pool.season if tenant_context else get_season()
+    pool_settings = None
+    if tenant_context:
+        try:
+            pool_settings = tenant_context.pool.settings
+        except PoolSettings.DoesNotExist:
+            pool_settings = None
+
+    context = {
+        'gameseason': gameseason,
+        'family': tenant_context.family if tenant_context else None,
+        'pool': tenant_context.pool if tenant_context else None,
+        'membership': tenant_context.membership if tenant_context else None,
+        'pool_settings': pool_settings,
+        'is_tenant_page': tenant_context is not None,
+    }
     return render(request, 'pickem/rules.html', context)
 
 
 def scores(request):
+    if request.user.is_authenticated:
+        return redirect_to_default_pool_route(request, 'family_pool_scores')
+    return render_scores_page(request)
 
+
+@family_member_required
+def tenant_scores(request, family_slug, pool_slug):
+    return render_scores_page(request, tenant_context=request.tenant_context)
+
+
+def render_scores_page(request, *, tenant_context=None, competition=None, gameseason=None, week=None):
     today = date.today()
     today_date = today.strftime("%Y-%m-%d")
-    gameseason = get_season()
+    gameseason = gameseason or (tenant_context.pool.season if tenant_context else get_season())
 
     # Track if we're defaulting to week 1 (before season starts)
     is_default_week = False
-    try:
-        week_obj = GameWeeks.objects.get(date=today_date)
-        game_week = week_obj.weekNumber
-        game_competition = week_obj.competition
-    except GameWeeks.DoesNotExist:
-        game_week = '1'
-        game_competition = 'nfl'
-        is_default_week = True
+    if week is None:
+        try:
+            week_obj = GameWeeks.objects.get(date=today_date)
+            game_week = str(week_obj.weekNumber)
+            game_competition = week_obj.competition
+        except GameWeeks.DoesNotExist:
+            game_week = '1'
+            game_competition = 'nfl'
+            is_default_week = True
+    else:
+        game_week = str(week)
+        game_competition = 'nfl-preseason' if str(competition) == '0' else 'nfl'
+    if tenant_context and week is None:
+        game_competition = tenant_context.pool.competition
     
     game_list = GamesAndScores.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
 
     game_days = game_list.values_list('startTimestamp', flat=True).distinct()
-    competition = game_list.values_list('competition', flat=True).distinct()
     
     picks = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
+    if tenant_context:
+        picks = picks.filter(pool=tenant_context.pool)
     picks_total = picks.count()
 
     points = GamePicks.objects.filter(
@@ -927,23 +1014,33 @@ def scores(request):
         competition=game_competition,
         pick_correct=True,
     )
+    if tenant_context:
+        points = points.filter(pool=tenant_context.pool)
     points_total = points.count()
     
-    # user_points = points.values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
-    user_points = points.filter(gameseason=gameseason).values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
-
-    # users_w_points = user_points.values_list('uid', flat=True).distinct()
-    users_w_points = user_points.filter(gameseason=gameseason).values_list('uid', flat=True).distinct()
-    
-    
+    user_points = points.values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
+    users_w_points = user_points.values_list('uid', flat=True).distinct()
     
     players = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
+    if tenant_context:
+        players = players.filter(pool=tenant_context.pool)
     players_names = players.values_list('uid', flat=True).distinct()
-    players_ids = User.objects.filter(is_active=True, is_superuser=False).values_list('id', flat=True).distinct()
+    players_ids_qs = User.objects.filter(is_active=True, is_superuser=False)
+    if tenant_context:
+        member_user_ids = FamilyMembership.objects.filter(
+            family=tenant_context.family,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+        ).values_list('user_id', flat=True)
+        players_ids_qs = players_ids_qs.filter(id__in=member_user_ids)
+    players_ids = players_ids_qs.values_list('id', flat=True).distinct()
     wins_losses = Teams.objects.filter(gameseason=gameseason)
 
     winner_object = "week_{}_winner".format(game_week)
-    week_winner = userSeasonPoints.objects.filter(**{winner_object: True},gameseason=gameseason).distinct() 
+    week_winner = userSeasonPoints.objects.filter(**{winner_object: True}, gameseason=gameseason)
+    if tenant_context:
+        week_winner = week_winner.filter(pool=tenant_context.pool)
+    week_winner = week_winner.distinct()
 
     # TODO: Give zero points to users that didn't win yet
     user_weekly_stats = {}
@@ -965,7 +1062,13 @@ def scores(request):
         points_field = f"week_{game_week}_points"
         weekly_points = 0
         try:
-            user_points_obj = userSeasonPoints.objects.get(userID=str(request.user.id), gameseason=gameseason)
+            user_points_lookup = userSeasonPoints.objects.filter(
+                userID=str(request.user.id),
+                gameseason=gameseason,
+            )
+            if tenant_context:
+                user_points_lookup = user_points_lookup.filter(pool=tenant_context.pool)
+            user_points_obj = user_points_lookup.get()
             weekly_points = getattr(user_points_obj, points_field, 0)
         except userSeasonPoints.DoesNotExist:
             weekly_points = 0 # User may not have an entry yet
@@ -997,11 +1100,43 @@ def scores(request):
         'game_weeks': range(1,19),
         'gameseason': gameseason,
         'user_weekly_stats': user_weekly_stats,
-        'is_default_week': is_default_week
+        'is_default_week': is_default_week,
+        'family': tenant_context.family if tenant_context else None,
+        'pool': tenant_context.pool if tenant_context else None,
+        'membership': tenant_context.membership if tenant_context else None,
+        'is_tenant_page': tenant_context is not None,
     }
     return HttpResponse(template.render(context, request))
 
 def scores_long(request, competition, gameseason, week):
+    if request.user.is_authenticated:
+        return redirect_to_default_pool_route(
+            request,
+            'family_pool_scores_long',
+            competition=competition,
+            gameseason=gameseason,
+            week=week,
+        )
+    return render_scores_page(
+        request,
+        competition=competition,
+        gameseason=gameseason,
+        week=week,
+    )
+
+
+@family_member_required
+def tenant_scores_long(request, family_slug, pool_slug, competition, gameseason, week):
+    return render_scores_page(
+        request,
+        tenant_context=request.tenant_context,
+        competition=competition,
+        gameseason=gameseason,
+        week=week,
+    )
+
+
+def legacy_scores_long_unused(request, competition, gameseason, week):
     if competition == '0':
         competition_name='nfl-preseason'
     else:
@@ -1325,12 +1460,9 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
 
 
 def rules(request):
-    gameseason = get_season()
-    template = loader.get_template('pickem/rules.html')
-    context = {
-        'gameseason': gameseason,
-    }
-    return HttpResponse(template.render(context, request))
+    if request.user.is_authenticated:
+        return redirect_to_default_pool_route(request, 'family_pool_rules')
+    return render_rules_page(request)
 
 
 def home_view(request):
