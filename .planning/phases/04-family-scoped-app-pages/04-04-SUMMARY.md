@@ -170,7 +170,7 @@ status: complete
 
 ## Issues Encountered
 
-- A combined verification command attempted `cd pickem` twice, so the second check command failed with `zsh: no such file or directory: ../venv/bin/python`. The Django check was rerun separately from the repository root and passed.
+- A combined verification command attempted `cd pickem` twice, so the second check command hit `zsh: no such file or directory: ../venv/bin/python`. The Django check was rerun separately from the repository root and passed.
 
 ## User Setup Required
 
@@ -190,7 +190,7 @@ None - the new route/AJAX trust boundaries match the plan threat model entries T
 - PASS: `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` — 100 tests passed.
 - PASS: `cd pickem && ../venv/bin/python manage.py check --settings=pickem.test_settings` — no issues.
 - PASS: `curl -s --max-time 5 http://localhost:8000 | head -40` — public homepage returned HTML.
-- NOTE: A first Task 1 red run of `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` failed with 11 `NoReverseMatch` errors for the not-yet-implemented tenant route names; this was expected coverage confirmation before Tasks 2-3.
+- NOTE: A first Task 1 red run of `cd pickem && ../venv/bin/python manage.py test pickem_homepage --settings=pickem.test_settings --verbosity=2` produced 11 `NoReverseMatch` errors for the not-yet-implemented tenant route names; this was expected coverage confirmation before Tasks 2-3.
 
 ## Next Phase Readiness
 
