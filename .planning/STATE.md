@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 04
 status: completed
-stopped_at: Completed 04-family-scoped-app-pages-01-PLAN.md
-last_updated: "2026-06-30T00:09:12.372Z"
+stopped_at: Completed 04-family-scoped-app-pages-02-PLAN.md
+last_updated: "2026-06-30T00:19:35.453Z"
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 18
-  completed_plans: 13
-  percent: 38
+  completed_plans: 14
+  percent: 78
+current_phase: 04
 ---
 
 # GSD State
@@ -117,6 +117,12 @@ See: `.planning/PROJECT.md`
   - `04-04-PLAN.md`: family-private profiles, players, and message-board AJAX.
   - `04-05-PLAN.md`: shared navigation, shared context processors, dashboard, picks, and scores tenant-link cleanup.
   - `04-06-PLAN.md`: final cross-family negative coverage and validation handoff.
+- Phase 4 Plan 02 completed:
+  - Added tenant pick submit and edit routes under explicit family/pool URLs.
+  - Replaced broad tenant pick saves with server-derived `GamePicks` ownership, pool, season/week/game fields, and correctness reset.
+  - Converted signed-in legacy pick routes into redirects before private global pick rendering or mutation.
+  - Added cross-family, cross-pool, and request-body tampering tests.
+  - Summary: `.planning/phases/04-family-scoped-app-pages/04-02-SUMMARY.md`.
 
 ## Decisions
 
@@ -160,6 +166,10 @@ See: `.planning/PROJECT.md`
 - [Phase 04]: 04-01: Dashboard private widgets read from request.tenant_context.pool or request.tenant_context.family; global NFL week/game facts remain global reference data.
 - [Phase 04]: 04-01: Unbuilt tenant gameplay destinations stay disabled in the dashboard instead of linking users to legacy global gameplay pages.
 - [Phase 04]: 04-01: Shared base navigation global-link cleanup remains deferred to the planned Phase 4 shared navigation cleanup.
+- [Phase 04]: 04-02: Tenant pick writes accept only selected game/team and tiebreakers; user, pool, season, week, game metadata, and correctness are server-derived.
+- [Phase 04]: 04-02: Signed-in legacy /picks/ and /picks/edit/ redirect to the resolved tenant picks page before reading or mutating private picks.
+- [Phase 04]: 04-02: Tenant pick IDs include pool, user, and game to avoid cross-pool collisions for the same user/game.
+- [Phase 04]: 04-02: Until tenant scores/standings routes ship in Plan 04-03, tenant picks empty-state links stay inside the pool dashboard instead of linking to global pages.
 
 ## Verification
 
@@ -213,12 +223,12 @@ Result:
 
 ## Next Action
 
-Execute Phase 4 starting with `04-01-PLAN.md`.
+Execute Phase 4 Plan 03: `04-03-PLAN.md`.
 
 ## Session
 
-**Last session:** 2026-06-30T00:08:41.959Z
-**Stopped at:** Completed 04-family-scoped-app-pages-01-PLAN.md
+**Last session:** 2026-06-30T00:19:35.449Z
+**Stopped at:** Completed 04-family-scoped-app-pages-02-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -231,3 +241,4 @@ Execute Phase 4 starting with `04-01-PLAN.md`.
 | Phase 03-onboarding-and-family-selection P04 | 176 | 3 tasks | 4 files |
 | Phase 03-onboarding-and-family-selection P05 | 130 | 3 tasks | 4 files |
 | Phase 04-family-scoped-app-pages P01 | 4min 24s | 3 tasks | 3 files |
+| Phase 04-family-scoped-app-pages P02 | 7min | 3 tasks | 5 files |
