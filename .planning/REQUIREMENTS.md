@@ -33,7 +33,7 @@
 - [x] **POOL-01**: Picks are scoped to a pool.
 - [x] **POOL-02**: Standings and weekly winners are scoped to a pool.
 - [x] **POOL-03**: Scores can use global NFL game data while showing only pool-scoped pick overlays.
-- [ ] **POOL-04**: Rules/settings are visible and editable in the appropriate family/pool context.
+- [x] **POOL-04**: Rules/settings are visible and editable in the appropriate family/pool context.
 - [ ] **POOL-05**: Background scoring jobs update only the intended pool data.
 
 ### Community And Profiles
@@ -93,7 +93,7 @@
 | POOL-01 | Phase 1, Phase 4 | Complete |
 | POOL-02 | Phase 1, Phase 4, Phase 6 | Complete |
 | POOL-03 | Phase 4 | Complete |
-| POOL-04 | Phase 4, Phase 5 | Pending |
+| POOL-04 | Phase 4, Phase 5 | Complete |
 | POOL-05 | Phase 6 | Pending |
 | COMM-01 | Phase 1, Phase 4 | Complete |
 | COMM-02 | Phase 4 | Pending |
