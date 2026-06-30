@@ -1885,30 +1885,41 @@ def toggle_theme(request):
 # @ratelimit(key='user', rate='10/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def create_post(request):
-    """Create a new message board post (chat-style)"""
+    return message_board_not_found()
+
+
+@family_member_required
+@require_http_methods(["POST"])
+def tenant_create_post(request, family_slug, pool_slug):
+    return create_post_for_family(request, request.tenant_context.family)
+
+
+def message_board_not_found():
+    return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
+
+
+def create_post_for_family(request, family):
     content = request.POST.get('content', '').strip()
     title = request.POST.get('title', '').strip()
-    
-    # If no title provided, auto-generate from content
+
     if not title and content:
         title = content[:50] + ('...' if len(content) > 50 else '')
-    
-    # Validate content
+
     if not content:
         return JsonResponse({
             'success': False,
             'errors': {'content': ['This field is required.']}
         }, status=400)
-    
-    if len(content) > 2000:  # Reasonable limit for chat messages
+
+    if len(content) > 2000:
         return JsonResponse({
             'success': False,
             'errors': {'content': ['Message too long. Please keep it under 2000 characters.']}
         }, status=400)
-    
-    # Create the post
+
     try:
         post = MessageBoardPost.objects.create(
+            family=family,
             user=request.user,
             title=title,
             content=content
@@ -1930,40 +1941,57 @@ def create_post(request):
 # @ratelimit(key='user', rate='15/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def create_comment(request):
-    """Create a new comment on a post"""
+    return message_board_not_found()
+
+
+@family_member_required
+@require_http_methods(["POST"])
+def tenant_create_comment(request, family_slug, pool_slug):
+    return create_comment_for_family(request, request.tenant_context.family)
+
+
+def create_comment_for_family(request, family):
     try:
         data = json.loads(request.body)
         post_id = data.get('post_id')
-        parent_id = data.get('parent_id')  # For nested comments
+        parent_id = data.get('parent_id')
         content = data.get('content', '').strip()
-        
+
         if not content:
             return JsonResponse({
                 'success': False,
                 'error': 'Comment content is required'
             }, status=400)
-        
-        # Get the post
-        post = get_object_or_404(MessageBoardPost, id=post_id, is_active=True)
-        
-        # Get parent comment if this is a reply
+
+        post = get_object_or_404(
+            MessageBoardPost,
+            id=post_id,
+            family=family,
+            is_active=True,
+        )
+
         parent = None
         if parent_id:
-            parent = get_object_or_404(MessageBoardComment, id=parent_id, is_active=True)
-        
-        # Create the comment
+            parent = get_object_or_404(
+                MessageBoardComment,
+                id=parent_id,
+                family=family,
+                post=post,
+                is_active=True,
+            )
+
         comment = MessageBoardComment.objects.create(
+            family=family,
             post=post,
             user=request.user,
             parent=parent,
             content=content
         )
-        
-        # Get user avatar for response
+
         avatar_url = 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'
         if hasattr(request.user, 'socialaccount_set') and request.user.socialaccount_set.exists():
             avatar_url = request.user.socialaccount_set.first().get_avatar_url()
-        
+
         return JsonResponse({
             'success': True,
             'comment': {
@@ -1974,10 +2002,13 @@ def create_comment(request):
                 'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M'),
                 'score': comment.score,
                 'depth': comment.depth,
-                'parent_id': parent_id
+                'parent_id': parent_id,
+                'user_id': request.user.id,
             }
         })
-        
+
+    except Http404:
+        return message_board_not_found()
     except json.JSONDecodeError:
         return JsonResponse({
             'success': False,
@@ -1994,45 +2025,59 @@ def create_comment(request):
 # @ratelimit(key='user', rate='30/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def vote_post(request):
-    """Vote on a post (upvote/downvote)"""
+    return message_board_not_found()
+
+
+@family_member_required
+@require_http_methods(["POST"])
+def tenant_vote_post(request, family_slug, pool_slug):
+    return vote_post_for_family(request, request.tenant_context.family)
+
+
+def vote_post_for_family(request, family):
     try:
         data = json.loads(request.body)
         post_id = data.get('post_id')
-        vote_type = data.get('vote_type')  # 1 for upvote, -1 for downvote
-        
+        vote_type = data.get('vote_type')
+
         if vote_type not in [1, -1]:
             return JsonResponse({
                 'success': False,
                 'error': 'Invalid vote type'
             }, status=400)
-        
-        post = get_object_or_404(MessageBoardPost, id=post_id, is_active=True)
-        
-        # Check if user already voted
-        existing_vote = MessageBoardVote.objects.filter(user=request.user, post=post).first()
-        
+
+        post = get_object_or_404(
+            MessageBoardPost,
+            id=post_id,
+            family=family,
+            is_active=True,
+        )
+
+        existing_vote = MessageBoardVote.objects.filter(
+            family=family,
+            user=request.user,
+            post=post,
+        ).first()
+
         if existing_vote:
             if existing_vote.vote_type == vote_type:
-                # Remove vote if clicking same button
                 existing_vote.delete()
                 action = 'removed'
             else:
-                # Change vote
                 existing_vote.vote_type = vote_type
                 existing_vote.save()
                 action = 'changed'
         else:
-            # Create new vote
             MessageBoardVote.objects.create(
+                family=family,
                 user=request.user,
                 post=post,
                 vote_type=vote_type
             )
             action = 'added'
-        
-        # Refresh post to get updated vote counts
+
         post.refresh_from_db()
-        
+
         return JsonResponse({
             'success': True,
             'action': action,
@@ -2040,7 +2085,9 @@ def vote_post(request):
             'upvotes': post.upvotes,
             'downvotes': post.downvotes
         })
-        
+
+    except Http404:
+        return message_board_not_found()
     except json.JSONDecodeError:
         return JsonResponse({
             'success': False,
@@ -2057,45 +2104,59 @@ def vote_post(request):
 # @ratelimit(key='user', rate='30/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def vote_comment(request):
-    """Vote on a comment (upvote/downvote)"""
+    return message_board_not_found()
+
+
+@family_member_required
+@require_http_methods(["POST"])
+def tenant_vote_comment(request, family_slug, pool_slug):
+    return vote_comment_for_family(request, request.tenant_context.family)
+
+
+def vote_comment_for_family(request, family):
     try:
         data = json.loads(request.body)
         comment_id = data.get('comment_id')
-        vote_type = data.get('vote_type')  # 1 for upvote, -1 for downvote
-        
+        vote_type = data.get('vote_type')
+
         if vote_type not in [1, -1]:
             return JsonResponse({
                 'success': False,
                 'error': 'Invalid vote type'
             }, status=400)
-        
-        comment = get_object_or_404(MessageBoardComment, id=comment_id, is_active=True)
-        
-        # Check if user already voted
-        existing_vote = MessageBoardVote.objects.filter(user=request.user, comment=comment).first()
-        
+
+        comment = get_object_or_404(
+            MessageBoardComment,
+            id=comment_id,
+            family=family,
+            is_active=True,
+        )
+
+        existing_vote = MessageBoardVote.objects.filter(
+            family=family,
+            user=request.user,
+            comment=comment,
+        ).first()
+
         if existing_vote:
             if existing_vote.vote_type == vote_type:
-                # Remove vote if clicking same button
                 existing_vote.delete()
                 action = 'removed'
             else:
-                # Change vote
                 existing_vote.vote_type = vote_type
                 existing_vote.save()
                 action = 'changed'
         else:
-            # Create new vote
             MessageBoardVote.objects.create(
+                family=family,
                 user=request.user,
                 comment=comment,
                 vote_type=vote_type
             )
             action = 'added'
-        
-        # Refresh comment to get updated vote counts
+
         comment.refresh_from_db()
-        
+
         return JsonResponse({
             'success': True,
             'action': action,
@@ -2103,7 +2164,9 @@ def vote_comment(request):
             'upvotes': comment.upvotes,
             'downvotes': comment.downvotes
         })
-        
+
+    except Http404:
+        return message_board_not_found()
     except json.JSONDecodeError:
         return JsonResponse({
             'success': False,
@@ -2118,37 +2181,66 @@ def vote_comment(request):
 
 # @ratelimit(key='ip', rate='60/m', method='GET', block=True)  # Disabled for now
 def get_post_comments(request, post_id):
-    """Get all comments for a post (AJAX endpoint)"""
+    return message_board_not_found()
+
+
+@family_member_required
+def tenant_get_post_comments(request, family_slug, pool_slug, post_id):
+    return get_post_comments_for_family(request, request.tenant_context.family, post_id)
+
+
+def get_post_comments_for_family(request, family, post_id):
     try:
-        post = get_object_or_404(MessageBoardPost, id=post_id, is_active=True)
-        comments = post.get_top_level_comments()
-        
+        post = get_object_or_404(
+            MessageBoardPost,
+            id=post_id,
+            family=family,
+            is_active=True,
+        )
+        comments = MessageBoardComment.objects.filter(
+            post=post,
+            family=family,
+            parent=None,
+            is_active=True,
+        ).order_by('-created_at')
+
         def serialize_comment(comment):
-            """Recursively serialize comment and its replies"""
             avatar_url = 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'
             if hasattr(comment.user, 'socialaccount_set') and comment.user.socialaccount_set.exists():
                 avatar_url = comment.user.socialaccount_set.first().get_avatar_url()
-            
+
+            replies = MessageBoardComment.objects.filter(
+                parent=comment,
+                family=family,
+                is_active=True,
+            ).order_by('created_at')
             data = {
                 'id': comment.id,
                 'content': comment.content,
                 'user': comment.user.username,
+                'user_id': comment.user_id,
                 'avatar': avatar_url,
                 'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M'),
                 'score': comment.score,
                 'depth': comment.depth,
-                'replies': [serialize_comment(reply) for reply in comment.get_nested_replies()]
+                'replies': [serialize_comment(reply) for reply in replies]
             }
             return data
-        
+
         comments_data = [serialize_comment(comment) for comment in comments]
-        
+
         return JsonResponse({
             'success': True,
             'comments': comments_data,
-            'total_comments': post.comment_count
+            'total_comments': MessageBoardComment.objects.filter(
+                post=post,
+                family=family,
+                is_active=True,
+            ).count()
         })
-        
+
+    except Http404:
+        return message_board_not_found()
     except Exception as e:
         return JsonResponse({
             'success': False,

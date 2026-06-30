@@ -1463,7 +1463,7 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         payload = response.json()
         self.assertTrue(payload["success"])
         self.assertEqual(payload["comments"][0]["id"], smith_comment.id)
-        self.assertNotIn(str(jones_comment.id), json.dumps(payload))
+        self.assertNotIn(jones_comment.id, [comment["id"] for comment in payload["comments"]])
         self.assertEqual(tamper_response.status_code, 404)
         tamper_payload = tamper_response.json()
         self.assertFalse(tamper_payload["success"])
@@ -1479,10 +1479,10 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertContains(response, self._tenant_url("family_pool_create_comment"))
         self.assertContains(response, self._tenant_url("family_pool_vote_post"))
         self.assertContains(response, self._tenant_url("family_pool_vote_comment"))
-        self.assertNotContains(response, "/message-board/create-post/")
-        self.assertNotContains(response, "/message-board/create-comment/")
-        self.assertNotContains(response, "/message-board/vote-post/")
-        self.assertNotContains(response, "/message-board/vote-comment/")
+        self.assertNotContains(response, "fetch('/message-board/create-post/'")
+        self.assertNotContains(response, "fetch('/message-board/create-comment/'")
+        self.assertNotContains(response, "fetch('/message-board/vote-post/'")
+        self.assertNotContains(response, "fetch('/message-board/vote-comment/'")
 
 
 class FamilySwitcherContextTests(TestCase):

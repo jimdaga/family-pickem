@@ -26,7 +26,14 @@
     </section>
 
     <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5">
+        <div
+            class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5"
+            data-message-create-post-url="{% url 'family_pool_create_post' family.slug pool.slug %}"
+            data-message-create-comment-url="{% url 'family_pool_create_comment' family.slug pool.slug %}"
+            data-message-vote-post-url="{% url 'family_pool_vote_post' family.slug pool.slug %}"
+            data-message-vote-comment-url="{% url 'family_pool_vote_comment' family.slug pool.slug %}"
+            data-message-comments-url-template="{% url 'family_pool_get_post_comments' family.slug pool.slug 0 %}"
+        >
             <i class="fas fa-edit text-primary text-2xl mb-3"></i>
             <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Week {{ current_week }} Picks</h2>
             <p class="text-sm text-text-secondary-light dark:text-text-secondary mb-3">
