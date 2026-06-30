@@ -26,21 +26,103 @@
     </section>
 
     <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <a href="/picks/" class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 hover:border-primary/40 transition-colors">
+        <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5">
             <i class="fas fa-edit text-primary text-2xl mb-3"></i>
-            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Picks</h2>
-            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Go to the current weekly pick sheet.</p>
-        </a>
-        <a href="/standings/" class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 hover:border-primary/40 transition-colors">
+            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Week {{ current_week }} Picks</h2>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary mb-3">
+                {{ user_picks_count }} of {{ current_games }} submitted.
+            </p>
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-border-light dark:bg-surface-hover text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">
+                {{ user_pick_status }}
+            </span>
+        </div>
+        <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5">
             <i class="fas fa-medal text-primary text-2xl mb-3"></i>
-            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Standings</h2>
-            <p class="text-sm text-text-secondary-light dark:text-text-secondary">View the leaderboard while tenant pages continue migrating.</p>
-        </a>
-        <a href="/scores/" class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 hover:border-primary/40 transition-colors">
+            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Pool Standings</h2>
+            {% if standings %}
+                <ol class="space-y-2">
+                    {% for row in standings %}
+                    <li class="flex items-center justify-between gap-3 text-sm">
+                        <span class="font-semibold text-text-dark dark:text-white">#{{ row.rank }} {% if row.user %}{{ row.user.username }}{% else %}Player {{ row.points.userID }}{% endif %}</span>
+                        <span class="text-text-secondary-light dark:text-text-secondary">{{ row.points.total_points|default:0 }} pts</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+            {% else %}
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">No standings yet for {{ pool.name }}.</p>
+            {% endif %}
+        </div>
+        <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5">
+            <i class="fas fa-trophy text-primary text-2xl mb-3"></i>
+            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Recent Winners</h2>
+            {% if recent_winners %}
+                <ul class="space-y-2">
+                    {% for row in recent_winners %}
+                    <li class="flex items-center justify-between gap-3 text-sm">
+                        <span class="text-text-secondary-light dark:text-text-secondary">Week {{ row.week }}</span>
+                        <span class="font-semibold text-text-dark dark:text-white">{% if row.user %}{{ row.user.username }}{% else %}Player {{ row.winner.userID }}{% endif %}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">No weekly winners recorded in this pool yet.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5">
+            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-3">
+                <i class="fas fa-comments text-primary mr-2"></i>Family Messages
+            </h2>
+            {% if message_posts %}
+                <ul class="space-y-3">
+                    {% for post in message_posts %}
+                    <li class="border-b border-border-light dark:border-border-subtle pb-3 last:border-b-0 last:pb-0">
+                        <p class="font-semibold text-text-dark dark:text-white">{{ post.title }}</p>
+                        <p class="text-xs text-text-secondary-light dark:text-text-secondary">by {{ post.user.username }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">No family messages yet.</p>
+            {% endif %}
+        </div>
+        <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5">
+            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-3">
+                <i class="fas fa-users text-primary mr-2"></i>Family Activity
+            </h2>
+            {% if active_members %}
+                <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {% for active_member in active_members %}
+                    <li class="flex items-center justify-between gap-3 rounded-lg border border-border-light dark:border-border-subtle px-3 py-2 text-sm">
+                        <span class="font-semibold text-text-dark dark:text-white">{{ active_member.user.username }}</span>
+                        <span class="text-xs uppercase text-text-secondary-light dark:text-text-secondary">{{ active_member.get_role_display }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">No active family members yet.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div class="bg-surface-light dark:bg-surface border border-dashed border-border-light dark:border-border-subtle rounded-lg p-5 opacity-80">
+            <i class="fas fa-edit text-primary text-2xl mb-3"></i>
+            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Make Picks</h2>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Tenant pick sheet opens in the next migration step.</p>
+        </div>
+        <div class="bg-surface-light dark:bg-surface border border-dashed border-border-light dark:border-border-subtle rounded-lg p-5 opacity-80">
             <i class="fas fa-chart-line text-primary text-2xl mb-3"></i>
             <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Scores</h2>
-            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Check NFL scores and game details.</p>
-        </a>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Tenant score overlays are not linked to global pages.</p>
+        </div>
+        <div class="bg-surface-light dark:bg-surface border border-dashed border-border-light dark:border-border-subtle rounded-lg p-5 opacity-80">
+            <i class="fas fa-book text-primary text-2xl mb-3"></i>
+            <h2 class="text-lg font-bold text-text-dark dark:text-white mb-2">Rules</h2>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Pool rules stay in {{ family.name }} context.</p>
+        </div>
     </section>
 
     <section class="mt-6 flex flex-wrap gap-3">
@@ -57,9 +139,9 @@
             <i class="fas fa-exchange-alt"></i>
             <span>Switch family</span>
         </a>
-        <a href="/" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
+        <a href="{% url 'family_pool_home' family.slug pool.slug %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
             <i class="fas fa-home"></i>
-            <span>Home</span>
+            <span>Dashboard</span>
         </a>
     </section>
 
