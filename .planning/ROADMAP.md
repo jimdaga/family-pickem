@@ -108,12 +108,12 @@ Completion evidence:
 
 **Goal:** Move user-facing gameplay pages into explicit tenant context.
 
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 Plans:
 
 - [x] 04-01-PLAN.md — Migrate dashboard/home into tenant context.
-- [ ] 04-02-PLAN.md — Move pick submit/edit into tenant URLs with server-derived writes.
+- [x] 04-02-PLAN.md — Move pick submit/edit into tenant URLs with server-derived writes.
 - [ ] 04-03-PLAN.md — Scope scores, standings, weekly winners, and rules.
 - [ ] 04-04-PLAN.md — Make profiles, player lists, and message-board AJAX family-private.
 - [ ] 04-05-PLAN.md — Clean shared navigation, shared context processors, dashboard, picks, and scores links.
