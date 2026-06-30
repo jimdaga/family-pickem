@@ -98,7 +98,7 @@
         <div class="flex items-center justify-center gap-6 py-6">
             {% with player.userID|lookupname as username %}
             {% with player.userID|lookupavatar as avatar %}
-            <a href="{% url 'user_profile' player.userID %}" class="group">
+            <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="group">
                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                      alt="Profile picture for {{ username }}"
                      class="w-24 h-24 rounded-full border-4 border-yellow-500 shadow-glow-primary group-hover:scale-110 transition-transform">
@@ -138,13 +138,13 @@
                             {% with player.uid|lookupname as username %}
                             {% with player.uid|lookupavatar as avatar %}
                             <div class="flex items-center gap-3 min-w-0 flex-1">
-                                <a href="{% url 'user_profile' player.uid %}" class="flex-shrink-0 group">
+                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="flex-shrink-0 group">
                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                          alt="Profile picture for {{ username }}"
                                          class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:scale-110 transition-transform">
                                 </a>
                                 <div class="min-w-0 flex-1">
-                                    <a href="{% url 'user_profile' player.uid %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
+                                    <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
                                 </div>
                             </div>
                             <div class="flex items-baseline gap-1 flex-shrink-0">
@@ -162,13 +162,13 @@
                             {% with player|lookupname as username %}
                             {% with player|lookupavatar as avatar %}
                             <div class="flex items-center gap-3 min-w-0 flex-1">
-                                <a href="{% url 'user_profile' player %}" class="flex-shrink-0 group">
+                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player %}{% endif %}" class="flex-shrink-0 group">
                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                          alt="Profile picture for {{ username }}"
                                          class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:scale-110 transition-transform">
                                 </a>
                                 <div class="min-w-0 flex-1">
-                                    <a href="{% url 'user_profile' player %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
+                                    <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player %}{% endif %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
                                 </div>
                             </div>
                             <div class="flex items-baseline gap-1 flex-shrink-0">
@@ -559,7 +559,7 @@
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
                                                             <div class="flex flex-col items-center gap-1">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
@@ -573,7 +573,7 @@
                                                             </div>
                                                         {% else %}
                                                             <div class="flex flex-col items-center gap-1 opacity-60">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
@@ -588,7 +588,7 @@
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
                                                         <div class="flex flex-col items-center gap-1">
-                                                            <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                            <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                      alt="{{ username|default:'Unknown' }}"
                                                                      class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
@@ -631,7 +631,7 @@
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
                                                             <div class="flex flex-col items-center gap-1">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
@@ -645,7 +645,7 @@
                                                             </div>
                                                         {% else %}
                                                             <div class="flex flex-col items-center gap-1 opacity-60">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                     <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
@@ -660,7 +660,7 @@
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
                                                         <div class="flex flex-col items-center gap-1">
-                                                            <a href="{% url 'user_profile' pick.uid %}" class="group">
+                                                            <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
                                                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
                                                                      alt="{{ username|default:'Unknown' }}"
                                                                      class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
@@ -812,7 +812,7 @@
                     {% if is_default_week %}
                     <h4 class="text-xl font-bold text-text-dark dark:text-white mb-3">Week {{ week }} Games Coming Soon</h4>
                     <p class="text-text-secondary-light dark:text-text-secondary mb-6 max-w-md">NFL Week {{ week }} games will appear here once the schedule is released. Get ready for the season by submitting your picks!</p>
-                    <a href="{% url 'game_picks' %}" class="btn-primary px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 transition-all hover:shadow-card-hover">
+                    <a href="{% if family and pool %}{% url 'family_pool_game_picks' family.slug pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}" class="btn-primary px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 transition-all hover:shadow-card-hover">
                         <i class="fas fa-edit"></i>
                         <span>Submit Week {{ week }} Picks</span>
                     </a>
@@ -841,7 +841,7 @@
                         {% with player.userID|lookupname as username %}
                         {% with player.userID|lookupavatar as avatar %}
                         <div class="winner-profile">
-                            <a href="{% url 'user_profile' player.userID %}" class="winner-avatar-link">
+                            <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="winner-avatar-link">
                                 <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
                                      alt="Profile picture for {{ username }}" 
                                      class="winner-avatar">

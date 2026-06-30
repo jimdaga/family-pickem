@@ -34,6 +34,26 @@
     </div>
 
 <div class="max-w-7xl mx-auto px-6 py-6">
+    {% if family and pool %}
+    <div class="section-container mb-8">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Current pool</p>
+                <h3 class="text-2xl font-bold text-text-dark dark:text-white">{{ family.name }} - {{ pool.name }}</h3>
+            </div>
+            {% if pool_settings %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div class="rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-4">
+                    <span class="font-semibold text-text-dark dark:text-white">Game locking: {% if pool_settings.picks_lock_at_kickoff %}On{% else %}Off{% endif %}</span>
+                </div>
+                <div class="rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-4">
+                    <span class="font-semibold text-text-dark dark:text-white">Tiebreakers: {% if pool_settings.allow_tiebreaker %}On{% else %}Off{% endif %}</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Scoring System Section -->
     <div class="mb-8">
