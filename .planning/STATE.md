@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05-04-PLAN.md
-last_updated: "2026-07-01T16:53:14.208Z"
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-07-01T17:02:18.072Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 25
-  completed_plans: 22
-  percent: 88
+  completed_plans: 23
+  percent: 92
 current_phase: 05
 ---
 
@@ -212,6 +212,9 @@ See: `.planning/PROJECT.md`
 - [Phase 05-family-admin-experience]: 05-04: Invite management keeps the existing FamilyInvitation model and hash-only code storage; no email delivery or model redesign was added. — Plan 05-04 implemented D-08/D-10 by reusing existing invite storage and one-time raw code rendering only.
 - [Phase 05-family-admin-experience]: 05-04: Admins may create member invites only; owners may create member or admin invites through the explicit role allowlist. — This enforces D-27 least privilege and prevents admin-role escalation through invite creation.
 - [Phase 05-family-admin-experience]: 05-04: Invite replacement is revoke-and-create in one transaction, with the new raw code shown only on that response. — This satisfies D-11 without changing the invitation model or redisplaying old raw codes.
+- [Phase 05]: 05-05: Manual pick admin uses explicit tenant admin URLs and family_member_required(admin) for browser pages.
+- [Phase 05]: 05-05: JSON user-pick retrieval uses a local JSON-aware tenant context resolver so anonymous requests return 401 JSON instead of login redirects.
+- [Phase 05]: 05-05: Manual pick writes reuse the Phase 4 pool-user-game pick identity and reset correctness server-side on admin override.
 
 ## Verification
 
@@ -285,8 +288,8 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 
 ## Session
 
-**Last session:** 2026-07-01T16:52:46.422Z
-**Stopped at:** Completed 05-04-PLAN.md
+**Last session:** 2026-07-01T17:02:18.067Z
+**Stopped at:** Completed 05-05-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -308,3 +311,4 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 | Phase 05-family-admin-experience P02 | 4min 21s | 3 tasks | 5 files |
 | Phase 05-family-admin-experience P03 | 14min | 3 tasks | 6 files |
 | Phase 05-family-admin-experience P04 | 6min | 3 tasks | 6 files |
+| Phase 05-family-admin-experience P05 | 6min | 3 tasks | 5 files |
