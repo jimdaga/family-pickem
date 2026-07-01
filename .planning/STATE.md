@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-07-01T03:07:54.300Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-07-01T03:15:41.467Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 25
-  completed_plans: 19
+  completed_plans: 20
   percent: 50
-current_phase: 04
+current_phase: 05
 ---
 
 # GSD State
@@ -198,6 +198,9 @@ See: `.planning/PROJECT.md`
 - [Phase 05]: 05-01: Tenant admin hub uses family_member_required(admin); global commissioner and superuser state do not bypass tenant membership.
 - [Phase 05]: 05-01: Recent audit activity is scoped to request.tenant_context.family and tested against cross-family rows.
 - [Phase 05]: 05-01: Shared admin navigation appears only for current tenant owners/admins.
+- [Phase 05]: Settings POST ignores client-supplied family_id, pool_id, banner ids, and other foreign identifiers; targets come from request.tenant_context.
+- [Phase 05]: Family, Pool, and PoolSettings edits share FamilyAuditLog.Action.POOL_SETTINGS_UPDATED with metadata target_type=family_pool_settings.
+- [Phase 05]: COMM-03 is covered as read-only current-family banner metadata; no banner editing UI or SiteBanner mutation was added.
 
 ## Verification
 
@@ -271,9 +274,9 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 
 ## Session
 
-**Last session:** 2026-07-01T03:07:54.296Z
-**Stopped at:** Completed 05-01-PLAN.md
-**Resume file:** .planning/phases/05-family-admin-experience/05-02-PLAN.md
+**Last session:** 2026-07-01T03:15:32.288Z
+**Stopped at:** Completed 05-02-PLAN.md
+**Resume file:** None
 
 ## Performance Metrics
 
@@ -291,3 +294,4 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 | Phase 04-family-scoped-app-pages P05 | 42min | 3 tasks | 7 files |
 | Phase 04-family-scoped-app-pages P06 | 6min 44s | 3 tasks | 3 files |
 | Phase 05-family-admin-experience P01 | 36min | 3 tasks | 5 files |
+| Phase 05-family-admin-experience P02 | 4min 21s | 3 tasks | 5 files |
