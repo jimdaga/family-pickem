@@ -86,9 +86,9 @@ class ViewSmokeTests(TestCase):
 
     # -- commissioner pages redirect for anon --
 
-    def test_commissioners_redirects_anon(self):
+    def test_commissioners_denies_anon_without_global_dashboard(self):
         resp = self.client.get("/commissioners/")
-        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.status_code, 404)
 
     # -- API endpoints (AllowAny / IsAdminOrReadOnly at view level) --
 
@@ -2236,6 +2236,49 @@ class FamilyAdminExperienceTests(TestCase):
             kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
         )
 
+    def _winners_url(self, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_winners",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def _winner_candidate(self, user=None, *, game=None, pick=None, correct=True):
+        user = user or self.member
+        game = game or self._admin_game(game_id=9701, week="1")
+        return GamePicks.objects.create(
+            id=f"{self.pool.id}-{user.id}-{game.id}",
+            pool=self.pool,
+            userEmail=user.email,
+            userID=str(user.id),
+            uid=user.id,
+            slug=game.slug,
+            competition=game.competition,
+            gameseason=game.gameseason,
+            gameWeek=game.gameWeek,
+            gameyear=game.gameyear,
+            pick_game_id=game.id,
+            pick=pick or game.homeTeamSlug,
+            pick_correct=correct,
+        )
+
+    def _season_points(self, user=None, *, pool=None, week=1, points=0, bonus=0):
+        user = user or self.member
+        pool = pool or self.pool
+        row = userSeasonPoints.objects.create(
+            pool=pool,
+            userEmail=user.email,
+            userID=str(user.id),
+            gameyear=str(pool.season)[:4],
+            gameseason=pool.season,
+            total_points=points + bonus,
+        )
+        setattr(row, f"week_{week}_points", points)
+        setattr(row, f"week_{week}_bonus", bonus)
+        row.save()
+        return row
+
     def _admin_invitation(self, raw_code="ADMIN-CODE", **overrides):
         from pickem_homepage.views import hash_invite_code
 
@@ -3265,6 +3308,232 @@ class FamilyAdminExperienceTests(TestCase):
         csrf_response = csrf_client.post(self._picks_url(), self._manual_pick_payload(game))
         self.assertEqual(csrf_response.status_code, 403)
         self.assertFalse(GamePicks.objects.filter(pool=self.pool).exists())
+
+    def test_winner_page_lists_current_family_candidates_and_current_pool_rows(self):
+        current_game = self._admin_game(game_id=9701, week="2")
+        other_pool_game = self._admin_game(game_id=9702, week="2", home="mia", away="buf")
+        current_pick = self._winner_candidate(self.member, game=current_game)
+        self._season_points(self.member, week=2, points=3)
+        GamePicks.objects.create(
+            id=f"{self.other_pool.id}-{self.outsider.id}-{other_pool_game.id}",
+            pool=self.other_pool,
+            userEmail=self.outsider.email,
+            userID=str(self.outsider.id),
+            uid=self.outsider.id,
+            slug=other_pool_game.slug,
+            competition=other_pool_game.competition,
+            gameseason=other_pool_game.gameseason,
+            gameWeek=other_pool_game.gameWeek,
+            gameyear=other_pool_game.gameyear,
+            pick_game_id=other_pool_game.id,
+            pick=other_pool_game.homeTeamSlug,
+            pick_correct=True,
+        )
+
+        self.client.force_login(self.admin_user)
+        response = self.client.get(self._winners_url(), {"week": "2"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/family_admin_winners.html")
+        self.assertContains(response, "Week Winners")
+        self.assertContains(response, "Smith Family")
+        self.assertContains(response, self.member.username)
+        self.assertContains(response, str(current_pick.uid))
+        self.assertNotContains(response, self.outsider.username)
+        self.assertNotContains(response, other_pool_game.homeTeamName)
+
+    def test_winner_post_sets_current_pool_winner_bonus_total_and_audit(self):
+        game = self._admin_game(game_id=9710, week="3")
+        self._winner_candidate(self.member, game=game)
+        member_points = self._season_points(self.member, week=3, points=4)
+        owner_points = self._season_points(self.owner, week=3, points=5, bonus=2)
+        setattr(owner_points, "week_3_winner", True)
+        owner_points.total_points = 7
+        owner_points.save()
+        other_points = self._season_points(self.outsider, pool=self.other_pool, week=3, points=8)
+
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            self._winners_url(),
+            {
+                "week_number": "3",
+                "winner_uid": str(self.member.id),
+                "gameseason": "1999",
+                "pool_id": str(self.other_pool.id),
+                "family_id": str(self.other_family.id),
+                "bonus": "99",
+            },
+        )
+
+        self.assertRedirects(response, self._winners_url() + "?week=3")
+        member_points.refresh_from_db()
+        owner_points.refresh_from_db()
+        other_points.refresh_from_db()
+        self.assertTrue(member_points.week_3_winner)
+        self.assertEqual(member_points.week_3_bonus, 2)
+        self.assertEqual(member_points.total_points, 6)
+        self.assertFalse(owner_points.week_3_winner)
+        self.assertEqual(owner_points.week_3_bonus, 0)
+        self.assertEqual(owner_points.total_points, 5)
+        self.assertFalse(other_points.week_3_winner)
+        self.assertEqual(other_points.week_3_bonus, 0)
+        self.assertEqual(other_points.total_points, 8)
+
+        audit = FamilyAuditLog.objects.get(
+            family=self.family,
+            pool=self.pool,
+            actor=self.admin_user,
+            action=FamilyAuditLog.Action.WEEK_WINNER_UPDATED,
+            target_type="userSeasonPoints",
+            target_id=str(member_points.id),
+        )
+        self.assertEqual(audit.metadata["week"], 3)
+        self.assertEqual(audit.metadata["previous_winner_user_id"], self.owner.id)
+        self.assertEqual(audit.metadata["new_winner_user_id"], self.member.id)
+        self.assertEqual(audit.metadata["bonus_points"], 2)
+        self.assertEqual(audit.metadata["actor_id"], self.admin_user.id)
+        self.assertNotIn("1999", str(audit.metadata))
+        self.assertNotIn(str(self.other_pool.id), str(audit.metadata))
+
+    def test_winner_post_rejects_invalid_weeks_before_dynamic_fields(self):
+        self._season_points(self.member, week=1, points=1)
+        self.client.force_login(self.admin_user)
+
+        for invalid_week in ("0", "19", "abc", "1; DROP", "", None):
+            with self.subTest(invalid_week=invalid_week):
+                payload = {"winner_uid": str(self.member.id)}
+                if invalid_week is not None:
+                    payload["week_number"] = invalid_week
+                response = self.client.post(self._winners_url(), payload)
+                self.assertEqual(response.status_code, 400)
+
+        row = userSeasonPoints.objects.get(pool=self.pool, userID=str(self.member.id))
+        self.assertFalse(row.week_1_winner)
+        self.assertEqual(row.week_1_bonus, 0)
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                action=FamilyAuditLog.Action.WEEK_WINNER_UPDATED,
+            ).exists()
+        )
+
+    def test_winner_post_rejects_forged_users_and_missing_current_pool_standings(self):
+        game = self._admin_game(game_id=9720, week="4")
+        self._winner_candidate(self.member, game=game)
+        self._season_points(self.outsider, pool=self.other_pool, week=4, points=6)
+        no_standing_user = User.objects.create_user(
+            "admin-no-standing",
+            email="no-standing@example.com",
+            password="pass",
+        )
+        self._membership(no_standing_user, self.family, FamilyMembership.Role.MEMBER)
+
+        self.client.force_login(self.admin_user)
+        cases = [
+            self.outsider.id,
+            no_standing_user.id,
+        ]
+        for winner_uid in cases:
+            with self.subTest(winner_uid=winner_uid):
+                response = self.client.post(
+                    self._winners_url(),
+                    {"week_number": "4", "winner_uid": str(winner_uid)},
+                )
+                self.assertEqual(response.status_code, 404)
+
+        self.assertFalse(userSeasonPoints.objects.filter(pool=self.pool, week_4_winner=True).exists())
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                action=FamilyAuditLog.Action.WEEK_WINNER_UPDATED,
+            ).exists()
+        )
+
+    def test_winner_access_denies_member_outsider_inactive_anonymous_and_csrf(self):
+        self._season_points(self.member, week=5, points=2)
+
+        for user, expected_status in (
+            (self.member, 403),
+            (self.outsider, 404),
+            (self.inactive_user, 404),
+        ):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+                get_response = self.client.get(self._winners_url())
+                post_response = self.client.post(
+                    self._winners_url(),
+                    {"week_number": "5", "winner_uid": str(self.member.id)},
+                )
+                self.assertEqual(get_response.status_code, expected_status)
+                self.assertEqual(post_response.status_code, expected_status)
+
+        self.client.logout()
+        response = self.client.get(self._winners_url())
+        self.assertEqual(response.status_code, 302)
+
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.admin_user)
+        csrf_response = csrf_client.post(
+            self._winners_url(),
+            {"week_number": "5", "winner_uid": str(self.member.id)},
+        )
+        self.assertEqual(csrf_response.status_code, 403)
+        self.assertFalse(userSeasonPoints.objects.filter(pool=self.pool, week_5_winner=True).exists())
+
+    def test_legacy_commissioner_routes_are_disabled_without_login_html_or_global_mutation(self):
+        UserProfile.objects.create(user=self.owner, is_commissioner=True)
+        legacy_pick_game = self._admin_game(game_id=9730, week="6")
+        legacy_standing = self._season_points(self.owner, week=6, points=4)
+
+        self.client.force_login(self.owner)
+        page_response = self.client.get(reverse("commissioners"))
+        self.assertEqual(page_response.status_code, 404)
+        self.assertNotContains(page_response, "Commissioners Dashboard", status_code=404)
+
+        json_routes = [
+            (
+                "set_week_winner",
+                "post",
+                {
+                    "week_number": "6",
+                    "winner_uid": str(self.owner.id),
+                    "gameseason": str(self.pool.season),
+                },
+            ),
+            (
+                "submit_manual_pick",
+                "post",
+                {
+                    "user_id": str(self.owner.id),
+                    "game_id": str(legacy_pick_game.id),
+                    "pick": legacy_pick_game.homeTeamSlug,
+                },
+            ),
+            ("get_user_picks", "get", {"user_id": str(self.owner.id)}),
+        ]
+        for route_name, method, payload in json_routes:
+            with self.subTest(route_name=route_name):
+                url = reverse(route_name)
+                if method == "post":
+                    response = self.client.post(
+                        url,
+                        data=json.dumps(payload),
+                        content_type="application/json",
+                        HTTP_ACCEPT="application/json",
+                    )
+                else:
+                    response = self.client.get(url, payload, HTTP_ACCEPT="application/json")
+                self.assertIn(response.status_code, (403, 404))
+                self.assertEqual(response["Content-Type"].split(";")[0], "application/json")
+                body = response.content.decode()
+                self.assertNotIn("/accounts/login", body)
+                self.assertNotIn("Smith", body)
+                self.assertNotIn("Jones", body)
+
+        legacy_standing.refresh_from_db()
+        self.assertFalse(legacy_standing.week_6_winner)
+        self.assertEqual(legacy_standing.week_6_bonus, 0)
+        self.assertFalse(GamePicks.objects.filter(userID=str(self.owner.id), pick_game_id=legacy_pick_game.id).exists())
 
 
 class CreateFamilyFlowTests(TestCase):
