@@ -2492,6 +2492,26 @@ class FamilyAdminExperienceTests(TestCase):
         response = self.client.get(self._members_url())
         self.assertEqual(response.status_code, 302)
 
+    def test_member_list_owner_controls_and_admin_readonly_state_are_visible(self):
+        self.client.force_login(self.owner)
+        owner_response = self.client.get(self._members_url())
+
+        self.assertEqual(owner_response.status_code, 200)
+        self.assertContains(owner_response, 'data-testid="family-admin-members"')
+        self.assertContains(owner_response, 'data-testid="membership-update-form"')
+        self.assertContains(owner_response, self._member_update_url())
+        self.assertContains(owner_response, "Save")
+
+        self.client.force_login(self.admin_user)
+        admin_response = self.client.get(self._members_url())
+
+        self.assertEqual(admin_response.status_code, 200)
+        self.assertContains(admin_response, 'data-testid="family-admin-members"')
+        self.assertContains(admin_response, 'data-testid="membership-readonly-state"')
+        self.assertContains(admin_response, "Owner role required")
+        self.assertNotContains(admin_response, 'data-testid="membership-update-form"')
+        self.assertNotContains(admin_response, self._member_update_url())
+
     def test_owner_can_update_member_role_status_and_audit_safe_metadata(self):
         self.client.force_login(self.owner)
         member_membership = FamilyMembership.objects.get(
