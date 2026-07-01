@@ -2164,6 +2164,14 @@ class FamilyAdminExperienceTests(TestCase):
             kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
         )
 
+    def _settings_url(self, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_settings",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
     def test_anonymous_admin_hub_redirects_to_login(self):
         response = self.client.get(self._admin_url())
 
@@ -2247,6 +2255,173 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(member_response.status_code, 200)
         self.assertNotContains(member_response, 'data-testid="tenant-admin-nav"')
         self.assertNotContains(member_response, self._admin_url())
+
+    def test_admin_and_owner_settings_page_renders_current_context_without_banner_leakage(self):
+        SiteBanner.objects.create(
+            family=self.family,
+            title="Smith-only draft note",
+            description="Smith private banner metadata",
+            is_active=True,
+        )
+        SiteBanner.objects.create(
+            family=self.other_family,
+            title="Jones-only draft note",
+            description="Jones private banner metadata",
+            is_active=True,
+        )
+
+        for user in (self.owner, self.admin_user):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+
+                response = self.client.get(self._settings_url())
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "pickem/family_admin_settings.html")
+                self.assertContains(response, "Smith Family")
+                self.assertContains(response, "Main Pickem")
+                self.assertContains(response, "Pick Locking")
+                self.assertContains(response, "Tiebreakers")
+                self.assertContains(response, "Smith-only draft note")
+                self.assertNotContains(response, "Jones Family")
+                self.assertNotContains(response, "Jones-only draft note")
+                self.assertNotContains(response, "Jones private banner metadata")
+
+    def test_settings_post_updates_only_current_tenant_and_audits_safe_metadata(self):
+        other_settings = self.other_pool.settings
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            self._settings_url(),
+            {
+                "family_name": "Updated Smith Family",
+                "pool_name": "Updated Main Pickem",
+                "picks_lock_at_kickoff": "",
+                "allow_tiebreaker": "on",
+                "family_id": self.other_family.id,
+                "pool_id": self.other_pool.id,
+                "site_banner_id": SiteBanner.objects.create(
+                    family=self.other_family,
+                    title="Do not touch me",
+                    description="Other family banner secret",
+                    is_active=True,
+                ).id,
+                "secret": "csrf-token-or-session-secret",
+            },
+        )
+
+        self.assertRedirects(response, self._settings_url())
+
+        self.family.refresh_from_db()
+        self.pool.refresh_from_db()
+        self.pool.settings.refresh_from_db()
+        self.other_family.refresh_from_db()
+        self.other_pool.refresh_from_db()
+        other_settings.refresh_from_db()
+
+        self.assertEqual(self.family.name, "Updated Smith Family")
+        self.assertEqual(self.pool.name, "Updated Main Pickem")
+        self.assertFalse(self.pool.settings.picks_lock_at_kickoff)
+        self.assertTrue(self.pool.settings.allow_tiebreaker)
+        self.assertEqual(self.other_family.name, "Jones Family")
+        self.assertEqual(self.other_pool.name, "Main Pickem")
+        self.assertTrue(other_settings.picks_lock_at_kickoff)
+        self.assertTrue(other_settings.allow_tiebreaker)
+
+        audit = FamilyAuditLog.objects.get(
+            family=self.family,
+            pool=self.pool,
+            actor=self.admin_user,
+            action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+            target_type="AdminSettings",
+        )
+        self.assertEqual(audit.target_id, str(self.pool.id))
+        self.assertEqual(audit.metadata["target_type"], "family_pool_settings")
+        self.assertEqual(audit.metadata["family_id"], self.family.id)
+        self.assertEqual(audit.metadata["pool_id"], self.pool.id)
+        self.assertIn("family.name", audit.metadata["changed_fields"])
+        self.assertIn("pool.name", audit.metadata["changed_fields"])
+        self.assertIn("settings.picks_lock_at_kickoff", audit.metadata["changed_fields"])
+        self.assertNotIn("secret", str(audit.metadata).lower())
+        self.assertNotIn("csrf", str(audit.metadata).lower())
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                family=self.other_family,
+                action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+            ).exists()
+        )
+
+    def test_settings_post_denies_member_outsider_inactive_anonymous_without_mutation(self):
+        for user, expected_status in (
+            (self.member, 403),
+            (self.outsider, 404),
+            (self.inactive_user, 404),
+        ):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+
+                response = self.client.post(
+                    self._settings_url(),
+                    {
+                        "family_name": "Unauthorized Name",
+                        "pool_name": "Unauthorized Pool",
+                        "allow_tiebreaker": "on",
+                    },
+                )
+
+                self.assertEqual(response.status_code, expected_status)
+                self.family.refresh_from_db()
+                self.pool.refresh_from_db()
+                self.assertEqual(self.family.name, "Smith Family")
+                self.assertEqual(self.pool.name, "Main Pickem")
+
+        self.client.logout()
+        response = self.client.post(
+            self._settings_url(),
+            {
+                "family_name": "Anonymous Name",
+                "pool_name": "Anonymous Pool",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.pool.refresh_from_db()
+        self.assertEqual(self.family.name, "Smith Family")
+        self.assertEqual(self.pool.name, "Main Pickem")
+
+    def test_settings_post_requires_csrf_and_does_not_deactivate_banners(self):
+        smith_banner = SiteBanner.objects.create(
+            family=self.family,
+            title="Smith active banner",
+            is_active=True,
+        )
+        jones_banner = SiteBanner.objects.create(
+            family=self.other_family,
+            title="Jones active banner",
+            is_active=True,
+        )
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.admin_user)
+
+        response = csrf_client.post(
+            self._settings_url(),
+            {
+                "family_name": "CSRF Name",
+                "pool_name": "CSRF Pool",
+                "allow_tiebreaker": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.family.refresh_from_db()
+        self.pool.refresh_from_db()
+        smith_banner.refresh_from_db()
+        jones_banner.refresh_from_db()
+        self.assertEqual(self.family.name, "Smith Family")
+        self.assertEqual(self.pool.name, "Main Pickem")
+        self.assertTrue(smith_banner.is_active)
+        self.assertTrue(jones_banner.is_active)
 
 
 class CreateFamilyFlowTests(TestCase):
