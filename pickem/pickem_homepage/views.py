@@ -6,6 +6,7 @@ from pickem_api.models import GamePicks
 from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile
 from .forms import (
     CreateFamilyForm,
+    FamilyAdminSettingsForm,
     GamePicksForm,
     JoinFamilyForm,
     MessageBoardPostForm,
@@ -148,8 +149,8 @@ def build_family_admin_sections(family, pool):
             'label': 'Settings',
             'description': 'Family name, pool name, rules, and display settings.',
             'icon': 'fas fa-sliders-h',
-            'url': None,
-            'status': 'Planned 05-02',
+            'url': reverse('family_pool_admin_settings', kwargs=route_kwargs),
+            'status': 'Manage settings',
         },
         {
             'label': 'Members',
@@ -686,6 +687,122 @@ def family_pool_admin(request, family_slug, pool_slug):
         'pool_settings': pool_settings,
     }
     return render(request, 'pickem/family_admin.html', context)
+
+
+def build_admin_settings_metadata(*, family, pool, settings, cleaned_data):
+    before = {
+        'family.name': family.name,
+        'pool.name': pool.name,
+        'settings.picks_lock_at_kickoff': settings.picks_lock_at_kickoff,
+        'settings.allow_tiebreaker': settings.allow_tiebreaker,
+    }
+    after = {
+        'family.name': cleaned_data['family_name'],
+        'pool.name': cleaned_data['pool_name'],
+        'settings.picks_lock_at_kickoff': cleaned_data['picks_lock_at_kickoff'],
+        'settings.allow_tiebreaker': cleaned_data['allow_tiebreaker'],
+    }
+    changed_fields = [
+        field for field, before_value in before.items()
+        if before_value != after[field]
+    ]
+    return changed_fields, {
+        'target_type': 'family_pool_settings',
+        'family_id': family.id,
+        'pool_id': pool.id,
+        'changed_fields': changed_fields,
+        'before': {field: before[field] for field in changed_fields},
+        'after': {field: after[field] for field in changed_fields},
+    }
+
+
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_settings(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    family = tenant_context.family
+    pool = tenant_context.pool
+    pool_settings, _created = PoolSettings.objects.get_or_create(pool=pool)
+    current_family_banners = (
+        SiteBanner.objects.filter(family=family)
+        .order_by('-is_active', '-priority', '-created_at')[:5]
+    )
+
+    initial = {
+        'family_name': family.name,
+        'pool_name': pool.name,
+        'picks_lock_at_kickoff': pool_settings.picks_lock_at_kickoff,
+        'allow_tiebreaker': pool_settings.allow_tiebreaker,
+    }
+    form = FamilyAdminSettingsForm(request.POST or None, initial=initial)
+
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            locked_family = Family.objects.select_for_update().get(id=family.id)
+            locked_pool = Pool.objects.select_for_update().get(
+                id=pool.id,
+                family=locked_family,
+            )
+            locked_settings, _created = (
+                PoolSettings.objects.select_for_update().get_or_create(pool=locked_pool)
+            )
+            changed_fields, metadata = build_admin_settings_metadata(
+                family=locked_family,
+                pool=locked_pool,
+                settings=locked_settings,
+                cleaned_data=form.cleaned_data,
+            )
+
+            if changed_fields:
+                if 'family.name' in changed_fields:
+                    locked_family.name = form.cleaned_data['family_name']
+                    locked_family.save(update_fields=['name', 'updated_at'])
+                if 'pool.name' in changed_fields:
+                    locked_pool.name = form.cleaned_data['pool_name']
+                    locked_pool.save(update_fields=['name', 'updated_at'])
+                settings_fields = []
+                if 'settings.picks_lock_at_kickoff' in changed_fields:
+                    locked_settings.picks_lock_at_kickoff = form.cleaned_data[
+                        'picks_lock_at_kickoff'
+                    ]
+                    settings_fields.append('picks_lock_at_kickoff')
+                if 'settings.allow_tiebreaker' in changed_fields:
+                    locked_settings.allow_tiebreaker = form.cleaned_data[
+                        'allow_tiebreaker'
+                    ]
+                    settings_fields.append('allow_tiebreaker')
+                if settings_fields:
+                    locked_settings.save(update_fields=settings_fields + ['updated_at'])
+
+                FamilyAuditLog.objects.create(
+                    family=locked_family,
+                    pool=locked_pool,
+                    actor=request.user,
+                    action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                    target_type='AdminSettings',
+                    target_id=str(locked_pool.id),
+                    metadata=metadata,
+                    **get_invite_audit_context(request),
+                )
+                messages.success(request, "Settings updated.")
+            else:
+                messages.info(request, "No settings changes to save.")
+
+        return redirect(
+            'family_pool_admin_settings',
+            family_slug=family.slug,
+            pool_slug=pool.slug,
+        )
+
+    context = {
+        'family': family,
+        'pool': pool,
+        'membership': tenant_context.membership,
+        'gameseason': pool.season or get_season(),
+        'form': form,
+        'pool_settings': pool_settings,
+        'current_family_banners': current_family_banners,
+    }
+    return render(request, 'pickem/family_admin_settings.html', context)
 
 
 # @ratelimit(key='ip', rate='30/m', method='GET', block=True)  # Disabled for now

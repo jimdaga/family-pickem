@@ -72,6 +72,63 @@ class PickSubmissionForm(forms.Form):
     tieBreakerYards = forms.IntegerField(required=False, min_value=0, max_value=2000)
 
 
+ADMIN_TEXT_INPUT_CLASSES = (
+    'w-full rounded-lg border border-border-light dark:border-border-subtle '
+    'bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary '
+    'placeholder-slate-500 focus:border-primary focus:outline-none '
+    'focus:ring-2 focus:ring-primary/20'
+)
+
+
+class FamilyAdminSettingsForm(forms.Form):
+    family_name = forms.CharField(
+        label="Family display name",
+        max_length=200,
+        min_length=2,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'autocomplete': 'organization',
+        }),
+    )
+    pool_name = forms.CharField(
+        label="Pool display name",
+        max_length=200,
+        min_length=2,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'autocomplete': 'off',
+        }),
+    )
+    picks_lock_at_kickoff = forms.BooleanField(
+        label="Pick Locking",
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
+    allow_tiebreaker = forms.BooleanField(
+        label="Tiebreakers",
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
+
+    def clean_family_name(self):
+        name = self.cleaned_data.get('family_name', '').strip()
+        if not name:
+            raise forms.ValidationError("Family display name is required.")
+        return " ".join(name.split())
+
+    def clean_pool_name(self):
+        name = self.cleaned_data.get('pool_name', '').strip()
+        if not name:
+            raise forms.ValidationError("Pool display name is required.")
+        return " ".join(name.split())
+
+
 class MessageBoardPostForm(forms.ModelForm):
     """Form for creating and editing message board posts"""
     

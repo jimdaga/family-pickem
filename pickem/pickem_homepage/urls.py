@@ -22,6 +22,11 @@ urlpatterns = [
         name='family_pool_admin',
     ),
     path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/settings/',
+        views.family_pool_admin_settings,
+        name='family_pool_admin_settings',
+    ),
+    path(
         'families/<slug:family_slug>/pools/<slug:pool_slug>/invites/create/',
         views.create_family_invite,
         name='create_family_invite',
