@@ -135,11 +135,11 @@ Definition of done:
 
 **Goal:** Replace global commissioner behavior with family owner/admin management.
 
-**Plans:** 7 plans
+**Plans:** 1/7 plans executed
 
 Plans:
 
-- [ ] 05-01-PLAN.md — Create tenant admin hub, scoped audit display, and admin navigation.
+- [x] 05-01-PLAN.md — Create tenant admin hub, scoped audit display, and admin navigation.
 - [ ] 05-02-PLAN.md — Add family, pool, rules/settings editing, and banner non-leakage preservation.
 - [ ] 05-03-PLAN.md — Add member role/status management with owner protections.
 - [ ] 05-04-PLAN.md — Add simple current-model invite management.

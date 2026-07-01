@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 5 planned and verified
-last_updated: "2026-07-01T02:51:59.373Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-07-01T03:07:54.300Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 25
-  completed_plans: 18
+  completed_plans: 19
   percent: 50
 current_phase: 04
 ---
@@ -195,6 +195,9 @@ See: `.planning/PROJECT.md`
 - [Phase 04]: 04-05: Shared nav/dashboard/picks/scores links use tenant route names when current family/pool context exists, with public-safe fallbacks for anonymous pages.
 - [Phase 04]: 04-06: Final negative tests cover posts/comments/votes/player list/profile stats/picks/scores overlays/standings/dashboard/shared footer stats/family banners plus slug/object/query/body tampering.
 - [Phase 04]: 04-06: Phase 04 validation is complete without claiming family admin editing, cron/scoring hardening, or production migration hardening.
+- [Phase 05]: 05-01: Tenant admin hub uses family_member_required(admin); global commissioner and superuser state do not bypass tenant membership.
+- [Phase 05]: 05-01: Recent audit activity is scoped to request.tenant_context.family and tested against cross-family rows.
+- [Phase 05]: 05-01: Shared admin navigation appears only for current tenant owners/admins.
 
 ## Verification
 
@@ -268,9 +271,9 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 
 ## Session
 
-**Last session:** 2026-07-01T02:51:59.368Z
-**Stopped at:** Phase 5 planned and verified
-**Resume file:** .planning/phases/05-family-admin-experience/05-01-PLAN.md
+**Last session:** 2026-07-01T03:07:54.296Z
+**Stopped at:** Completed 05-01-PLAN.md
+**Resume file:** .planning/phases/05-family-admin-experience/05-02-PLAN.md
 
 ## Performance Metrics
 
@@ -287,3 +290,4 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 | Phase 04-family-scoped-app-pages P04 | 46min | 3 tasks | 6 files |
 | Phase 04-family-scoped-app-pages P05 | 42min | 3 tasks | 7 files |
 | Phase 04-family-scoped-app-pages P06 | 6min 44s | 3 tasks | 3 files |
+| Phase 05-family-admin-experience P01 | 36min | 3 tasks | 5 files |

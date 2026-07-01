@@ -17,7 +17,7 @@
 
 - [x] **AUTHZ-01**: Every family/pool read path checks authenticated membership server-side.
 - [x] **AUTHZ-02**: Every family/pool write path checks authenticated membership server-side.
-- [ ] **AUTHZ-03**: Owner/admin actions require least-privilege role checks.
+- [x] **AUTHZ-03**: Owner/admin actions require least-privilege role checks.
 - [x] **AUTHZ-04**: Users outside a family cannot view or infer private family picks, standings, members, invitations, settings, dashboards, profiles, or message-board data.
 - [x] **AUTHZ-05**: Client-provided family, pool, user, season, week, and game identifiers are validated against server-resolved membership and allowed objects.
 
@@ -83,7 +83,7 @@
 | TEN-05 | Phase 1 | Complete |
 | AUTHZ-01 | Phase 2, Phase 4 | Complete |
 | AUTHZ-02 | Phase 2, Phase 4 | Complete |
-| AUTHZ-03 | Phase 2, Phase 5 | Pending |
+| AUTHZ-03 | Phase 2, Phase 5 | Complete |
 | AUTHZ-04 | Phase 2, Phase 4 | Complete |
 | AUTHZ-05 | Phase 2, Phase 4, Phase 5 | Complete |
 | INV-01 | Phase 3, Phase 5 | Complete |
