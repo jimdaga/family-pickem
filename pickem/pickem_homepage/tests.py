@@ -2188,6 +2188,54 @@ class FamilyAdminExperienceTests(TestCase):
             kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
         )
 
+    def _invites_url(self, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_invites",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def _invite_revoke_url(self, invitation, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_invite_revoke",
+            kwargs={
+                "family_slug": family.slug,
+                "pool_slug": pool.slug,
+                "invitation_id": invitation.id,
+            },
+        )
+
+    def _invite_replace_url(self, invitation, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_invite_replace",
+            kwargs={
+                "family_slug": family.slug,
+                "pool_slug": pool.slug,
+                "invitation_id": invitation.id,
+            },
+        )
+
+    def _admin_invitation(self, raw_code="ADMIN-CODE", **overrides):
+        from pickem_homepage.views import hash_invite_code
+
+        defaults = {
+            "family": self.family,
+            "pool": self.pool,
+            "code_hash": hash_invite_code(raw_code),
+            "role": FamilyMembership.Role.MEMBER,
+            "expires_at": timezone.now() + timedelta(days=14),
+            "max_uses": 20,
+            "use_count": 1,
+            "created_by": self.owner,
+        }
+        defaults.update(overrides)
+        return FamilyInvitation.objects.create(**defaults)
+
     def test_anonymous_admin_hub_redirects_to_login(self):
         response = self.client.get(self._admin_url())
 
@@ -2670,6 +2718,242 @@ class FamilyAdminExperienceTests(TestCase):
         member_membership.refresh_from_db()
         self.assertEqual(member_membership.role, FamilyMembership.Role.MEMBER)
         self.assertEqual(member_membership.status, FamilyMembership.Status.ACTIVE)
+
+    def test_admin_invite_page_lists_safe_current_family_metadata_only(self):
+        current_invite = self._admin_invitation(
+            raw_code="SAFE-LIST-CODE",
+            role=FamilyMembership.Role.MEMBER,
+            use_count=3,
+            max_uses=10,
+        )
+        current_invite.is_revoked = True
+        current_invite.save(update_fields=["is_revoked", "updated_at"])
+        self._admin_invitation(
+            raw_code="OTHER-FAMILY-CODE",
+            family=self.other_family,
+            pool=self.other_pool,
+            created_by=self.outsider,
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(self._invites_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/family_admin_invites.html")
+        self.assertContains(response, "Smith Family")
+        self.assertContains(response, "Member")
+        self.assertContains(response, "10")
+        self.assertContains(response, "3")
+        self.assertContains(response, "admin-owner")
+        self.assertContains(response, "Revoked")
+        self.assertContains(response, str(current_invite.id))
+        self.assertNotContains(response, "SAFE-LIST-CODE")
+        self.assertNotContains(response, current_invite.code_hash)
+        self.assertNotContains(response, "OTHER-FAMILY-CODE")
+        self.assertNotContains(response, "Jones Family")
+
+    def test_admin_and_owner_can_create_member_invites_with_one_time_raw_display(self):
+        for user in (self.owner, self.admin_user):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+                before_count = FamilyInvitation.objects.filter(family=self.family).count()
+
+                response = self.client.post(
+                    self._invites_url(),
+                    {
+                        "role": FamilyMembership.Role.MEMBER,
+                        "expires_in_days": "21",
+                        "max_uses": "7",
+                    },
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "pickem/family_admin_invites.html")
+                invitation = FamilyInvitation.objects.filter(
+                    family=self.family,
+                    created_by=user,
+                ).latest("created_at")
+                raw_code = response.context["invite_code"]
+                self.assertEqual(
+                    FamilyInvitation.objects.filter(family=self.family).count(),
+                    before_count + 1,
+                )
+                self.assertEqual(invitation.role, FamilyMembership.Role.MEMBER)
+                self.assertEqual(invitation.max_uses, 7)
+                self.assertEqual(invitation.use_count, 0)
+                self.assertFalse(invitation.is_revoked)
+                self.assertTrue(invitation.code_hash.startswith("sha256:"))
+                self.assertNotEqual(invitation.code_hash, raw_code)
+                self.assertContains(response, raw_code)
+                self.assertContains(response, reverse("accept_invite_link", kwargs={"invite_code": raw_code}))
+                self.assertNotIn(raw_code, str(FamilyAuditLog.objects.get(
+                    family=self.family,
+                    actor=user,
+                    action=FamilyAuditLog.Action.INVITATION_CREATED,
+                    target_id=str(invitation.id),
+                ).metadata))
+
+                reload_response = self.client.get(self._invites_url())
+                self.assertNotContains(reload_response, raw_code)
+                self.assertNotContains(reload_response, invitation.code_hash)
+
+    def test_admin_cannot_create_admin_role_invite_but_owner_can(self):
+        self.client.force_login(self.admin_user)
+
+        admin_response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.ADMIN,
+                "expires_in_days": "14",
+                "max_uses": "5",
+            },
+        )
+
+        self.assertEqual(admin_response.status_code, 400)
+        self.assertFalse(
+            FamilyInvitation.objects.filter(
+                family=self.family,
+                role=FamilyMembership.Role.ADMIN,
+            ).exists()
+        )
+
+        self.client.force_login(self.owner)
+        owner_response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.ADMIN,
+                "expires_in_days": "14",
+                "max_uses": "5",
+            },
+        )
+
+        self.assertEqual(owner_response.status_code, 200)
+        self.assertTrue(
+            FamilyInvitation.objects.filter(
+                family=self.family,
+                role=FamilyMembership.Role.ADMIN,
+                created_by=self.owner,
+            ).exists()
+        )
+
+    def test_invite_revoke_and_replace_are_current_family_scoped_and_audited(self):
+        invite = self._admin_invitation(raw_code="REVOKE-ME")
+        self.client.force_login(self.admin_user)
+
+        revoke_response = self.client.post(self._invite_revoke_url(invite))
+
+        self.assertRedirects(revoke_response, self._invites_url())
+        invite.refresh_from_db()
+        self.assertTrue(invite.is_revoked)
+        revoke_audit = FamilyAuditLog.objects.get(
+            family=self.family,
+            actor=self.admin_user,
+            action=FamilyAuditLog.Action.INVITATION_REVOKED,
+            target_id=str(invite.id),
+        )
+        self.assertEqual(revoke_audit.metadata["role"], FamilyMembership.Role.MEMBER)
+        self.assertNotIn("REVOKE-ME", str(revoke_audit.metadata))
+
+        replacement_source = self._admin_invitation(raw_code="REPLACE-ME")
+        replace_response = self.client.post(self._invite_replace_url(replacement_source))
+
+        self.assertEqual(replace_response.status_code, 200)
+        replacement_source.refresh_from_db()
+        self.assertTrue(replacement_source.is_revoked)
+        replacement = FamilyInvitation.objects.exclude(id__in=[invite.id, replacement_source.id]).get(
+            family=self.family,
+            created_by=self.admin_user,
+        )
+        self.assertEqual(replacement.role, replacement_source.role)
+        self.assertEqual(replacement.max_uses, replacement_source.max_uses)
+        raw_code = replace_response.context["invite_code"]
+        self.assertContains(replace_response, raw_code)
+        self.assertNotIn(raw_code, str(FamilyAuditLog.objects.filter(
+            family=self.family,
+            target_id=str(replacement.id),
+        ).values_list("metadata", flat=True)))
+
+    def test_cross_family_invitation_ids_cannot_be_revoked_or_replaced(self):
+        other_invite = self._admin_invitation(
+            raw_code="JONES-SECRET",
+            family=self.other_family,
+            pool=self.other_pool,
+            created_by=self.outsider,
+        )
+        self.client.force_login(self.owner)
+
+        revoke_response = self.client.post(self._invite_revoke_url(other_invite))
+        replace_response = self.client.post(self._invite_replace_url(other_invite))
+
+        self.assertEqual(revoke_response.status_code, 404)
+        self.assertEqual(replace_response.status_code, 404)
+        other_invite.refresh_from_db()
+        self.assertFalse(other_invite.is_revoked)
+        self.assertEqual(
+            FamilyInvitation.objects.filter(family=self.other_family).count(),
+            1,
+        )
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                family=self.other_family,
+                action__in=[
+                    FamilyAuditLog.Action.INVITATION_REVOKED,
+                    FamilyAuditLog.Action.INVITATION_CREATED,
+                ],
+                target_id=str(other_invite.id),
+            ).exists()
+        )
+
+    def test_invite_mutations_deny_member_outsider_inactive_anonymous_and_csrf(self):
+        invite = self._admin_invitation(raw_code="NO-MUTATE")
+
+        for user, expected_status in (
+            (self.member, 403),
+            (self.outsider, 404),
+            (self.inactive_user, 404),
+        ):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+                create_response = self.client.post(
+                    self._invites_url(),
+                    {
+                        "role": FamilyMembership.Role.MEMBER,
+                        "expires_in_days": "14",
+                        "max_uses": "5",
+                    },
+                )
+                revoke_response = self.client.post(self._invite_revoke_url(invite))
+                replace_response = self.client.post(self._invite_replace_url(invite))
+
+                self.assertEqual(create_response.status_code, expected_status)
+                self.assertEqual(revoke_response.status_code, expected_status)
+                self.assertEqual(replace_response.status_code, expected_status)
+                invite.refresh_from_db()
+                self.assertFalse(invite.is_revoked)
+
+        self.client.logout()
+        self.assertEqual(self.client.post(self._invites_url()).status_code, 302)
+        self.assertEqual(self.client.post(self._invite_revoke_url(invite)).status_code, 302)
+        self.assertEqual(self.client.post(self._invite_replace_url(invite)).status_code, 302)
+
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.admin_user)
+        csrf_create = csrf_client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.MEMBER,
+                "expires_in_days": "14",
+                "max_uses": "5",
+            },
+        )
+        csrf_revoke = csrf_client.post(self._invite_revoke_url(invite))
+        csrf_replace = csrf_client.post(self._invite_replace_url(invite))
+
+        self.assertEqual(csrf_create.status_code, 403)
+        self.assertEqual(csrf_revoke.status_code, 403)
+        self.assertEqual(csrf_replace.status_code, 403)
+        invite.refresh_from_db()
+        self.assertFalse(invite.is_revoked)
 
 
 class CreateFamilyFlowTests(TestCase):
