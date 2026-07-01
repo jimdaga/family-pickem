@@ -150,6 +150,11 @@ class FamilyManualPickForm(forms.Form):
     tieBreakerYards = forms.IntegerField(required=False, min_value=0, max_value=2000)
 
 
+class FamilyWeekWinnerForm(forms.Form):
+    week_number = forms.IntegerField(required=True, min_value=1, max_value=18)
+    winner_uid = forms.IntegerField(required=True, min_value=1)
+
+
 class FamilyInviteCreateForm(forms.Form):
     role = forms.ChoiceField(required=True)
     expires_in_days = forms.IntegerField(

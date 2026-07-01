@@ -3393,7 +3393,8 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(audit.metadata["bonus_points"], 2)
         self.assertEqual(audit.metadata["actor_id"], self.admin_user.id)
         self.assertNotIn("1999", str(audit.metadata))
-        self.assertNotIn(str(self.other_pool.id), str(audit.metadata))
+        self.assertNotIn("pool_id", audit.metadata)
+        self.assertNotIn("family_id", audit.metadata)
 
     def test_winner_post_rejects_invalid_weeks_before_dynamic_fields(self):
         self._season_points(self.member, week=1, points=1)

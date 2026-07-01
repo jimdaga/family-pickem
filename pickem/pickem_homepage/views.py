@@ -10,6 +10,7 @@ from .forms import (
     FamilyInviteCreateForm,
     FamilyAdminSettingsForm,
     FamilyManualPickForm,
+    FamilyWeekWinnerForm,
     FamilyMembershipUpdateForm,
     GamePicksForm,
     JoinFamilyForm,
@@ -187,8 +188,8 @@ def build_family_admin_sections(family, pool):
             'label': 'Winners',
             'description': 'Weekly winner and bonus point controls.',
             'icon': 'fas fa-trophy',
-            'url': None,
-            'status': 'Planned 05-06',
+            'url': reverse('family_pool_admin_winners', kwargs=route_kwargs),
+            'status': 'Manage winners',
         },
     ]
 
@@ -871,6 +872,22 @@ def get_admin_pick_week(request, pool):
     return str(week)
 
 
+def get_admin_winner_week(request, pool):
+    requested_week = request.POST.get('week_number') if request.method == 'POST' else request.GET.get('week')
+    if requested_week:
+        form = forms.IntegerField(min_value=1, max_value=18)
+        try:
+            return form.clean(requested_week)
+        except forms.ValidationError:
+            return None
+    week, _competition = get_current_week_context(pool.season or get_season())
+    form = forms.IntegerField(min_value=1, max_value=18)
+    try:
+        return form.clean(week)
+    except forms.ValidationError:
+        return 1
+
+
 def get_manual_pick_members(family):
     return (
         FamilyMembership.objects.filter(
@@ -930,6 +947,96 @@ def manual_pick_audit_metadata(*, previous_pick, new_pick, target_user, game, ac
     }
 
 
+def recalculate_season_total(points_row):
+    total_points = 0
+    for week in range(1, 19):
+        total_points += getattr(points_row, f"week_{week}_points", 0) or 0
+        total_points += getattr(points_row, f"week_{week}_bonus", 0) or 0
+    points_row.total_points = total_points
+    return total_points
+
+
+def get_week_winner_candidates(family, pool, week):
+    pick_rows = (
+        GamePicks.objects.filter(
+            pool=pool,
+            gameseason=pool.season,
+            competition=pool.competition,
+            gameWeek=str(week),
+            pick_correct=True,
+        )
+        .values('uid')
+        .annotate(wins=Count('uid'))
+        .order_by('-wins', 'uid')
+    )
+    if not pick_rows:
+        return []
+
+    active_memberships = {
+        membership.user_id: membership.user
+        for membership in FamilyMembership.objects.filter(
+            family=family,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+            user_id__in=[row['uid'] for row in pick_rows],
+        ).select_related('user')
+    }
+    standing_user_ids = set(
+        userSeasonPoints.objects.filter(
+            pool=pool,
+            gameseason=pool.season,
+            userID__in=[str(user_id) for user_id in active_memberships],
+        ).values_list('userID', flat=True)
+    )
+
+    candidates = []
+    for row in pick_rows:
+        user = active_memberships.get(row['uid'])
+        if user and str(user.id) in standing_user_ids:
+            candidates.append({'user': user, 'uid': user.id, 'wins': row['wins']})
+    return candidates
+
+
+def resolve_week_winner_row(family, pool, winner_uid):
+    membership = (
+        FamilyMembership.objects.filter(
+            family=family,
+            user_id=winner_uid,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+        )
+        .select_related('user')
+        .first()
+    )
+    if not membership:
+        raise Http404()
+
+    points_row = (
+        userSeasonPoints.objects.select_for_update()
+        .filter(
+            pool=pool,
+            gameseason=pool.season,
+            userID=str(membership.user_id),
+        )
+        .first()
+    )
+    if not points_row:
+        raise Http404()
+    return membership.user, points_row
+
+
+def week_winner_audit_metadata(*, week, previous_row, new_row, actor):
+    return {
+        'week': week,
+        'previous_winner_user_id': int(previous_row.userID) if previous_row else None,
+        'previous_winner_row_id': previous_row.id if previous_row else None,
+        'new_winner_user_id': int(new_row.userID),
+        'new_winner_row_id': new_row.id,
+        'bonus_points': 2,
+        'actor_id': actor.id,
+    }
+
+
 def json_tenant_admin_context(request, family_slug, pool_slug):
     try:
         return require_tenant_context(
@@ -977,6 +1084,105 @@ def render_family_admin_picks(request, tenant_context, form=None, *, status=200)
         ),
     }
     return render(request, 'pickem/family_admin_picks.html', context, status=status)
+
+
+def render_family_admin_winners(request, tenant_context, form=None, *, status=200):
+    family = tenant_context.family
+    pool = tenant_context.pool
+    selected_week = get_admin_winner_week(request, pool)
+    if selected_week is None:
+        selected_week = 1
+    winner_field = f"week_{selected_week}_winner"
+    candidates = get_week_winner_candidates(family, pool, selected_week)
+    current_winner = (
+        userSeasonPoints.objects.filter(
+            pool=pool,
+            gameseason=pool.season,
+            **{winner_field: True},
+        )
+        .order_by('id')
+        .first()
+    )
+    context = {
+        'family': family,
+        'pool': pool,
+        'membership': tenant_context.membership,
+        'gameseason': pool.season or get_season(),
+        'selected_week': selected_week,
+        'week_choices': range(1, 19),
+        'candidates': candidates,
+        'current_winner': current_winner,
+        'form': form,
+    }
+    return render(request, 'pickem/family_admin_winners.html', context, status=status)
+
+
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_winners(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    if request.method == 'GET':
+        return render_family_admin_winners(request, tenant_context)
+
+    form = FamilyWeekWinnerForm(request.POST)
+    if not form.is_valid():
+        return render_family_admin_winners(request, tenant_context, form, status=400)
+
+    week = form.cleaned_data['week_number']
+    winner_field = f"week_{week}_winner"
+    bonus_field = f"week_{week}_bonus"
+    family = tenant_context.family
+    pool = tenant_context.pool
+
+    with transaction.atomic():
+        previous_winner = (
+            userSeasonPoints.objects.select_for_update()
+            .filter(
+                pool=pool,
+                gameseason=pool.season,
+                **{winner_field: True},
+            )
+            .order_by('id')
+            .first()
+        )
+        _winner_user, winner_row = resolve_week_winner_row(
+            family,
+            pool,
+            form.cleaned_data['winner_uid'],
+        )
+        affected_rows = list(
+            userSeasonPoints.objects.select_for_update().filter(
+                pool=pool,
+                gameseason=pool.season,
+            )
+        )
+        for points_row in affected_rows:
+            if getattr(points_row, winner_field, False) or (points_row.id == winner_row.id):
+                setattr(points_row, winner_field, points_row.id == winner_row.id)
+                setattr(points_row, bonus_field, 2 if points_row.id == winner_row.id else 0)
+                recalculate_season_total(points_row)
+                points_row.save(update_fields=[winner_field, bonus_field, 'total_points', 'playerUpdated'])
+
+        winner_row.refresh_from_db()
+        FamilyAuditLog.objects.create(
+            family=family,
+            pool=pool,
+            actor=request.user,
+            action=FamilyAuditLog.Action.WEEK_WINNER_UPDATED,
+            target_type='userSeasonPoints',
+            target_id=str(winner_row.id),
+            metadata=week_winner_audit_metadata(
+                week=week,
+                previous_row=previous_winner,
+                new_row=winner_row,
+                actor=request.user,
+            ),
+            **get_invite_audit_context(request),
+        )
+
+    messages.success(request, f"Week {week} winner updated.")
+    return redirect(
+        f"{reverse('family_pool_admin_winners', kwargs={'family_slug': family.slug, 'pool_slug': pool.slug})}?week={week}"
+    )
 
 
 @family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
@@ -3038,191 +3244,34 @@ def get_post_comments_for_family(request, family, post_id):
 
 
 # Commissioner Views
-@commissioner_required
+def legacy_commissioner_json_denial(request):
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {'success': False, 'error': 'authentication_required'},
+            status=401,
+        )
+    return JsonResponse({'success': False, 'error': 'not_found'}, status=404)
+
+
 @never_cache
 def commissioners(request):
-    """Main commissioners dashboard"""
-    from .forms import WeekWinnerForm, SiteBannerForm
-    
-    today = date.today()
-    gameseason = get_season()
-    
-    # Get current week info
-    try:
-        week_obj = GameWeeks.objects.get(date=today.strftime("%Y-%m-%d"))
-        current_week = week_obj.weekNumber
-        current_competition = week_obj.competition
-    except GameWeeks.DoesNotExist:
-        current_week = '1'
-        current_competition = 'nfl'
-    
-    # Get current week candidates for week winner selection
-    week_candidates = get_week_candidates(gameseason, current_week, current_competition)
-    
-    # Check if current week already has a winner
-    winner_field = f"week_{current_week}_winner"
-    current_week_winner = userSeasonPoints.objects.filter(
-        gameseason=gameseason, 
-        **{winner_field: True}
-    ).first()
-    
-    # Get active banner info
-    active_banner = SiteBanner.get_active_banner()
-    
-    # Get data for manual pick submission
-    # Get all active users for the dropdown
-    User = get_user_model()
-    active_users = User.objects.filter(is_active=True).order_by('username')
-    
-    # Get current week games
-    current_week_games = GamesAndScores.objects.filter(
-        gameseason=gameseason, 
-        gameWeek=current_week, 
-        competition=current_competition
-    ).order_by('startTimestamp')
-    
-    # Get team records for display
-    team_records = Teams.objects.filter(gameseason=gameseason)
-    
-    # Initialize forms
-    week_winner_form = WeekWinnerForm(week_candidates) if week_candidates else None
-    banner_form = SiteBannerForm(instance=active_banner) if active_banner else SiteBannerForm()
-    
-    context = {
-        'current_week': current_week,
-        'gameseason': gameseason,
-        'current_competition': current_competition,
-        'week_candidates': week_candidates,
-        'current_week_winner': current_week_winner,
-        'active_banner': active_banner,
-        'week_winner_form': week_winner_form,
-        'banner_form': banner_form,
-        'active_users': active_users,
-        'current_week_games': current_week_games,
-        'team_records': team_records,
-    }
-    
-    return render(request, 'pickem/commissioners.html', context)
+    raise Http404()
 
 
-@commissioner_required
 @require_http_methods(["POST"])
 @csrf_exempt
 def set_week_winner(request):
-    """Set the winner for a specific week"""
-    from .forms import WeekWinnerForm
-    
-    try:
-        data = json.loads(request.body)
-        week_number = data.get('week_number')
-        winner_uid = data.get('winner_uid')
-        gameseason = data.get('gameseason')
-        
-        if not all([week_number, winner_uid, gameseason]):
-            return JsonResponse({
-                'success': False,
-                'error': 'Missing required fields'
-            }, status=400)
-        
-        # Clear any existing winners for this week
-        winner_field = f"week_{week_number}_winner"
-        userSeasonPoints.objects.filter(gameseason=gameseason).update(**{winner_field: False})
-        
-        # Set the new winner
-        winner_record = userSeasonPoints.objects.filter(
-            userEmail=User.objects.get(id=winner_uid).email,
-            gameseason=gameseason
-        ).first()
-        
-        if not winner_record:
-            return JsonResponse({
-                'success': False,
-                'error': 'User season record not found'
-            }, status=404)
-        
-        # Set winner and add bonus points
-        setattr(winner_record, winner_field, True)
-        bonus_field = f"week_{week_number}_bonus"
-        setattr(winner_record, bonus_field, 2)  # 2 bonus points for winning
-        
-        # Recalculate total points
-        total_points = 0
-        for week in range(1, 19):  # Weeks 1-18
-            points_field = f"week_{week}_points"
-            bonus_field = f"week_{week}_bonus"
-            week_points = getattr(winner_record, points_field, 0) or 0
-            week_bonus = getattr(winner_record, bonus_field, 0) or 0
-            total_points += week_points + week_bonus
-        
-        winner_record.total_points = total_points
-        winner_record.save()
-        
-        winner_user = User.objects.get(id=winner_uid)
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Successfully set {winner_user.username} as Week {week_number} winner with 2 bonus points!'
-        })
-        
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': 'Invalid JSON data'
-        }, status=400)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+    return legacy_commissioner_json_denial(request)
 
 
-@commissioner_required
 @require_http_methods(["POST"])
 def manage_banner(request):
-    """Create or update a site banner"""
-    from .forms import SiteBannerForm
-    
-    # Deactivate all current banners first (only one active at a time)
-    SiteBanner.objects.filter(is_active=True).update(is_active=False)
-    
-    # Get existing banner if editing
-    banner_id = request.POST.get('banner_id')
-    if banner_id:
-        banner = get_object_or_404(SiteBanner, id=banner_id)
-        form = SiteBannerForm(request.POST, instance=banner)
-    else:
-        form = SiteBannerForm(request.POST)
-    
-    if form.is_valid():
-        banner = form.save(commit=False)
-        banner.is_active = True  # Make this the active banner
-        banner.save()
-        
-        messages.success(request, f'Successfully {"updated" if banner_id else "created"} site banner!')
-        return redirect('commissioners')
-    else:
-        messages.error(request, 'Please correct the errors below.')
-        
-        # Re-render the commissioners page with form errors
-        return commissioners(request)
+    raise Http404()
 
 
-@commissioner_required
 @require_http_methods(["POST"])
 def deactivate_banner(request):
-    """Deactivate the current site banner"""
-    try:
-        active_banner = SiteBanner.get_active_banner()
-        if active_banner:
-            active_banner.is_active = False
-            active_banner.save()
-            messages.success(request, 'Site banner has been deactivated.')
-        else:
-            messages.info(request, 'No active banner to deactivate.')
-    except Exception as e:
-        messages.error(request, f'Error deactivating banner: {str(e)}')
-    
-    return redirect('commissioners')
+    raise Http404()
 
 
 def get_week_candidates(gameseason, week, competition):
@@ -3272,130 +3321,12 @@ def get_week_candidates(gameseason, week, competition):
     return candidates
 
 
-@commissioner_required
 @require_http_methods(["POST"])
 @csrf_exempt
 def submit_manual_pick(request):
-    """Submit a pick on behalf of a user"""
-    try:
-        data = json.loads(request.body)
-        user_id = data.get('user_id')
-        game_id = data.get('game_id')
-        pick = data.get('pick')
-        tiebreaker_score = data.get('tiebreaker_score', '')
-        tiebreaker_yards = data.get('tiebreaker_yards', '')
-        
-        if not all([user_id, game_id, pick]):
-            return JsonResponse({
-                'success': False,
-                'error': 'Missing required fields'
-            }, status=400)
-        
-        # Get the user and game
-        try:
-            User = get_user_model()
-            user = User.objects.get(id=user_id)
-            game = GamesAndScores.objects.get(id=game_id)
-        except (User.DoesNotExist, GamesAndScores.DoesNotExist):
-            return JsonResponse({
-                'success': False,
-                'error': 'User or game not found'
-            }, status=404)
-        
-        # Create the pick ID (same format as regular picks)
-        pick_id = f"{user.id}-{game.id}"
-        
-        # Check if pick already exists and update or create
-        pick_obj, created = GamePicks.objects.update_or_create(
-            id=pick_id,
-            defaults={
-                'userEmail': user.email,
-                'uid': user.id,
-                'userID': str(user.id),
-                'slug': game.slug,
-                'competition': game.competition,
-                'gameWeek': game.gameWeek,
-                'gameyear': game.gameyear,
-                'gameseason': game.gameseason,
-                'pick_game_id': game.id,
-                'pick': pick,
-                'tieBreakerScore': int(tiebreaker_score) if tiebreaker_score else None,
-                'tieBreakerYards': int(tiebreaker_yards) if tiebreaker_yards else None,
-            }
-        )
-        
-        action = "created" if created else "updated"
-        return JsonResponse({
-            'success': True,
-            'message': f'Successfully {action} pick for {user.username}: {pick}',
-            'pick_id': pick_id
-        })
-        
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': 'Invalid JSON data'
-        }, status=400)
-    except ValueError as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Invalid data: {str(e)}'
-        }, status=400)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+    return legacy_commissioner_json_denial(request)
 
 
-@commissioner_required
 @require_http_methods(["GET"])
 def get_user_picks(request):
-    """Get existing picks for a user for the current week"""
-    user_id = request.GET.get('user_id')
-    if not user_id:
-        return JsonResponse({'error': 'User ID required'}, status=400)
-    
-    try:
-        User = get_user_model()
-        user = User.objects.get(id=user_id)
-        
-        # Get current week info
-        today = date.today()
-        gameseason = get_season()
-        
-        try:
-            week_obj = GameWeeks.objects.get(date=today.strftime("%Y-%m-%d"))
-            current_week = week_obj.weekNumber
-            current_competition = week_obj.competition
-        except GameWeeks.DoesNotExist:
-            current_week = '1'
-            current_competition = 'nfl'
-        
-        # Get user's picks for current week
-        picks = GamePicks.objects.filter(
-            userEmail=user.email,
-            gameWeek=current_week,
-            gameseason=gameseason,
-            competition=current_competition
-        )
-        
-        picks_data = {}
-        for pick in picks:
-            picks_data[str(pick.pick_game_id)] = {
-                'pick': pick.pick,
-                'tiebreaker_score': pick.tieBreakerScore,
-                'tiebreaker_yards': pick.tieBreakerYards,
-                'pick_id': pick.id
-            }
-        
-        return JsonResponse({
-            'success': True,
-            'picks': picks_data,
-            'username': user.username
-        })
-        
-    except User.DoesNotExist:
-        return JsonResponse({'error': 'User not found'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    return legacy_commissioner_json_denial(request)
