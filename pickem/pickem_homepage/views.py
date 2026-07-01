@@ -141,6 +141,47 @@ def get_family_pool_choices(user):
     return choices
 
 
+def build_family_admin_sections(family, pool):
+    route_kwargs = {'family_slug': family.slug, 'pool_slug': pool.slug}
+    return [
+        {
+            'label': 'Settings',
+            'description': 'Family name, pool name, rules, and display settings.',
+            'icon': 'fas fa-sliders-h',
+            'url': None,
+            'status': 'Planned 05-02',
+        },
+        {
+            'label': 'Members',
+            'description': 'Review members, roles, and active status.',
+            'icon': 'fas fa-user-shield',
+            'url': None,
+            'status': 'Planned 05-03',
+        },
+        {
+            'label': 'Invites',
+            'description': 'Create and revoke family invite links.',
+            'icon': 'fas fa-ticket-alt',
+            'url': reverse('create_family_invite', kwargs=route_kwargs),
+            'status': 'Create invite',
+        },
+        {
+            'label': 'Picks',
+            'description': 'Tenant-scoped manual pick tools.',
+            'icon': 'fas fa-clipboard-check',
+            'url': None,
+            'status': 'Planned 05-05',
+        },
+        {
+            'label': 'Winners',
+            'description': 'Weekly winner and bonus point controls.',
+            'icon': 'fas fa-trophy',
+            'url': None,
+            'status': 'Planned 05-06',
+        },
+    ]
+
+
 def get_current_week_context(gameseason):
     today = date.today()
     try:
@@ -606,6 +647,45 @@ def family_pool_home(request, family_slug, pool_slug):
         'active_members': active_members,
     }
     return render(request, 'pickem/family_pool_home.html', context)
+
+
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    family = tenant_context.family
+    pool = tenant_context.pool
+
+    recent_audit_logs = (
+        FamilyAuditLog.objects.filter(family=family)
+        .select_related('actor', 'pool')
+        .order_by('-created_at')[:12]
+    )
+    active_member_count = FamilyMembership.objects.filter(
+        family=family,
+        status=FamilyMembership.Status.ACTIVE,
+        user__is_active=True,
+    ).count()
+    active_invite_count = FamilyInvitation.objects.filter(
+        family=family,
+        pool=pool,
+        is_revoked=False,
+    ).filter(
+        Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+    ).count()
+    pool_settings = PoolSettings.objects.filter(pool=pool).first()
+
+    context = {
+        'family': family,
+        'pool': pool,
+        'membership': tenant_context.membership,
+        'gameseason': pool.season or get_season(),
+        'recent_audit_logs': recent_audit_logs,
+        'admin_sections': build_family_admin_sections(family, pool),
+        'active_member_count': active_member_count,
+        'active_invite_count': active_invite_count,
+        'pool_settings': pool_settings,
+    }
+    return render(request, 'pickem/family_admin.html', context)
 
 
 # @ratelimit(key='ip', rate='30/m', method='GET', block=True)  # Disabled for now

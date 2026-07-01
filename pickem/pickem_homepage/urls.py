@@ -17,6 +17,11 @@ urlpatterns = [
         name='family_pool_home',
     ),
     path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/',
+        views.family_pool_admin,
+        name='family_pool_admin',
+    ),
+    path(
         'families/<slug:family_slug>/pools/<slug:pool_slug>/invites/create/',
         views.create_family_invite,
         name='create_family_invite',

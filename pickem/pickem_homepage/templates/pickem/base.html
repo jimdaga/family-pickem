@@ -99,8 +99,8 @@
                         <i class="fas fa-gavel"></i>
                     </a>
 
-                    {% if user_is_commissioner %}
-                    <a class="nav-link-base" href="{% url 'commissioners' %}" aria-label="Commissioners Dashboard">
+                    {% if current_family and current_pool and current_membership.role == "owner" or current_family and current_pool and current_membership.role == "admin" %}
+                    <a data-testid="tenant-admin-nav" class="nav-link-base" href="{% url 'family_pool_admin' current_family.slug current_pool.slug %}" aria-label="Family Admin">
                         <i class="fas fa-crown"></i>
                     </a>
                     {% endif %}
@@ -237,9 +237,9 @@
                         <i class="fas fa-gavel mr-3"></i>Rules
                     </a>
 
-                    {% if user_is_commissioner %}
-                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% url 'commissioners' %}">
-                        <i class="fas fa-crown mr-3"></i>Commissioners Dashboard
+                    {% if current_family and current_pool and current_membership.role == "owner" or current_family and current_pool and current_membership.role == "admin" %}
+                    <a data-testid="tenant-admin-nav" class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% url 'family_pool_admin' current_family.slug current_pool.slug %}">
+                        <i class="fas fa-crown mr-3"></i>Family Admin
                     </a>
                     {% endif %}
 
