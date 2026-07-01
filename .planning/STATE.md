@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-07-01T03:15:41.467Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-07-01T16:42:54.422Z"
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 25
-  completed_plans: 20
-  percent: 50
+  completed_plans: 21
+  percent: 84
 current_phase: 05
 ---
 
@@ -138,6 +138,11 @@ See: `.planning/PROJECT.md`
   - Converted legacy signed-in message-board AJAX endpoints to generic JSON not-found instead of writing family-null private rows.
   - Added cross-family profile/player/message-board IDOR tests.
   - Summary: `.planning/phases/04-family-scoped-app-pages/04-04-SUMMARY.md`.
+- Phase 5 Plan 03 completed:
+  - Added tenant-scoped member admin list and owner-only role/status update routes.
+  - Enforced current-family membership lookup, forged ID denial, CSRF protection, and transactional last-active-owner protection.
+  - Added `MEMBERSHIP_UPDATED` audit metadata with before/after role/status, target membership/user, and actor ids.
+  - Summary: `.planning/phases/05-family-admin-experience/05-03-SUMMARY.md`.
 
 ## Decisions
 
@@ -201,6 +206,9 @@ See: `.planning/PROJECT.md`
 - [Phase 05]: Settings POST ignores client-supplied family_id, pool_id, banner ids, and other foreign identifiers; targets come from request.tenant_context.
 - [Phase 05]: Family, Pool, and PoolSettings edits share FamilyAuditLog.Action.POOL_SETTINGS_UPDATED with metadata target_type=family_pool_settings.
 - [Phase 05]: COMM-03 is covered as read-only current-family banner metadata; no banner editing UI or SiteBanner mutation was added.
+- [Phase 05]: 05-03: Member list access is admin+ but role/status mutation POSTs require current actor owner role server-side.
+- [Phase 05]: 05-03: Membership updates resolve target rows by family=request.tenant_context.family and membership id, ignoring forged user/family identifiers.
+- [Phase 05]: 05-03: The last active owner invariant is checked inside the same transaction as the membership update.
 
 ## Verification
 
@@ -274,8 +282,8 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 
 ## Session
 
-**Last session:** 2026-07-01T03:15:32.288Z
-**Stopped at:** Completed 05-02-PLAN.md
+**Last session:** 2026-07-01T16:42:54.418Z
+**Stopped at:** Completed 05-03-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -295,3 +303,4 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 | Phase 04-family-scoped-app-pages P06 | 6min 44s | 3 tasks | 3 files |
 | Phase 05-family-admin-experience P01 | 36min | 3 tasks | 5 files |
 | Phase 05-family-admin-experience P02 | 4min 21s | 3 tasks | 5 files |
+| Phase 05-family-admin-experience P03 | 14min | 3 tasks | 6 files |
