@@ -24,7 +24,7 @@
 ### Invitations And Onboarding
 
 - [x] **INV-01**: Owners/admins can create invite links or codes.
-- [ ] **INV-02**: Invite codes can expire, be revoked, and be regenerated.
+- [x] **INV-02**: Invite codes can expire, be revoked, and be regenerated.
 - [x] **INV-03**: A signed-in user with no family sees onboarding to create or join a family.
 - [x] **INV-04**: A signed-in user with multiple families can switch active family/pool context.
 
@@ -87,7 +87,7 @@
 | AUTHZ-04 | Phase 2, Phase 4 | Complete |
 | AUTHZ-05 | Phase 2, Phase 4, Phase 5 | Complete |
 | INV-01 | Phase 3, Phase 5 | Complete |
-| INV-02 | Phase 3, Phase 5 | Pending |
+| INV-02 | Phase 3, Phase 5 | Complete |
 | INV-03 | Phase 3 | Complete |
 | INV-04 | Phase 3 | Complete |
 | POOL-01 | Phase 1, Phase 4 | Complete |
