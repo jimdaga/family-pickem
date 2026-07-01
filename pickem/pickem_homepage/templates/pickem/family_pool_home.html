@@ -133,14 +133,11 @@
     </section>
 
     <section class="mt-6 flex flex-wrap gap-3">
-        {% if membership.role == 'owner' %}
-        <form method="post" action="{% url 'create_family_invite' family.slug pool.slug %}">
-            {% csrf_token %}
-            <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold hover:bg-slate-700 transition-colors">
-                <i class="fas fa-ticket"></i>
-                <span>Create invite</span>
-            </button>
-        </form>
+        {% if membership.role == 'owner' or membership.role == 'admin' %}
+        <a href="{% url 'family_pool_admin_invites' family.slug pool.slug %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold hover:bg-slate-700 transition-colors">
+            <i class="fas fa-ticket"></i>
+            <span>Manage invites</span>
+        </a>
         {% endif %}
         <a href="{% url 'family_picker' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border-light dark:border-border-subtle text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors">
             <i class="fas fa-exchange-alt"></i>
