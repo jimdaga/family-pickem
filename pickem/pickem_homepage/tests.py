@@ -2317,6 +2317,8 @@ class FamilyAdminExperienceTests(TestCase):
                 self.assertContains(response, "Invitation created")
                 self.assertContains(response, "Settings")
                 self.assertContains(response, self._settings_url())
+                self.assertContains(response, "Picks")
+                self.assertContains(response, self._picks_url())
                 self.assertNotContains(response, "Jones Family")
                 self.assertNotContains(response, "Jones private event")
 
