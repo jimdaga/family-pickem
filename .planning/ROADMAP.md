@@ -135,7 +135,7 @@ Definition of done:
 
 **Goal:** Replace global commissioner behavior with family owner/admin management.
 
-**Plans:** 5/7 plans executed
+**Plans:** 6/7 plans executed
 
 Plans:
 
@@ -144,7 +144,7 @@ Plans:
 - [x] 05-03-PLAN.md — Add member role/status management with owner protections.
 - [x] 05-04-PLAN.md — Add simple current-model invite management.
 - [x] 05-05-PLAN.md — Add tenant-scoped manual pick and user-pick retrieval tools.
-- [ ] 05-06-PLAN.md — Add week-winner tools and disable legacy commissioner routes.
+- [x] 05-06-PLAN.md — Add week-winner tools and disable legacy commissioner routes.
 - [ ] 05-07-PLAN.md — Complete final cross-feature validation and handoff.
 
 Scope:
