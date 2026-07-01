@@ -37,6 +37,21 @@ urlpatterns = [
         name='family_pool_admin_member_update',
     ),
     path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/invites/',
+        views.family_pool_admin_invites,
+        name='family_pool_admin_invites',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/invites/<int:invitation_id>/revoke/',
+        views.family_pool_admin_invite_revoke,
+        name='family_pool_admin_invite_revoke',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/invites/<int:invitation_id>/replace/',
+        views.family_pool_admin_invite_replace,
+        name='family_pool_admin_invite_replace',
+    ),
+    path(
         'families/<slug:family_slug>/pools/<slug:pool_slug>/invites/create/',
         views.create_family_invite,
         name='create_family_invite',

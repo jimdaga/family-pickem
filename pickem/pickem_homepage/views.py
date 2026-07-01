@@ -6,6 +6,7 @@ from pickem_api.models import GamePicks
 from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile
 from .forms import (
     CreateFamilyForm,
+    FamilyInviteCreateForm,
     FamilyAdminSettingsForm,
     FamilyMembershipUpdateForm,
     GamePicksForm,
@@ -164,8 +165,8 @@ def build_family_admin_sections(family, pool):
             'label': 'Invites',
             'description': 'Create and revoke family invite links.',
             'icon': 'fas fa-ticket-alt',
-            'url': reverse('create_family_invite', kwargs=route_kwargs),
-            'status': 'Create invite',
+            'url': reverse('family_pool_admin_invites', kwargs=route_kwargs),
+            'status': 'Manage invites',
         },
         {
             'label': 'Picks',
@@ -842,6 +843,223 @@ def _membership_update_metadata(*, target_membership, previous_role, previous_st
         'new_status': target_membership.status,
         'actor_id': actor.id,
     }
+
+
+def get_invite_role_choices_for_membership(membership):
+    if membership.role == FamilyMembership.Role.OWNER:
+        return [FamilyMembership.Role.MEMBER, FamilyMembership.Role.ADMIN]
+    return [FamilyMembership.Role.MEMBER]
+
+
+def build_invite_audit_metadata(invitation, *, source, replacement_for=None):
+    metadata = {
+        'source': source,
+        'role': invitation.role,
+        'expires_at': invitation.expires_at.isoformat() if invitation.expires_at else None,
+        'max_uses': invitation.max_uses,
+        'use_count': invitation.use_count,
+        'is_revoked': invitation.is_revoked,
+    }
+    if replacement_for is not None:
+        metadata['replacement_for_invitation_id'] = replacement_for
+    return metadata
+
+
+def create_admin_invitation(*, family, pool, actor, role, expires_in_days, max_uses, request, replacement_for=None):
+    raw_code = generate_invite_code()
+    invitation = FamilyInvitation.objects.create(
+        family=family,
+        pool=pool,
+        code_hash=hash_invite_code(raw_code),
+        role=role,
+        expires_at=timezone.now() + timedelta(days=expires_in_days),
+        max_uses=max_uses,
+        created_by=actor,
+    )
+    FamilyAuditLog.objects.create(
+        family=family,
+        pool=pool,
+        actor=actor,
+        action=FamilyAuditLog.Action.INVITATION_CREATED,
+        target_type='FamilyInvitation',
+        target_id=str(invitation.id),
+        metadata=build_invite_audit_metadata(
+            invitation,
+            source='admin_invite_management',
+            replacement_for=replacement_for,
+        ),
+        **get_invite_audit_context(request),
+    )
+    return invitation, raw_code
+
+
+def render_family_admin_invites(request, tenant_context, form, *, invite_code=None, invite_link=None, status=200):
+    family = tenant_context.family
+    pool = tenant_context.pool
+    invitations = (
+        FamilyInvitation.objects.filter(family=family)
+        .select_related('created_by', 'pool')
+        .order_by('-created_at')[:50]
+    )
+    context = {
+        'family': family,
+        'pool': pool,
+        'membership': tenant_context.membership,
+        'gameseason': pool.season or get_season(),
+        'form': form,
+        'invitations': invitations,
+        'invite_code': invite_code,
+        'invite_link': invite_link,
+        'can_create_admin_invites': (
+            tenant_context.membership.role == FamilyMembership.Role.OWNER
+        ),
+    }
+    return render(request, 'pickem/family_admin_invites.html', context, status=status)
+
+
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_invites(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    allowed_roles = get_invite_role_choices_for_membership(tenant_context.membership)
+    form = FamilyInviteCreateForm(
+        request.POST or None,
+        allowed_roles=allowed_roles,
+        initial={
+            'role': FamilyMembership.Role.MEMBER,
+            'expires_in_days': 14,
+            'max_uses': 20,
+        },
+    )
+
+    if request.method == 'POST':
+        if not form.is_valid():
+            return render_family_admin_invites(
+                request,
+                tenant_context,
+                form,
+                status=400,
+            )
+
+        with transaction.atomic():
+            invitation, raw_code = create_admin_invitation(
+                family=tenant_context.family,
+                pool=tenant_context.pool,
+                actor=request.user,
+                role=form.cleaned_data['role'],
+                expires_in_days=form.cleaned_data['expires_in_days'],
+                max_uses=form.cleaned_data['max_uses'],
+                request=request,
+            )
+
+        messages.success(request, "Invite created. Copy it now; it will not be shown again.")
+        return render_family_admin_invites(
+            request,
+            tenant_context,
+            form,
+            invite_code=raw_code,
+            invite_link=request.build_absolute_uri(
+                reverse('accept_invite_link', kwargs={'invite_code': raw_code})
+            ),
+        )
+
+    return render_family_admin_invites(request, tenant_context, form)
+
+
+def revoke_admin_invitation(*, request, tenant_context, invitation):
+    if not invitation.is_revoked:
+        invitation.is_revoked = True
+        invitation.save(update_fields=['is_revoked', 'updated_at'])
+    FamilyAuditLog.objects.create(
+        family=tenant_context.family,
+        pool=tenant_context.pool,
+        actor=request.user,
+        action=FamilyAuditLog.Action.INVITATION_REVOKED,
+        target_type='FamilyInvitation',
+        target_id=str(invitation.id),
+        metadata=build_invite_audit_metadata(
+            invitation,
+            source='admin_invite_management',
+        ),
+        **get_invite_audit_context(request),
+    )
+
+
+@require_http_methods(["POST"])
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_invite_revoke(request, family_slug, pool_slug, invitation_id):
+    tenant_context = request.tenant_context
+
+    with transaction.atomic():
+        try:
+            invitation = FamilyInvitation.objects.select_for_update().get(
+                family=tenant_context.family,
+                id=invitation_id,
+            )
+        except FamilyInvitation.DoesNotExist:
+            raise Http404()
+        revoke_admin_invitation(
+            request=request,
+            tenant_context=tenant_context,
+            invitation=invitation,
+        )
+
+    messages.success(request, "Invite revoked.")
+    return redirect(
+        'family_pool_admin_invites',
+        family_slug=tenant_context.family.slug,
+        pool_slug=tenant_context.pool.slug,
+    )
+
+
+@require_http_methods(["POST"])
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_invite_replace(request, family_slug, pool_slug, invitation_id):
+    tenant_context = request.tenant_context
+
+    with transaction.atomic():
+        try:
+            old_invitation = FamilyInvitation.objects.select_for_update().get(
+                family=tenant_context.family,
+                id=invitation_id,
+            )
+        except FamilyInvitation.DoesNotExist:
+            raise Http404()
+
+        revoke_admin_invitation(
+            request=request,
+            tenant_context=tenant_context,
+            invitation=old_invitation,
+        )
+        new_invitation, raw_code = create_admin_invitation(
+            family=tenant_context.family,
+            pool=tenant_context.pool,
+            actor=request.user,
+            role=old_invitation.role,
+            expires_in_days=14,
+            max_uses=old_invitation.max_uses or 20,
+            request=request,
+            replacement_for=old_invitation.id,
+        )
+
+    allowed_roles = get_invite_role_choices_for_membership(tenant_context.membership)
+    form = FamilyInviteCreateForm(
+        allowed_roles=allowed_roles,
+        initial={
+            'role': FamilyMembership.Role.MEMBER,
+            'expires_in_days': 14,
+            'max_uses': 20,
+        },
+    )
+    messages.success(request, "Invite replaced. Copy the new code now.")
+    return render_family_admin_invites(
+        request,
+        tenant_context,
+        form,
+        invite_code=raw_code,
+        invite_link=request.build_absolute_uri(
+            reverse('accept_invite_link', kwargs={'invite_code': raw_code})
+        ),
+    )
 
 
 @require_http_methods(["POST"])

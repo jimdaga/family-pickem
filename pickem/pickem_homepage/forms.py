@@ -141,6 +141,45 @@ class FamilyMembershipUpdateForm(forms.Form):
     )
 
 
+class FamilyInviteCreateForm(forms.Form):
+    role = forms.ChoiceField(required=True)
+    expires_in_days = forms.IntegerField(
+        label="Expires after",
+        min_value=1,
+        max_value=365,
+        initial=14,
+        widget=forms.NumberInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+        }),
+    )
+    max_uses = forms.IntegerField(
+        label="Max uses",
+        min_value=1,
+        max_value=1000,
+        initial=20,
+        widget=forms.NumberInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+        }),
+    )
+
+    def __init__(self, *args, allowed_roles=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        allowed_roles = allowed_roles or [FamilyMembership.Role.MEMBER]
+        role_labels = dict(FamilyMembership.Role.choices)
+        self.fields['role'].choices = [
+            (role, role_labels[role])
+            for role in allowed_roles
+            if role in role_labels
+        ]
+        self.fields['role'].widget.attrs.update({
+            'class': (
+                'w-full rounded-lg border border-border-light dark:border-border-subtle '
+                'bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary '
+                'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
+            ),
+        })
+
+
 class MessageBoardPostForm(forms.ModelForm):
     """Form for creating and editing message board posts"""
     
