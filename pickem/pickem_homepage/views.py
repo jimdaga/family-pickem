@@ -2,12 +2,14 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.template import loader
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
+from django import forms
 from pickem_api.models import GamePicks
 from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile
 from .forms import (
     CreateFamilyForm,
     FamilyInviteCreateForm,
     FamilyAdminSettingsForm,
+    FamilyManualPickForm,
     FamilyMembershipUpdateForm,
     GamePicksForm,
     JoinFamilyForm,
@@ -41,7 +43,13 @@ from datetime import date, timedelta
 from django.forms import formset_factory
 from django.utils import timezone
 from pickem.utils import get_season as get_season_from_api
-from pickem_api.authz import get_user_family_memberships
+from pickem_api.authz import (
+    AuthenticationRequired,
+    PermissionDeniedForTenant,
+    TenantNotFound,
+    get_user_family_memberships,
+    require_tenant_context,
+)
 from pickem_api.models import Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, Pool, PoolSettings
 from pickem_homepage.authz import family_member_required
 
@@ -172,8 +180,8 @@ def build_family_admin_sections(family, pool):
             'label': 'Picks',
             'description': 'Tenant-scoped manual pick tools.',
             'icon': 'fas fa-clipboard-check',
-            'url': None,
-            'status': 'Planned 05-05',
+            'url': reverse('family_pool_admin_picks', kwargs=route_kwargs),
+            'status': 'Manage picks',
         },
         {
             'label': 'Winners',
@@ -849,6 +857,245 @@ def get_invite_role_choices_for_membership(membership):
     if membership.role == FamilyMembership.Role.OWNER:
         return [FamilyMembership.Role.MEMBER, FamilyMembership.Role.ADMIN]
     return [FamilyMembership.Role.MEMBER]
+
+
+def get_admin_pick_week(request, pool):
+    requested_week = request.POST.get('week') if request.method == 'POST' else request.GET.get('week')
+    if requested_week:
+        form = forms.IntegerField(min_value=1, max_value=18)
+        try:
+            return str(form.clean(requested_week))
+        except forms.ValidationError:
+            return None
+    week, _competition = get_current_week_context(pool.season or get_season())
+    return str(week)
+
+
+def get_manual_pick_members(family):
+    return (
+        FamilyMembership.objects.filter(
+            family=family,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+        )
+        .select_related('user')
+        .order_by('user__username', 'id')
+    )
+
+
+def resolve_manual_pick_target_user(family, target_user_id):
+    membership = (
+        FamilyMembership.objects.filter(
+            family=family,
+            user_id=target_user_id,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+        )
+        .select_related('user')
+        .first()
+    )
+    if not membership:
+        raise Http404()
+    return membership.user
+
+
+def get_manual_pick_games(pool, week):
+    return GamesAndScores.objects.filter(
+        gameseason=pool.season,
+        competition=pool.competition,
+        gameWeek=str(week),
+    ).order_by('startTimestamp', 'id')
+
+
+def resolve_manual_pick_game(pool, *, game_id, week):
+    try:
+        return GamesAndScores.objects.get(
+            id=game_id,
+            gameseason=pool.season,
+            competition=pool.competition,
+            gameWeek=str(week),
+        )
+    except GamesAndScores.DoesNotExist:
+        raise Http404()
+
+
+def manual_pick_audit_metadata(*, previous_pick, new_pick, target_user, game, actor):
+    return {
+        'previous_pick': previous_pick,
+        'new_pick': new_pick,
+        'target_user_id': target_user.id,
+        'game_id': game.id,
+        'week': str(game.gameWeek),
+        'actor_id': actor.id,
+    }
+
+
+def json_tenant_admin_context(request, family_slug, pool_slug):
+    try:
+        return require_tenant_context(
+            request.user,
+            family=family_slug,
+            pool=pool_slug,
+            minimum_role=FamilyMembership.Role.ADMIN,
+        ), None
+    except AuthenticationRequired:
+        return None, JsonResponse(
+            {'success': False, 'error': 'authentication_required'},
+            status=401,
+        )
+    except TenantNotFound:
+        return None, JsonResponse(
+            {'success': False, 'error': 'not_found'},
+            status=404,
+        )
+    except PermissionDeniedForTenant:
+        return None, JsonResponse(
+            {'success': False, 'error': 'permission_denied'},
+            status=403,
+        )
+
+
+def render_family_admin_picks(request, tenant_context, form=None, *, status=200):
+    family = tenant_context.family
+    pool = tenant_context.pool
+    selected_week = get_admin_pick_week(request, pool) or '1'
+    members = get_manual_pick_members(family)
+    games = get_manual_pick_games(pool, selected_week)
+    context = {
+        'family': family,
+        'pool': pool,
+        'membership': tenant_context.membership,
+        'gameseason': pool.season or get_season(),
+        'selected_week': selected_week,
+        'week_choices': range(1, 19),
+        'members': members,
+        'games': games,
+        'form': form,
+        'pick_lookup_url': reverse(
+            'family_pool_admin_pick_user_picks',
+            kwargs={'family_slug': family.slug, 'pool_slug': pool.slug},
+        ),
+    }
+    return render(request, 'pickem/family_admin_picks.html', context, status=status)
+
+
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_picks(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    if request.method == 'GET':
+        return render_family_admin_picks(request, tenant_context)
+
+    form = FamilyManualPickForm(request.POST)
+    if not form.is_valid():
+        return render_family_admin_picks(request, tenant_context, form, status=400)
+
+    family = tenant_context.family
+    pool = tenant_context.pool
+    target_user = resolve_manual_pick_target_user(
+        family,
+        form.cleaned_data['target_user_id'],
+    )
+    game = resolve_manual_pick_game(
+        pool,
+        game_id=form.cleaned_data['game_id'],
+        week=form.cleaned_data['week'],
+    )
+    selected_pick = form.cleaned_data['pick']
+    if selected_pick not in (game.homeTeamSlug, game.awayTeamSlug):
+        return render_family_admin_picks(request, tenant_context, form, status=400)
+
+    with transaction.atomic():
+        existing_pick = GamePicks.objects.select_for_update().filter(
+            pool=pool,
+            userID=str(target_user.id),
+            pick_game_id=game.id,
+        ).first()
+        previous_pick = existing_pick.pick if existing_pick else None
+        saved_pick = save_server_derived_pick(
+            user=target_user,
+            pool=pool,
+            game=game,
+            selected_pick=selected_pick,
+            tiebreaker_score=form.cleaned_data.get('tieBreakerScore'),
+            tiebreaker_yards=form.cleaned_data.get('tieBreakerYards'),
+        )
+        FamilyAuditLog.objects.create(
+            family=family,
+            pool=pool,
+            actor=request.user,
+            action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
+            target_type='GamePicks',
+            target_id=saved_pick.id,
+            metadata=manual_pick_audit_metadata(
+                previous_pick=previous_pick,
+                new_pick=saved_pick.pick,
+                target_user=target_user,
+                game=game,
+                actor=request.user,
+            ),
+            **get_invite_audit_context(request),
+        )
+
+    messages.success(request, "Manual pick saved.")
+    return redirect(
+        f"{reverse('family_pool_admin_picks', kwargs={'family_slug': family.slug, 'pool_slug': pool.slug})}?week={game.gameWeek}"
+    )
+
+
+@require_http_methods(["GET"])
+def family_pool_admin_pick_user_picks(request, family_slug, pool_slug):
+    tenant_context, denial = json_tenant_admin_context(request, family_slug, pool_slug)
+    if denial is not None:
+        return denial
+
+    target_user_id = request.GET.get('target_user_id')
+    selected_week = request.GET.get('week')
+    if not target_user_id or not selected_week:
+        return JsonResponse(
+            {'success': False, 'error': 'missing_required_fields'},
+            status=400,
+        )
+    week_form = forms.IntegerField(min_value=1, max_value=18)
+    user_id_form = forms.IntegerField(min_value=1)
+    try:
+        target_user_id = user_id_form.clean(target_user_id)
+        selected_week = str(week_form.clean(selected_week))
+    except forms.ValidationError:
+        return JsonResponse({'success': False, 'error': 'invalid_request'}, status=400)
+
+    try:
+        target_user = resolve_manual_pick_target_user(
+            tenant_context.family,
+            target_user_id,
+        )
+    except Http404:
+        return JsonResponse({'success': False, 'error': 'not_found'}, status=404)
+
+    picks = GamePicks.objects.filter(
+        pool=tenant_context.pool,
+        userID=str(target_user.id),
+        gameseason=tenant_context.pool.season,
+        competition=tenant_context.pool.competition,
+        gameWeek=selected_week,
+    )
+    picks_data = {}
+    for pick in picks:
+        picks_data[str(pick.pick_game_id)] = {
+            'pick': pick.pick,
+            'tiebreaker_score': pick.tieBreakerScore,
+            'tiebreaker_yards': pick.tieBreakerYards,
+            'pick_id': pick.id,
+        }
+
+    return JsonResponse({
+        'success': True,
+        'target_user': {
+            'id': target_user.id,
+            'username': target_user.username,
+        },
+        'week': selected_week,
+        'picks': picks_data,
+    })
 
 
 def build_invite_audit_metadata(invitation, *, source, replacement_for=None):

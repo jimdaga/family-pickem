@@ -141,6 +141,15 @@ class FamilyMembershipUpdateForm(forms.Form):
     )
 
 
+class FamilyManualPickForm(forms.Form):
+    target_user_id = forms.IntegerField(required=True, min_value=1)
+    week = forms.IntegerField(required=True, min_value=1, max_value=18)
+    game_id = forms.IntegerField(required=True, min_value=1)
+    pick = forms.CharField(max_length=250, required=True, strip=True)
+    tieBreakerScore = forms.IntegerField(required=False, min_value=0, max_value=200)
+    tieBreakerYards = forms.IntegerField(required=False, min_value=0, max_value=2000)
+
+
 class FamilyInviteCreateForm(forms.Form):
     role = forms.ChoiceField(required=True)
     expires_in_days = forms.IntegerField(
