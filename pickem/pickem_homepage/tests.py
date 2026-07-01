@@ -2220,6 +2220,22 @@ class FamilyAdminExperienceTests(TestCase):
             },
         )
 
+    def _picks_url(self, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_picks",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def _picks_json_url(self, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_pick_user_picks",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
     def _admin_invitation(self, raw_code="ADMIN-CODE", **overrides):
         from pickem_homepage.views import hash_invite_code
 
@@ -2235,6 +2251,34 @@ class FamilyAdminExperienceTests(TestCase):
         }
         defaults.update(overrides)
         return FamilyInvitation.objects.create(**defaults)
+
+    def _admin_game(self, *, game_id=9501, week="1", season=2526, competition="nfl", home="atl", away="ari"):
+        return GamesAndScores.objects.create(
+            id=game_id,
+            slug=f"{away}-{home}-{season}-week-{week}",
+            competition=competition,
+            gameWeek=str(week),
+            gameyear=str(season)[:4],
+            gameseason=season,
+            startTimestamp=timezone.now() + timedelta(days=1),
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=game_id + 1,
+            homeTeamSlug=home,
+            homeTeamName=f"{home.upper()} Home",
+            awayTeamId=game_id + 2,
+            awayTeamSlug=away,
+            awayTeamName=f"{away.upper()} Away",
+        )
+
+    def _manual_pick_payload(self, game, user=None, *, pick=None, week=None):
+        user = user or self.member
+        return {
+            "target_user_id": str(user.id),
+            "week": str(week or game.gameWeek),
+            "game_id": str(game.id),
+            "pick": pick or game.homeTeamSlug,
+        }
 
     def test_anonymous_admin_hub_redirects_to_login(self):
         response = self.client.get(self._admin_url())
@@ -2954,6 +2998,271 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(csrf_replace.status_code, 403)
         invite.refresh_from_db()
         self.assertFalse(invite.is_revoked)
+
+    def test_manual_pick_page_lists_current_family_users_and_current_pool_games(self):
+        current_game = self._admin_game(game_id=9601, week="1")
+        other_week_game = self._admin_game(game_id=9602, week="2", home="mia", away="buf")
+        other_season_game = self._admin_game(game_id=9603, week="1", season=2527, home="dal", away="nyg")
+        other_competition_game = self._admin_game(game_id=9604, week="1", competition="college", home="osu", away="um")
+        other_member = self._membership(
+            User.objects.create_user(
+                "jones-admin-picks",
+                email="jones-admin-picks@example.com",
+                password="pass",
+            ),
+            self.other_family,
+            FamilyMembership.Role.MEMBER,
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(self._picks_url(), {"week": "1"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/family_admin_picks.html")
+        self.assertContains(response, "Smith Family")
+        self.assertContains(response, "Manual Picks")
+        self.assertContains(response, self.member.username)
+        self.assertContains(response, self.admin_user.username)
+        self.assertContains(response, current_game.homeTeamName)
+        self.assertContains(response, current_game.awayTeamName)
+        self.assertNotContains(response, other_member.user.username)
+        self.assertNotContains(response, other_week_game.homeTeamName)
+        self.assertNotContains(response, other_season_game.homeTeamName)
+        self.assertNotContains(response, other_competition_game.homeTeamName)
+
+    def test_admin_and_owner_can_retrieve_current_pool_picks_for_active_family_users_only(self):
+        game = self._admin_game(game_id=9610, week="1")
+        other_game = self._admin_game(game_id=9611, week="1", home="mia", away="buf")
+        GamePicks.objects.create(
+            id=f"{self.pool.id}-{self.member.id}-{game.id}",
+            pool=self.pool,
+            userEmail=self.member.email,
+            userID=str(self.member.id),
+            uid=self.member.id,
+            slug=game.slug,
+            competition=game.competition,
+            gameseason=game.gameseason,
+            gameWeek=game.gameWeek,
+            gameyear=game.gameyear,
+            pick_game_id=game.id,
+            pick=game.awayTeamSlug,
+            pick_correct=True,
+        )
+        GamePicks.objects.create(
+            id=f"{self.other_pool.id}-{self.outsider.id}-{other_game.id}",
+            pool=self.other_pool,
+            userEmail=self.outsider.email,
+            userID=str(self.outsider.id),
+            uid=self.outsider.id,
+            slug=other_game.slug,
+            competition=other_game.competition,
+            gameseason=other_game.gameseason,
+            gameWeek=other_game.gameWeek,
+            gameyear=other_game.gameyear,
+            pick_game_id=other_game.id,
+            pick=other_game.homeTeamSlug,
+        )
+
+        for user in (self.owner, self.admin_user):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+                response = self.client.get(
+                    self._picks_json_url(),
+                    {"target_user_id": self.member.id, "week": "1"},
+                    HTTP_ACCEPT="application/json",
+                )
+
+                self.assertEqual(response.status_code, 200)
+                data = response.json()
+                self.assertTrue(data["success"])
+                self.assertEqual(data["target_user"]["id"], self.member.id)
+                self.assertEqual(data["picks"][str(game.id)]["pick"], game.awayTeamSlug)
+                self.assertEqual(data["picks"][str(game.id)]["pick_id"], f"{self.pool.id}-{self.member.id}-{game.id}")
+                self.assertNotIn(str(other_game.id), data["picks"])
+
+        self.client.force_login(self.owner)
+        cross_family_response = self.client.get(
+            self._picks_json_url(),
+            {"target_user_id": self.outsider.id, "week": "1"},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(cross_family_response.status_code, 404)
+        self.assertNotIn("Jones", cross_family_response.content.decode())
+        self.assertNotIn(self.outsider.email, cross_family_response.content.decode())
+
+    def test_manual_pick_submission_server_derives_scope_and_writes_audit(self):
+        game = self._admin_game(game_id=9620, week="3")
+        other_pool_game = self._admin_game(game_id=9621, week="3", home="mia", away="buf")
+        GamePicks.objects.create(
+            id=f"{self.other_pool.id}-{self.outsider.id}-{other_pool_game.id}",
+            pool=self.other_pool,
+            userEmail=self.outsider.email,
+            userID=str(self.outsider.id),
+            uid=self.outsider.id,
+            slug=other_pool_game.slug,
+            competition=other_pool_game.competition,
+            gameseason=other_pool_game.gameseason,
+            gameWeek=other_pool_game.gameWeek,
+            gameyear=other_pool_game.gameyear,
+            pick_game_id=other_pool_game.id,
+            pick=other_pool_game.awayTeamSlug,
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            self._picks_url(),
+            {
+                **self._manual_pick_payload(game, pick=game.homeTeamSlug),
+                "pool": self.other_pool.id,
+                "pool_id": self.other_pool.id,
+                "season": 1999,
+                "gameseason": 1999,
+                "competition": "forged",
+                "correctness": "true",
+                "pick_correct": "true",
+                "pick_id": "forged-pick-id",
+                "id": "forged-id",
+                "user_id": self.outsider.id,
+            },
+        )
+
+        self.assertRedirects(response, self._picks_url() + "?week=3")
+        pick = GamePicks.objects.get(pool=self.pool, userID=str(self.member.id), pick_game_id=game.id)
+        self.assertEqual(pick.id, f"{self.pool.id}-{self.member.id}-{game.id}")
+        self.assertEqual(pick.userEmail, self.member.email)
+        self.assertEqual(pick.uid, self.member.id)
+        self.assertEqual(pick.slug, game.slug)
+        self.assertEqual(pick.gameseason, self.pool.season)
+        self.assertEqual(pick.competition, self.pool.competition)
+        self.assertEqual(pick.gameWeek, "3")
+        self.assertEqual(pick.pick, game.homeTeamSlug)
+        self.assertFalse(pick.pick_correct)
+        self.assertFalse(GamePicks.objects.filter(pool=self.pool, userID=str(self.outsider.id)).exists())
+
+        audit = FamilyAuditLog.objects.get(
+            family=self.family,
+            pool=self.pool,
+            actor=self.admin_user,
+            action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
+            target_type="GamePicks",
+            target_id=pick.id,
+        )
+        self.assertIsNone(audit.metadata["previous_pick"])
+        self.assertEqual(audit.metadata["new_pick"], game.homeTeamSlug)
+        self.assertEqual(audit.metadata["target_user_id"], self.member.id)
+        self.assertEqual(audit.metadata["game_id"], game.id)
+        self.assertEqual(audit.metadata["week"], "3")
+        self.assertEqual(audit.metadata["actor_id"], self.admin_user.id)
+        self.assertNotIn("forged", str(audit.metadata).lower())
+        self.assertNotIn("csrf", str(audit.metadata).lower())
+
+    def test_manual_pick_update_records_previous_pick_and_ignores_correctness_forgery(self):
+        game = self._admin_game(game_id=9630, week="4")
+        existing = GamePicks.objects.create(
+            id=f"{self.pool.id}-{self.member.id}-{game.id}",
+            pool=self.pool,
+            userEmail=self.member.email,
+            userID=str(self.member.id),
+            uid=self.member.id,
+            slug=game.slug,
+            competition=game.competition,
+            gameseason=game.gameseason,
+            gameWeek=game.gameWeek,
+            gameyear=game.gameyear,
+            pick_game_id=game.id,
+            pick=game.homeTeamSlug,
+            pick_correct=True,
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self._picks_url(),
+            {
+                **self._manual_pick_payload(game, pick=game.awayTeamSlug),
+                "pick_correct": "true",
+            },
+        )
+
+        self.assertRedirects(response, self._picks_url() + "?week=4")
+        existing.refresh_from_db()
+        self.assertEqual(existing.pick, game.awayTeamSlug)
+        self.assertFalse(existing.pick_correct)
+        audit = FamilyAuditLog.objects.get(
+            family=self.family,
+            action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
+            target_id=existing.id,
+        )
+        self.assertEqual(audit.metadata["previous_pick"], game.homeTeamSlug)
+        self.assertEqual(audit.metadata["new_pick"], game.awayTeamSlug)
+
+    def test_manual_pick_submission_rejects_invalid_team_cross_family_user_and_wrong_game_scope(self):
+        game = self._admin_game(game_id=9640, week="5")
+        wrong_week_game = self._admin_game(game_id=9641, week="6", home="mia", away="buf")
+        wrong_season_game = self._admin_game(game_id=9642, week="5", season=2527, home="dal", away="nyg")
+        wrong_competition_game = self._admin_game(game_id=9643, week="5", competition="college", home="osu", away="um")
+        self.client.force_login(self.admin_user)
+
+        cases = [
+            ({**self._manual_pick_payload(game, pick="not-a-team")}, 400),
+            ({**self._manual_pick_payload(game, user=self.outsider)}, 404),
+            ({**self._manual_pick_payload(wrong_week_game, week="5", pick=wrong_week_game.homeTeamSlug)}, 404),
+            ({**self._manual_pick_payload(wrong_season_game, pick=wrong_season_game.homeTeamSlug)}, 404),
+            ({**self._manual_pick_payload(wrong_competition_game, pick=wrong_competition_game.homeTeamSlug)}, 404),
+        ]
+        for payload, expected_status in cases:
+            with self.subTest(payload=payload):
+                response = self.client.post(self._picks_url(), payload)
+                self.assertEqual(response.status_code, expected_status)
+
+        self.assertFalse(GamePicks.objects.filter(pool=self.pool).exists())
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
+            ).exists()
+        )
+
+    def test_manual_pick_access_denies_member_outsider_inactive_anonymous_and_csrf(self):
+        game = self._admin_game(game_id=9650, week="7")
+
+        for user, expected_status in (
+            (self.member, 403),
+            (self.outsider, 404),
+            (self.inactive_user, 404),
+        ):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+                page_response = self.client.get(self._picks_url())
+                post_response = self.client.post(self._picks_url(), self._manual_pick_payload(game))
+                json_response = self.client.get(
+                    self._picks_json_url(),
+                    {"target_user_id": self.member.id, "week": "7"},
+                    HTTP_ACCEPT="application/json",
+                )
+                self.assertEqual(page_response.status_code, expected_status)
+                self.assertEqual(post_response.status_code, expected_status)
+                self.assertEqual(json_response.status_code, expected_status)
+                if expected_status == 404:
+                    self.assertNotIn("Smith", json_response.content.decode())
+                    self.assertNotIn("Jones", json_response.content.decode())
+
+        self.client.logout()
+        browser_response = self.client.get(self._picks_url())
+        json_response = self.client.get(
+            self._picks_json_url(),
+            {"target_user_id": self.member.id, "week": "7"},
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(browser_response.status_code, 302)
+        self.assertEqual(json_response.status_code, 401)
+        self.assertNotIn("/accounts/login", json_response.content.decode())
+        self.assertIn("auth", json_response.json()["error"])
+
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.admin_user)
+        csrf_response = csrf_client.post(self._picks_url(), self._manual_pick_payload(game))
+        self.assertEqual(csrf_response.status_code, 403)
+        self.assertFalse(GamePicks.objects.filter(pool=self.pool).exists())
 
 
 class CreateFamilyFlowTests(TestCase):
