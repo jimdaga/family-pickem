@@ -9,7 +9,7 @@
 | Plan | Wave | Objective | Key Verification |
 |------|------|-----------|------------------|
 | `05-01-PLAN.md` | 1 | Tenant admin hub, scoped audit display, and admin navigation | `FamilyAdminExperienceTests`; hub auth split |
-| `05-02-PLAN.md` | 2 | Family/pool/settings and family-banner editing | `FamilyAdminExperienceTests`; migration dry-run |
+| `05-02-PLAN.md` | 2 | Family/pool/settings editing and banner non-leakage | `FamilyAdminExperienceTests`; migration dry-run |
 | `05-03-PLAN.md` | 3 | Member role/status management with owner protections | `FamilyAdminExperienceTests`; last-owner negative tests |
 | `05-04-PLAN.md` | 4 | Simple current-model invite management | `FamilyAdminExperienceTests`; raw-code non-disclosure tests |
 | `05-05-PLAN.md` | 5 | Tenant-scoped manual pick submission and user-pick retrieval | `FamilyAdminExperienceTests`; forged user/game/body tests |
@@ -38,10 +38,10 @@
 | Requirement | Coverage | Plan(s) | Verification Target |
 |-------------|----------|---------|---------------------|
 | AUTHZ-03: Owner/admin actions require least-privilege role checks | COVERED | 05-01, 05-03, 05-04, 05-05, 05-06, 05-07 | `FamilyAdminExperienceTests` owner/admin/member/outsider/inactive matrix |
-| AUTHZ-05: Client-provided IDs validated against server-resolved membership and allowed objects | COVERED | 05-02, 05-03, 05-04, 05-05, 05-06, 05-07 | forged slug/body/user/game/week/invite/membership/banner tests |
+| AUTHZ-05: Client-provided IDs validated against server-resolved membership and allowed objects | COVERED | 05-02, 05-03, 05-04, 05-05, 05-06, 05-07 | forged slug/body/user/game/week/invite/membership tests and banner non-leakage checks |
 | INV-02: Invite codes can expire, be revoked, and be regenerated | COVERED | 05-04, 05-07 | invite list/revoke/revoke-and-create tests |
 | POOL-04: Rules/settings visible and editable in appropriate context | COVERED | 05-02, 05-07 | tenant settings edit tests |
-| COMM-03: Site/family banners do not leak across families | COVERED | 05-02, 05-07 | family banner edit/list isolation tests |
+| COMM-03: Site/family banners do not leak across families | COVERED | 05-02, 05-07 | family banner metadata non-leakage and no global banner mutation tests |
 | SEC-01: Security-sensitive admin actions are audit logged | COVERED | 05-01 through 05-07 | audit metadata tests for settings, membership, invites, picks, winners |
 
 ### RESEARCH Coverage

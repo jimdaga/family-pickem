@@ -89,7 +89,7 @@
 | AUTHZ-05 | Client-provided family, pool, user, season, week, and game identifiers are validated against server-resolved membership and allowed objects. | Resolve family/pool from `request.tenant_context`; resolve target users through active same-family memberships; resolve games by server-side game/week/season validation. [VERIFIED: codebase grep] |
 | INV-02 | Invite codes can expire, be revoked, and be regenerated. | Existing `FamilyInvitation` already has `expires_at`, `is_revoked`, `max_uses`, and `use_count`; implement revoke and optional revoke-and-create regeneration without raw-code storage. [VERIFIED: codebase grep] |
 | POOL-04 | Rules/settings are visible and editable in the appropriate family/pool context. | `PoolSettings` currently supports `picks_lock_at_kickoff` and `allow_tiebreaker`; Phase 4 rendered rules display-only and handed editing to Phase 5. [VERIFIED: codebase grep] |
-| COMM-03 | Site/family banners do not leak across families. | `SiteBanner.family` exists and Phase 4 context processors choose current-family banners before site-wide fallback; Phase 5 can edit family-scoped banners only if included. [VERIFIED: codebase grep] |
+| COMM-03 | Site/family banners do not leak across families. | `SiteBanner.family` exists and Phase 4 context processors choose current-family banners before site-wide fallback; Phase 5 should preserve/test isolation but not add banner editing UI. [VERIFIED: codebase grep] |
 | SEC-01 | Security-sensitive admin actions are audit logged. | `FamilyAuditLog` has actions for invitation, membership, pool settings, manual picks, and week winners. [VERIFIED: codebase grep] |
 </phase_requirements>
 
@@ -370,17 +370,17 @@ bonus_field = f"week_{week_number}_bonus"
 | A1 | Last-owner protection should use transaction plus row locking/counting because the database has no direct constraint for this business invariant. | Common Pitfalls | Race condition if two owner changes happen concurrently. |
 | A2 | `select_for_update()` is sufficient for Phase 5 membership/invite mutation consistency in the deployed database. | Common Pitfalls | SQLite tests may not reveal PostgreSQL lock behavior; planner should keep tests deterministic and code transaction-safe. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should Phase 5 include family-scoped banner editing or only preserve current banner isolation?**
    - What we know: `SiteBanner.family` exists and `SiteBannerForm` does not currently expose `family`. [VERIFIED: codebase grep]
    - What's unclear: CONTEXT emphasizes family settings and COMM-03 traceability, but not a full banner-management UI. [VERIFIED: `.planning/phases/05-family-admin-experience/05-CONTEXT.md`]
-   - Recommendation: If included, keep it small and family-scoped; otherwise leave global site-wide banner management disabled with legacy commissioner routes. [ASSUMED]
+   - Resolution: Phase 5 should not add a new family-banner editing UI. Preserve and test current-family banner isolation only, and disable legacy global commissioner banner management with the rest of the global commissioner surface. [RESOLVED: plan-checker feedback + D-23 scope control]
 
 2. **Should admins create invites or owners only?**
    - What we know: Phase 3 invite creation is owner-only; Phase 5 says owners/admins should manage simple invites. [VERIFIED: codebase grep] [VERIFIED: `.planning/phases/05-family-admin-experience/05-CONTEXT.md`]
    - What's unclear: Whether admins can create admin-role invites. [VERIFIED: `.planning/phases/05-family-admin-experience/05-CONTEXT.md`]
-   - Recommendation: Admins create member invites only; owners may create member/admin invites if implemented. [ASSUMED]
+   - Resolution: Admins may create member-role invites only. Owners may create member or admin invites if the form explicitly allowlists those roles. Do not introduce email invite delivery or raw-code redisplay. [RESOLVED: D-08 through D-11 and D-27]
 
 ## Environment Availability
 
@@ -414,7 +414,7 @@ bonus_field = f"week_{week_number}_bonus"
 | AUTHZ-05 | Forged family/pool/user/game/week IDs cannot cross tenant boundaries. | integration | same focused command | Missing - Wave 0 |
 | INV-02 | Invite list/revoke/regenerate respects expiry/revocation/max-use metadata and no raw code redisplay. | integration | same focused command | Missing - Wave 0 |
 | POOL-04 | Family/pool/settings edits are current-tenant only and audit logged. | integration | same focused command | Missing - Wave 0 |
-| COMM-03 | Family admin does not leak another family's banner metadata if banner editing is included. | integration | same focused command | Missing - Wave 0 |
+| COMM-03 | Family admin does not leak another family's banner metadata or globally mutate banner rows. | integration | same focused command | Missing - Wave 0 |
 | SEC-01 | Every sensitive mutation creates scoped `FamilyAuditLog` metadata without secrets/raw invite codes. | unit/integration | same focused command | Missing - Wave 0 |
 
 ### Sampling Rate

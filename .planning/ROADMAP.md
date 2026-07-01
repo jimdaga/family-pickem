@@ -140,7 +140,7 @@ Definition of done:
 Plans:
 
 - [ ] 05-01-PLAN.md — Create tenant admin hub, scoped audit display, and admin navigation.
-- [ ] 05-02-PLAN.md — Add family, pool, rules/settings, and family-banner editing.
+- [ ] 05-02-PLAN.md — Add family, pool, rules/settings editing, and banner non-leakage preservation.
 - [ ] 05-03-PLAN.md — Add member role/status management with owner protections.
 - [ ] 05-04-PLAN.md — Add simple current-model invite management.
 - [ ] 05-05-PLAN.md — Add tenant-scoped manual pick and user-pick retrieval tools.
