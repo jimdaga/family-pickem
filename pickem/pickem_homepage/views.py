@@ -7,6 +7,7 @@ from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints
 from .forms import (
     CreateFamilyForm,
     FamilyAdminSettingsForm,
+    FamilyMembershipUpdateForm,
     GamePicksForm,
     JoinFamilyForm,
     MessageBoardPostForm,
@@ -156,8 +157,8 @@ def build_family_admin_sections(family, pool):
             'label': 'Members',
             'description': 'Review members, roles, and active status.',
             'icon': 'fas fa-user-shield',
-            'url': None,
-            'status': 'Planned 05-03',
+            'url': reverse('family_pool_admin_members', kwargs=route_kwargs),
+            'status': 'Manage members',
         },
         {
             'label': 'Invites',
@@ -803,6 +804,132 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
         'current_family_banners': current_family_banners,
     }
     return render(request, 'pickem/family_admin_settings.html', context)
+
+
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_members(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    family = tenant_context.family
+    pool = tenant_context.pool
+    memberships = (
+        FamilyMembership.objects.filter(family=family)
+        .select_related('user')
+        .order_by('status', 'role', 'user__username', 'id')
+    )
+
+    context = {
+        'family': family,
+        'pool': pool,
+        'membership': tenant_context.membership,
+        'gameseason': pool.season or get_season(),
+        'memberships': memberships,
+        'role_choices': FamilyMembership.Role.choices,
+        'status_choices': FamilyMembership.Status.choices,
+        'can_manage_members': (
+            tenant_context.membership.role == FamilyMembership.Role.OWNER
+        ),
+    }
+    return render(request, 'pickem/family_admin_members.html', context)
+
+
+def _membership_update_metadata(*, target_membership, previous_role, previous_status, actor):
+    return {
+        'target_membership_id': target_membership.id,
+        'target_user_id': target_membership.user_id,
+        'previous_role': previous_role,
+        'new_role': target_membership.role,
+        'previous_status': previous_status,
+        'new_status': target_membership.status,
+        'actor_id': actor.id,
+    }
+
+
+@require_http_methods(["POST"])
+@family_member_required(minimum_role=FamilyMembership.Role.OWNER)
+def family_pool_admin_member_update(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    form = FamilyMembershipUpdateForm(request.POST)
+    if not form.is_valid():
+        return HttpResponse("Invalid membership update.", status=400)
+
+    family = tenant_context.family
+    pool = tenant_context.pool
+    new_role = form.cleaned_data['role']
+    new_status = form.cleaned_data['status']
+
+    with transaction.atomic():
+        try:
+            target_membership = (
+                FamilyMembership.objects.select_for_update()
+                .select_related('user')
+                .get(
+                    family=family,
+                    id=form.cleaned_data['membership_id'],
+                )
+            )
+        except FamilyMembership.DoesNotExist:
+            raise Http404()
+
+        previous_role = target_membership.role
+        previous_status = target_membership.status
+        losing_active_owner = (
+            previous_role == FamilyMembership.Role.OWNER
+            and previous_status == FamilyMembership.Status.ACTIVE
+            and (
+                new_role != FamilyMembership.Role.OWNER
+                or new_status != FamilyMembership.Status.ACTIVE
+            )
+        )
+        if losing_active_owner:
+            active_owner_count = (
+                FamilyMembership.objects.select_for_update()
+                .filter(
+                    family=family,
+                    role=FamilyMembership.Role.OWNER,
+                    status=FamilyMembership.Status.ACTIVE,
+                )
+                .count()
+            )
+            if active_owner_count <= 1:
+                return HttpResponse(
+                    "Cannot remove the last active owner.",
+                    status=400,
+                )
+
+        if previous_role == new_role and previous_status == new_status:
+            messages.info(request, "No member changes to save.")
+            return redirect(
+                'family_pool_admin_members',
+                family_slug=family.slug,
+                pool_slug=pool.slug,
+            )
+
+        target_membership.role = new_role
+        target_membership.status = new_status
+        target_membership.save(update_fields=['role', 'status', 'updated_at'])
+
+        FamilyAuditLog.objects.create(
+            family=family,
+            pool=pool,
+            actor=request.user,
+            action=FamilyAuditLog.Action.MEMBERSHIP_UPDATED,
+            target_type='FamilyMembership',
+            target_id=str(target_membership.id),
+            metadata=_membership_update_metadata(
+                target_membership=target_membership,
+                previous_role=previous_role,
+                previous_status=previous_status,
+                actor=request.user,
+            ),
+            **get_invite_audit_context(request),
+        )
+
+    messages.success(request, "Member updated.")
+    return redirect(
+        'family_pool_admin_members',
+        family_slug=family.slug,
+        pool_slug=pool.slug,
+    )
 
 
 # @ratelimit(key='ip', rate='30/m', method='GET', block=True)  # Disabled for now

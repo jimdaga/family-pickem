@@ -1,0 +1,134 @@
+{% extends "pickem/base.html" %}
+
+{% block title %}Members - {{ family.name }}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-gray-50 dark:bg-bg-dark">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="text-sm font-semibold uppercase tracking-wide text-primary">Family Admin</div>
+                <h1 class="mt-2 text-3xl font-bold text-text-dark dark:text-white">Members</h1>
+                <p class="mt-2 text-text-secondary-light dark:text-text-secondary">
+                    {{ family.name }} - {{ pool.name }}
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'family_pool_admin' family.slug pool.slug %}" class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white hover:bg-white dark:hover:bg-surface transition-colors">
+                    <i class="fas fa-arrow-left"></i>
+                    Admin Hub
+                </a>
+                <span class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">
+                    <i class="fas fa-shield-alt"></i>
+                    {{ membership.get_role_display }}
+                </span>
+            </div>
+        </header>
+
+        <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden">
+            <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Family Members</h2>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                    Current-family memberships only. Owners can update roles and status.
+                </p>
+            </div>
+
+            {% if memberships %}
+            <div class="hidden overflow-x-auto md:block">
+                <table class="min-w-full divide-y divide-border-light dark:divide-border-subtle">
+                    <thead class="bg-gray-100 dark:bg-slate-800">
+                        <tr>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Member</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Role</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Status</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border-light dark:divide-border-subtle">
+                        {% for member in memberships %}
+                        <tr>
+                            <td class="px-5 py-4">
+                                <div class="font-semibold text-text-dark dark:text-white">{{ member.user.username }}</div>
+                                <div class="text-sm text-text-secondary-light dark:text-text-secondary">{{ member.user.email }}</div>
+                            </td>
+                            <td class="px-5 py-4">
+                                <span class="inline-flex rounded-lg bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">{{ member.get_role_display }}</span>
+                            </td>
+                            <td class="px-5 py-4">
+                                <span class="inline-flex rounded-lg px-3 py-1 text-sm font-semibold {% if member.status == 'active' %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300{% else %}bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-text-secondary{% endif %}">
+                                    {{ member.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="px-5 py-4">
+                                {% if can_manage_members %}
+                                <form method="post" action="{% url 'family_pool_admin_member_update' family.slug pool.slug %}" class="flex flex-wrap items-center gap-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="membership_id" value="{{ member.id }}">
+                                    <select name="role" class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-2 text-sm text-text-dark dark:text-white">
+                                        {% for value, label in role_choices %}
+                                        <option value="{{ value }}" {% if member.role == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <select name="status" class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-2 text-sm text-text-dark dark:text-white">
+                                        {% for value, label in status_choices %}
+                                        <option value="{{ value }}" {% if member.status == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary/90">Save</button>
+                                </form>
+                                {% else %}
+                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">Owner role required</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="grid gap-4 p-4 md:hidden">
+                {% for member in memberships %}
+                <article class="rounded-lg border border-border-light dark:border-border-subtle p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="font-bold text-text-dark dark:text-white">{{ member.user.username }}</h3>
+                            <p class="text-sm text-text-secondary-light dark:text-text-secondary">{{ member.user.email }}</p>
+                        </div>
+                        <span class="rounded-lg bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">{{ member.get_role_display }}</span>
+                    </div>
+                    <div class="mt-3 text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Status: {{ member.get_status_display }}</div>
+                    {% if can_manage_members %}
+                    <form method="post" action="{% url 'family_pool_admin_member_update' family.slug pool.slug %}" class="mt-4 grid gap-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="membership_id" value="{{ member.id }}">
+                        <select name="role" class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-2 text-sm text-text-dark dark:text-white">
+                            {% for value, label in role_choices %}
+                            <option value="{{ value }}" {% if member.role == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="status" class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-2 text-sm text-text-dark dark:text-white">
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if member.status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white">Save</button>
+                    </form>
+                    {% else %}
+                    <p class="mt-4 text-sm text-text-secondary-light dark:text-text-secondary">Owner role required for changes.</p>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="px-5 py-12 text-center">
+                <div class="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-text-secondary-light dark:bg-slate-800 dark:text-text-secondary">
+                    <i class="fas fa-users"></i>
+                </div>
+                <p class="mt-4 font-semibold text-text-dark dark:text-white">No members found</p>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Memberships for this family will appear here.</p>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+</main>
+{% endblock %}

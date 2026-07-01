@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-from pickem_api.models import GamePicks, userSeasonPoints
+from pickem_api.models import FamilyMembership, GamePicks, userSeasonPoints
 from .models import MessageBoardPost, MessageBoardComment, SiteBanner
 
 
@@ -127,6 +127,18 @@ class FamilyAdminSettingsForm(forms.Form):
         if not name:
             raise forms.ValidationError("Pool display name is required.")
         return " ".join(name.split())
+
+
+class FamilyMembershipUpdateForm(forms.Form):
+    membership_id = forms.IntegerField(required=True, min_value=1)
+    role = forms.ChoiceField(
+        choices=FamilyMembership.Role.choices,
+        required=True,
+    )
+    status = forms.ChoiceField(
+        choices=FamilyMembership.Status.choices,
+        required=True,
+    )
 
 
 class MessageBoardPostForm(forms.ModelForm):

@@ -2625,6 +2625,7 @@ class FamilyAdminExperienceTests(TestCase):
             FamilyAuditLog.objects.filter(
                 family=self.other_family,
                 action=FamilyAuditLog.Action.MEMBERSHIP_UPDATED,
+                target_id=str(other_member.id),
             ).exists()
         )
 
