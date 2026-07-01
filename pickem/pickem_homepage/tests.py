@@ -2172,6 +2172,22 @@ class FamilyAdminExperienceTests(TestCase):
             kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
         )
 
+    def _members_url(self, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_members",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def _member_update_url(self, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_member_update",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
     def test_anonymous_admin_hub_redirects_to_login(self):
         response = self.client.get(self._admin_url())
 
@@ -2424,6 +2440,215 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(self.pool.name, "Main Pickem")
         self.assertTrue(smith_banner.is_active)
         self.assertTrue(jones_banner.is_active)
+
+    def test_member_list_shows_current_family_members_only_to_admins_and_owners(self):
+        inactive_member = self._membership(
+            User.objects.create_user(
+                "admin-inactive-member",
+                email="inactive-member@example.com",
+                password="pass",
+            ),
+            self.family,
+            FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.INACTIVE,
+        )
+        other_member = self._membership(
+            User.objects.create_user(
+                "jones-member",
+                email="jones-member@example.com",
+                password="pass",
+            ),
+            self.other_family,
+            FamilyMembership.Role.MEMBER,
+        )
+
+        for user in (self.owner, self.admin_user):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+
+                response = self.client.get(self._members_url())
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "pickem/family_admin_members.html")
+                self.assertContains(response, "admin-owner")
+                self.assertContains(response, "admin-user")
+                self.assertContains(response, "admin-member")
+                self.assertContains(response, inactive_member.user.username)
+                self.assertNotContains(response, other_member.user.username)
+                self.assertNotContains(response, "jones-member@example.com")
+
+    def test_member_list_denies_member_outsider_inactive_and_anonymous(self):
+        for user, expected_status in (
+            (self.member, 403),
+            (self.outsider, 404),
+            (self.inactive_user, 404),
+        ):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+                response = self.client.get(self._members_url())
+                self.assertEqual(response.status_code, expected_status)
+
+        self.client.logout()
+        response = self.client.get(self._members_url())
+        self.assertEqual(response.status_code, 302)
+
+    def test_owner_can_update_member_role_status_and_audit_safe_metadata(self):
+        self.client.force_login(self.owner)
+        member_membership = FamilyMembership.objects.get(
+            family=self.family,
+            user=self.member,
+        )
+
+        response = self.client.post(
+            self._member_update_url(),
+            {
+                "membership_id": member_membership.id,
+                "role": FamilyMembership.Role.ADMIN,
+                "status": FamilyMembership.Status.INACTIVE,
+                "user_id": self.outsider.id,
+                "family_id": self.other_family.id,
+                "secret": "csrf-or-session-secret",
+            },
+        )
+
+        self.assertRedirects(response, self._members_url())
+        member_membership.refresh_from_db()
+        self.assertEqual(member_membership.role, FamilyMembership.Role.ADMIN)
+        self.assertEqual(member_membership.status, FamilyMembership.Status.INACTIVE)
+
+        audit = FamilyAuditLog.objects.get(
+            family=self.family,
+            pool=self.pool,
+            actor=self.owner,
+            action=FamilyAuditLog.Action.MEMBERSHIP_UPDATED,
+            target_type="FamilyMembership",
+            target_id=str(member_membership.id),
+        )
+        self.assertEqual(audit.metadata["target_membership_id"], member_membership.id)
+        self.assertEqual(audit.metadata["target_user_id"], self.member.id)
+        self.assertEqual(audit.metadata["previous_role"], FamilyMembership.Role.MEMBER)
+        self.assertEqual(audit.metadata["new_role"], FamilyMembership.Role.ADMIN)
+        self.assertEqual(audit.metadata["previous_status"], FamilyMembership.Status.ACTIVE)
+        self.assertEqual(audit.metadata["new_status"], FamilyMembership.Status.INACTIVE)
+        self.assertEqual(audit.metadata["actor_id"], self.owner.id)
+        self.assertNotIn("secret", str(audit.metadata).lower())
+        self.assertNotIn("csrf", str(audit.metadata).lower())
+
+    def test_admin_cannot_perform_owner_sensitive_role_or_status_mutations(self):
+        member_membership = FamilyMembership.objects.get(
+            family=self.family,
+            user=self.member,
+        )
+        self.client.force_login(self.admin_user)
+
+        for role, status in (
+            (FamilyMembership.Role.ADMIN, FamilyMembership.Status.ACTIVE),
+            (FamilyMembership.Role.OWNER, FamilyMembership.Status.ACTIVE),
+            (FamilyMembership.Role.MEMBER, FamilyMembership.Status.INACTIVE),
+        ):
+            with self.subTest(role=role, status=status):
+                response = self.client.post(
+                    self._member_update_url(),
+                    {
+                        "membership_id": member_membership.id,
+                        "role": role,
+                        "status": status,
+                    },
+                )
+
+                self.assertEqual(response.status_code, 403)
+                member_membership.refresh_from_db()
+                self.assertEqual(member_membership.role, FamilyMembership.Role.MEMBER)
+                self.assertEqual(member_membership.status, FamilyMembership.Status.ACTIVE)
+
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                action=FamilyAuditLog.Action.MEMBERSHIP_UPDATED,
+                target_id=str(member_membership.id),
+            ).exists()
+        )
+
+    def test_last_active_owner_cannot_be_demoted_or_deactivated(self):
+        owner_membership = FamilyMembership.objects.get(
+            family=self.family,
+            user=self.owner,
+        )
+        self.client.force_login(self.owner)
+
+        for role, status in (
+            (FamilyMembership.Role.ADMIN, FamilyMembership.Status.ACTIVE),
+            (FamilyMembership.Role.OWNER, FamilyMembership.Status.INACTIVE),
+        ):
+            with self.subTest(role=role, status=status):
+                response = self.client.post(
+                    self._member_update_url(),
+                    {
+                        "membership_id": owner_membership.id,
+                        "role": role,
+                        "status": status,
+                    },
+                )
+
+                self.assertEqual(response.status_code, 400)
+                owner_membership.refresh_from_db()
+                self.assertEqual(owner_membership.role, FamilyMembership.Role.OWNER)
+                self.assertEqual(owner_membership.status, FamilyMembership.Status.ACTIVE)
+
+    def test_forged_cross_family_membership_id_does_not_leak_or_mutate(self):
+        other_member = self._membership(
+            User.objects.create_user(
+                "jones-target",
+                email="jones-target@example.com",
+                password="pass",
+            ),
+            self.other_family,
+            FamilyMembership.Role.MEMBER,
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self._member_update_url(),
+            {
+                "membership_id": other_member.id,
+                "role": FamilyMembership.Role.OWNER,
+                "status": FamilyMembership.Status.INACTIVE,
+                "user_id": other_member.user_id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+        other_member.refresh_from_db()
+        self.assertEqual(other_member.role, FamilyMembership.Role.MEMBER)
+        self.assertEqual(other_member.status, FamilyMembership.Status.ACTIVE)
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                family=self.other_family,
+                action=FamilyAuditLog.Action.MEMBERSHIP_UPDATED,
+            ).exists()
+        )
+
+    def test_membership_update_requires_csrf(self):
+        member_membership = FamilyMembership.objects.get(
+            family=self.family,
+            user=self.member,
+        )
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.owner)
+
+        response = csrf_client.post(
+            self._member_update_url(),
+            {
+                "membership_id": member_membership.id,
+                "role": FamilyMembership.Role.ADMIN,
+                "status": FamilyMembership.Status.INACTIVE,
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        member_membership.refresh_from_db()
+        self.assertEqual(member_membership.role, FamilyMembership.Role.MEMBER)
+        self.assertEqual(member_membership.status, FamilyMembership.Status.ACTIVE)
 
 
 class CreateFamilyFlowTests(TestCase):
