@@ -2064,6 +2064,191 @@ class FamilySwitcherContextTests(TestCase):
         self.assertNotContains(response, "Outsider Family")
 
 
+class FamilyAdminExperienceTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user(
+            "admin-owner", email="owner@example.com", password="pass"
+        )
+        self.admin_user = User.objects.create_user(
+            "admin-user", email="admin@example.com", password="pass"
+        )
+        self.member = User.objects.create_user(
+            "admin-member", email="member@example.com", password="pass"
+        )
+        self.inactive_user = User.objects.create_user(
+            "admin-inactive", email="inactive@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "admin-outsider", email="outsider@example.com", password="pass"
+        )
+
+        self.family, self.pool = self._family_with_pool(
+            "Smith Family", "smith-family", pool_slug="smith-main"
+        )
+        self.other_family, self.other_pool = self._family_with_pool(
+            "Jones Family", "jones-family", pool_slug="jones-main"
+        )
+
+        self._membership(self.owner, self.family, FamilyMembership.Role.OWNER)
+        self._membership(self.admin_user, self.family, FamilyMembership.Role.ADMIN)
+        self._membership(self.member, self.family, FamilyMembership.Role.MEMBER)
+        self._membership(
+            self.inactive_user,
+            self.family,
+            FamilyMembership.Role.ADMIN,
+            status=FamilyMembership.Status.INACTIVE,
+        )
+        self._membership(self.outsider, self.other_family, FamilyMembership.Role.OWNER)
+
+        self.current_audit = FamilyAuditLog.objects.create(
+            family=self.family,
+            pool=self.pool,
+            actor=self.owner,
+            action=FamilyAuditLog.Action.INVITATION_CREATED,
+            target_type="FamilyInvitation",
+            target_id="smith-invite",
+            metadata={"summary": "Smith admin event"},
+        )
+        FamilyAuditLog.objects.create(
+            family=self.other_family,
+            pool=self.other_pool,
+            actor=self.outsider,
+            action=FamilyAuditLog.Action.MEMBERSHIP_UPDATED,
+            target_type="FamilyMembership",
+            target_id="jones-member",
+            metadata={"summary": "Jones private event"},
+        )
+
+    def _family_with_pool(self, name, slug, *, pool_slug):
+        family = Family.objects.create(name=name, slug=slug)
+        pool = Pool.objects.create(
+            family=family,
+            name="Main Pickem",
+            slug=pool_slug,
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        PoolSettings.objects.create(pool=pool)
+        return family, pool
+
+    def _membership(
+        self,
+        user,
+        family,
+        role=FamilyMembership.Role.MEMBER,
+        *,
+        status=FamilyMembership.Status.ACTIVE,
+    ):
+        return FamilyMembership.objects.create(
+            family=family,
+            user=user,
+            role=role,
+            status=status,
+        )
+
+    def _admin_url(self, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def test_anonymous_admin_hub_redirects_to_login(self):
+        response = self.client.get(self._admin_url())
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(self._admin_url(), response["Location"])
+
+    def test_outsider_and_inactive_membership_admin_hub_return_404(self):
+        self.client.force_login(self.outsider)
+        outsider_response = self.client.get(self._admin_url())
+        self.assertEqual(outsider_response.status_code, 404)
+
+        self.client.force_login(self.inactive_user)
+        inactive_response = self.client.get(self._admin_url())
+        self.assertEqual(inactive_response.status_code, 404)
+
+    def test_active_member_admin_hub_returns_403(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._admin_url())
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_and_owner_admin_hub_render_only_current_family_audit_rows(self):
+        for user in (self.owner, self.admin_user):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+
+                response = self.client.get(self._admin_url())
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "pickem/family_admin.html")
+                self.assertContains(response, "Smith Family")
+                self.assertContains(response, "Main Pickem")
+                self.assertContains(response, "Smith admin event")
+                self.assertContains(response, "Invitation created")
+                self.assertNotContains(response, "Jones Family")
+                self.assertNotContains(response, "Jones private event")
+
+    def test_forged_family_pool_slug_combination_cannot_render_other_family_hub(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            reverse(
+                "family_pool_admin",
+                kwargs={
+                    "family_slug": self.family.slug,
+                    "pool_slug": self.other_pool.slug,
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_nav_affordance_visible_only_for_tenant_admin_roles(self):
+        for user in (self.owner, self.admin_user):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+
+                response = self.client.get(
+                    reverse(
+                        "family_pool_home",
+                        kwargs={
+                            "family_slug": self.family.slug,
+                            "pool_slug": self.pool.slug,
+                        },
+                    )
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'data-testid="tenant-admin-nav"')
+                self.assertContains(response, self._admin_url())
+
+        self.client.force_login(self.member)
+        member_response = self.client.get(
+            reverse(
+                "family_pool_home",
+                kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
+            )
+        )
+
+        self.assertEqual(member_response.status_code, 200)
+        self.assertNotContains(member_response, 'data-testid="tenant-admin-nav"')
+        self.assertNotContains(member_response, self._admin_url())
+
+
 class CreateFamilyFlowTests(TestCase):
     @classmethod
     def setUpTestData(cls):
