@@ -6,7 +6,7 @@ to all templates for consistent dark mode functionality.
 """
 
 from datetime import date
-from django.db.models import Q
+from django.db.models import F, Q
 from django.urls import reverse
 from django.utils import timezone
 from pickem_api.authz import (
@@ -182,7 +182,9 @@ def site_banner_context(request):
                 )
                 .filter(Q(end_date__isnull=True) | Q(end_date__gt=now))
                 .filter(Q(family=tenant_context.family) | Q(family__isnull=True))
-                .order_by('-family_id', '-priority', '-created_at')
+                # Family-scoped banners (non-null family_id) must win over global
+                # ones; nulls_last keeps the global banner as the fallback.
+                .order_by(F('family_id').desc(nulls_last=True), '-priority', '-created_at')
                 .first()
             )
         else:

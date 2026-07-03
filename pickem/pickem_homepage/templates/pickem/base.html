@@ -339,7 +339,7 @@
             </div>
         </div>
         {% elif banner_message or banner_type %}
-        <div id="site-banner" class="site-banner text-white shadow-sm {% if banner_type == 'success' %}bg-green-600{% elif banner_type == 'warning' %}bg-amber-600{% elif banner_type == 'danger' %}bg-red-600{% else %}bg-blue-600{% endif %}">
+        <div id="site-banner" data-banner-key="banner-legacy-{{ banner_type|default:'info' }}-{{ banner_message|striptags|slugify|slice:':48' }}" class="site-banner text-white shadow-sm {% if banner_type == 'success' %}bg-green-600{% elif banner_type == 'warning' %}bg-amber-600{% elif banner_type == 'danger' %}bg-red-600{% else %}bg-blue-600{% endif %}">
             <div class="max-w-7xl mx-auto px-4 sm:px-6">
                 <div class="flex items-center gap-3 py-2.5">
                     {% if banner_icon %}

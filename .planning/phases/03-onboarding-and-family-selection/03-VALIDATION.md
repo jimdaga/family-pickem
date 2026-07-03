@@ -67,7 +67,7 @@ Existing test infrastructure covers all Phase 3 requirements. No test framework 
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Header/mobile switcher visual fit | INV-04 | Existing suite has no browser visual automation | Run local server, sign in with one-family and multi-family test users, verify header and mobile nav text does not overlap. |
+| Header/mobile switcher visual fit | INV-04 | Existing suite has no browser visual automation | Using the already-running server at `http://localhost:8000`, sign in with one-family and multi-family test users, and verify header and mobile nav text does not overlap. |
 
 ## Validation Sign-Off
 

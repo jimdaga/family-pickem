@@ -1,7 +1,7 @@
 # Roadmap: Family Pickem Multi-Tenancy
 
 **Created:** 2026-06-28  
-**Current focus:** Phase 4: Family-Scoped App Pages
+**Current focus:** Phase 5: Family Admin Experience
 
 ## Phase 0: Discovery And Repo Readiness
 
@@ -135,7 +135,7 @@ Definition of done:
 
 **Goal:** Replace global commissioner behavior with family owner/admin management.
 
-**Plans:** 6/7 plans executed
+**Plans:** 7/7 plans executed
 
 Plans:
 

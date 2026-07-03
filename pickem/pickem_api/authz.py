@@ -96,6 +96,10 @@ def resolve_pool_context(
         if isinstance(pool, int):
             resolved_pool = queryset.filter(pk=pool).first()
         else:
+            # Pool.slug is only unique within a family, so a slug lookup without
+            # a family scope could resolve an arbitrary pool from another tenant.
+            if resolved_family is None:
+                raise TenantNotFound()
             resolved_pool = queryset.filter(slug=pool).first()
 
     if not resolved_pool or resolved_pool.status != Pool.Status.ACTIVE:

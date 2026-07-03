@@ -54,7 +54,8 @@
 
                 <div>
                     <label for="target-user-id" class="block text-sm font-semibold text-text-dark dark:text-white">Family Member</label>
-                    <select id="target-user-id" name="target_user_id" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
+                    <select id="target-user-id" name="target_user_id" required class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
+                        <option value="" disabled selected>Select member&hellip;</option>
                         {% for member in members %}
                         <option value="{{ member.user.id }}">{{ member.user.username }}{% if member.user.email %} - {{ member.user.email }}{% endif %}</option>
                         {% endfor %}
@@ -66,7 +67,8 @@
 
                 <div>
                     <label for="game-id" class="block text-sm font-semibold text-text-dark dark:text-white">Game</label>
-                    <select id="game-id" name="game_id" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
+                    <select id="game-id" name="game_id" required class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
+                        <option value="" disabled selected>Select game&hellip;</option>
                         {% for game in games %}
                         <option value="{{ game.id }}" data-home="{{ game.homeTeamSlug }}" data-away="{{ game.awayTeamSlug }}" data-home-name="{{ game.homeTeamName }}" data-away-name="{{ game.awayTeamName }}">
                             {{ game.awayTeamName }} at {{ game.homeTeamName }}

@@ -69,7 +69,7 @@
 
 - No layout restructuring (no sidebar, no feed-only view, no column rebalancing)
 - No font changes (Inter and Urbanist stay)
-- No primary color change (orange stays — it's the brand)
+- No layout-driven recoloring beyond the navy/blue primary migration described above (the orange `#FF6B1A` → navy/blue accent swap is intentional and in-scope)
 - No dark mode style changes beyond what's required to match light mode changes
 - No functional changes to JS (message board, dropdowns, theme toggle, picks)
 - No new pages, no new routes, no new components beyond what's needed
