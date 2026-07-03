@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load pickem_homepage_extras %}
 <html lang="en" class="{% if user_theme_preference == 'dark' %}dark{% endif %}">
 <head>
     <!-- Google tag (gtag.js) -->
@@ -31,7 +32,7 @@
     {% load static %}
     <link rel="shortcut icon" type="image/png" href="{% static 'images/windowlogo.png' %}">
     <!-- Tailwind CSS -->
-    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={% now 'U' %}">
     <!-- OLD CSS FILES REMOVED - Tailwind migration in progress -->
     <!-- <link rel="stylesheet" href="{% static 'css/style.css' %}"> -->
     <!-- <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}"> -->
@@ -47,7 +48,6 @@
                 <!-- Brand Logo -->
                 <a class="flex items-center space-x-2 hover:opacity-80 transition-opacity" href="/" aria-label="Family Pick'em Home">
                     <img src="{% static 'images/logo.png' %}" alt="Family Pick'em Logo" class="h-10 w-auto">
-                    <span class="hidden lg:inline text-lg font-semibold text-white">Family Pick'em</span>
                 </a>
 
                 <!-- Mobile Page Title - HIDDEN (using fancy banner instead) -->
@@ -55,6 +55,7 @@
                     {% block mobile_title %}{% endblock %}
                 </div>
 
+                {% if user.is_authenticated %}
                 <!-- Mobile Toggle Button -->
                 <button id="mobile-menu-btn" class="lg:hidden p-2 text-gray-300 hover:bg-slate-700 rounded-lg transition-colors" type="button"
                         aria-controls="navbarContent"
@@ -62,9 +63,11 @@
                         aria-label="Toggle navigation">
                     <i class="fas fa-bars text-xl"></i>
                 </button>
+                {% endif %}
 
                 <!-- Desktop Navigation -->
-                <div class="hidden lg:flex items-center space-x-1 absolute left-1/2 transform -translate-x-1/2">
+                {% if user.is_authenticated %}
+                <div data-testid="app-primary-nav" class="hidden lg:flex items-center space-x-1 absolute left-1/2 transform -translate-x-1/2">
                     <a class="nav-link-base" href="{% if current_family and current_pool %}{% url 'family_pool_home' current_family.slug current_pool.slug %}{% else %}/{% endif %}" aria-label="Home">
                         <i class="fas fa-home"></i>
                     </a>
@@ -105,6 +108,7 @@
                     </a>
                     {% endif %}
                 </div>
+                {% endif %}
 
                 <!-- Right Side Navigation -->
                 <div class="hidden lg:flex items-center space-x-4">
@@ -113,11 +117,10 @@
                         <div class="relative dropdown-container" data-testid="family-context-switcher">
                             <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors"
                                     aria-label="Switch family" onclick="toggleDropdown(event, this)">
-                                <i class="fas fa-users text-primary"></i>
+                                <i class="fas fa-users text-primary text-sm"></i>
                                 <span class="text-left">
-                                    <span class="block text-[11px] font-semibold uppercase text-slate-400">Current family</span>
-                                    <span class="block max-w-44 truncate text-sm font-semibold text-white">{{ current_family.name }}</span>
-                                    <span class="block max-w-44 truncate text-xs text-slate-400">{{ current_pool.name }}</span>
+                                    <span class="block max-w-36 truncate text-sm font-semibold text-white leading-tight">{{ current_family.name }}</span>
+                                    <span class="block max-w-36 truncate text-xs text-slate-400 leading-tight">{{ current_pool.name }}</span>
                                 </span>
                                 {% if family_switcher_choices|length > 1 %}
                                 <i class="fas fa-chevron-down text-xs text-slate-400"></i>
@@ -161,11 +164,15 @@
                         <div class="relative dropdown-container">
                             <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors"
                                     aria-label="User menu" onclick="toggleDropdown(event, this)">
-                                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
-                                     alt="Profile picture"
-                                     class="w-8 h-8 rounded-full">
+                                <div class="relative w-8 h-8 flex-shrink-0">
+                                    <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold select-none">{{ user|display_name|slice:":1"|upper }}</div>
+                                    <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                                         alt="Profile picture"
+                                         class="absolute inset-0 w-8 h-8 rounded-full object-cover"
+                                         onerror="this.remove()">
+                                </div>
                                 <span class="text-white font-medium">
-                                    {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
+                                    {{ user|display_name }}
                                 </span>
                                 <i class="fas fa-chevron-down text-xs text-slate-400"></i>
                             </button>
@@ -175,7 +182,7 @@
                                     <i class="fas fa-user-circle text-xl mr-3 text-text-dark dark:text-white"></i>
                                     <div>
                                         <div class="font-bold text-text-dark dark:text-white">
-                                            {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
+                                            {{ user|display_name }}
                                             {{ user.socialaccount_set.all.0.extra_data.family_name }}
                                         </div>
                                         <div class="text-sm text-text-secondary-light dark:text-text-secondary">{{ user.email }}</div>
@@ -201,6 +208,7 @@
             </div>
 
             <!-- Mobile Menu (Hidden by default) -->
+            {% if user.is_authenticated %}
             <div id="mobile-menu" class="hidden lg:hidden absolute top-16 left-0 right-0 bg-slate-800 border-b border-slate-700 shadow-lg">
                 <div class="px-4 py-4 space-y-2">
                     <!-- Mobile Navigation Links -->
@@ -302,57 +310,53 @@
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
         </div>
     </nav>
 
-      <!-- Banner Section (Optional) -->
-      {% block banner %}
-      {% if active_banner %}
-      <div class="site-banner banner-{{ active_banner.banner_type }}" id="site-banner">
-          <div class="container">
-              <div class="banner-content">
-                  <div class="banner-icon">
-                      <i class="{{ active_banner.icon }}"></i>
-                  </div>
-                  <div class="banner-text">
-                      {{ active_banner.title }}
-                      {% if active_banner.description %}
-                          <div class="banner-description">{{ active_banner.description }}</div>
-                      {% endif %}
-                  </div>
-                  {% if active_banner.show_close_button %}
-                  <button type="button" class="banner-close" aria-label="Close banner">
-                      <i class="fas fa-times"></i>
-                  </button>
-                  {% endif %}
-              </div>
-          </div>
-      </div>
-      {% elif banner_message or banner_type %}
-      <div class="site-banner {% if banner_type %}banner-{{ banner_type }}{% else %}banner-info{% endif %}" id="site-banner">
-          <div class="container">
-              <div class="banner-content">
-                  {% if banner_icon %}
-                  <div class="banner-icon">
-                      <i class="{{ banner_icon }}"></i>
-                  </div>
-                  {% endif %}
-                  <div class="banner-text">
-                      {{ banner_message|safe }}
-                  </div>
-                  {% if banner_dismissible %}
-                  <button type="button" class="banner-close" aria-label="Close banner">
-                      <i class="fas fa-times"></i>
-                  </button>
-                  {% endif %}
-              </div>
-          </div>
-      </div>
-      {% endif %}
-      {% endblock %}
-
      <!-- Main Content -->
      <main class="pt-16 min-h-screen {% if user.is_authenticated %}pb-24{% endif %}" role="main">
+
+        <!-- Banner Section (Optional) -->
+        {% block banner %}
+        {% if active_banner %}
+        <div id="site-banner" data-banner-key="banner-{{ active_banner.pk }}-{{ active_banner.updated_at|date:'U' }}" class="site-banner text-white shadow-sm {% if active_banner.banner_type == 'success' %}bg-green-600{% elif active_banner.banner_type == 'warning' %}bg-amber-600{% elif active_banner.banner_type == 'danger' %}bg-red-600{% else %}bg-blue-600{% endif %}">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                <div class="flex items-center gap-3 py-2.5">
+                    {% if active_banner.icon %}
+                    <i class="{{ active_banner.icon }} text-lg flex-shrink-0" aria-hidden="true"></i>
+                    {% endif %}
+                    <div class="min-w-0 flex-1 text-sm leading-snug">
+                        <span class="font-semibold">{{ active_banner.title }}</span>
+                        {% if active_banner.description %}<span class="text-white/85"> &mdash; {{ active_banner.description }}</span>{% endif %}
+                    </div>
+                    {% if active_banner.show_close_button %}
+                    <button type="button" class="banner-close -mr-1 flex-shrink-0 rounded-lg p-1.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors" aria-label="Dismiss banner">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% elif banner_message or banner_type %}
+        <div id="site-banner" class="site-banner text-white shadow-sm {% if banner_type == 'success' %}bg-green-600{% elif banner_type == 'warning' %}bg-amber-600{% elif banner_type == 'danger' %}bg-red-600{% else %}bg-blue-600{% endif %}">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                <div class="flex items-center gap-3 py-2.5">
+                    {% if banner_icon %}
+                    <i class="{{ banner_icon }} text-lg flex-shrink-0" aria-hidden="true"></i>
+                    {% endif %}
+                    <div class="min-w-0 flex-1 text-sm font-semibold leading-snug">{{ banner_message|safe }}</div>
+                    {% if banner_dismissible %}
+                    <button type="button" class="banner-close -mr-1 flex-shrink-0 rounded-lg p-1.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors" aria-label="Dismiss banner">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endblock %}
+
         {% block content %}
             <div class="max-w-7xl mx-auto px-6 py-8">
                 <div class="text-center">
@@ -368,11 +372,15 @@
         <div class="max-w-7xl mx-auto px-4 py-4 grid grid-cols-3 items-center gap-4 text-base">
             <!-- Left: User Info -->
             <div class="flex items-center gap-3">
-                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
-                     alt="Your avatar"
-                     class="w-8 h-8 rounded-full border-2 border-border-light dark:border-border-subtle">
+                <div class="relative w-8 h-8 flex-shrink-0">
+                    <div class="w-8 h-8 rounded-full bg-primary border-2 border-border-subtle flex items-center justify-center text-white text-xs font-bold select-none">{{ user|display_name|slice:":1"|upper }}</div>
+                    <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                         alt="Your avatar"
+                         class="absolute inset-0 w-8 h-8 rounded-full object-cover border-2 border-border-light dark:border-border-subtle"
+                         onerror="this.remove()">
+                </div>
                 <span class="text-white font-semibold truncate">
-                    {{ user.first_name|default:user.username }}
+                    {{ user|display_name }}
                 </span>
             </div>
 
@@ -513,14 +521,11 @@
         // Check if banner was dismissed this session
         const banner = document.querySelector('.site-banner');
         if (banner) {
-            // Create a global banner key - use banner ID or a global key for site-wide dismissal
-            const bannerId = banner.id || 'site-banner';
+            // Key dismissal to THIS specific banner so publishing a new/edited
+            // banner shows again even if a previous one was dismissed this session.
+            const bannerId = banner.dataset.bannerKey || banner.id || 'site-banner';
             const bannerKey = 'banner_dismissed_' + bannerId;
-            
-            console.log('Banner found:', banner);
-            console.log('Banner key:', bannerKey);
-            console.log('Storage value:', sessionStorage.getItem(bannerKey));
-            
+
             // Choose storage type: sessionStorage (session-only) or localStorage (persistent)
             // sessionStorage = banner reappears after browser restart (recommended for announcements)
             // localStorage = banner stays dismissed permanently until manually cleared
@@ -557,7 +562,7 @@
         window.showBanner = function() {
             const banner = document.querySelector('.site-banner');
             if (banner) {
-                const bannerId = banner.id || 'site-banner';
+                const bannerId = banner.dataset.bannerKey || banner.id || 'site-banner';
                 const bannerKey = 'banner_dismissed_' + bannerId;
                 const storage = sessionStorage; // Match the storage type used above
                 storage.removeItem(bannerKey);

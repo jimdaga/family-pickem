@@ -11,6 +11,25 @@ from pickem.utils import get_season
 register = template.Library()
 
 @register.filter
+def display_name(user):
+    """Return a consistent display name for a Django user-like object."""
+    if not user:
+        return ""
+
+    name = ""
+    try:
+        social_account = user.socialaccount_set.first()
+        if social_account:
+            name = social_account.extra_data.get("given_name") or ""
+    except Exception:
+        name = ""
+
+    if not name:
+        name = getattr(user, "first_name", "") or getattr(user, "username", "") or ""
+
+    return str(name).strip().capitalize()
+
+@register.filter
 def addstr(arg1, arg2):
     """concatenate arg1 & arg2"""
     return str(arg1) + str(arg2)

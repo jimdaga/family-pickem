@@ -3,1255 +3,408 @@
 {% load socialaccount %}
 {% load pickem_homepage_extras %}
 
-
 {% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6">
 
-    <div class="max-w-7xl mx-auto px-6 py-6">
-    <!-- Compact Page Header -->
-    <div class="page-header-clean" data-deploy-marker="phase1-2026-06-28.1">
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-            <div class="flex items-center gap-3">
-                <img src="{% static 'images/logo.png' %}" alt="Family Pickem Logo" class="w-10 h-10 object-contain">
-                <div>
-                    <h1 class="text-xl font-bold text-text-dark dark:text-white">Family Pickem</h1>
-                    <p class="text-sm text-text-secondary-light dark:text-text-secondary">NFL Pick 'em League</p>
-                </div>
+    <!-- ═══════════════════════════════════════ HERO ═══════════════════════════════════════ -->
+    <div class="relative overflow-hidden rounded-2xl mb-8 mt-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border border-slate-700 dark:border-slate-800">
+        <!-- subtle vertical field lines -->
+        <div class="absolute inset-0 opacity-5 pointer-events-none select-none" aria-hidden="true">
+            <div class="absolute left-1/4 top-0 bottom-0 border-l border-white"></div>
+            <div class="absolute left-1/2 top-0 bottom-0 border-l border-white"></div>
+            <div class="absolute left-3/4 top-0 bottom-0 border-l border-white"></div>
+        </div>
+
+        <div class="relative z-10 px-6 py-12 sm:py-16 text-center">
+            <!-- Logo -->
+            <div class="flex justify-center mb-5">
+                <img src="{% static 'images/logo.png' %}" alt="Family Pick'em" class="w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-lg">
             </div>
-            {% if user.is_authenticated %}
-            <div class="flex items-center gap-3">
-                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
-                     alt="Your profile picture"
-                     class="w-9 h-9 rounded-full border-2 border-primary">
-                <div>
-                    <p class="text-sm font-semibold text-text-dark dark:text-white">Welcome back, {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}!</p>
-                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Ready for Week {{ current_week }}?</p>
-                </div>
+
+            <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight mb-3 leading-none">
+                Family Pick'em
+            </h1>
+            <p class="text-base sm:text-xl font-semibold text-slate-300 mb-2 tracking-wide uppercase">
+                Predict &bull; Compete &bull; Win
+            </p>
+            <p class="text-sm sm:text-base text-slate-400 max-w-md mx-auto mb-8">
+                Pick NFL game winners each week and battle your family for season bragging rights.
+            </p>
+
+            <!-- CTAs -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a href="{% provider_login_url 'google' %}"
+                   class="inline-flex items-center gap-3 px-6 py-3 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl text-base transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0">
+                    <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Sign in with Google
+                </a>
+                <a href="{% url 'scores' %}"
+                   class="inline-flex items-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl text-base transition-all border border-white/20 hover:border-white/40">
+                    <i class="fas fa-chart-line text-sm"></i>
+                    Live Scores
+                </a>
             </div>
-            {% else %}
-            <div>
-                <p class="text-sm font-semibold text-text-dark dark:text-white">Join the Family League</p>
-                <p class="text-xs text-text-secondary-light dark:text-text-secondary">Sign in to start making picks!</p>
+
+            <!-- Inline stat teasers -->
+            <div class="flex items-center justify-center gap-6 mt-8 text-sm text-slate-400 flex-wrap">
+                <span><span class="font-bold text-white">{{ total_players }}</span> players</span>
+                <span class="text-slate-600">&bull;</span>
+                <span><span class="font-bold text-white">{{ total_picks|default:0 }}</span> picks made</span>
+                <span class="text-slate-600">&bull;</span>
+                <span><span class="font-bold text-white">{{ league_accuracy }}%</span> avg accuracy</span>
             </div>
-            {% endif %}
         </div>
     </div>
-        <!-- Today's Games Section -->
-        {% if today_games %}
-        <div class="section-container mb-6">
-            <h3 class="section-title">
-                <i class="fas fa-calendar-day mr-2"></i>Today's Games
-            </h3>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {% for game in today_games %}
-                <div class="bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle overflow-hidden hover:shadow-card-hover transition-all duration-200 animate-fade-in-up" style="animation-delay: {{ forloop.counter0|add:1|floatformat:1|stringformat:'0.1' }}s">
-                    <!-- Game Status Header -->
-                    <div class="px-4 py-2 {% if game.statusType == 'inprogress' %}bg-gradient-to-r from-green-500/20 to-teal-500/20 dark:from-green-600/30 dark:to-teal-600/30{% elif game.statusType == 'finished' %}bg-gradient-to-r from-gray-500/20 to-gray-600/20 dark:from-gray-600/30 dark:to-gray-700/30{% else %}bg-gradient-to-r from-blue-500/20 to-indigo-500/20 dark:from-blue-600/30 dark:to-indigo-600/30{% endif %} border-b border-border-light dark:border-border-subtle">
-                        <div class="flex items-center justify-between text-sm">
-                            <div class="flex items-center gap-2 font-semibold">
-                                {% if game.statusType == 'inprogress' %}
-                                    <span class="flex items-center gap-1.5 text-green-600 dark:text-green-400">
-                                        <span class="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></span>
-                                        LIVE
-                                    </span>
-                                {% elif game.statusType == 'finished' %}
-                                    <span class="text-gray-600 dark:text-gray-400">
-                                        <i class="fas fa-check-circle mr-1"></i>FINAL
-                                    </span>
-                                {% else %}
-                                    <span class="text-blue-600 dark:text-blue-400">
-                                        <i class="fas fa-clock mr-1"></i>{{ game.statusTitle }}
-                                    </span>
-                                {% endif %}
-                            </div>
-                            <div class="text-text-secondary-light dark:text-text-secondary">
-                                {{ game|game_start_label }}
-                            </div>
-                        </div>
+    <!-- ═══════════════════════════════════ TODAY'S GAMES ══════════════════════════════════ -->
+    {% if today_games %}
+    <div class="section-container mb-6">
+        <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-calendar-day text-xl text-primary"></i>
+            <div>
+                <h2 class="text-lg font-bold text-text-dark dark:text-white leading-tight">Today's Games</h2>
+                <p class="text-xs text-text-secondary-light dark:text-text-secondary">Live scores &amp; upcoming kickoffs</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for game in today_games %}
+            <div class="bg-surface-light dark:bg-slate-700 rounded-xl border border-border-light dark:border-slate-600 overflow-hidden hover:shadow-card-hover transition-all duration-200">
+                <!-- Status bar -->
+                <div class="px-4 py-2 {% if game.statusType == 'inprogress' %}bg-green-500/15{% elif game.statusType == 'finished' %}bg-slate-500/10{% else %}bg-blue-500/10{% endif %} border-b border-border-light dark:border-slate-600">
+                    <div class="flex items-center justify-between text-sm font-semibold">
+                        {% if game.statusType == 'inprogress' %}
+                            <span class="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+                                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>LIVE
+                            </span>
+                        {% elif game.statusType == 'finished' %}
+                            <span class="text-text-secondary-light dark:text-slate-400"><i class="fas fa-check-circle mr-1"></i>FINAL</span>
+                        {% else %}
+                            <span class="text-blue-600 dark:text-blue-400"><i class="fas fa-clock mr-1"></i>{{ game.statusTitle }}</span>
+                        {% endif %}
+                        <span class="text-text-secondary-light dark:text-text-secondary text-xs font-normal">{{ game|game_start_label }}</span>
                     </div>
+                </div>
 
-                    <!-- Teams Matchup -->
-                    <div class="p-4">
-                        <!-- Away Team -->
-                        <div class="flex items-center justify-between mb-3 pb-3 border-b border-border-light dark:border-border-subtle">
-                            <div class="flex items-center gap-3 flex-1 min-w-0">
-                                {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
-                                     alt="{{ game.awayTeamName }}"
-                                     class="w-10 h-10 object-contain flex-shrink-0">
-                                {% endwith %}
-                                <div class="flex-1 min-w-0">
-                                    <div class="font-bold text-text-dark dark:text-white truncate {% if game.statusType == 'finished' and game.gameWinner != game.awayTeamSlug %}opacity-60{% endif %}">
-                                        {{ game.awayTeamName }}
-                                    </div>
-                                    <div class="text-xs text-text-secondary-light dark:text-text-secondary">
-                                        {% for team in wins_losses %}
-                                            {% if team.teamNameSlug == game.awayTeamSlug %}
-                                                ({{ team.teamWins }}-{{ team.teamLosses }}{% if team.teamTies > 0 %}-{{ team.teamTies }}{% endif %})
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
+                <!-- Teams -->
+                <div class="p-4">
+                    <!-- Away -->
+                    <div class="flex items-center justify-between mb-3 pb-3 border-b border-border-light dark:border-slate-600">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }}" class="w-9 h-9 object-contain flex-shrink-0">
+                            {% endwith %}
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-text-dark dark:text-white truncate text-sm {% if game.statusType == 'finished' and game.gameWinner != game.awayTeamSlug %}opacity-50{% endif %}">{{ game.awayTeamName }}</div>
+                                <div class="text-xs text-text-secondary-light dark:text-text-secondary">
+                                    {% for team in wins_losses %}{% if team.teamNameSlug == game.awayTeamSlug %}{{ team.teamWins }}-{{ team.teamLosses }}{% if team.teamTies > 0 %}-{{ team.teamTies }}{% endif %}{% endif %}{% endfor %}
                                 </div>
                             </div>
-                            {% if game.statusType != 'notstarted' %}
-                            <div class="text-2xl font-black text-text-dark dark:text-white ml-3">
-                                {{ game.awayTeamScore|default:"0" }}
-                            </div>
-                            {% endif %}
                         </div>
-
-                        <!-- Home Team -->
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3 flex-1 min-w-0">
-                                {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
-                                     alt="{{ game.homeTeamName }}"
-                                     class="w-10 h-10 object-contain flex-shrink-0">
-                                {% endwith %}
-                                <div class="flex-1 min-w-0">
-                                    <div class="font-bold text-text-dark dark:text-white truncate {% if game.statusType == 'finished' and game.gameWinner != game.homeTeamSlug %}opacity-60{% endif %}">
-                                        {{ game.homeTeamName }}
-                                    </div>
-                                    <div class="text-xs text-text-secondary-light dark:text-text-secondary">
-                                        {% for team in wins_losses %}
-                                            {% if team.teamNameSlug == game.homeTeamSlug %}
-                                                ({{ team.teamWins }}-{{ team.teamLosses }}{% if team.teamTies > 0 %}-{{ team.teamTies }}{% endif %})
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
+                        {% if game.statusType != 'notstarted' %}<div class="text-xl font-black text-text-dark dark:text-white ml-2">{{ game.awayTeamScore|default:"0" }}</div>{% endif %}
+                    </div>
+                    <!-- Home -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }}" class="w-9 h-9 object-contain flex-shrink-0">
+                            {% endwith %}
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-text-dark dark:text-white truncate text-sm {% if game.statusType == 'finished' and game.gameWinner != game.homeTeamSlug %}opacity-50{% endif %}">{{ game.homeTeamName }}</div>
+                                <div class="text-xs text-text-secondary-light dark:text-text-secondary">
+                                    {% for team in wins_losses %}{% if team.teamNameSlug == game.homeTeamSlug %}{{ team.teamWins }}-{{ team.teamLosses }}{% if team.teamTies > 0 %}-{{ team.teamTies }}{% endif %}{% endif %}{% endfor %}
                                 </div>
                             </div>
-                            {% if game.statusType != 'notstarted' %}
-                            <div class="text-2xl font-black text-text-dark dark:text-white ml-3">
-                                {{ game.homeTeamScore|default:"0" }}
-                            </div>
-                            {% endif %}
                         </div>
+                        {% if game.statusType != 'notstarted' %}<div class="text-xl font-black text-text-dark dark:text-white ml-2">{{ game.homeTeamScore|default:"0" }}</div>{% endif %}
+                    </div>
 
-                        <!-- Game Info (Spread, Weather, etc.) -->
-                        {% if game.spread or game.overUnder or game.temperature %}
-                        <div class="mt-3 pt-3 border-t border-border-light dark:border-border-subtle flex flex-wrap gap-2 text-xs">
-                            {% if game.spread %}
-                            <div class="flex items-center gap-1 px-2 py-1 bg-surface-light dark:bg-surface-hover rounded-lg">
-                                <i class="fas fa-chart-line text-text-secondary-light dark:text-text-secondary"></i>
-                                <span class="text-text-dark dark:text-white font-semibold">
-                                    {% if game.spread > 0 %}
-                                        {{ game.homeTeamName|truncatewords:1 }} -{{ game.spread|floatformat:1 }}
-                                    {% else %}
-                                        {{ game.awayTeamName|truncatewords:1 }} -{{ game.spread|floatformat:1|cut:"-" }}
-                                    {% endif %}
-                                </span>
-                            </div>
-                            {% endif %}
-                            {% if game.overUnder %}
-                            <div class="flex items-center gap-1 px-2 py-1 bg-surface-light dark:bg-surface-hover rounded-lg">
-                                <i class="fas fa-calculator text-text-secondary-light dark:text-text-secondary"></i>
-                                <span class="text-text-dark dark:text-white font-semibold">O/U {{ game.overUnder|floatformat:1 }}</span>
-                            </div>
-                            {% endif %}
-                            {% if game.temperature and game.weatherCondition %}
-                            <div class="flex items-center gap-1 px-2 py-1 bg-surface-light dark:bg-surface-hover rounded-lg">
-                                {% if 'Sun' in game.weatherCondition or 'Clear' in game.weatherCondition %}
-                                    <i class="fas fa-sun text-yellow-500"></i>
-                                {% elif 'Cloud' in game.weatherCondition %}
-                                    <i class="fas fa-cloud text-gray-500"></i>
-                                {% elif 'Rain' in game.weatherCondition or 'Shower' in game.weatherCondition %}
-                                    <i class="fas fa-cloud-rain text-blue-500"></i>
-                                {% elif 'Snow' in game.weatherCondition %}
-                                    <i class="fas fa-snowflake text-blue-300"></i>
-                                {% else %}
-                                    <i class="fas fa-thermometer-half text-text-secondary-light dark:text-text-secondary"></i>
-                                {% endif %}
-                                <span class="text-text-dark dark:text-white font-semibold">{{ game.temperature }}°F</span>
-                            </div>
-                            {% endif %}
-                        </div>
+                    {% if game.spread or game.overUnder %}
+                    <div class="mt-3 pt-3 border-t border-border-light dark:border-slate-600 flex flex-wrap gap-2 text-xs">
+                        {% if game.spread %}
+                        <span class="px-2 py-1 bg-surface-light dark:bg-slate-800 rounded-lg text-text-dark dark:text-white font-semibold">
+                            <i class="fas fa-chart-line text-text-secondary-light dark:text-text-secondary mr-1"></i>
+                            {% if game.spread > 0 %}{{ game.homeTeamName|truncatewords:1 }} -{{ game.spread|floatformat:1 }}{% else %}{{ game.awayTeamName|truncatewords:1 }} -{{ game.spread|floatformat:1|cut:"-" }}{% endif %}
+                        </span>
+                        {% endif %}
+                        {% if game.overUnder %}
+                        <span class="px-2 py-1 bg-surface-light dark:bg-slate-800 rounded-lg text-text-dark dark:text-white font-semibold">
+                            <i class="fas fa-calculator text-text-secondary-light dark:text-text-secondary mr-1"></i>O/U {{ game.overUnder|floatformat:1 }}
+                        </span>
                         {% endif %}
                     </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
-                    <!-- Action Footer -->
-                    <div class="px-4 py-2 bg-surface-light/50 dark:bg-surface/50 border-t border-border-light dark:border-border-subtle">
-                        <a href="{% if family and pool %}{% url 'family_pool_scores' family.slug pool.slug %}{% else %}{% url 'scores' %}{% endif %}" class="text-xs text-primary hover:text-primary/80 font-semibold transition-colors flex items-center justify-center gap-1">
-                            <span>View Details</span>
-                            <i class="fas fa-arrow-right text-[10px]"></i>
-                        </a>
+    <!-- ════════════════════════════════ LEADERBOARD + NEWS ════════════════════════════════ -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+        <!-- Leaderboard -->
+        <div class="section-container mb-0">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-trophy text-xl text-yellow-500"></i>
+                    <div>
+                        <h2 class="text-lg font-bold text-text-dark dark:text-white leading-tight">Season Leaderboard</h2>
+                        <p class="text-xs text-text-secondary-light dark:text-text-secondary">Current standings</p>
                     </div>
+                </div>
+                <a href="{% url 'standings' %}" class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white transition-colors">
+                    View All <i class="fas fa-arrow-right ml-1 text-[10px]"></i>
+                </a>
+            </div>
+
+            <div class="space-y-2">
+                {% for player in top_players %}
+                <div class="flex items-center gap-3 p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
+                    <div class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full font-bold text-sm
+                        {% if forloop.counter == 1 %}bg-yellow-500 text-white
+                        {% elif forloop.counter == 2 %}bg-slate-400 text-white
+                        {% elif forloop.counter == 3 %}bg-amber-700 text-white
+                        {% else %}bg-surface-light dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary{% endif %}">
+                        {{ forloop.counter }}
+                    </div>
+                    {% with player.userID|lookupavatar as avatar %}
+                    {% with player.userID|safe_username as username %}
+                    <div class="relative w-9 h-9 flex-shrink-0">
+                        <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold select-none">{{ username|slice:":1"|upper }}</div>
+                        <img src="{{ avatar }}" alt="{{ username }}" class="absolute inset-0 w-9 h-9 rounded-full object-cover" onerror="this.remove()">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-text-dark dark:text-white truncate uppercase text-sm">{{ username|default:"Unknown" }}</div>
+                        <div class="text-xs text-text-secondary-light dark:text-text-secondary">{{ player.total_points|default:0 }} pts</div>
+                    </div>
+                    {% endwith %}
+                    {% endwith %}
+                    {% if current_week_winner and current_week_winner.userID == player.userID %}
+                    <span class="text-xs px-2 py-0.5 bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 rounded-full font-semibold flex-shrink-0">
+                        <i class="fas fa-star text-[10px] mr-0.5"></i>Wk {{ current_week }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-text-secondary-light dark:text-text-secondary text-sm">
+                    Season hasn't started yet.
                 </div>
                 {% endfor %}
             </div>
-        </div>
-        {% endif %}
 
-        <!-- Week Points - Compact Leaderboard (only show if picks exist) -->
-        {% if show_week_points %}
-        <div class="section-container mb-6">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="section-title mb-0">
-                    <i class="fas fa-list-ol mr-2"></i>Week {{ current_week }} Points
-                </h3>
-                <a href="{% if family and pool %}{% url 'family_pool_scores' family.slug pool.slug %}{% else %}{% url 'scores' %}{% endif %}" class="text-sm text-primary hover:text-primary/80 font-semibold transition-colors flex items-center gap-1">
-                    <span>View All</span>
-                    <i class="fas fa-arrow-right text-xs"></i>
-                </a>
-            </div>
-
-            <!-- Horizontal scrolling list on mobile, grid on larger screens -->
-            <div class="flex gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 sm:overflow-visible sm:pb-0">
-                {% for player in week_points %}
-                <div class="flex-shrink-0 w-24 sm:w-auto flex flex-col items-center p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all">
-                    {% with player.uid|lookupavatar as avatar %}
-                    {% with player.uid|lookupname as username %}
-                    {% with all_user_ranks|lookup:player.uid as rank %}
-                    <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.uid %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="group">
-                        <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                             alt="{{ username }}"
-                             class="w-10 h-10 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:border-primary group-hover:scale-110 transition-all">
-                    </a>
-                    <span class="text-xs font-semibold text-text-dark dark:text-white mt-1.5 text-center truncate w-full uppercase">{{ username|default:"Unknown"|truncatechars:10 }}</span>
-                    <div class="flex items-baseline gap-0.5 mt-0.5">
-                        <span class="text-lg font-black text-text-dark dark:text-white">{{ player.wins }}</span>
-                        <span class="text-[10px] text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
-                    </div>
-                    {% if rank %}
-                    <div class="text-[10px] text-text-secondary-light dark:text-text-secondary mt-1">
-                        Rank: <span class="font-bold {% if rank == 1 %}text-yellow-500{% elif rank == 2 %}text-gray-400{% elif rank == 3 %}text-amber-600{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">#{{ rank }}</span>
-                    </div>
-                    {% endif %}
-                    {% endwith %}
-                    {% endwith %}
-                    {% endwith %}
-                </div>
-                {% endfor %}
-
-                <!-- Show players with 0 points -->
-                {% for player_id in week_players %}
-                {% if player_id not in users_with_week_points %}
-                <div class="flex-shrink-0 w-24 sm:w-auto flex flex-col items-center p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all">
-                    {% with player_id|lookupavatar as avatar %}
-                    {% with player_id|lookupname as username %}
-                    {% with all_user_ranks|lookup:player_id as rank %}
-                    <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player_id %}{% else %}{% url 'user_profile' player_id %}{% endif %}" class="group">
-                        <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                             alt="{{ username }}"
-                             class="w-10 h-10 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:border-primary group-hover:scale-110 transition-all">
-                    </a>
-                    <span class="text-xs font-semibold text-text-dark dark:text-white mt-1.5 text-center truncate w-full uppercase">{{ username|default:"Unknown"|truncatechars:10 }}</span>
-                    <div class="flex items-baseline gap-0.5 mt-0.5">
-                        <span class="text-lg font-black text-text-dark dark:text-white">0</span>
-                        <span class="text-[10px] text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
-                    </div>
-                    {% if rank %}
-                    <div class="text-[10px] text-text-secondary-light dark:text-text-secondary mt-1">
-                        Rank: <span class="font-bold {% if rank == 1 %}text-yellow-500{% elif rank == 2 %}text-gray-400{% elif rank == 3 %}text-amber-600{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">#{{ rank }}</span>
-                    </div>
-                    {% endif %}
-                    {% endwith %}
-                    {% endwith %}
-                    {% endwith %}
-                </div>
-                {% endif %}
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Current Week Status -->
-        <div class="section-container mb-6">
-            <h3 class="section-title">
-                <i class="fas fa-calendar-week mr-2"></i>Week {{ current_week }} Status
-            </h3>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 {% if user.is_authenticated %}lg:grid-cols-4{% else %}lg:grid-cols-3{% endif %} gap-4">
-                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle animate-fade-in-up" style="animation-delay: 0.1s">
-                    <div class="text-4xl text-primary mb-2">
-                        <i class="fas fa-football-ball"></i>
-                    </div>
-                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">{{ current_games }}</div>
-                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Games This Week</div>
-                </div>
-
-                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle animate-fade-in-up" style="animation-delay: 0.2s">
-                    <div class="text-4xl text-secondary-light dark:text-secondary mb-2">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">{{ total_players }}</div>
-                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Active Players</div>
-                </div>
-
-                {% if current_week_winner %}
-                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.3s">
-                    <div class="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-transparent animate-pulse"></div>
-                    <div class="relative">
-                        <div class="text-4xl text-yellow-500 mb-2">
-                            <i class="fas fa-trophy"></i>
-                        </div>
-                        <div class="text-3xl font-bold text-text-dark dark:text-white mb-1 uppercase">
-                            {% with current_week_winner.userID|safe_username as winner_name %}
-                                {{ winner_name|truncatechars:12 }}
-                            {% endwith %}
-                        </div>
-                        <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Week Winner</div>
-                    </div>
-                </div>
-                {% else %}
-                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle animate-fade-in-up" style="animation-delay: 0.3s">
-                    <div class="text-4xl text-muted mb-2">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">TBD</div>
-                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Week Winner</div>
-                </div>
-                {% endif %}
-
-                {% if user.is_authenticated %}
-                <div class="text-center p-6 bg-surface-light dark:bg-surface rounded-2xl border border-border-light dark:border-border-subtle animate-fade-in-up" style="animation-delay: 0.4s">
-                    <div class="text-4xl mb-2 {% if user_pick_status == 'complete' %}text-secondary-light dark:text-secondary{% elif user_pick_status == 'partial' %}text-yellow-500{% else %}text-red-500{% endif %}">
-                        {% if user_pick_status == 'complete' %}
-                            <i class="fas fa-check-circle"></i>
-                        {% elif user_pick_status == 'partial' %}
-                            <i class="fas fa-clock"></i>
-                        {% else %}
-                            <i class="fas fa-exclamation-circle"></i>
-                        {% endif %}
-                    </div>
-                    <div class="text-3xl font-bold text-text-dark dark:text-white mb-1">
-                        {% if user_pick_status == 'complete' %}
-                            Complete
-                        {% elif user_pick_status == 'partial' %}
-                            {{ user_picks_count }}/{{ current_games }}
-                        {% else %}
-                            Pending
-                        {% endif %}
-                    </div>
-                    <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide">Your Picks</div>
-
-                    <!-- Progress bar for partial completion -->
-                    {% if user_pick_status == 'partial' %}
-                    <div class="mt-3 w-full bg-surface-light dark:bg-surface-hover rounded-full h-2 overflow-hidden border border-border-light dark:border-border-subtle">
-                        <div class="h-full bg-primary rounded-full transition-all duration-500"
-                             style="width: {% widthratio user_picks_count current_games 100 %}%">
-                        </div>
-                    </div>
-                    <div class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary mt-1">
-                        {% widthratio user_picks_count current_games 100 %}% Complete
-                    </div>
-                    {% endif %}
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Quick Navigation -->
-        <div class="section-container mb-6">
-            <h3 class="section-title">
-                <i class="fas fa-compass mr-2"></i>Quick Actions
-            </h3>
-
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                {% if user.is_authenticated %}
-                <a href="{% if family and pool %}{% url 'family_pool_game_picks' family.slug pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
-                    <div class="text-3xl text-red-600 dark:text-red-500 mb-2 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-edit"></i>
-                    </div>
-                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Submit Picks</h5>
-                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Make your Week {{ current_week }} predictions</p>
-                    {% if user_pick_status != 'complete' %}
-                        <span class="absolute top-2 right-2 px-2 py-1 text-xs font-semibold bg-red-600 text-white rounded-full animate-pulse">!</span>
-                    {% endif %}
-                </a>
-                {% else %}
-                <a href="{% provider_login_url 'google' %}" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-1">
-                    <div class="text-3xl text-red-600 dark:text-red-500 mb-2 group-hover:scale-110 transition-transform">
-                        <i class="fab fa-google"></i>
-                    </div>
-                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Sign In</h5>
-                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Join the league with Google</p>
-                </a>
-                {% endif %}
-
-                <a href="{% if family and pool %}{% url 'family_pool_scores' family.slug pool.slug %}{% else %}{% url 'scores' %}{% endif %}" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
-                    <div class="text-3xl text-blue-600 dark:text-blue-500 mb-2 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Live Scores</h5>
-                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Track current week results</p>
-                </a>
-
-                <a href="{% if family and pool %}{% url 'family_pool_standings' family.slug pool.slug %}{% else %}{% url 'standings' %}{% endif %}" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
-                    <div class="text-3xl text-yellow-600 dark:text-yellow-500 mb-2 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-medal"></i>
-                    </div>
-                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Standings</h5>
-                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">View league leaderboard</p>
-                </a>
-
-                <a href="{% if family and pool %}{% url 'family_pool_rules' family.slug pool.slug %}{% else %}{% url 'rules' %}{% endif %}" class="group relative block p-5 bg-surface-light dark:bg-surface rounded-xl border-2 border-border-light dark:border-border-subtle hover:border-primary transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5">
-                    <div class="text-3xl text-purple-600 dark:text-purple-500 mb-2 group-hover:scale-110 transition-transform">
-                        <i class="fas fa-gavel"></i>
-                    </div>
-                    <h5 class="text-base font-bold text-text-dark dark:text-white mb-1">Rules</h5>
-                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">League guidelines</p>
-                </a>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Leaderboard Preview -->
-            <div class="section-container mb-0">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="section-title mb-0">
-                        <i class="fas fa-trophy mr-2"></i>Top Players
-                    </h3>
-                    <a href="{% if family and pool %}{% url 'family_pool_standings' family.slug pool.slug %}{% else %}{% url 'standings' %}{% endif %}" class="text-sm text-primary hover:text-primary/80 font-semibold transition-colors">View All →</a>
-                </div>
-
-                <div class="space-y-3">
-                    {% for player in top_players %}
-                    <div class="leaderboard-card group">
-                        <div class="flex items-center gap-3">
-                            <div class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg
-                                {% if forloop.counter == 1 %}bg-yellow-500 text-white
-                                {% elif forloop.counter == 2 %}bg-gray-400 text-white
-                                {% elif forloop.counter == 3 %}bg-amber-700 text-white
-                                {% else %}bg-surface-light dark:bg-surface-hover text-text-secondary-light dark:text-text-secondary{% endif %}">
-                                {{ forloop.counter }}
-                            </div>
-                            {% with player.userID|lookupavatar as avatar %}
-                            {% with player.userID|safe_username as username %}
-                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="flex-shrink-0">
-                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                                     alt="Profile picture for {{ username }}"
-                                     class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:border-primary transition-colors">
-                            </a>
-                            <div class="flex-grow min-w-0">
-                                <div class="font-semibold text-text-dark dark:text-white truncate uppercase">{{ username|default:"Unknown Player" }}</div>
-                                <div class="text-sm text-text-secondary-light dark:text-text-secondary">{{ player.total_points|default:0 }} points</div>
-                            </div>
-                            {% endwith %}
-                            {% endwith %}
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="text-center py-8">
-                        <p class="text-text-secondary-light dark:text-text-secondary">No standings data available yet.</p>
+            {% if recent_winners %}
+            <div class="mt-4 pt-4 border-t border-border-light dark:border-border-subtle">
+                <p class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mb-2">Recent Week Winners</p>
+                <div class="flex flex-wrap gap-2">
+                    {% for wd in recent_winners %}
+                    <div class="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-light dark:bg-slate-700 rounded-lg border border-border-light dark:border-slate-600 text-xs">
+                        <span class="font-bold text-text-dark dark:text-white">W{{ wd.week }}</span>
+                        <i class="fas fa-trophy text-yellow-500 text-[10px]"></i>
+                        <span class="text-text-secondary-light dark:text-text-secondary uppercase">
+                            {% with wd.winner.userID|safe_username as wname %}{{ wname|default:"—"|truncatechars:10 }}{% endwith %}
+                        </span>
                     </div>
                     {% endfor %}
                 </div>
             </div>
-
-            <!-- League Statistics & Recent Activity -->
-            <div class="section-container mb-0">
-                <h3 class="section-title">
-                    <i class="fas fa-chart-pie mr-2"></i>League Stats
-                </h3>
-
-                <div class="grid grid-cols-3 gap-4 mb-6">
-                    <div class="text-center p-4 bg-surface-light dark:bg-surface/50 rounded-xl border border-transparent dark:border-border-subtle">
-                        <div class="text-3xl text-blue-600 dark:text-blue-500 mb-2">
-                            <i class="fas fa-percentage"></i>
-                        </div>
-                        <div class="text-2xl font-bold text-text-dark dark:text-white">{{ league_accuracy }}%</div>
-                        <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">League Accuracy</div>
-                    </div>
-
-                    <div class="text-center p-4 bg-surface-light dark:bg-surface/50 rounded-xl border border-transparent dark:border-border-subtle">
-                        <div class="text-3xl text-secondary-light dark:text-secondary mb-2">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="text-2xl font-bold text-text-dark dark:text-white">{{ total_correct_picks|default:0 }}</div>
-                        <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Correct Picks</div>
-                    </div>
-
-                    <div class="text-center p-4 bg-surface-light dark:bg-surface/50 rounded-xl border border-transparent dark:border-border-subtle">
-                        <div class="text-3xl text-purple-600 dark:text-purple-500 mb-2">
-                            <i class="fas fa-list-ol"></i>
-                        </div>
-                        <div class="text-2xl font-bold text-text-dark dark:text-white">{{ total_picks|default:0 }}</div>
-                        <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Total Picks</div>
-                    </div>
-                </div>
-
-                <!-- Recent Winners -->
-                {% if recent_winners %}
-                <div class="mt-4">
-                    <h6 class="text-lg font-semibold text-text-dark dark:text-white mb-3 flex items-center">
-                        <i class="fas fa-history mr-2"></i>Recent Week Winners
-                    </h6>
-                    <div class="space-y-2">
-                        {% for winner_data in recent_winners %}
-                        <div class="flex items-center justify-between p-3 bg-surface-light dark:bg-surface-hover rounded-lg">
-                            <div class="flex items-center gap-3">
-                                <div class="px-3 py-1 bg-blue-600 text-white text-sm font-bold rounded-full">W{{ winner_data.week }}</div>
-                                {% with winner_data.winner.userID|safe_username as winner_name %}
-                                {% with winner_data.winner.userID|lookupavatar as winner_avatar %}
-                                <img src="{{ winner_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                                     alt="Profile picture for {{ winner_name }}"
-                                     class="w-8 h-8 rounded-full">
-                                <span class="font-medium text-text-dark dark:text-white uppercase">{{ winner_name|default:"Unknown Player" }}</span>
-                                {% endwith %}
-                                {% endwith %}
-                            </div>
-                            <i class="fas fa-trophy text-yellow-500"></i>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-            </div>
+            {% endif %}
         </div>
 
-        <!-- Message Board Section -->
-        {% if user.is_authenticated %}
-        <div class="section-container mb-6 mt-6">
-            <h3 class="section-title">
-                <i class="fas fa-comments mr-2"></i>League Discussion
-            </h3>
-
-            <!-- Chat Input (for authenticated users) -->
-            <div class="mb-6 bg-surface-light dark:bg-surface-hover rounded-xl p-4 border border-border-light dark:border-border-subtle">
-                <form id="create-post-form">
-                    {% csrf_token %}
-                    <div class="flex items-center gap-3">
-                        <img src="{{ user.socialaccount_set.all.0.get_avatar_url|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                             alt="Your avatar"
-                             class="w-10 h-10 rounded-full border-2 border-border-light dark:border-border-subtle">
-                        <span class="font-semibold text-text-dark dark:text-white hidden sm:inline">{{ user.username }}</span>
-                        <input type="text"
-                               name="content"
-                               class="flex-grow bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-xl px-4 py-2 text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-primary dark:focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                               placeholder="Share your thoughts..."
-                               maxlength="500">
-                        <button type="submit"
-                                class="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-2">
-                            <i class="fas fa-paper-plane"></i>
-                            <span class="hidden sm:inline">Post</span>
-                        </button>
-                    </div>
-                </form>
+        <!-- NFL News (client-side fetch) -->
+        <div class="section-container mb-0" id="nfl-news-section">
+            <div class="flex items-center gap-3 mb-4">
+                <i class="fas fa-newspaper text-xl text-primary"></i>
+                <div>
+                    <h2 class="text-lg font-bold text-text-dark dark:text-white leading-tight">NFL News</h2>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Latest from around the league</p>
+                </div>
             </div>
 
-            <!-- Message Board Posts -->
-            <div class="space-y-4" id="message-board-posts">
-                {% for post in message_posts %}
-                <div class="group bg-surface-light dark:bg-surface rounded-xl p-4 border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200" data-post-id="{{ post.id }}">
-                    <!-- Post Header -->
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center gap-3 flex-wrap">
-                            {% with post.user.id|lookupavatar as avatar %}
-                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug post.user.id %}{% else %}{% url 'user_profile' post.user.id %}{% endif %}" class="flex-shrink-0">
-                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                                     alt="Profile picture for {{ post.user.username }}"
-                                     class="w-10 h-10 rounded-full border-2 border-border-light dark:border-border-subtle hover:border-primary transition-colors">
-                            </a>
-                            {% endwith %}
-                            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                <span class="font-semibold text-text-dark dark:text-white uppercase">{{ post.user.username }}</span>
-                                <span class="text-sm text-text-secondary-light dark:text-text-secondary">{{ post.created_at|timesince }} ago</span>
-                            </div>
-
-                        </div>
-
-                        <!-- Achievement Badges -->
-                        <div class="flex items-center gap-1 flex-wrap ml-auto">
-                            {% if user_rankings|lookup:post.user.id %}
-                                {% with ranking=user_rankings|lookup:post.user.id %}
-                                    <!-- Current Rank Badge -->
-                                    {% if ranking.rank <= 3 %}
-                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg
-                                                     {% if ranking.rank == 1 %}bg-yellow-500/20 text-yellow-700 dark:text-yellow-400
-                                                     {% elif ranking.rank == 2 %}bg-gray-400/20 text-gray-700 dark:text-gray-300
-                                                     {% else %}bg-amber-700/20 text-amber-800 dark:text-amber-500{% endif %}"
-                                              title="Current Season Rank #{{ ranking.rank }}">
-                                            <i class="fas fa-trophy"></i> #{{ ranking.rank }}
-                                        </span>
-                                    {% elif ranking.rank <= 10 %}
-                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-blue-600/20 text-blue-700 dark:text-blue-400 rounded-lg"
-                                              title="Current Season Rank #{{ ranking.rank }}">
-                                            <i class="fas fa-medal"></i> #{{ ranking.rank }}
-                                        </span>
-                                    {% endif %}
-
-                                    <!-- Season Winner Badge -->
-                                    {% if ranking.is_season_winner %}
-                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-purple-600/20 text-purple-700 dark:text-purple-400 rounded-lg"
-                                              title="Season Champion">
-                                            <i class="fas fa-crown"></i> <span class="hidden sm:inline">Champion</span>
-                                        </span>
-                                    {% endif %}
-
-                                    <!-- Weekly Winner Badge -->
-                                    {% if ranking.weekly_wins %}
-                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-secondary-light/20 dark:bg-secondary/20 text-text-dark dark:text-white rounded-lg"
-                                              title="Won Week{{ ranking.weekly_wins|length|pluralize }} {{ ranking.weekly_wins|join:', ' }}">
-                                            <i class="fas fa-star"></i> <span class="hidden sm:inline">Week Winner ({{ ranking.weekly_wins|length }})</span>
-                                        </span>
-                                    {% endif %}
-                                {% endwith %}
-                            {% endif %}
-
-                            {% if user_achievements|lookup:post.user.id %}
-                                {% with achievements=user_achievements|lookup:post.user.id %}
-                                    <!-- Perfect Week Badge -->
-                                    {% if achievements.perfect_weeks_season > 0 %}
-                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-yellow-600/20 text-yellow-700 dark:text-yellow-400 rounded-lg"
-                                              title="{{ achievements.perfect_weeks_season }} Perfect Week{{ achievements.perfect_weeks_season|pluralize }} This Season">
-                                            <i class="fas fa-bolt"></i> <span class="hidden sm:inline">Perfect ({{ achievements.perfect_weeks_season }})</span>
-                                        </span>
-                                    {% endif %}
-
-                                    <!-- High Accuracy Badge -->
-                                    {% if achievements.pick_percent_season >= 70 %}
-                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-red-600/20 text-red-700 dark:text-red-400 rounded-lg"
-                                              title="{{ achievements.pick_percent_season }}% Pick Accuracy This Season">
-                                            <i class="fas fa-bullseye"></i> {{ achievements.pick_percent_season }}%
-                                        </span>
-                                    {% endif %}
-
-                                    <!-- Veteran Badge -->
-                                    {% if achievements.seasons_won > 0 %}
-                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-indigo-600/20 text-indigo-700 dark:text-indigo-400 rounded-lg"
-                                              title="Won {{ achievements.seasons_won }} Season{{ achievements.seasons_won|pluralize }}">
-                                            <i class="fas fa-gem"></i> <span class="hidden sm:inline">Veteran ({{ achievements.seasons_won }})</span>
-                                        </span>
-                                    {% endif %}
-                                {% endwith %}
-                            {% endif %}
-
-                            {% if post.is_pinned %}
-                                <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 rounded-lg">
-                                    <i class="fas fa-thumbtack"></i> Pinned
-                                </span>
-                            {% endif %}
-                        </div>
+            <!-- Skeleton while loading -->
+            <div id="nfl-news-loading" class="space-y-3">
+                {% for i in "12345" %}
+                <div class="animate-pulse flex gap-3">
+                    <div class="w-16 h-16 rounded-lg bg-surface-light dark:bg-slate-700 flex-shrink-0"></div>
+                    <div class="flex-1 space-y-2 py-1">
+                        <div class="h-3 bg-surface-light dark:bg-slate-700 rounded w-full"></div>
+                        <div class="h-3 bg-surface-light dark:bg-slate-700 rounded w-4/5"></div>
+                        <div class="h-2.5 bg-surface-light dark:bg-slate-700 rounded w-1/3"></div>
                     </div>
-
-                    <!-- Post Content -->
-                    <div class="mb-4">
-                        <div class="text-base text-text-dark dark:text-white leading-relaxed">{{ post.content|linebreaksbr }}</div>
-                    </div>
-
-                    <!-- Post Actions -->
-                    <div class="flex items-center gap-4 text-sm">
-                        <!-- Voting Controls -->
-                        <div class="flex items-center gap-1">
-                            {% if user.is_authenticated %}
-                            <button class="vote-btn upvote-btn p-2 rounded-lg hover:bg-red-500/10 text-text-secondary-light dark:text-text-secondary hover:text-red-500 dark:hover:text-red-400 transition-colors {% if user_votes|lookup:post.id == 1 %}!text-red-500 dark:!text-red-400{% endif %}"
-                                    data-post-id="{{ post.id }}" data-vote-type="1">
-                                <i class="fas fa-arrow-up"></i>
-                            </button>
-                            {% endif %}
-                            <span class="vote-score font-bold text-sm min-w-[2rem] text-center text-text-dark dark:text-white" data-post-id="{{ post.id }}">{{ post.score }}</span>
-                            {% if user.is_authenticated %}
-                            <button class="vote-btn downvote-btn p-2 rounded-lg hover:bg-blue-500/10 text-text-secondary-light dark:text-text-secondary hover:text-blue-500 dark:hover:text-blue-400 transition-colors {% if user_votes|lookup:post.id == -1 %}!text-blue-500 dark:!text-blue-400{% endif %}"
-                                    data-post-id="{{ post.id }}" data-vote-type="-1">
-                                <i class="fas fa-arrow-down"></i>
-                            </button>
-                            {% endif %}
-                        </div>
-
-                        <!-- Comment Count -->
-                        <button class="comment-count-btn flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-surface-light dark:hover:bg-surface-hover text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white transition-all"
-                                data-post-id="{{ post.id }}">
-                            <i class="fas fa-comment"></i>
-                            <span>{{ post.comment_count }}</span>
-                        </button>
-
-                        <!-- Reply Button -->
-                        {% if user.is_authenticated %}
-                        <button class="toggle-comments-btn px-3 py-2 rounded-lg border border-border-light dark:border-border-subtle hover:border-primary dark:hover:border-primary text-text-dark dark:text-white hover:bg-primary/5 transition-all flex items-center gap-2"
-                                data-post-id="{{ post.id }}">
-                            <i class="fas fa-reply"></i>
-                            <span>Reply</span>
-                        </button>
-                        {% endif %}
-                    </div>
-
-                    <!-- Comments Section (initially hidden) -->
-                    <div class="comments-section mt-4 pt-4 border-t border-border-light dark:border-border-subtle" id="comments-{{ post.id }}" style="display: none;">
-                        {% if user.is_authenticated %}
-                        <!-- Quick Comment Form -->
-                        <div class="quick-comment-form mb-4 bg-surface-light dark:bg-surface-hover rounded-lg p-3">
-                            <form class="comment-form" data-post-id="{{ post.id }}">
-                                {% csrf_token %}
-                                <div class="flex gap-3">
-                                    <img src="{{ user.socialaccount_set.all.0.get_avatar_url|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                                         alt="Your avatar"
-                                         class="w-8 h-8 rounded-full border-2 border-border-light dark:border-border-subtle flex-shrink-0">
-                                    <div class="flex-grow">
-                                        <textarea class="comment-textarea w-full bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg px-3 py-2 text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-primary dark:focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
-                                                  placeholder="Write a comment..."
-                                                  rows="2"></textarea>
-                                        <div class="flex items-center gap-2 mt-2">
-                                            <button type="button" class="cancel-comment-btn px-3 py-1.5 text-sm rounded-lg border border-border-light dark:border-border-subtle text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white transition-colors">
-                                                Cancel
-                                            </button>
-                                            <button type="submit" class="px-3 py-1.5 text-sm bg-primary hover:bg-primary/80 text-white rounded-lg font-semibold transition-all flex items-center gap-1">
-                                                <i class="fas fa-paper-plane"></i>
-                                                <span>Comment</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                        {% endif %}
-
-                        <!-- Comments List -->
-                        <div class="comments-list" data-post-id="{{ post.id }}">
-                            <!-- Comments will be loaded via AJAX -->
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="text-center py-12">
-                    <i class="fas fa-comments text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
-                    <h5 class="text-xl font-semibold text-text-dark dark:text-white mb-2">No discussions yet</h5>
-                    <p class="text-text-secondary-light dark:text-text-secondary mb-4">Be the first to start a conversation!</p>
-                    {% if not user.is_authenticated %}
-                    <a href="{% provider_login_url 'google' %}" class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/80 text-white rounded-xl font-semibold transition-all">
-                        <i class="fab fa-google"></i>
-                        <span>Sign in to post</span>
-                    </a>
-                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
-        </div>
-        {% endif %}
 
-        <!-- Season Champion Section (if exists) -->
-        {% if season_winner %}
-        <div class="section-container mb-6 mt-6">
-            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500/20 via-surface-light to-yellow-600/10 dark:from-yellow-500/30 dark:via-surface dark:to-yellow-600/20 border-2 border-yellow-500/50 dark:border-yellow-400/60 p-8 text-center">
-                <!-- Crown Icon -->
-                <div class="text-6xl text-yellow-500 mb-3">
-                    <i class="fas fa-crown"></i>
-                </div>
-
-                <h3 class="text-2xl font-black text-text-dark dark:text-white mb-4">
-                    🏆 Season Champion 🏆
-                </h3>
-
-                {% with season_winner.userID|safe_username as champion_name %}
-                {% with season_winner.userID|lookupavatar as champion_avatar %}
-                <div class="flex flex-col items-center gap-4">
-                    <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                         alt="Profile picture for {{ champion_name }}"
-                         class="w-24 h-24 rounded-full border-4 border-yellow-500 shadow-xl">
-                    <div>
-                        <h4 class="text-2xl font-bold text-text-dark dark:text-white mb-1 uppercase">
-                            {{ champion_name|default:"Unknown Champion" }}
-                        </h4>
-                        <p class="text-base text-text-secondary-light dark:text-text-secondary">
-                            Congratulations on your victory!
-                        </p>
-                    </div>
-                </div>
-                {% endwith %}
-                {% endwith %}
+            <div id="nfl-news-content" class="space-y-1 hidden"></div>
+            <div id="nfl-news-error" class="hidden text-center py-8 text-text-secondary-light dark:text-text-secondary text-sm">
+                <i class="fas fa-wifi-slash text-2xl mb-2 block text-text-secondary-light dark:text-text-secondary"></i>
+                News temporarily unavailable.
             </div>
         </div>
-        {% endif %}
-
     </div>
 
-    <!-- Message Board JavaScript -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Set current user avatar for reply forms
-        window.currentUserAvatar = '{{ user.socialaccount_set.all.0.get_avatar_url|default:"https://www.wmata.com/systemimages/icons/menu-car-icon.png" }}';
-        
-        // Message Board functionality
-        const messageBoard = {
-            init: function() {
-                this.bindEvents();
-            },
-            
-            bindEvents: function() {
-                // Create post form submission
-                const createPostForm = document.getElementById('create-post-form');
-                if (createPostForm) {
-                    createPostForm.addEventListener('submit', this.handleCreatePost.bind(this));
-                }
-                
-                // Vote buttons
-                document.addEventListener('click', (e) => {
-                    if (e.target.closest('.vote-btn')) {
-                        this.handleVote(e.target.closest('.vote-btn'));
-                    }
-                });
-                
-                // Toggle comments
-                document.addEventListener('click', (e) => {
-                    if (e.target.closest('.toggle-comments-btn')) {
-                        this.toggleComments(e.target.closest('.toggle-comments-btn'));
-                    }
-                });
-                
-                // Comment count click to show comments
-                document.addEventListener('click', (e) => {
-                    if (e.target.closest('.comment-count-btn')) {
-                        this.showComments(e.target.closest('.comment-count-btn'));
-                    }
-                });
-                
-                // Reply to comment
-                document.addEventListener('click', (e) => {
-                    if (e.target.closest('.reply-btn')) {
-                        this.showReplyForm(e.target.closest('.reply-btn'));
-                    }
-                });
-                
-                // Comment form submission
-                document.addEventListener('submit', (e) => {
-                    if (e.target.classList.contains('comment-form')) {
-                        e.preventDefault();
-                        this.handleCreateComment(e.target);
-                    }
-                    if (e.target.classList.contains('reply-form')) {
-                        e.preventDefault();
-                        this.handleCreateComment(e.target);
-                    }
-                });
-                
-                // Cancel reply
-                document.addEventListener('click', (e) => {
-                    if (e.target.closest('.cancel-reply-btn')) {
-                        this.cancelReply(e.target.closest('.cancel-reply-btn'));
-                    }
-                });
-                
-                // Cancel comment
-                document.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('cancel-comment-btn')) {
-                        this.cancelComment(e.target);
-                    }
-                });
-            },
-            
-            handleCreatePost: function(e) {
-                e.preventDefault();
-                const form = e.target;
-                const contentInput = form.querySelector('[name="content"]');
-                const content = contentInput.value.trim();
-                
-                if (!content) {
-                    alert('Please enter a message');
-                    return;
-                }
-                
-                // Create FormData with title and content (title will be auto-generated)
-                const formData = new FormData();
-                formData.append('title', content.substring(0, 50) + (content.length > 50 ? '...' : ''));
-                formData.append('content', content);
-                formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-                
-                fetch('/message-board/create-post/', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Reset form
-                        contentInput.value = '';
-                        // Reload page to show new message
-                        window.location.reload();
-                    } else {
-                        alert('Error sending message: ' + JSON.stringify(data.errors));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error sending message');
-                });
-            },
-            
-            handleVote: function(button) {
-                const postId = button.dataset.postId;
-                const commentId = button.dataset.commentId;
-                const voteType = parseInt(button.dataset.voteType);
-                
-                const url = commentId ? '/message-board/vote-comment/' : '/message-board/vote-post/';
-                const data = commentId ? 
-                    { comment_id: commentId, vote_type: voteType } :
-                    { post_id: postId, vote_type: voteType };
-                
-                fetch(url, {
-                    method: 'POST',
-                    body: JSON.stringify(data),
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Update vote display
-                        const scoreElement = document.querySelector(`.vote-score[data-${commentId ? 'comment' : 'post'}-id="${commentId || postId}"]`);
-                        if (scoreElement) {
-                            scoreElement.textContent = data.score;
-                        }
-                        
-                        // Update button states
-                        const container = button.closest('.voting-controls');
-                        const upBtn = container.querySelector('.upvote-btn');
-                        const downBtn = container.querySelector('.downvote-btn');
-                        
-                        // Remove active states
-                        upBtn.classList.remove('active');
-                        downBtn.classList.remove('active');
-                        
-                        // Add active state if vote wasn't removed
-                        if (data.action !== 'removed') {
-                            button.classList.add('active');
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-            },
-            
-            showComments: function(button) {
-                const postId = button.dataset.postId;
-                const commentsSection = document.getElementById(`comments-${postId}`);
-                const toggleBtn = document.querySelector(`[data-post-id="${postId}"].toggle-comments-btn`);
-                const commentForm = commentsSection.querySelector('.quick-comment-form');
-                
-                // Toggle comments section visibility
-                if (commentsSection.style.display === 'none') {
-                    // Show comments section
-                    commentsSection.style.display = 'block';
-                    
-                    // Hide the comment form initially when just viewing comments
-                    if (commentForm) {
-                        commentForm.style.display = 'none';
-                    }
-                    
-                    if (toggleBtn) {
-                        toggleBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>Write Comment';
-                    }
-                    
-                    // Load comments if not already loaded
-                    const commentsList = commentsSection.querySelector('.comments-list');
-                    if (!commentsList.hasAttribute('data-loaded')) {
-                        this.loadComments(postId);
-                    }
-                } else {
-                    // Hide comments section
-                    commentsSection.style.display = 'none';
-                    
-                    if (toggleBtn) {
-                        toggleBtn.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
-                    }
-                }
-            },
-            
-            toggleComments: function(button) {
-                const postId = button.dataset.postId;
-                const commentsSection = document.getElementById(`comments-${postId}`);
-                const commentForm = commentsSection.querySelector('.quick-comment-form');
-                
-                if (commentsSection.style.display === 'none') {
-                    // Show the entire comments section
-                    commentsSection.style.display = 'block';
-                    
-                    // Show the comment form
-                    if (commentForm) {
-                        commentForm.style.display = 'block';
-                        // Apply dark mode styles to the newly shown comment form
-                        setTimeout(forceDarkModeMessageBoard, 10);
-                    }
-                    
-                    button.innerHTML = '<i class="fas fa-times mr-1"></i>Hide Comments';
-                    
-                    // Load comments if not already loaded
-                    const commentsList = commentsSection.querySelector('.comments-list');
-                    if (!commentsList.hasAttribute('data-loaded')) {
-                        this.loadComments(postId);
-                    }
-                } else {
-                    // Check if we should hide everything or just the form
-                    const buttonText = button.innerHTML;
-                    
-                    if (buttonText.includes('Write Comment')) {
-                        // Just show the comment form
-                        if (commentForm) {
-                            commentForm.style.display = 'block';
-                            // Apply dark mode styles to the newly shown comment form
-                            setTimeout(forceDarkModeMessageBoard, 10);
-                        }
-                        button.innerHTML = '<i class="fas fa-times mr-1"></i>Hide Comments';
-                    } else {
-                        // Hide the entire comments section
-                        commentsSection.style.display = 'none';
-                        button.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
-                    }
-                }
-            },
-            
-            loadComments: function(postId) {
-                const commentsList = document.querySelector(`.comments-list[data-post-id="${postId}"]`);
-                
-                fetch(`/message-board/comments/${postId}/`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        commentsList.innerHTML = this.renderComments(data.comments);
-                        commentsList.setAttribute('data-loaded', 'true');
-                        // Apply dark mode styles to new content
-                        setTimeout(forceDarkModeMessageBoard, 50);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading comments:', error);
-                });
-            },
-            
-            renderComments: function(comments) {
-                let html = '';
-                
-                comments.forEach(comment => {
-                    html += this.renderComment(comment);
-                });
-                
-                return html || '<div class="no-comments text-muted text-center py-3">No comments yet</div>';
-            },
-            
-            renderComment: function(comment, depth = 0) {
-                const indent = depth * 12;
-                let html = `
-                    <div class="comment-item" data-comment-id="${comment.id}" style="margin-left: ${indent}px;">
-                        <div class="comment-header">
-                            <a href="/user/${comment.user_id}/" class="comment-avatar-link">
-                                <img src="${comment.avatar}" alt="${comment.user}" class="comment-avatar">
-                            </a>
-                            <div class="comment-meta">
-                                <span class="comment-author">${comment.user}</span>
-                                <span class="comment-time">${comment.created_at}</span>
-                            </div>
-                        </div>
-                        <div class="comment-content">
-                            <p>${comment.content.replace(/\n/g, '<br>')}</p>
-                        </div>
-                        <div class="comment-actions">
-                            <div class="voting-controls">
-                                <button class="vote-btn upvote-btn" data-comment-id="${comment.id}" data-vote-type="1">
-                                    <i class="fas fa-arrow-up"></i>
-                                </button>
-                                <span class="vote-score" data-comment-id="${comment.id}">${comment.score}</span>
-                                <button class="vote-btn downvote-btn" data-comment-id="${comment.id}" data-vote-type="-1">
-                                    <i class="fas fa-arrow-down"></i>
-                                </button>
-                            </div>
-                            <button class="btn btn-sm btn-outline-secondary reply-btn" data-comment-id="${comment.id}">
-                                <i class="fas fa-reply mr-1"></i>Reply
-                            </button>
-                        </div>
-                        
-                        <!-- Reply form (initially hidden) -->
-                        <div class="comment-reply-form" id="reply-form-${comment.id}" style="display: none;">
-                            <form class="reply-form mt-2" data-parent-id="${comment.id}">
-                                <div class="flex">
-                                    <img src="${window.currentUserAvatar || 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'}"
-                                         alt="Your avatar" class="comment-avatar mr-2">
-                                    <div class="flex-1">
-                                        <textarea class="input-base comment-textarea" 
-                                                  placeholder="Write a reply..." 
-                                                  rows="2"></textarea>
-                                        <div class="comment-actions mt-2">
-                                            <button type="button" class="px-3 py-1.5 text-sm font-medium text-text-dark dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors cancel-reply-btn" data-comment-id="${comment.id}">
-                                                Cancel
-                                            </button>
-                                            <button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/80 rounded-lg transition-colors">
-                                                <i class="fas fa-paper-plane mr-1"></i>Reply
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                `;
-                
-                // Add nested replies
-                if (comment.replies && comment.replies.length > 0) {
-                    comment.replies.forEach(reply => {
-                        html += this.renderComment(reply, depth + 1);
-                    });
-                }
-                
-                return html;
-            },
-            
-            handleCreateComment: function(form) {
-                let postId = form.dataset.postId;
-                
-                // If postId is not on the form, get it from the message post container
-                if (!postId) {
-                    const messagePost = form.closest('.message-post');
-                    if (messagePost) {
-                        postId = messagePost.dataset.postId;
-                    }
-                }
-                
-                const parentId = form.dataset.parentId || null;
-                const textarea = form.querySelector('.comment-textarea');
-                const content = textarea.value.trim();
-                
-                if (!content) {
-                    alert('Please enter a comment');
-                    return;
-                }
-                
-                if (!postId) {
-                    alert('Error: Could not determine which post to comment on');
-                    return;
-                }
-                
-                const data = {
-                    post_id: postId,
-                    parent_id: parentId,
-                    content: content
-                };
-                
-                fetch('/message-board/create-comment/', {
-                    method: 'POST',
-                    body: JSON.stringify(data),
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Clear textarea
-                        textarea.value = '';
-                        
-                        // Check if this is a reply or main comment
-                        const isReply = form.classList.contains('reply-form');
-                        
-                        if (isReply) {
-                            // Hide the reply form
-                            const replyForm = form.closest('.comment-reply-form');
-                            if (replyForm) {
-                                replyForm.style.display = 'none';
-                            }
-                            
-                            // Reset the reply button
-                            const replyButton = document.querySelector(`[data-comment-id="${parentId}"].reply-btn`);
-                            if (replyButton) {
-                                replyButton.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
-                            }
-                        } else {
-                            // Hide only the comment form, keep comments visible
-                            const commentForm = form.closest('.quick-comment-form');
-                            if (commentForm) {
-                                commentForm.style.display = 'none';
-                            }
-                            
-                            // Update the toggle button to show "Write Comment" instead of "Hide Comments"
-                            const toggleBtn = document.querySelector(`[data-post-id="${postId}"].toggle-comments-btn`);
-                            if (toggleBtn) {
-                                toggleBtn.innerHTML = '<i class="fas fa-edit mr-1"></i>Write Comment';
-                            }
-                        }
-                        
-                        // Reload comments to show the new one
-                        const commentsList = document.querySelector(`.comments-list[data-post-id="${postId}"]`);
-                        commentsList.removeAttribute('data-loaded');
-                        this.loadComments(postId);
-                        
-                        // Update comment count
-                        const commentCountBtn = document.querySelector(`.message-post[data-post-id="${postId}"] .comment-count-btn`);
-                        if (commentCountBtn) {
-                            const currentCount = parseInt(commentCountBtn.textContent.match(/\d+/)[0]);
-                            const newCount = currentCount + 1;
-                            commentCountBtn.innerHTML = `<i class="fas fa-comment mr-1"></i>${newCount} comment${newCount !== 1 ? 's' : ''}`;
-                        }
-                    } else {
-                        alert('Error creating comment: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error creating comment');
-                });
-            },
-            
-            showReplyForm: function(button) {
-                const commentId = button.dataset.commentId;
-                const replyForm = document.getElementById(`reply-form-${commentId}`);
-                
-                if (replyForm) {
-                    // Hide any other open reply forms first
-                    document.querySelectorAll('.comment-reply-form').forEach(form => {
-                        if (form.id !== `reply-form-${commentId}`) {
-                            form.style.display = 'none';
-                            // Reset the reply button text for other forms
-                            const otherCommentId = form.id.replace('reply-form-', '');
-                            const otherReplyBtn = document.querySelector(`[data-comment-id="${otherCommentId}"].reply-btn`);
-                            if (otherReplyBtn) {
-                                otherReplyBtn.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
-                            }
-                        }
-                    });
-                    
-                    // Toggle this reply form
-                    if (replyForm.style.display === 'none') {
-                        replyForm.style.display = 'block';
-                        button.innerHTML = '<i class="fas fa-times mr-1"></i>Cancel';
-                        // Apply dark mode styles to the newly shown reply form
-                        setTimeout(forceDarkModeMessageBoard, 10);
-                    } else {
-                        replyForm.style.display = 'none';
-                        button.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
-                    }
-                }
-            },
-            
-            cancelReply: function(button) {
-                const commentId = button.dataset.commentId;
-                const replyForm = document.getElementById(`reply-form-${commentId}`);
-                const replyButton = document.querySelector(`[data-comment-id="${commentId}"].reply-btn`);
-                
-                if (replyForm) {
-                    replyForm.style.display = 'none';
-                    const textarea = replyForm.querySelector('.comment-textarea');
-                    if (textarea) {
-                        textarea.value = '';
-                    }
-                }
-                
-                if (replyButton) {
-                    replyButton.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
-                }
-            },
-            
-            cancelComment: function(button) {
-                const form = button.closest('form');
-                const textarea = form.querySelector('.comment-textarea');
-                textarea.value = '';
-                
-                // Hide comments section if no comments
-                const commentsSection = button.closest('.comments-section');
-                const commentsList = commentsSection.querySelector('.comments-list');
-                if (!commentsList.hasAttribute('data-loaded')) {
-                    commentsSection.style.display = 'none';
-                    const toggleBtn = document.querySelector(`[data-post-id="${form.dataset.postId}"].toggle-comments-btn`);
-                    if (toggleBtn) {
-                        toggleBtn.innerHTML = '<i class="fas fa-reply mr-1"></i>Reply';
-                    }
-                }
-            }
-        };
-        
-        // Initialize message board
-        messageBoard.init();
+    <!-- ════════════════════════════════ BY THE NUMBERS ═══════════════════════════════════ -->
+    <div class="section-container mb-6">
+        <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-chart-pie text-xl text-primary"></i>
+            <h2 class="text-lg font-bold text-text-dark dark:text-white">By the Numbers</h2>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="text-center p-5 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
+                <div class="text-3xl text-primary mb-1"><i class="fas fa-football-ball"></i></div>
+                <div class="text-3xl font-black text-text-dark dark:text-white">{{ current_games }}</div>
+                <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Games This Week</div>
+            </div>
+            <div class="text-center p-5 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
+                <div class="text-3xl text-blue-500 mb-1"><i class="fas fa-users"></i></div>
+                <div class="text-3xl font-black text-text-dark dark:text-white">{{ total_players }}</div>
+                <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Active Players</div>
+            </div>
+            <div class="text-center p-5 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
+                <div class="text-3xl text-green-500 mb-1"><i class="fas fa-check-circle"></i></div>
+                <div class="text-3xl font-black text-text-dark dark:text-white">{{ total_correct_picks|default:0 }}</div>
+                <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Correct Picks</div>
+            </div>
+            <div class="text-center p-5 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
+                <div class="text-3xl text-purple-500 mb-1"><i class="fas fa-percentage"></i></div>
+                <div class="text-3xl font-black text-text-dark dark:text-white">{{ league_accuracy }}%</div>
+                <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">League Accuracy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════ HOW IT WORKS ═════════════════════════════════════ -->
+    <div class="section-container mb-6">
+        <div class="text-center mb-6">
+            <h2 class="text-xl font-bold text-text-dark dark:text-white mb-1">How It Works</h2>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Three steps to compete each week</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="flex flex-col items-center text-center p-6 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
+                <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center mb-4 shadow-md">
+                    <i class="fab fa-google text-white text-2xl"></i>
+                </div>
+                <div class="text-xs font-bold text-text-secondary-light dark:text-text-secondary uppercase tracking-widest mb-1">Step 1</div>
+                <h3 class="text-base font-bold text-text-dark dark:text-white mb-2">Sign In</h3>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Log in with your Google account — no new password to remember.</p>
+            </div>
+
+            <div class="flex flex-col items-center text-center p-6 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
+                <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-700 rounded-xl flex items-center justify-center mb-4 shadow-md">
+                    <i class="fas fa-edit text-white text-2xl"></i>
+                </div>
+                <div class="text-xs font-bold text-text-secondary-light dark:text-text-secondary uppercase tracking-widest mb-1">Step 2</div>
+                <h3 class="text-base font-bold text-text-dark dark:text-white mb-2">Submit Picks</h3>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Pick the winner for every NFL game before kickoff each week.</p>
+            </div>
+
+            <div class="flex flex-col items-center text-center p-6 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
+                <div class="w-14 h-14 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center mb-4 shadow-md">
+                    <i class="fas fa-medal text-white text-2xl"></i>
+                </div>
+                <div class="text-xs font-bold text-text-secondary-light dark:text-text-secondary uppercase tracking-widest mb-1">Step 3</div>
+                <h3 class="text-base font-bold text-text-dark dark:text-white mb-2">Chase the Trophy</h3>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Rack up points, win weekly bonuses, and top the season leaderboard.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════ SEASON CHAMPION ═════════════════════════════════ -->
+    {% if season_winner %}
+    <div class="section-container mb-6">
+        <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-yellow-500/20 via-surface-light to-yellow-600/10 dark:from-yellow-500/30 dark:via-surface dark:to-yellow-600/20 border-2 border-yellow-500/50 p-8 text-center">
+            <div class="text-5xl text-yellow-500 mb-3"><i class="fas fa-crown"></i></div>
+            <h3 class="text-xl font-black text-text-dark dark:text-white mb-4">Season Champion</h3>
+            {% with season_winner.userID|safe_username as champion_name %}
+            {% with season_winner.userID|lookupavatar as champion_avatar %}
+            <div class="flex flex-col items-center gap-3">
+                <div class="relative w-20 h-20">
+                    <div class="w-20 h-20 rounded-full bg-primary border-4 border-yellow-500 flex items-center justify-center text-white font-bold text-2xl select-none">{{ champion_name|slice:":1"|upper }}</div>
+                    <img src="{{ champion_avatar }}" alt="{{ champion_name }}" class="absolute inset-0 w-20 h-20 rounded-full border-4 border-yellow-500 object-cover" onerror="this.remove()">
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold text-text-dark dark:text-white uppercase">{{ champion_name|default:"Champion" }}</h4>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary">{{ season_winner.total_points }} season points</p>
+                </div>
+            </div>
+            {% endwith %}
+            {% endwith %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ═════════════════════════════════ BOTTOM CTA ══════════════════════════════════════ -->
+    <div class="mb-8 rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-slate-950 border border-slate-700 dark:border-slate-800 p-8 text-center">
+        <h2 class="text-xl font-bold text-white mb-2">Ready to play?</h2>
+        <p class="text-sm text-slate-400 mb-6">Join the league and start making picks for Week {{ current_week }}.</p>
+        <a href="{% provider_login_url 'google' %}"
+           class="inline-flex items-center gap-3 px-7 py-3 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl text-base transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Sign in with Google
+        </a>
+    </div>
+
+</div>
+
+<!-- NFL News: live pull from ESPN public API -->
+<script>
+(function () {
+    var loading = document.getElementById('nfl-news-loading');
+    var content = document.getElementById('nfl-news-content');
+    var error   = document.getElementById('nfl-news-error');
+
+    function timeAgo(dateStr) {
+        var diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+        if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        return Math.floor(diff / 86400) + 'd ago';
+    }
+
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var fetchOpts = ctrl ? { signal: ctrl.signal } : {};
+    if (ctrl) setTimeout(function() { ctrl.abort(); }, 6000);
+
+    fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=6', fetchOpts)
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+    .then(function(data) {
+        var articles = (data.articles || []).slice(0, 6);
+        if (!articles.length) throw new Error('empty');
+
+        content.innerHTML = articles.map(function(a) {
+            var img  = (a.images || [])[0];
+            var href = (a.links && a.links.web && a.links.web.href) || '#';
+            var when = a.published ? timeAgo(a.published) : '';
+            var imgHtml = img
+                ? '<img src="' + img.url + '" alt="" class="w-14 h-14 rounded-lg object-cover flex-shrink-0 bg-surface-light dark:bg-slate-700">'
+                : '<div class="w-14 h-14 rounded-lg bg-surface-light dark:bg-slate-700 flex-shrink-0 flex items-center justify-center"><i class="fas fa-football-ball text-text-secondary-light dark:text-text-secondary"></i></div>';
+            return '<a href="' + href + '" target="_blank" rel="noopener"'
+                 + ' class="flex gap-3 p-2 rounded-xl hover:bg-surface-light dark:hover:bg-slate-700/60 transition-colors group">'
+                 + imgHtml
+                 + '<div class="flex-1 min-w-0">'
+                 + '<p class="text-sm font-semibold text-text-dark dark:text-white leading-snug line-clamp-2 group-hover:underline">' + (a.headline || '') + '</p>'
+                 + (when ? '<p class="text-xs text-text-secondary-light dark:text-text-secondary mt-0.5">' + when + '</p>' : '')
+                 + '</div></a>';
+        }).join('');
+
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+    })
+    .catch(function() {
+        loading.classList.add('hidden');
+        error.classList.remove('hidden');
     });
-    </script>
+})();
+</script>
 
 {% endblock %}

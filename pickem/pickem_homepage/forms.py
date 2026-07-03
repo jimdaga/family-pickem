@@ -386,8 +386,55 @@ class SiteBannerForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         # Set default values for new banners
         if not self.instance.pk:
             self.fields['priority'].initial = 1
+            self.fields['show_close_button'].initial = True
+
+
+class FamilyBannerForm(forms.ModelForm):
+    """Lightweight form for family admins to publish a pool banner."""
+
+    class Meta:
+        model = SiteBanner
+        fields = ['title', 'description', 'banner_type', 'icon', 'show_close_button']
+        labels = {
+            'title': 'Message',
+            'description': 'Details (optional)',
+            'banner_type': 'Style',
+            'icon': 'Icon',
+            'show_close_button': 'Let members dismiss it',
+        }
+        help_texts = {
+            'title': 'The headline members will see across the site.',
+            'description': 'Optional supporting text shown beneath the message.',
+            'icon': 'Font Awesome class, e.g. fas fa-bullhorn.',
+        }
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': ADMIN_TEXT_INPUT_CLASSES,
+                'placeholder': 'e.g. Picks lock Sunday at 1pm!',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': ADMIN_TEXT_INPUT_CLASSES,
+                'rows': 2,
+                'placeholder': 'Optional details…',
+            }),
+            'banner_type': forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+            'icon': forms.TextInput(attrs={
+                'class': ADMIN_TEXT_INPUT_CLASSES,
+                'placeholder': 'fas fa-bullhorn',
+            }),
+            'show_close_button': forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['title'].required = True
+        self.fields['description'].required = False
+        if not self.instance.pk:
+            self.fields['icon'].initial = 'fas fa-bullhorn'
             self.fields['show_close_button'].initial = True

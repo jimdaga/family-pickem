@@ -11,9 +11,11 @@
 {% block content %}
 
 <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
-    <!-- Compact Page Header -->
-    <div class="page-header-clean">
-        <div class="flex items-center gap-3">
+
+    <!-- Unified top panel: header + stats + filters -->
+    <div class="section-container mb-6">
+        <!-- Header row -->
+        <div class="flex items-center gap-3 {% if user.is_authenticated and user_weekly_stats %}mb-4 pb-4 border-b border-border-light dark:border-border-subtle{% endif %}">
             <i class="fas fa-chart-line text-2xl text-primary"></i>
             <div>
                 <h2 class="text-xl font-bold text-text-dark dark:text-white">Live Scores</h2>
@@ -22,16 +24,17 @@
                 </p>
             </div>
         </div>
-    </div>
 
-
-    <!-- Your Weekly Performance Section -->
-    {% if user.is_authenticated and user_weekly_stats %}
-    <div class="section-container mb-6">
-        <div class="flex items-center gap-4">
-            <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
-                 alt="Your profile picture"
-                 class="w-16 h-16 rounded-full border-2 border-primary">
+        <!-- Weekly Performance -->
+        {% if user.is_authenticated and user_weekly_stats %}
+        <div class="flex items-center gap-4 mb-4 pb-4 border-b border-border-light dark:border-border-subtle">
+            <div class="relative w-14 h-14 flex-shrink-0">
+                <div class="w-14 h-14 rounded-full bg-primary border-2 border-primary flex items-center justify-center text-white font-bold select-none">{{ user.first_name|default:user.username|slice:":1"|upper }}</div>
+                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                     alt="Your profile picture"
+                     class="absolute inset-0 w-14 h-14 rounded-full border-2 border-primary object-cover"
+                     onerror="this.remove()">
+            </div>
             <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
                 <div>
                     <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase font-semibold">Picks Accuracy:</div>
@@ -47,11 +50,9 @@
                 </div>
             </div>
         </div>
-    </div>
-    {% endif %}
+        {% endif %}
 
-    <!-- Filter Controls -->
-    <div class="section-container mb-6">
+        <!-- Filter Controls -->
         <div class="flex flex-wrap gap-2 justify-center">
             <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn active bg-blue-600 border-blue-600 text-white hover:bg-blue-700" data-filter="all">
                 <i class="fas fa-list mr-2"></i>All Games
@@ -290,7 +291,7 @@
                      class="games-grid px-1 sm:px-2 lg:px-4 pt-1 pb-4 grid grid-cols-1 md:grid-cols-2 gap-6"
                      id="games-{{ time_group.grouper|date:'Y-m-d-Hi' }}">
                             {% for game in time_group.list %}
-                            <div class="game-score-card bg-surface-light dark:bg-slate-800 rounded-xl overflow-hidden border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 flex flex-col" data-game-status="{{ game.statusType|lower }}">
+                            <div class="game-score-card bg-surface-light dark:bg-slate-700 rounded-xl overflow-hidden border border-border-light dark:border-slate-600 hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 flex flex-col" data-game-status="{{ game.statusType|lower }}">
                                 <!-- Game Status Header -->
                                 <div class="flex items-center justify-between px-3 py-1 text-sm font-semibold text-white {% if game.statusType == 'inprogress' %}bg-gradient-to-r from-green-600 to-green-700{% elif game.statusType == 'finished' %}bg-gradient-to-r from-blue-600 to-blue-700{% else %}bg-gradient-to-r from-gray-600 to-gray-700 dark:from-gray-700 dark:to-gray-800{% endif %}">
                                     <div class="flex items-center gap-2">
@@ -302,7 +303,7 @@
 
                                 <!-- Game Info (Spread, Weather, etc.) -->
                                 {% if game.spread or game.overUnder or game.temperature or game.weatherCondition %}
-                                <div class="flex flex-wrap items-center justify-center gap-3 px-3 py-1 text-xs text-text-dark dark:text-text-secondary border-b border-border-light dark:border-border-subtle bg-border-light dark:bg-surface-hover">
+                                <div class="flex flex-wrap items-center justify-center gap-3 px-3 py-1 text-xs text-text-dark dark:text-text-secondary border-b border-border-light dark:border-slate-600 bg-border-light dark:bg-slate-800">
                                     {% if game.spread %}
                                     <div class="flex items-center gap-1">
                                         <i class="fas fa-chart-line"></i>
@@ -1254,12 +1255,6 @@
                         currentGame.innerHTML = newGames[index].innerHTML;
                         currentGame.setAttribute('data-game-status', newStatus);
                         
-                        // Re-apply dark mode styles after content update
-                        setTimeout(() => {
-                            if (typeof forceDarkModeScores === 'function') {
-                                forceDarkModeScores();
-                            }
-                        }, 10);
                         
                         // Add update animation
                         currentGame.style.animation = 'none';
@@ -1416,173 +1411,6 @@
         }
     };
     
-    // Force dark mode styling - Focus on existing elements
-    function forceDarkModeScores() {
-        if (document.documentElement.getAttribute('data-bs-theme') === 'dark') {
-            console.log('Applying dark mode fixes to scores page...');
-            
-            // Target Week Points leaderboard
-            // COMMENTED OUT - Using Tailwind CSS backgrounds now
-            // const pointsLeaderboard = document.querySelector('#week-points-leaderboard');
-            // if (pointsLeaderboard) {
-            //     pointsLeaderboard.style.setProperty('background-color', '#404040', 'important');
-            //     pointsLeaderboard.style.setProperty('background', '#404040', 'important');
-            //     pointsLeaderboard.style.setProperty('color', '#ffffff', 'important');
-            // }
-            
-            // Force Week Points player cards
-            const playerCards = document.querySelectorAll('.player-points-card');
-            playerCards.forEach(card => {
-                card.style.setProperty('background-color', '#404040', 'important');
-                card.style.setProperty('background', '#404040', 'important');
-                card.style.setProperty('color', '#ffffff', 'important');
-                card.style.setProperty('border', '1px solid #555555', 'important');
-            });
-            
-            // Force section containers
-            const sectionContainers = document.querySelectorAll('.scores-main-container .section-container');
-            sectionContainers.forEach(section => {
-                section.style.setProperty('background-color', '#333333', 'important');
-                section.style.setProperty('background', '#333333', 'important');
-                section.style.setProperty('color', '#ffffff', 'important');
-            });
-            
-            // 1. Fix ALL game score cards - the main issue
-            const gameScoreCards = document.querySelectorAll('.game-score-card');
-            console.log(`Found ${gameScoreCards.length} game score cards`);
-            gameScoreCards.forEach(card => {
-                card.style.setProperty('background', 'linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%)', 'important');
-                card.style.setProperty('background-color', '#404040', 'important');
-                card.style.setProperty('color', '#ffffff', 'important');
-                card.style.setProperty('border', '1px solid #555555', 'important');
-                card.style.removeProperty('background-image');
-            });
-            
-            // 2. Fix game status headers
-            const gameStatusHeaders = document.querySelectorAll('.game-status-header');
-            console.log(`Found ${gameStatusHeaders.length} game status headers`);
-            gameStatusHeaders.forEach(header => {
-                header.style.setProperty('background', '#2a2a2a', 'important');
-                header.style.setProperty('background-color', '#2a2a2a', 'important');
-                header.style.setProperty('color', '#ffffff', 'important');
-                header.style.setProperty('border-bottom', '1px solid #555555', 'important');
-            });
-            
-            // 3. Fix game info bars (spread, weather, etc.)
-            const gameInfoBars = document.querySelectorAll('.game-info-bar');
-            console.log(`Found ${gameInfoBars.length} game info bars`);
-            gameInfoBars.forEach(bar => {
-                bar.style.setProperty('background', '#2a2a2a', 'important');
-                bar.style.setProperty('background-color', '#2a2a2a', 'important');
-                bar.style.setProperty('color', '#ffffff', 'important');
-            });
-            
-            // 4. Fix game info items (buttons inside info bar)
-            const gameInfoItems = document.querySelectorAll('.game-info-item');
-            console.log(`Found ${gameInfoItems.length} game info items`);
-            gameInfoItems.forEach(item => {
-                item.style.setProperty('background', '#333333', 'important');
-                item.style.setProperty('background-color', '#333333', 'important');
-                item.style.setProperty('color', '#ffffff', 'important');
-                item.style.setProperty('border', '1px solid #555555', 'important');
-            });
-            
-            // 5. Fix team score rows - preserve team color gradients
-            const teamScoreRows = document.querySelectorAll('.team-score-row');
-            console.log(`Found ${teamScoreRows.length} team score rows`);
-            teamScoreRows.forEach(row => {
-                // Don't override background - let team color gradients show through
-                row.style.setProperty('color', '#ffffff', 'important');
-            });
-            
-            // 6. Fix team names
-            const teamNames = document.querySelectorAll('.team-name');
-            console.log(`Found ${teamNames.length} team names`);
-            teamNames.forEach(name => {
-                name.style.setProperty('color', '#ffffff', 'important');
-            });
-            
-            // Remove any dark mode styling from total-score elements to let them use default light mode colors
-            const totalScoreElements = document.querySelectorAll('.total-score');
-            totalScoreElements.forEach((score) => {
-                // Remove any inline styles that might be interfering
-                score.removeAttribute('style');
-                
-                // Remove any dark mode classes
-                score.classList.remove('dark-mode-override');
-            });
-            
-            // 7b. Fix LIVE button containers specifically
-            const gameStatusDisplays = document.querySelectorAll('.game-status-display');
-            console.log(`Found ${gameStatusDisplays.length} game status displays`);
-            gameStatusDisplays.forEach(display => {
-                display.style.setProperty('background', '#2a2a2a', 'important');
-                display.style.setProperty('background-color', '#2a2a2a', 'important');
-                display.style.setProperty('border', '1px solid #555555', 'important');
-                display.style.setProperty('padding', '0.5rem', 'important');
-            });
-            
-            // 8. Fix live status elements
-            const liveElements = document.querySelectorAll('.game-status.live, .status-live');
-            liveElements.forEach(el => {
-                el.style.setProperty('background', 'linear-gradient(135deg, #28a745 0%, #20c997 100%)', 'important');
-                el.style.setProperty('background-color', '#28a745', 'important');
-                el.style.setProperty('color', '#ffffff', 'important');
-            });
-            
-            // REMOVED - Let Player Picks sections use transparent background
-            
-            // REMOVED - Let Your Pick sections use transparent background
-            
-            // REMOVED - Let Missing Picks sections use transparent background
-            
-            
-            // 11. Force any remaining white elements
-            const whiteElements = document.querySelectorAll('.scores-main-container *');
-            whiteElements.forEach(el => {
-                const styles = window.getComputedStyle(el);
-                const rect = el.getBoundingClientRect();
-                
-                if (styles.backgroundColor === 'rgb(255, 255, 255)' && rect.width > 10 && rect.height > 10) {
-                    el.style.setProperty('background-color', '#404040', 'important');
-                    el.style.setProperty('background', '#404040', 'important');
-                    el.style.setProperty('color', '#ffffff', 'important');
-                    el.style.removeProperty('background-image');
-                    el.style.removeProperty('background-gradient');
-                }
-            });
-            
-            console.log('Dark mode fixes applied to scores page');
-        }
-    }
-    
-    // Run immediately and after any dynamic content loads
-    document.addEventListener('DOMContentLoaded', forceDarkModeScores);
-    setTimeout(forceDarkModeScores, 100);
-    setTimeout(forceDarkModeScores, 500);
-    setTimeout(forceDarkModeScores, 1000);
-    
-    // Override layout manager to apply dark mode after it runs
-    if (window.weekPointsLayoutManager) {
-        const originalApply = window.weekPointsLayoutManager.apply;
-        window.weekPointsLayoutManager.apply = function() {
-            originalApply.call(this);
-            setTimeout(forceDarkModeScores, 50);
-        };
-        
-        const originalRefresh = window.weekPointsLayoutManager.refresh;
-        window.weekPointsLayoutManager.refresh = function() {
-            originalRefresh.call(this);
-            setTimeout(forceDarkModeScores, 50);
-        };
-    }
-    
-    // Run when layout manager initializes
-    setTimeout(() => {
-        if (window.weekPointsLayoutManager) {
-            forceDarkModeScores();
-        }
-    }, 1500);
     
     // Handle hiding empty team pick sections with JavaScript (more reliable than CSS :has())
     function hideEmptyTeamPickSections() {

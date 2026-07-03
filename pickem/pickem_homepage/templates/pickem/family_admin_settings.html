@@ -105,25 +105,103 @@
 
         <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden">
             <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
-                <h2 class="text-xl font-bold text-text-dark dark:text-white">Current Family Banner Metadata</h2>
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Announcement Banner</h2>
                 <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
-                    Banner rows are shown read-only here and are not edited by this settings page.
+                    Publish a banner shown across this family's pages. Publishing replaces any banner that's currently live.
                 </p>
+            </div>
+
+            <form method="post" class="space-y-5 p-5">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_banner">
+
+                <div>
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ banner_form.title.id_for_label }}">
+                        {{ banner_form.title.label }}
+                    </label>
+                    <div class="mt-2">{{ banner_form.title }}</div>
+                    {% for error in banner_form.title.errors %}
+                    <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ banner_form.description.id_for_label }}">
+                        {{ banner_form.description.label }}
+                    </label>
+                    <div class="mt-2">{{ banner_form.description }}</div>
+                    {% for error in banner_form.description.errors %}
+                    <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="grid gap-5 md:grid-cols-2">
+                    <div>
+                        <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ banner_form.banner_type.id_for_label }}">
+                            {{ banner_form.banner_type.label }}
+                        </label>
+                        <div class="mt-2">{{ banner_form.banner_type }}</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ banner_form.icon.id_for_label }}">
+                            {{ banner_form.icon.label }}
+                        </label>
+                        <div class="mt-2">{{ banner_form.icon }}</div>
+                        <p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary">{{ banner_form.icon.help_text }}</p>
+                    </div>
+                </div>
+
+                <label class="flex items-start gap-3 rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark p-4">
+                    {{ banner_form.show_close_button }}
+                    <span>
+                        <span class="block font-bold text-text-dark dark:text-white">{{ banner_form.show_close_button.label }}</span>
+                        <span class="mt-1 block text-sm text-text-secondary-light dark:text-text-secondary">
+                            Members can close the banner; leave off to keep it pinned.
+                        </span>
+                    </span>
+                </label>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white hover:bg-primary/90 transition-colors">
+                        <i class="fas fa-bullhorn"></i>
+                        Publish Banner
+                    </button>
+                </div>
+            </form>
+
+            <div class="border-t border-border-light dark:border-border-subtle px-5 py-4">
+                <h3 class="font-bold text-text-dark dark:text-white">Recent banners</h3>
             </div>
 
             {% if current_family_banners %}
             <div class="divide-y divide-border-light dark:divide-border-subtle">
                 {% for banner in current_family_banners %}
-                <div class="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <div class="font-bold text-text-dark dark:text-white">{{ banner.title }}</div>
+                <div class="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 font-bold text-text-dark dark:text-white">
+                            {% if banner.icon %}<i class="{{ banner.icon }} text-primary"></i>{% endif %}
+                            <span class="truncate">{{ banner.title }}</span>
+                        </div>
                         {% if banner.description %}
                         <div class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">{{ banner.description }}</div>
                         {% endif %}
                     </div>
-                    <div class="flex flex-wrap gap-2 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">
                         <span class="rounded border border-border-light dark:border-border-subtle px-2 py-1">{{ banner.banner_type }}</span>
-                        <span class="rounded border border-border-light dark:border-border-subtle px-2 py-1">{% if banner.is_active %}Active{% else %}Inactive{% endif %}</span>
+                        {% if banner.is_active %}
+                        <span class="rounded border border-green-500/40 bg-green-500/10 px-2 py-1 text-green-600 dark:text-green-400">Active</span>
+                        <form method="post" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="deactivate_banner">
+                            <input type="hidden" name="banner_id" value="{{ banner.id }}">
+                            <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-border-light dark:border-border-subtle px-3 py-1.5 text-xs font-semibold normal-case text-text-dark dark:text-white hover:bg-gray-50 dark:hover:bg-bg-dark transition-colors">
+                                <i class="fas fa-eye-slash"></i>
+                                Deactivate
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="rounded border border-border-light dark:border-border-subtle px-2 py-1">Inactive</span>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -133,8 +211,8 @@
                 <div class="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-text-secondary-light dark:bg-slate-800 dark:text-text-secondary">
                     <i class="fas fa-bullhorn"></i>
                 </div>
-                <p class="mt-4 font-semibold text-text-dark dark:text-white">No family banner metadata</p>
-                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">This settings page does not create or deactivate banners.</p>
+                <p class="mt-4 font-semibold text-text-dark dark:text-white">No banners yet</p>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Publish one above to announce it across your family's pages.</p>
             </div>
             {% endif %}
         </section>

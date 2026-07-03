@@ -9,212 +9,169 @@
 {% endblock %}
 
 {% block content %}
-    <!-- Page Header (Hero Section) -->
-    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 shadow-xl animate-fade-in">
-        <!-- Subtle background pattern -->
-        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
-
-        <div class="relative z-10">
-            <!-- Icon -->
-            <div class="flex items-center justify-center mb-3 lg:mb-4">
-                <i class="fas fa-gavel text-4xl lg:text-6xl text-primary"></i>
-            </div>
-
-            <!-- Title -->
-            <h2 class="text-3xl lg:text-5xl font-black tracking-tight mb-2 lg:mb-3"
-                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
-                League Rules
-            </h2>
-
-            <!-- Subtitle -->
-            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium">
-                Official guidelines and regulations for fair play
-            </p>
-        </div>
-    </div>
-
-<div class="max-w-7xl mx-auto px-6 py-6">
-    {% if family and pool %}
-    <div class="section-container mb-8">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+<div class="min-h-screen bg-gray-50 dark:bg-bg-dark">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <!-- Header -->
+        <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <p class="text-sm font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Current pool</p>
-                <h3 class="text-2xl font-bold text-text-dark dark:text-white">{{ family.name }} - {{ pool.name }}</h3>
+                <div class="text-sm font-semibold uppercase tracking-wide text-primary">League Rules</div>
+                <h1 class="mt-2 text-3xl font-bold text-text-dark dark:text-white">How to Play</h1>
+                <p class="mt-2 text-text-secondary-light dark:text-text-secondary">Official guidelines and regulations for fair play</p>
             </div>
-            {% if pool_settings %}
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                <div class="rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-4">
-                    <span class="font-semibold text-text-dark dark:text-white">Game locking: {% if pool_settings.picks_lock_at_kickoff %}On{% else %}Off{% endif %}</span>
-                </div>
-                <div class="rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-4">
-                    <span class="font-semibold text-text-dark dark:text-white">Tiebreakers: {% if pool_settings.allow_tiebreaker %}On{% else %}Off{% endif %}</span>
-                </div>
+            {% if family and pool %}
+            <div class="flex flex-wrap gap-2">
+                <span class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white">
+                    <i class="fas fa-users text-primary"></i>
+                    {{ family.name }} &mdash; {{ pool.name }}
+                </span>
+                {% if pool_settings %}
+                <span class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white">
+                    Locking: {% if pool_settings.picks_lock_at_kickoff %}On{% else %}Off{% endif %}
+                </span>
+                <span class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white">
+                    Tiebreakers: {% if pool_settings.allow_tiebreaker %}On{% else %}Off{% endif %}
+                </span>
+                {% endif %}
             </div>
             {% endif %}
-        </div>
-    </div>
-    {% endif %}
+        </header>
 
-    <!-- Scoring System Section -->
-    <div class="mb-8">
-        <div class="flex items-center gap-3 mb-6">
-            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center">
-                <i class="fas fa-calculator text-white text-xl"></i>
-            </div>
-            <div>
-                <h3 class="text-2xl font-bold text-text-dark dark:text-white">Scoring System</h3>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">How points are awarded each week</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Win -->
-            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all group">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <i class="fas fa-check-circle text-white text-2xl"></i>
+        <!-- Scoring System -->
+        <section>
+            <h2 class="text-xl font-bold text-text-dark dark:text-white">Scoring System</h2>
+            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">How points are awarded each week</p>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Win -->
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10 text-green-600 dark:text-green-400">
+                            <i class="fas fa-check-circle"></i>
+                        </span>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">+1</div>
                     </div>
-                    <div class="text-3xl font-black text-green-600 dark:text-green-400">+1</div>
+                    <div class="font-bold text-text-dark dark:text-white">Wins</div>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Correctly pick the winning team</p>
                 </div>
-                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Wins</h4>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Correctly pick the winning team</p>
-            </div>
 
-            <!-- Loss -->
-            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all group">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-14 h-14 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <i class="fas fa-times-circle text-white text-2xl"></i>
+                <!-- Loss -->
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400">
+                            <i class="fas fa-times-circle"></i>
+                        </span>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">0</div>
                     </div>
-                    <div class="text-3xl font-black text-red-600 dark:text-red-400">0</div>
+                    <div class="font-bold text-text-dark dark:text-white">Losses</div>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Incorrect picks earn no points</p>
                 </div>
-                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Losses</h4>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Incorrect picks earn no points</p>
-            </div>
 
-            <!-- Tie -->
-            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all group">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-14 h-14 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <i class="fas fa-equals text-white text-2xl"></i>
+                <!-- Tie -->
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-500/10 text-slate-600 dark:text-slate-300">
+                            <i class="fas fa-equals"></i>
+                        </span>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">0</div>
                     </div>
-                    <div class="text-3xl font-black text-yellow-600 dark:text-yellow-400">0</div>
+                    <div class="font-bold text-text-dark dark:text-white">Ties</div>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Tied games award no points</p>
                 </div>
-                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Ties</h4>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Tied games award no points</p>
-            </div>
 
-            <!-- Weekly Winner -->
-            <div class="bg-gradient-to-br from-yellow-500/10 to-amber-500/10 dark:from-yellow-500/20 dark:to-amber-500/20 rounded-2xl p-6 border-2 border-yellow-500/50 hover:shadow-lg transition-all group">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-14 h-14 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                        <i class="fas fa-trophy text-white text-2xl"></i>
+                <!-- Weekly Winner -->
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm ring-1 ring-yellow-500/20">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
+                            <i class="fas fa-trophy"></i>
+                        </span>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">+2</div>
                     </div>
-                    <div class="text-3xl font-black text-yellow-600 dark:text-yellow-400">+2</div>
+                    <div class="font-bold text-text-dark dark:text-white">Weekly Winner</div>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Bonus for most points in a week</p>
                 </div>
-                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Weekly Winner</h4>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Bonus for most points in a week</p>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- Advanced Rules Section -->
-    <div class="mb-8 mt-12">
-        <div class="flex items-center gap-3 mb-6">
-            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center">
-                <i class="fas fa-cogs text-white text-xl"></i>
-            </div>
-            <div>
-                <h3 class="text-2xl font-bold text-text-dark dark:text-white">Advanced Rules</h3>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Tiebreakers and game mechanics</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Tiebreaker -->
-            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all">
-                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-bullseye text-white text-xl"></i>
+        <!-- Advanced Rules -->
+        <section>
+            <h2 class="text-xl font-bold text-text-dark dark:text-white">Advanced Rules</h2>
+            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Tiebreakers and game mechanics</p>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Primary Tiebreaker -->
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm hover:border-primary hover:shadow-md transition-all">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
+                        <i class="fas fa-bullseye"></i>
+                    </span>
+                    <div class="font-bold text-text-dark dark:text-white mb-1">Primary Tiebreaker</div>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
+                        Determined by <strong class="text-text-dark dark:text-white">closest total score</strong>. No Price is Right rules &mdash; you can go over!
+                    </p>
                 </div>
-                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-3">Primary Tiebreaker</h4>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
-                    Determined by <strong class="text-text-dark dark:text-white">closest total score</strong>. No Price is Right rules - you can go over!
-                </p>
-            </div>
 
-            <!-- Secondary Tiebreaker -->
-            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all">
-                <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-football-ball text-white text-xl"></i>
+                <!-- Secondary Tiebreaker -->
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm hover:border-primary hover:shadow-md transition-all">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
+                        <i class="fas fa-football-ball"></i>
+                    </span>
+                    <div class="font-bold text-text-dark dark:text-white mb-1">Secondary Tiebreaker</div>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
+                        Uses <strong class="text-text-dark dark:text-white">combined yards</strong> from the Monday Night Football game
+                    </p>
                 </div>
-                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-3">Secondary Tiebreaker</h4>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
-                    Uses <strong class="text-text-dark dark:text-white">combined yards</strong> from Monday Night Football game
-                </p>
-            </div>
 
-            <!-- Auto Lock -->
-            <div class="bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:shadow-lg transition-all">
-                <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-lock text-white text-xl"></i>
+                <!-- Game Locking -->
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm hover:border-primary hover:shadow-md transition-all">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                    <div class="font-bold text-text-dark dark:text-white mb-1">Game Locking</div>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
+                        Games <strong class="text-text-dark dark:text-white">lock automatically</strong> when they start &mdash; no late picks allowed
+                    </p>
                 </div>
-                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-3">Game Locking</h4>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
-                    Games <strong class="text-text-dark dark:text-white">lock automatically</strong> when they start - no late picks allowed
-                </p>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- Prizes & Entry Section -->
-    <div class="mt-12">
-        <div class="flex items-center gap-3 mb-6">
-            <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-2xl flex items-center justify-center">
-                <i class="fas fa-trophy text-white text-xl"></i>
-            </div>
-            <div>
-                <h3 class="text-2xl font-bold text-text-dark dark:text-white">Prizes & Championship</h3>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Entry fees and special rewards</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Perfect Week Bonus -->
-            <div class="bg-gradient-to-br from-green-500/10 to-emerald-500/10 dark:from-green-500/20 dark:to-emerald-500/20 rounded-2xl p-6 border-2 border-green-500/50 hover:shadow-lg transition-all">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <i class="fas fa-gem text-white text-2xl"></i>
+        <!-- Prizes & Championship -->
+        <section>
+            <h2 class="text-xl font-bold text-text-dark dark:text-white">Prizes &amp; Championship</h2>
+            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Entry fees and special rewards</p>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Perfect Week Bonus -->
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <i class="fas fa-gem"></i>
+                        </span>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">$10</div>
                     </div>
-                    <div class="text-3xl font-black text-green-600 dark:text-green-400">$10</div>
+                    <div class="font-bold text-text-dark dark:text-white">Perfect Week Bonus</div>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Get all picks correct and earn <strong class="text-text-dark dark:text-white">$10 from each participant</strong></p>
                 </div>
-                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Perfect Week Bonus</h4>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Get all picks correct and earn <strong class="text-text-dark dark:text-white">$10 from each participant</strong></p>
-            </div>
 
-            <!-- Entry Fee -->
-            <div class="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/20 dark:to-indigo-500/20 rounded-2xl p-6 border-2 border-blue-500/50 hover:shadow-lg transition-all">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <i class="fas fa-dollar-sign text-white text-2xl"></i>
+                <!-- Entry Fee -->
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <i class="fas fa-dollar-sign"></i>
+                        </span>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">$40</div>
                     </div>
-                    <div class="text-3xl font-black text-blue-600 dark:text-blue-400">$40</div>
+                    <div class="font-bold text-text-dark dark:text-white">Entry Fee</div>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Per person entry. Champion determined by <strong class="text-text-dark dark:text-white">most total points</strong></p>
                 </div>
-                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Entry Fee</h4>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Per person entry. Champion determined by <strong class="text-text-dark dark:text-white">most total points</strong></p>
-            </div>
 
-            <!-- Playoffs -->
-            <div class="bg-gradient-to-br from-purple-500/10 to-indigo-500/10 dark:from-purple-500/20 dark:to-indigo-500/20 rounded-2xl p-6 border-2 border-purple-500/50 hover:shadow-lg transition-all">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <i class="fas fa-crown text-white text-2xl"></i>
+                <!-- Championship Tiebreaker -->
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <i class="fas fa-crown"></i>
+                        </span>
                     </div>
+                    <div class="font-bold text-text-dark dark:text-white">Championship Tiebreaker</div>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Tied champions continue into <strong class="text-text-dark dark:text-white">the playoffs</strong> to determine the winner</p>
                 </div>
-                <h4 class="text-lg font-bold text-text-dark dark:text-white mb-2">Championship Tiebreaker</h4>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Tied champions continue into <strong class="text-text-dark dark:text-white">the playoffs</strong> to determine the winner</p>
             </div>
-        </div>
+        </section>
     </div>
 </div>
-
 {% endblock %}

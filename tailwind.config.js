@@ -13,14 +13,14 @@ module.exports = {
         'surface': '#121821',
         'surface-hover': '#1A212C',
         'border-subtle': '#1F2937',
-        'primary': '#FF6B1A',
+        'primary': 'rgb(var(--color-primary) / <alpha-value>)',
         'secondary': '#9FE870',
         'text-primary': '#FFFFFF',
         'text-secondary': '#A9B4C4',
         'muted': '#6B7280',
 
         // Light Mode (ESPN-inspired neutral grays)
-        'bg-light': '#EDEEF0',        // Very light neutral gray (ESPN body bg)
+        'bg-light': '#F0F2F5',        // Light neutral gray (card body bg)
         'surface-light': '#FFFFFF',   // Pure white for cards
         'border-light': '#DCDCDD',    // Light neutral gray for borders
         'secondary-light': '#3CA455', // Keep green accent
@@ -34,7 +34,7 @@ module.exports = {
       boxShadow: {
         'card': '0 4px 6px rgba(0, 0, 0, 0.1)',
         'card-hover': '0 8px 25px rgba(0,0,0,0.15)',
-        'glow-primary': '0 0 20px rgba(255,107,26,0.4)',
+        'glow-primary': '0 0 20px rgba(11,61,145,0.4)',
       },
       borderRadius: {
         'xl': '1rem',

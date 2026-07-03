@@ -9,6 +9,7 @@ from .forms import (
     CreateFamilyForm,
     FamilyInviteCreateForm,
     FamilyAdminSettingsForm,
+    FamilyBannerForm,
     FamilyManualPickForm,
     FamilyWeekWinnerForm,
     FamilyMembershipUpdateForm,
@@ -35,6 +36,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from functools import wraps
 # from django_ratelimit.decorators import ratelimit  # Disabled for now
+from collections import defaultdict
 import hashlib
 import json
 import secrets
@@ -68,6 +70,81 @@ def is_commissioner(user):
         return profile.is_commissioner
     except UserProfile.DoesNotExist:
         return False
+
+def current_user_picks(picks, user):
+    return picks.filter(Q(userID=str(user.id)) | Q(uid=user.id)).distinct()
+
+def select_dashboard_snapshot_games(games, *, today=None):
+    today = today or timezone.localdate()
+    weekday = today.weekday()
+
+    if weekday in (1, 2):
+        return games
+
+    if weekday == 4:
+        target_date = today - timedelta(days=1)
+    else:
+        target_date = today
+
+    day_games = games.filter(startTimestamp__date=target_date)
+    if day_games.exists():
+        return day_games
+    return games
+
+def attach_dashboard_pick_groups(games, *, pool, family):
+    game_ids = [game.id for game in games]
+    if not game_ids:
+        return games
+
+    active_user_ids = set(
+        FamilyMembership.objects.filter(
+            family=family,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+        ).values_list('user_id', flat=True)
+    )
+    picks = GamePicks.objects.filter(
+        pool=pool,
+        pick_game_id__in=game_ids,
+    ).order_by('pick_game_id', 'pick', 'uid', 'userID')
+
+    pick_user_ids = set()
+    for pick in picks:
+        user_id = pick.uid
+        if not user_id and str(pick.userID).isdigit():
+            user_id = int(pick.userID)
+        if user_id in active_user_ids:
+            pick_user_ids.add(user_id)
+
+    users = User.objects.in_bulk(pick_user_ids)
+    picks_by_game_team = defaultdict(lambda: defaultdict(list))
+    for pick in picks:
+        user_id = pick.uid
+        if not user_id and str(pick.userID).isdigit():
+            user_id = int(pick.userID)
+        user = users.get(user_id)
+        if user:
+            picks_by_game_team[pick.pick_game_id][pick.pick].append(user)
+
+    for game in games:
+        groups = []
+        for team_slug, team_name in (
+            (game.awayTeamSlug, game.awayTeamName),
+            (game.homeTeamSlug, game.homeTeamName),
+        ):
+            users_for_team = sorted(
+                picks_by_game_team[game.id].get(team_slug, []),
+                key=lambda user: user.username.lower(),
+            )
+            if users_for_team:
+                groups.append({
+                    'team_slug': team_slug,
+                    'team_name': team_name,
+                    'users': users_for_team,
+                })
+        game.dashboard_pick_groups = groups
+
+    return games
 
 def commissioner_required(view_func):
     """Decorator that ensures only commissioners and admins can access a view"""
@@ -586,6 +663,28 @@ def family_pool_home(request, family_slug, pool_slug):
         for rank, points in enumerate(top_standings, 1)
     ]
 
+    week_points_field = f"week_{current_week}_points"
+    week_points_rows = list(
+        userSeasonPoints.objects.filter(pool=pool, gameseason=gameseason)
+        .exclude(**{week_points_field: None})
+        .order_by(f"-{week_points_field}", "userID")[:3]
+    )
+    week_points_user_ids = [
+        int(points.userID)
+        for points in week_points_rows
+        if str(points.userID).isdigit()
+    ]
+    week_points_users = User.objects.in_bulk(week_points_user_ids)
+    week_points_summary = [
+        {
+            'rank': rank,
+            'points': points,
+            'week_points': getattr(points, week_points_field) or 0,
+            'user': week_points_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
+        }
+        for rank, points in enumerate(week_points_rows, 1)
+    ]
+
     recent_winners = []
     for week_num in range(1, 19):
         winner_field = f"week_{week_num}_winner"
@@ -609,18 +708,27 @@ def family_pool_home(request, family_slug, pool_slug):
             })
     recent_winners = recent_winners[-3:]
 
-    current_games = GamesAndScores.objects.filter(
+    current_week_games = GamesAndScores.objects.filter(
         gameseason=gameseason,
         gameWeek=current_week,
         competition=current_competition,
-    ).count()
+    ).order_by('startTimestamp', 'id')
+    current_games = current_week_games.count()
+    dashboard_snapshot_games = list(
+        select_dashboard_snapshot_games(current_week_games).order_by('startTimestamp', 'id')
+    )
+    attach_dashboard_pick_groups(
+        dashboard_snapshot_games,
+        pool=pool,
+        family=family,
+    )
     user_picks_count = GamePicks.objects.filter(
         pool=pool,
         gameseason=gameseason,
         gameWeek=current_week,
         competition=current_competition,
-        userEmail=request.user.email,
-    ).count()
+    )
+    user_picks_count = current_user_picks(user_picks_count, request.user).count()
     if user_picks_count == 0:
         user_pick_status = 'pending'
     elif user_picks_count < current_games:
@@ -651,7 +759,9 @@ def family_pool_home(request, family_slug, pool_slug):
         'current_week': current_week,
         'current_competition': current_competition,
         'standings': standings,
+        'week_points_summary': week_points_summary,
         'recent_winners': recent_winners,
+        'current_week_games': dashboard_snapshot_games,
         'current_games': current_games,
         'user_picks_count': user_picks_count,
         'user_pick_status': user_pick_status,
@@ -744,9 +854,75 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
         'picks_lock_at_kickoff': pool_settings.picks_lock_at_kickoff,
         'allow_tiebreaker': pool_settings.allow_tiebreaker,
     }
-    form = FamilyAdminSettingsForm(request.POST or None, initial=initial)
+    banner_form = FamilyBannerForm()
 
-    if request.method == 'POST' and form.is_valid():
+    action = request.POST.get('action') if request.method == 'POST' else None
+    is_settings_submit = (
+        request.method == 'POST'
+        and action not in ('create_banner', 'deactivate_banner')
+    )
+    form = FamilyAdminSettingsForm(
+        request.POST if is_settings_submit else None,
+        initial=initial,
+    )
+
+    if action == 'create_banner':
+        banner_form = FamilyBannerForm(request.POST)
+        if banner_form.is_valid():
+            with transaction.atomic():
+                SiteBanner.objects.filter(
+                    family=family, is_active=True
+                ).update(is_active=False)
+                banner = banner_form.save(commit=False)
+                banner.family = family
+                banner.is_active = True
+                banner.start_date = timezone.now()
+                banner.save()
+                FamilyAuditLog.objects.create(
+                    family=family,
+                    pool=pool,
+                    actor=request.user,
+                    action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                    target_type='SiteBanner',
+                    target_id=str(banner.id),
+                    metadata={'summary': f'Banner published: {banner.title}'},
+                    **get_invite_audit_context(request),
+                )
+            messages.success(request, "Banner published.")
+            return redirect(
+                'family_pool_admin_settings',
+                family_slug=family.slug,
+                pool_slug=pool.slug,
+            )
+
+    elif action == 'deactivate_banner':
+        banner = SiteBanner.objects.filter(
+            id=request.POST.get('banner_id'),
+            family=family,
+        ).first()
+        if banner:
+            banner.is_active = False
+            banner.save(update_fields=['is_active', 'updated_at'])
+            FamilyAuditLog.objects.create(
+                family=family,
+                pool=pool,
+                actor=request.user,
+                action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                target_type='SiteBanner',
+                target_id=str(banner.id),
+                metadata={'summary': f'Banner deactivated: {banner.title}'},
+                **get_invite_audit_context(request),
+            )
+            messages.success(request, "Banner deactivated.")
+        else:
+            messages.info(request, "That banner could not be found.")
+        return redirect(
+            'family_pool_admin_settings',
+            family_slug=family.slug,
+            pool_slug=pool.slug,
+        )
+
+    elif request.method == 'POST' and form.is_valid():
         with transaction.atomic():
             locked_family = Family.objects.select_for_update().get(id=family.id)
             locked_pool = Pool.objects.select_for_update().get(
@@ -810,6 +986,7 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
         'membership': tenant_context.membership,
         'gameseason': pool.season or get_season(),
         'form': form,
+        'banner_form': banner_form,
         'pool_settings': pool_settings,
         'current_family_banners': current_family_banners,
     }
@@ -2041,7 +2218,7 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
     user_weekly_stats = {}
     if request.user.is_authenticated:
         total_games_in_week = game_list.count()
-        user_picks = picks.filter(userEmail=request.user.email)
+        user_picks = current_user_picks(picks, request.user)
 
         # Base accuracy on picks made for games that are finished
         finished_games_slugs = game_list.filter(statusType='finished').values_list('slug', flat=True)
@@ -2198,7 +2375,7 @@ def legacy_scores_long_unused(request, competition, gameseason, week):
     user_weekly_stats = {}
     if request.user.is_authenticated:
         total_games_in_week = game_list.count()
-        user_picks = picks.filter(userEmail=request.user.email)
+        user_picks = current_user_picks(picks, request.user)
 
         # Base accuracy on picks made for games that are finished
         finished_games_slugs = game_list.filter(statusType='finished').values_list('slug', flat=True)
@@ -2289,8 +2466,8 @@ def render_pick_page(request, *, tenant_context=None):
             gameseason=gameseason,
             gameWeek=str(game_week),
             competition=game_competition,
-            userEmail=request.user.email,
         )
+        picks = current_user_picks(picks, request.user)
         pick_slugs = picks.values_list('slug', flat=True).distinct()
         pick_ids = picks.values_list('id', flat=True).distinct()
     else:

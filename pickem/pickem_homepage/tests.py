@@ -1,7 +1,8 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from io import StringIO
 from importlib import import_module
 import json
+from unittest.mock import patch
 
 from django.contrib import admin
 from django.contrib.auth.models import AnonymousUser
@@ -62,33 +63,42 @@ class ViewSmokeTests(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
 
-    def test_scores_returns_200(self):
-        resp = self.client.get("/scores/")
-        self.assertEqual(resp.status_code, 200)
-
-    def test_standings_returns_200(self):
-        resp = self.client.get("/standings/")
-        self.assertEqual(resp.status_code, 200)
-
-    def test_rules_returns_200(self):
-        resp = self.client.get("/rules/")
-        self.assertEqual(resp.status_code, 200)
-
-    def test_picks_returns_200_for_anon(self):
-        resp = self.client.get("/picks/")
-        self.assertEqual(resp.status_code, 200)
-
-    # -- auth-required pages (302) --
-
-    def test_profile_redirects_anon(self):
-        resp = self.client.get("/profile/")
+    def assert_redirects_to_login(self, path):
+        resp = self.client.get(path)
         self.assertEqual(resp.status_code, 302)
+        self.assertIn("/accounts/login/", resp["Location"])
+        self.assertIn(f"next={path}", resp["Location"])
 
-    # -- commissioner pages redirect for anon --
+    def test_logged_out_web_app_routes_redirect_to_login(self):
+        for path in [
+            "/scores/",
+            "/standings/",
+            "/rules/",
+            "/picks/",
+            "/profile/",
+            "/commissioners/",
+            "/families/",
+            "/families/create/",
+            "/families/join/",
+            "/families/smith-family/pools/main/",
+            "/invites/example-code/",
+            "/onboarding/",
+            "/message-board/create-post/",
+        ]:
+            with self.subTest(path=path):
+                self.assert_redirects_to_login(path)
 
-    def test_commissioners_denies_anon_without_global_dashboard(self):
-        resp = self.client.get("/commissioners/")
-        self.assertEqual(resp.status_code, 404)
+    def test_accounts_routes_remain_public_for_login(self):
+        resp = self.client.get("/accounts/login/")
+        self.assertNotEqual(resp.status_code, 302)
+
+    def test_logged_out_homepage_and_login_hide_internal_nav_links(self):
+        for path in ["/", "/accounts/login/"]:
+            with self.subTest(path=path):
+                resp = self.client.get(path)
+                self.assertEqual(resp.status_code, 200)
+                self.assertNotContains(resp, 'data-testid="app-primary-nav"')
+                self.assertNotContains(resp, 'id="mobile-menu-btn"')
 
     # -- API endpoints (AllowAny / IsAdminOrReadOnly at view level) --
 
@@ -146,7 +156,7 @@ class PostLoginTenantRoutingTests(TestCase):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Family Pickem")
+        self.assertTemplateUsed(response, "pickem/home.html")
         self.assertTemplateUsed(response, "pickem/home.html")
 
     def test_authenticated_user_with_no_active_membership_routes_to_onboarding(self):
@@ -305,6 +315,29 @@ class TenantDashboardIsolationTests(TestCase):
             kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
         )
 
+    def _dashboard_game(self, *, game_id, start_date, home="atl", away="ari", status="notstarted", title="Scheduled"):
+        return GamesAndScores.objects.create(
+            id=game_id,
+            slug=f"{away}-{home}-2025-week-1-{game_id}",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.make_aware(
+                timezone.datetime(start_date.year, start_date.month, start_date.day, 20, 0)
+            ),
+            statusType=status,
+            statusTitle=title,
+            homeTeamId=game_id + 1,
+            homeTeamSlug=home,
+            homeTeamName=f"{home.upper()} Home",
+            homeTeamScore=21 if status == "finished" else None,
+            awayTeamId=game_id + 2,
+            awayTeamSlug=away,
+            awayTeamName=f"{away.upper()} Away",
+            awayTeamScore=17 if status == "finished" else None,
+        )
+
     def _seed_dashboard_data(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         jones_family, jones_pool = self._family_with_pool("Jones Family", "jones-family")
@@ -335,7 +368,7 @@ class TenantDashboardIsolationTests(TestCase):
         GamePicks.objects.create(
             id="smith-pick-1",
             pool=smith_pool,
-            userEmail=self.member.email,
+            userEmail="legacy-email@example.com",
             uid=self.member.id,
             userID=str(self.member.id),
             slug=self.game.slug,
@@ -379,7 +412,6 @@ class TenantDashboardIsolationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pickem/home.html")
-        self.assertContains(response, "Family Pickem")
 
     def test_signed_in_root_redirects_to_default_tenant_dashboard(self):
         family, pool = self._family_with_pool("Smith Family", "smith-family")
@@ -423,13 +455,270 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Smith Family")
         self.assertContains(response, "Main Pickem")
-        self.assertContains(response, "smith-player")
+        self.assertContains(response, "Smith-player")
         self.assertContains(response, "Smith family update")
         self.assertContains(response, "1 of 1")
         self.assertNotContains(response, "Jones Family")
-        self.assertNotContains(response, "jones-player")
+        self.assertNotContains(response, "Jones-player")
+
+    def test_dashboard_shows_condensed_week_points_for_current_pool_only(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        jones_family, jones_pool = self._family_with_pool("Jones Family", "jones-family")
+        self._active_membership(self.member, smith_family)
+        self._active_membership(self.smith_player, smith_family)
+        self._active_membership(self.jones_player, jones_family)
+        userSeasonPoints.objects.create(
+            pool=smith_pool,
+            userEmail=self.member.email,
+            userID=str(self.member.id),
+            gameseason=2526,
+            gameyear="2025",
+            week_1_points=2,
+            total_points=2,
+        )
+        userSeasonPoints.objects.create(
+            pool=smith_pool,
+            userEmail=self.smith_player.email,
+            userID=str(self.smith_player.id),
+            gameseason=2526,
+            gameyear="2025",
+            week_1_points=4,
+            total_points=4,
+        )
+        userSeasonPoints.objects.create(
+            pool=jones_pool,
+            userEmail=self.jones_player.email,
+            userID=str(self.jones_player.id),
+            gameseason=2526,
+            gameyear="2025",
+            week_1_points=99,
+            total_points=99,
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Week Points")
+        self.assertContains(response, "Week 1")
+        self.assertContains(response, "Smith-player")
+        self.assertContains(response, "4 pts")
+        self.assertContains(response, "Smith-member")
+        self.assertContains(response, "2 pts")
+        self.assertNotContains(response, "Jones-player")
+        self.assertLess(content.index("Week Points"), content.index("Live This Week"))
+
+    def test_dashboard_shows_in_progress_current_week_games(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        GamesAndScores.objects.create(
+            id=1002,
+            slug="buf-nyj-2025-week-1",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now() - timedelta(hours=1),
+            statusType="inprogress",
+            statusTitle="In Progress",
+            homeTeamId=3,
+            homeTeamSlug="nyj",
+            homeTeamName="New York Jets",
+            homeTeamScore=14,
+            awayTeamId=4,
+            awayTeamSlug="buf",
+            awayTeamName="Buffalo Bills",
+            awayTeamScore=17,
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Live This Week")
+        self.assertContains(response, "Buffalo Bills")
+        self.assertContains(response, "New York Jets")
+        self.assertContains(response, "In Progress")
         self.assertNotContains(response, "Jones family secret")
         self.assertNotContains(response, "2 of 1")
+
+    def test_dashboard_snapshot_weekday_selection_rules(self):
+        from pickem_homepage.views import select_dashboard_snapshot_games
+
+        thursday_game = self._dashboard_game(game_id=1010, start_date=date(2025, 9, 4), home="atl", away="ari")
+        saturday_game = self._dashboard_game(game_id=1011, start_date=date(2025, 9, 6), home="mia", away="buf")
+        sunday_game = self._dashboard_game(game_id=1012, start_date=date(2025, 9, 7), home="nyj", away="ne")
+        monday_game = self._dashboard_game(game_id=1013, start_date=date(2025, 9, 8), home="dal", away="phi")
+        games = GamesAndScores.objects.filter(id__in=[1010, 1011, 1012, 1013]).order_by("startTimestamp", "id")
+
+        cases = [
+            (date(2025, 9, 2), [thursday_game.id, saturday_game.id, sunday_game.id, monday_game.id]),
+            (date(2025, 9, 3), [thursday_game.id, saturday_game.id, sunday_game.id, monday_game.id]),
+            (date(2025, 9, 4), [thursday_game.id]),
+            (date(2025, 9, 5), [thursday_game.id]),
+            (date(2025, 9, 6), [saturday_game.id]),
+            (date(2025, 9, 7), [sunday_game.id]),
+            (date(2025, 9, 8), [monday_game.id]),
+        ]
+        for today, expected_ids in cases:
+            with self.subTest(today=today):
+                selected = select_dashboard_snapshot_games(games, today=today)
+                self.assertEqual(list(selected.values_list("id", flat=True)), expected_ids)
+
+    def test_dashboard_snapshot_saturday_without_games_falls_back_to_full_week(self):
+        from pickem_homepage.views import select_dashboard_snapshot_games
+
+        thursday_game = self._dashboard_game(game_id=1020, start_date=date(2025, 9, 4), home="atl", away="ari")
+        sunday_game = self._dashboard_game(game_id=1021, start_date=date(2025, 9, 7), home="nyj", away="ne")
+        games = GamesAndScores.objects.filter(id__in=[1020, 1021]).order_by("startTimestamp", "id")
+
+        selected = select_dashboard_snapshot_games(games, today=date(2025, 9, 6))
+
+        self.assertEqual(list(selected.values_list("id", flat=True)), [thursday_game.id, sunday_game.id])
+
+    def test_dashboard_snapshot_cards_show_current_pool_picks_grouped_by_team(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        jones_family, jones_pool = self._family_with_pool("Jones Family", "jones-family")
+        self._active_membership(self.member, smith_family)
+        self._active_membership(self.smith_player, smith_family)
+        self._active_membership(self.jones_player, jones_family)
+        game = self._dashboard_game(
+            game_id=1030,
+            start_date=date(2025, 9, 4),
+            home="atl",
+            away="ari",
+            status="finished",
+            title="Final",
+        )
+        GamePicks.objects.create(
+            id=f"{smith_pool.id}-{self.member.id}-{game.id}",
+            pool=smith_pool,
+            userEmail=self.member.email,
+            uid=self.member.id,
+            userID=str(self.member.id),
+            slug=game.slug,
+            competition=game.competition,
+            gameWeek=game.gameWeek,
+            gameyear=game.gameyear,
+            gameseason=game.gameseason,
+            pick_game_id=game.id,
+            pick=game.homeTeamSlug,
+        )
+        GamePicks.objects.create(
+            id=f"{smith_pool.id}-{self.smith_player.id}-{game.id}",
+            pool=smith_pool,
+            userEmail=self.smith_player.email,
+            uid=self.smith_player.id,
+            userID=str(self.smith_player.id),
+            slug=game.slug,
+            competition=game.competition,
+            gameWeek=game.gameWeek,
+            gameyear=game.gameyear,
+            gameseason=game.gameseason,
+            pick_game_id=game.id,
+            pick=game.awayTeamSlug,
+        )
+        GamePicks.objects.create(
+            id=f"{jones_pool.id}-{self.jones_player.id}-{game.id}",
+            pool=jones_pool,
+            userEmail=self.jones_player.email,
+            uid=self.jones_player.id,
+            userID=str(self.jones_player.id),
+            slug=game.slug,
+            competition=game.competition,
+            gameWeek=game.gameWeek,
+            gameyear=game.gameyear,
+            gameseason=game.gameseason,
+            pick_game_id=game.id,
+            pick=game.homeTeamSlug,
+        )
+        self.client.force_login(self.member)
+
+        with patch("pickem_homepage.views.timezone.localdate", return_value=date(2025, 9, 4)):
+            response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ATL Home")
+        self.assertContains(response, "Smith-member")
+        self.assertContains(response, "ARI Away")
+        self.assertContains(response, "Smith-player")
+        self.assertNotContains(response, "Jones-player")
+
+    def test_dashboard_snapshot_hides_picks_for_scheduled_games(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        game = self._dashboard_game(
+            game_id=1031,
+            start_date=date(2025, 9, 4),
+            home="atl",
+            away="ari",
+            status="notstarted",
+            title="Scheduled",
+        )
+        GamePicks.objects.create(
+            id=f"{smith_pool.id}-{self.member.id}-{game.id}",
+            pool=smith_pool,
+            userEmail=self.member.email,
+            uid=self.member.id,
+            userID=str(self.member.id),
+            slug=game.slug,
+            competition=game.competition,
+            gameWeek=game.gameWeek,
+            gameyear=game.gameyear,
+            gameseason=game.gameseason,
+            pick_game_id=game.id,
+            pick=game.homeTeamSlug,
+        )
+        self.client.force_login(self.member)
+
+        with patch("pickem_homepage.views.timezone.localdate", return_value=date(2025, 9, 4)):
+            response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Scheduled")
+        self.assertContains(response, "ATL Home")
+        self.assertNotContains(response, "Pool picks")
+
+    def test_dashboard_snapshot_cards_show_team_logos(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        Teams.objects.create(
+            id=9101,
+            gameseason=2526,
+            teamNameSlug="ari",
+            teamNameName="ARI Away",
+            teamLogo="https://example.test/ari.png",
+            color="333333",
+            alternateColor="666666",
+        )
+        Teams.objects.create(
+            id=9102,
+            gameseason=2526,
+            teamNameSlug="atl",
+            teamNameName="ATL Home",
+            teamLogo="https://example.test/atl.png",
+            color="333333",
+            alternateColor="666666",
+        )
+        self._dashboard_game(
+            game_id=1032,
+            start_date=date(2025, 9, 4),
+            home="atl",
+            away="ari",
+            status="finished",
+            title="Final",
+        )
+        self.client.force_login(self.member)
+
+        with patch("pickem_homepage.views.timezone.localdate", return_value=date(2025, 9, 4)):
+            response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'src="https://example.test/ari.png"')
+        self.assertContains(response, 'alt="ARI Away logo"')
+        self.assertContains(response, 'src="https://example.test/atl.png"')
+        self.assertContains(response, 'alt="ATL Home logo"')
 
     def test_dashboard_empty_states_do_not_link_to_global_gameplay_pages(self):
         family, pool = self._family_with_pool("Smith Family", "smith-family")
@@ -977,6 +1266,33 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertEqual(response.context["picks"].count(), 1)
         self.assertEqual(response.context["picks"].first().pool, self.smith_pool)
         self.assertEqual(list(response.context["week_winner"]), list(userSeasonPoints.objects.filter(pool=self.smith_pool)))
+
+    def test_tenant_scores_current_user_stats_use_stable_user_identity(self):
+        self.week_one_game.statusType = "finished"
+        self.week_one_game.statusTitle = "Final"
+        self.week_one_game.save(update_fields=["statusType", "statusTitle"])
+        GamePicks.objects.create(
+            id=f"{self.smith_pool.id}-{self.smith_member.id}-{self.week_one_game.id}",
+            pool=self.smith_pool,
+            userEmail="old-email@example.com",
+            uid=self.smith_member.id,
+            userID=str(self.smith_member.id),
+            slug=self.week_one_game.slug,
+            competition=self.week_one_game.competition,
+            gameWeek=self.week_one_game.gameWeek,
+            gameyear=self.week_one_game.gameyear,
+            gameseason=self.week_one_game.gameseason,
+            pick_game_id=self.week_one_game.id,
+            pick=self.week_one_game.homeTeamSlug,
+            pick_correct=True,
+        )
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["user_weekly_stats"]["total_graded_picks"], 1)
+        self.assertEqual(response.context["user_weekly_stats"]["correct_picks"], 1)
 
     def test_tenant_scores_selected_week_uses_global_week_facts_with_pool_only_overlays(self):
         self._seed_private_pool_data()

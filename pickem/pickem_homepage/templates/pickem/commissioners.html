@@ -11,43 +11,24 @@
 {% endblock %}
 
 {% block content %}
-    <!-- Hero Section -->
-    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-2 border-yellow-500 dark:border-yellow-600 shadow-xl rounded-2xl">
-        <!-- Subtle background pattern -->
-        <div class="absolute inset-0 opacity-20 dark:opacity-5 pointer-events-none"></div>
-
-        <!-- Content -->
-        <div class="relative z-10">
-            <!-- Commissioner Badge -->
-            <img src="{% static 'images/comish.png' %}" alt="Commissioner's Badge" class="w-48 h-48 lg:w-64 lg:h-64 mx-auto mb-4 drop-shadow-lg opacity-95">
-
-            <!-- Title -->
-            <h1 class="text-3xl lg:text-5xl font-black tracking-tight mb-2"
-                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
-                Commissioners Dashboard
-            </h1>
-
-            <!-- Subtitle -->
-            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium mb-4">
-                Classified operations center - authorized personnel only
-            </p>
-
-            <!-- Welcome Message -->
-            {% if user.is_authenticated %}
-            <div class="mt-6">
-                <h2 class="text-2xl lg:text-3xl font-bold text-primary dark:text-blue-400 mb-2">
-                    Welcome, Agent {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
-                </h2>
-                <p class="text-sm lg:text-base text-white/90 dark:text-text-secondary italic">
-                    Your mission: Command the league with precision and authority.
-                    The fate of weekly standings rests in your capable hands.
-                </p>
+<div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- Compact Page Header -->
+    <div class="page-header-clean">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex items-center gap-3">
+                <img src="{% static 'images/comish.png' %}" alt="Commissioner's Badge" class="w-10 h-10 object-contain">
+                <div>
+                    <h1 class="text-xl font-bold text-text-dark dark:text-white">Commissioners Dashboard</h1>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary">Authorized personnel only</p>
+                </div>
             </div>
+            {% if user.is_authenticated %}
+            <p class="text-sm font-semibold text-text-dark dark:text-white">
+                Agent {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
+            </p>
             {% endif %}
         </div>
     </div>
-
-<div class="max-w-7xl mx-auto px-6 py-6">
     <!-- Alert Messages -->
     {% if messages %}
         <div class="mb-6 space-y-3">
@@ -69,7 +50,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         <!-- Week Winner Selection -->
-        <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden hover:shadow-lg transition-all">
+        <div class="bg-surface-light dark:bg-surface rounded-xl shadow-sm border border-border-light dark:border-border-subtle overflow-hidden hover:shadow-md transition-all">
             <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800 border-b border-border-light dark:border-border-subtle">
                 <h3 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
                     <i class="fas fa-trophy text-primary"></i>
@@ -151,7 +132,7 @@
         </div>
 
         <!-- Banner Management -->
-        <div class="bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden hover:shadow-lg transition-all">
+        <div class="bg-surface-light dark:bg-surface rounded-xl shadow-sm border border-border-light dark:border-border-subtle overflow-hidden hover:shadow-md transition-all">
             <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800 border-b border-border-light dark:border-border-subtle">
                 <h3 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
                     <i class="fas fa-bullhorn text-primary"></i>
@@ -306,7 +287,7 @@
         </div>
 
         <!-- Manual Pick Submission -->
-        <div class="lg:col-span-2 bg-surface-light dark:bg-surface rounded-2xl shadow-card border border-border-light dark:border-border-subtle overflow-hidden">
+        <div class="lg:col-span-2 bg-surface-light dark:bg-surface rounded-xl shadow-sm border border-border-light dark:border-border-subtle overflow-hidden">
             <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800 border-b border-border-light dark:border-border-subtle">
                 <h3 class="text-lg font-bold text-text-dark dark:text-white flex items-center gap-2">
                     <i class="fas fa-user-edit text-primary"></i>
@@ -430,7 +411,7 @@
                                 <!-- Tiebreaker Section -->
                                 {% if game.tieBreakerGame %}
                                 <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 mb-3">
-                                    <div class="text-sm font-semibold text-primary mb-2 flex items-center gap-1">
+                                    <div class="text-sm font-semibold text-text-dark dark:text-white mb-2 flex items-center gap-1">
                                         <i class="fas fa-balance-scale"></i>
                                         Tiebreakers Required
                                     </div>
@@ -486,7 +467,7 @@
                                 Clear All
                             </button>
                             <div class="submission-status hidden ml-3">
-                                <span class="submitting-indicator text-primary hidden">
+                                <span class="submitting-indicator text-text-secondary-light dark:text-text-secondary hidden">
                                     <i class="fas fa-spinner fa-spin mr-1"></i>
                                     Submitting picks...
                                 </span>
