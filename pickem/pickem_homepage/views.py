@@ -663,27 +663,29 @@ def family_pool_home(request, family_slug, pool_slug):
         for rank, points in enumerate(top_standings, 1)
     ]
 
-    week_points_field = f"week_{current_week}_points"
-    week_points_rows = list(
-        userSeasonPoints.objects.filter(pool=pool, gameseason=gameseason)
-        .exclude(**{week_points_field: None})
-        .order_by(f"-{week_points_field}", "userID")[:3]
-    )
-    week_points_user_ids = [
-        int(points.userID)
-        for points in week_points_rows
-        if str(points.userID).isdigit()
-    ]
-    week_points_users = User.objects.in_bulk(week_points_user_ids)
-    week_points_summary = [
-        {
-            'rank': rank,
-            'points': points,
-            'week_points': getattr(points, week_points_field) or 0,
-            'user': week_points_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
-        }
-        for rank, points in enumerate(week_points_rows, 1)
-    ]
+    week_points_summary = []
+    if str(current_week).isdigit() and 1 <= int(current_week) <= 18:
+        week_points_field = f"week_{current_week}_points"
+        week_points_rows = list(
+            userSeasonPoints.objects.filter(pool=pool, gameseason=gameseason)
+            .exclude(**{week_points_field: None})
+            .order_by(f"-{week_points_field}", "userID")[:3]
+        )
+        week_points_user_ids = [
+            int(points.userID)
+            for points in week_points_rows
+            if str(points.userID).isdigit()
+        ]
+        week_points_users = User.objects.in_bulk(week_points_user_ids)
+        week_points_summary = [
+            {
+                'rank': rank,
+                'points': points,
+                'week_points': getattr(points, week_points_field) or 0,
+                'user': week_points_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
+            }
+            for rank, points in enumerate(week_points_rows, 1)
+        ]
 
     recent_winners = []
     for week_num in range(1, 19):
@@ -896,10 +898,13 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
             )
 
     elif action == 'deactivate_banner':
-        banner = SiteBanner.objects.filter(
-            id=request.POST.get('banner_id'),
-            family=family,
-        ).first()
+        banner_id = request.POST.get('banner_id')
+        banner = None
+        if banner_id and str(banner_id).isdigit():
+            banner = SiteBanner.objects.filter(
+                id=banner_id,
+                family=family,
+            ).first()
         if banner:
             banner.is_active = False
             banner.save(update_fields=['is_active', 'updated_at'])

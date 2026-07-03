@@ -27,7 +27,7 @@ def display_name(user):
     if not name:
         name = getattr(user, "first_name", "") or getattr(user, "username", "") or ""
 
-    return str(name).strip().capitalize()
+    return str(name).strip()
 
 @register.filter
 def addstr(arg1, arg2):
