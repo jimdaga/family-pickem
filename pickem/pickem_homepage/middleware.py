@@ -33,6 +33,11 @@ class RequireLoginForInternalPagesMiddleware:
         if request.user.is_authenticated:
             return False
 
+        # Let API/AJAX (JSON) requests fall through to the view so it can return a
+        # proper 401 JSON response instead of a 302 redirect to an HTML login page.
+        if self._expects_json(request):
+            return False
+
         path = request.path_info or "/"
         public_exact_paths = getattr(
             settings,
@@ -48,3 +53,10 @@ class RequireLoginForInternalPagesMiddleware:
         if path in public_exact_paths:
             return False
         return not path.startswith(tuple(public_prefixes))
+
+    @staticmethod
+    def _expects_json(request):
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return True
+        accept = request.headers.get("Accept", "")
+        return "application/json" in accept and "text/html" not in accept

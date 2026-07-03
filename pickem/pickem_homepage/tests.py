@@ -729,8 +729,11 @@ class TenantDashboardIsolationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         dashboard_markup = response.content.decode().split("<main", 1)[1].split("</main>", 1)[0]
-        self.assertIn(f'href="{self._tenant_url(family, pool)}"', dashboard_markup)
-        self.assertEqual(dashboard_markup.count('aria-disabled="true"'), 3)
+        # Quick actions link to the tenant-scoped gameplay pages...
+        base = self._tenant_url(family, pool)
+        for suffix in ("picks/", "scores/", "standings/", "rules/"):
+            self.assertIn(f'href="{base}{suffix}"', dashboard_markup)
+        # ...and never to the global, non-tenant gameplay pages.
         self.assertNotIn('href="/picks/"', dashboard_markup)
         self.assertNotIn('href="/scores/"', dashboard_markup)
         self.assertNotIn('href="/standings/"', dashboard_markup)
@@ -1368,7 +1371,7 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertTemplateUsed(response, "pickem/rules.html")
         self.assertContains(response, "Smith Family")
         self.assertContains(response, "Main Pickem")
-        self.assertContains(response, "Game locking: Off")
+        self.assertContains(response, "Locking: Off")
         self.assertContains(response, "Tiebreakers: On")
         self.assertNotContains(response, "<form")
         self.assertNotContains(response, "Save settings")
@@ -1425,9 +1428,9 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
 
         self.assertContains(standings_response, "smith-score-player")
         self.assertNotContains(standings_response, "jones-score-player")
-        self.assertContains(rules_response, "Game locking: Off")
+        self.assertContains(rules_response, "Locking: Off")
         self.assertContains(rules_response, "Tiebreakers: On")
-        self.assertNotContains(rules_response, "Game locking: On")
+        self.assertNotContains(rules_response, "Locking: On")
         self.assertNotContains(rules_response, "Tiebreakers: Off")
 
     def test_final_slug_query_and_overlay_tampering_do_not_cross_family_scores_standings_or_rules(self):
@@ -1460,9 +1463,9 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
             self.assertContains(response, "smith-score-player")
             self.assertNotContains(response, "jones-score-player")
         self.assertContains(rules_response, "Smith Family")
-        self.assertContains(rules_response, "Game locking: Off")
+        self.assertContains(rules_response, "Locking: Off")
         self.assertNotContains(rules_response, "Jones Family")
-        self.assertNotContains(rules_response, "Game locking: On")
+        self.assertNotContains(rules_response, "Locking: On")
 
 
 class Phase4SharedContextScopeTests(TestCase):

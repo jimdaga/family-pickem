@@ -1,5 +1,6 @@
 from django import template
 from django.contrib.auth.models import User
+from django.utils.text import capfirst
 from pickem_api.models import Teams, GamePicks, userSeasonPoints, userStats, UserProfile, GamesAndScores
 from django.shortcuts import render
 from allauth.socialaccount.models import SocialAccount
@@ -27,7 +28,9 @@ def display_name(user):
     if not name:
         name = getattr(user, "first_name", "") or getattr(user, "username", "") or ""
 
-    return str(name).strip()
+    # capfirst uppercases only the first character, leaving the rest intact so
+    # names like "McCoy" are not mangled while "smith-player" reads as "Smith-player".
+    return capfirst(str(name).strip())
 
 @register.filter
 def addstr(arg1, arg2):
