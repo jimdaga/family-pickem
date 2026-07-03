@@ -3,56 +3,49 @@
 {% load pickem_homepage_extras %}
 
 {% block content %}
-    <div class="max-w-7xl mx-auto px-6 py-6">
+    <div data-picks-page class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
         <!-- Combined header + pick progress summary -->
-        <div class="section-container mb-6">
+        <div class="picks-scoreboard-header rounded-2xl border border-border-light/80 dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 px-4 py-4 shadow-sm backdrop-blur sm:px-5 mb-5">
             <!-- Header -->
-            <div class="flex items-center gap-3 mb-6 pb-6 border-b border-border-light dark:border-border-subtle">
-                <i class="fas fa-football-ball text-2xl text-primary"></i>
-                <div>
-                    <h2 class="text-xl font-bold text-text-dark dark:text-white">Submit Your Picks</h2>
-                    <p class="text-sm text-text-secondary-light dark:text-text-secondary">
-                        {% if competition == 'nfl-preseason' %}Preseason — Week {{ week }}{% else %}Regular Season — Week {{ week }}{% endif %}
-                    </p>
-                </div>
-            </div>
-            {% with game_list|length as total_games %}
-            {% with pick_slugs|length as submitted_picks %}
-            <div class="space-y-4">
-                <!-- Stats Display -->
-                <div class="flex items-center justify-center gap-2 text-center">
-                    <div class="flex-1">
-                        <div class="text-4xl font-bold text-text-dark dark:text-white">{{ submitted_picks }}</div>
-                        <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Picks Submitted</div>
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/20">
+                        <i class="fas fa-football-ball text-xl"></i>
                     </div>
-                    <div class="text-3xl text-text-secondary-light dark:text-text-secondary font-light">/</div>
-                    <div class="flex-1">
-                        <div class="text-4xl font-bold text-text-dark dark:text-white">{{ total_games }}</div>
-                        <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Total Games</div>
+                    <div>
+                        <h2 class="text-2xl font-black tracking-tight text-text-dark dark:text-white">Submit Your Picks</h2>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                            {% if competition == 'nfl-preseason' %}Preseason &bull; Week {{ week }}{% else %}Regular Season &bull; Week {{ week }}{% endif %}
+                        </p>
                     </div>
                 </div>
 
-                <!-- Progress Bar -->
-                <div class="space-y-2">
-                    <div class="w-full bg-surface-light dark:bg-surface-hover rounded-full h-4 overflow-hidden border border-border-light dark:border-border-subtle">
-                        <div class="h-full bg-primary rounded-full transition-all duration-500 flex items-center justify-end pr-2"
-                             style="width: {% widthratio submitted_picks total_games 100 %}%">
-                            {% if submitted_picks > 0 %}
-                            <span class="text-xs font-semibold text-white">{% widthratio submitted_picks total_games 100 %}%</span>
-                            {% endif %}
+                {% with game_list|length as total_games %}
+                {% with pick_slugs|length as submitted_picks %}
+                <div class="picks-progress-strip rounded-xl border border-border-light/80 dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 p-3 sm:min-w-[380px]">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <div class="text-[10px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Submitted</div>
+                            <div class="text-2xl font-black text-text-dark dark:text-white">{{ submitted_picks }}<span class="text-sm text-text-secondary-light dark:text-text-secondary">/{{ total_games }}</span></div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="w-full bg-surface-light dark:bg-surface-hover rounded-full h-3 overflow-hidden border border-border-light dark:border-border-subtle">
+                                <div class="h-full bg-primary rounded-full transition-all duration-500"
+                                     style="width: {% widthratio submitted_picks total_games 100 %}%"></div>
+                            </div>
+                            <div class="mt-1 text-right text-xs font-semibold {% if submitted_picks == total_games and total_games > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">
+                                {% if submitted_picks == total_games and total_games > 0 %}
+                                    <i class="fas fa-check-circle mr-1"></i>Complete
+                                {% else %}
+                                    {{ total_games|sub:submitted_picks }} remaining
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                    <div class="text-center text-sm font-semibold {% if submitted_picks == total_games and total_games > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">
-                        {% if submitted_picks == total_games and total_games > 0 %}
-                            <i class="fas fa-check-circle mr-1"></i>All picks complete!
-                        {% else %}
-                            {% widthratio submitted_picks total_games 100 %}% Complete - {{ total_games|sub:submitted_picks }} remaining
-                        {% endif %}
-                    </div>
                 </div>
+                {% endwith %}
+                {% endwith %}
             </div>
-            {% endwith %}
-            {% endwith %}
         </div>
 
         <!-- Available Games Section -->
@@ -61,13 +54,13 @@
             <i class="fas fa-lock text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
             <h4 class="text-xl font-semibold text-text-dark dark:text-white mb-2">Sign in to submit your picks</h4>
             <p class="text-text-secondary-light dark:text-text-secondary mb-6">You need to be logged in to make or edit picks. Please sign in and try again.</p>
-            <a href="/accounts/google/login/" class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/80 text-white rounded-xl font-semibold transition-all">
-                <i class="fab fa-google"></i>
-                <span>Sign in with Google</span>
+            <a href="{% url 'account_login' %}" class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/80 text-white rounded-xl font-semibold transition-all">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Sign in</span>
             </a>
         </div>
         {% elif game_list %}
-        <div class="section-container mb-6">
+        <div class="picks-games-section rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 p-4 mb-5">
             {% with game_list|length as total_games %}
             {% with pick_slugs|length as submitted_picks %}
             <h3 class="section-title">
@@ -90,7 +83,7 @@
                      {% if game.slug not in pick_slugs %}
                         {% with user.id|addstr:"-"|addstr:game.id as template %}
                             {% if template not in pick_ids %}
-                                <div class="game-card flex flex-col bg-surface-light dark:bg-slate-700 rounded-xl overflow-hidden border border-border-light dark:border-slate-600 hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 {% if auth_required %}opacity-50 pointer-events-none{% endif %}" data-game-id="{{ game.id }}">
+                                <div class="picks-game-card game-card flex flex-col bg-surface-light dark:bg-slate-700 rounded-xl overflow-hidden border border-border-light dark:border-slate-600 hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 {% if auth_required %}opacity-50 pointer-events-none{% endif %}" data-game-id="{{ game.id }}">
 
                                     <!-- Status Bar -->
                                     <div class="flex items-center justify-between px-3 py-1.5 text-sm font-semibold text-white
@@ -728,6 +721,39 @@
     </div>
 
     <!-- Auto-save JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!window.gsap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+
+        var gsap = window.gsap;
+        gsap.set(['.picks-scoreboard-header', '.picks-games-section', '.picks-game-card'], {
+            autoAlpha: 0,
+            y: 18
+        });
+
+        gsap.timeline({ defaults: { ease: 'power3.out' } })
+            .to('.picks-scoreboard-header', { autoAlpha: 1, y: 0, duration: 0.42 })
+            .to('.picks-games-section', { autoAlpha: 1, y: 0, duration: 0.32 }, '-=0.16')
+            .to('.picks-game-card', { autoAlpha: 1, y: 0, duration: 0.28, stagger: 0.035 }, '-=0.12');
+
+        window.picksCardMotion = function () {
+            document.querySelectorAll('.picks-game-card').forEach(function (card) {
+                card.addEventListener('mouseenter', function () {
+                    gsap.to(card, { y: -3, scale: 1.006, duration: 0.18, ease: 'power2.out' });
+                });
+                card.addEventListener('mouseleave', function () {
+                    gsap.to(card, { y: 0, scale: 1, duration: 0.2, ease: 'power2.out' });
+                });
+            });
+        };
+
+        window.picksCardMotion();
+    });
+    </script>
+
     <script>
     const pickSubmitUrl = "{% if is_tenant_pick_page %}{% url 'family_pool_game_picks' family_slug=family.slug pool_slug=pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}";
     const pickEditUrl = "{% if is_tenant_pick_page %}{% url 'family_pool_edit_game_pick' family_slug=family.slug pool_slug=pool.slug %}{% else %}{% url 'edit_game_pick' %}{% endif %}";

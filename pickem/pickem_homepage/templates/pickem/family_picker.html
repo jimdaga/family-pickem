@@ -4,14 +4,20 @@
 
 {% block content %}
 <main class="max-w-5xl mx-auto px-6 py-10">
-    <section class="mb-8">
-        <p class="text-sm font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-3">Choose family</p>
-        <h1 class="text-3xl lg:text-4xl font-black text-text-dark dark:text-white mb-4">
-            Pick where you want to play
-        </h1>
-        <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
-            These are the active families linked to your account.
-        </p>
+    <section class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <p class="text-sm font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-3">Choose family</p>
+            <h1 class="text-3xl lg:text-4xl font-black text-text-dark dark:text-white mb-4">
+                Pick where you want to play
+            </h1>
+            <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
+                These are the active families linked to your account.
+            </p>
+        </div>
+        <a href="{% url 'create_family' %}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus"></i>
+            <span>Add a family</span>
+        </a>
     </section>
 
     {% if family_choices %}

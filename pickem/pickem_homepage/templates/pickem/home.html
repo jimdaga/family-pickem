@@ -1,410 +1,246 @@
 {% extends 'pickem/base.html' %}
 {% load static %}
-{% load socialaccount %}
-{% load pickem_homepage_extras %}
+
+{% block title %}Family Pick'em - Make every game matter{% endblock %}
+{% block main_navigation %}{% endblock %}
+{% block main_class %}min-h-screen bg-slate-950 text-white overflow-hidden{% endblock %}
+{% block banner %}{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6">
+<div data-landing-page="public" class="relative isolate bg-slate-950 text-white">
+    <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_70%_18%,rgba(14,165,233,0.22),transparent_32%),linear-gradient(135deg,#020617_0%,#07111f_44%,#0f172a_100%)]"></div>
+        <div class="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-sky-400/10 to-transparent"></div>
+        <div class="absolute left-1/2 top-0 h-[720px] w-px bg-white/10"></div>
+        <div class="absolute left-1/4 top-0 h-[720px] w-px bg-white/5"></div>
+        <div class="absolute right-1/4 top-0 h-[720px] w-px bg-white/5"></div>
+        <div class="absolute -top-24 left-8 h-[560px] w-28 -rotate-12 bg-gradient-to-b from-sky-300/20 to-transparent blur-xl"></div>
+        <div class="absolute -top-24 right-10 h-[560px] w-28 rotate-12 bg-gradient-to-b from-emerald-300/20 to-transparent blur-xl"></div>
+    </div>
 
-    <!-- ═══════════════════════════════════════ HERO ═══════════════════════════════════════ -->
-    <div class="relative overflow-hidden rounded-2xl mb-8 mt-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border border-slate-700 dark:border-slate-800">
-        <!-- subtle vertical field lines -->
-        <div class="absolute inset-0 opacity-5 pointer-events-none select-none" aria-hidden="true">
-            <div class="absolute left-1/4 top-0 bottom-0 border-l border-white"></div>
-            <div class="absolute left-1/2 top-0 bottom-0 border-l border-white"></div>
-            <div class="absolute left-3/4 top-0 bottom-0 border-l border-white"></div>
-        </div>
+    <header class="relative z-20 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
+        <a href="{% url 'public_home' %}" class="landing-brand inline-flex items-center gap-3" aria-label="Family Pick'em public home">
+            <img src="{% static 'images/logo.png' %}" alt="Family Pick'em" class="h-10 w-10 rounded-xl object-contain shadow-lg shadow-sky-950/40">
+            <span class="hidden text-sm font-black uppercase tracking-[0.28em] text-slate-200 sm:inline">Family Pick'em</span>
+        </a>
+        <a href="{% url 'account_login' %}" class="landing-sign-in inline-flex items-center gap-2 rounded-full border border-white/15 bg-white px-4 py-2 text-sm font-bold text-slate-950 shadow-xl shadow-sky-950/30 transition hover:-translate-y-0.5 hover:bg-slate-100">
+            <i class="fas fa-sign-in-alt text-sm" aria-hidden="true"></i>
+            <span>Sign in</span>
+        </a>
+    </header>
 
-        <div class="relative z-10 px-6 py-12 sm:py-16 text-center">
-            <!-- Logo -->
-            <div class="flex justify-center mb-5">
-                <img src="{% static 'images/logo.png' %}" alt="Family Pick'em" class="w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-lg">
-            </div>
-
-            <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight mb-3 leading-none">
+    <section class="relative z-10 mx-auto grid min-h-[500px] w-full max-w-7xl grid-cols-1 items-center gap-8 px-5 pb-8 pt-6 sm:px-8 lg:min-h-[460px] lg:grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] lg:px-10 lg:pb-6">
+        <div class="landing-copy max-w-3xl">
+            <h1 class="landing-title text-5xl font-black leading-[0.94] tracking-normal text-white sm:text-7xl lg:text-7xl">
                 Family Pick'em
             </h1>
-            <p class="text-base sm:text-xl font-semibold text-slate-300 mb-2 tracking-wide uppercase">
-                Predict &bull; Compete &bull; Win
+            <p class="landing-headline mt-5 max-w-2xl text-4xl font-black leading-none text-sky-100 sm:text-4xl">
+                Make every game matter.
             </p>
-            <p class="text-sm sm:text-base text-slate-400 max-w-md mx-auto mb-8">
-                Pick NFL game winners each week and battle your family for season bragging rights.
+            <p class="landing-subtitle mt-6 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl">
+                Pick winners, track live swings, and settle family bragging rights all season.
             </p>
-
-            <!-- CTAs -->
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <a href="{% provider_login_url 'google' %}"
-                   class="inline-flex items-center gap-3 px-6 py-3 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl text-base transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0">
-                    <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Sign in with Google
-                </a>
-                <a href="{% url 'scores' %}"
-                   class="inline-flex items-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl text-base transition-all border border-white/20 hover:border-white/40">
-                    <i class="fas fa-chart-line text-sm"></i>
-                    Live Scores
-                </a>
-            </div>
-
-            <!-- Inline stat teasers -->
-            <div class="flex items-center justify-center gap-6 mt-8 text-sm text-slate-400 flex-wrap">
-                <span><span class="font-bold text-white">{{ total_players }}</span> players</span>
-                <span class="text-slate-600">&bull;</span>
-                <span><span class="font-bold text-white">{{ total_picks|default:0 }}</span> picks made</span>
-                <span class="text-slate-600">&bull;</span>
-                <span><span class="font-bold text-white">{{ league_accuracy }}%</span> avg accuracy</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══════════════════════════════════ TODAY'S GAMES ══════════════════════════════════ -->
-    {% if today_games %}
-    <div class="section-container mb-6">
-        <div class="flex items-center gap-3 mb-4">
-            <i class="fas fa-calendar-day text-xl text-primary"></i>
-            <div>
-                <h2 class="text-lg font-bold text-text-dark dark:text-white leading-tight">Today's Games</h2>
-                <p class="text-xs text-text-secondary-light dark:text-text-secondary">Live scores &amp; upcoming kickoffs</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {% for game in today_games %}
-            <div class="bg-surface-light dark:bg-slate-700 rounded-xl border border-border-light dark:border-slate-600 overflow-hidden hover:shadow-card-hover transition-all duration-200">
-                <!-- Status bar -->
-                <div class="px-4 py-2 {% if game.statusType == 'inprogress' %}bg-green-500/15{% elif game.statusType == 'finished' %}bg-slate-500/10{% else %}bg-blue-500/10{% endif %} border-b border-border-light dark:border-slate-600">
-                    <div class="flex items-center justify-between text-sm font-semibold">
-                        {% if game.statusType == 'inprogress' %}
-                            <span class="flex items-center gap-1.5 text-green-600 dark:text-green-400">
-                                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>LIVE
-                            </span>
-                        {% elif game.statusType == 'finished' %}
-                            <span class="text-text-secondary-light dark:text-slate-400"><i class="fas fa-check-circle mr-1"></i>FINAL</span>
-                        {% else %}
-                            <span class="text-blue-600 dark:text-blue-400"><i class="fas fa-clock mr-1"></i>{{ game.statusTitle }}</span>
-                        {% endif %}
-                        <span class="text-text-secondary-light dark:text-text-secondary text-xs font-normal">{{ game|game_start_label }}</span>
-                    </div>
+            <div class="broadcast-mobile-preview mt-7 rounded-3xl border border-white/15 bg-slate-950/80 p-4 shadow-2xl shadow-black/30 md:hidden">
+                <div class="mb-4 flex items-center justify-between">
+                    <span class="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Sunday board</span>
+                    <span class="flex items-center gap-2 text-xs font-bold text-emerald-300"><span class="h-2 w-2 rounded-full bg-emerald-300"></span>Live</span>
                 </div>
-
-                <!-- Teams -->
-                <div class="p-4">
-                    <!-- Away -->
-                    <div class="flex items-center justify-between mb-3 pb-3 border-b border-border-light dark:border-slate-600">
-                        <div class="flex items-center gap-3 flex-1 min-w-0">
-                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }}" class="w-9 h-9 object-contain flex-shrink-0">
-                            {% endwith %}
-                            <div class="flex-1 min-w-0">
-                                <div class="font-bold text-text-dark dark:text-white truncate text-sm {% if game.statusType == 'finished' and game.gameWinner != game.awayTeamSlug %}opacity-50{% endif %}">{{ game.awayTeamName }}</div>
-                                <div class="text-xs text-text-secondary-light dark:text-text-secondary">
-                                    {% for team in wins_losses %}{% if team.teamNameSlug == game.awayTeamSlug %}{{ team.teamWins }}-{{ team.teamLosses }}{% if team.teamTies > 0 %}-{{ team.teamTies }}{% endif %}{% endif %}{% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                        {% if game.statusType != 'notstarted' %}<div class="text-xl font-black text-text-dark dark:text-white ml-2">{{ game.awayTeamScore|default:"0" }}</div>{% endif %}
-                    </div>
-                    <!-- Home -->
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3 flex-1 min-w-0">
-                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }}" class="w-9 h-9 object-contain flex-shrink-0">
-                            {% endwith %}
-                            <div class="flex-1 min-w-0">
-                                <div class="font-bold text-text-dark dark:text-white truncate text-sm {% if game.statusType == 'finished' and game.gameWinner != game.homeTeamSlug %}opacity-50{% endif %}">{{ game.homeTeamName }}</div>
-                                <div class="text-xs text-text-secondary-light dark:text-text-secondary">
-                                    {% for team in wins_losses %}{% if team.teamNameSlug == game.homeTeamSlug %}{{ team.teamWins }}-{{ team.teamLosses }}{% if team.teamTies > 0 %}-{{ team.teamTies }}{% endif %}{% endif %}{% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                        {% if game.statusType != 'notstarted' %}<div class="text-xl font-black text-text-dark dark:text-white ml-2">{{ game.homeTeamScore|default:"0" }}</div>{% endif %}
-                    </div>
-
-                    {% if game.spread or game.overUnder %}
-                    <div class="mt-3 pt-3 border-t border-border-light dark:border-slate-600 flex flex-wrap gap-2 text-xs">
-                        {% if game.spread %}
-                        <span class="px-2 py-1 bg-surface-light dark:bg-slate-800 rounded-lg text-text-dark dark:text-white font-semibold">
-                            <i class="fas fa-chart-line text-text-secondary-light dark:text-text-secondary mr-1"></i>
-                            {% if game.spread > 0 %}{{ game.homeTeamName|truncatewords:1 }} -{{ game.spread|floatformat:1 }}{% else %}{{ game.awayTeamName|truncatewords:1 }} -{{ game.spread|floatformat:1|cut:"-" }}{% endif %}
-                        </span>
-                        {% endif %}
-                        {% if game.overUnder %}
-                        <span class="px-2 py-1 bg-surface-light dark:bg-slate-800 rounded-lg text-text-dark dark:text-white font-semibold">
-                            <i class="fas fa-calculator text-text-secondary-light dark:text-text-secondary mr-1"></i>O/U {{ game.overUnder|floatformat:1 }}
-                        </span>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+                <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                    <span class="text-3xl font-black text-white">BUF</span>
+                    <span class="rounded-xl bg-white/10 px-3 py-2 text-lg font-black text-emerald-200">24-20</span>
+                    <span class="text-right text-3xl font-black text-slate-400">MIA</span>
                 </div>
             </div>
-            {% endfor %}
+            <div class="landing-actions mt-9 flex flex-col gap-3 sm:flex-row">
+                <a href="{% url 'account_login' %}" class="inline-flex items-center justify-center gap-3 rounded-full bg-white px-7 py-4 text-base font-black text-slate-950 shadow-2xl shadow-sky-950/40 transition hover:-translate-y-0.5 hover:bg-slate-100">
+                    <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                    Sign in to play
+                </a>
+                <a href="#how-it-works" class="inline-flex items-center justify-center gap-3 rounded-full border border-white/15 bg-white/10 px-7 py-4 text-base font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/15">
+                    <i class="fas fa-arrow-down text-sm" aria-hidden="true"></i>
+                    How it works
+                </a>
+            </div>
         </div>
-    </div>
-    {% endif %}
 
-    <!-- ════════════════════════════════ LEADERBOARD + NEWS ════════════════════════════════ -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="landing-visual relative hidden min-h-[500px] md:block lg:min-h-[460px]" aria-hidden="true">
+            <div class="absolute inset-x-0 top-6 mx-auto h-[440px] max-w-[520px] rounded-[2rem] border border-white/10 bg-slate-900/45 shadow-2xl shadow-black/40 backdrop-blur-md"></div>
+            <div class="absolute left-1/2 top-0 h-[480px] w-[320px] -translate-x-1/2 rounded-full border border-white/10 opacity-40"></div>
+            <div class="absolute left-1/2 top-12 h-[390px] w-[260px] -translate-x-1/2 rounded-full border border-emerald-300/20 opacity-60"></div>
 
-        <!-- Leaderboard -->
-        <div class="section-container mb-0">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-trophy text-xl text-yellow-500"></i>
+            <div class="broadcast-scoreboard absolute left-1/2 top-12 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
+                <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                    <div class="text-xs font-black uppercase tracking-[0.28em] text-slate-400">Sunday board</div>
+                    <div class="flex items-center gap-2 text-xs font-bold text-emerald-300">
+                        <span class="h-2 w-2 rounded-full bg-emerald-300"></span>
+                        Live
+                    </div>
+                </div>
+                <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-8">
+                    <div class="text-left">
+                        <div class="text-5xl font-black text-white">BUF</div>
+                        <div class="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Picked by 7</div>
+                    </div>
+                    <div class="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center">
+                        <div class="text-xs font-black uppercase tracking-widest text-slate-400">Q4</div>
+                        <div class="mt-1 text-2xl font-black text-emerald-200">24-20</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-5xl font-black text-slate-400">MIA</div>
+                        <div class="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Picked by 3</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="broadcast-pick-slip absolute bottom-4 left-0 w-[260px] rounded-3xl border border-white/15 bg-white p-5 text-slate-950 shadow-2xl shadow-black/40">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-black uppercase tracking-[0.22em] text-slate-500">Pick slip</span>
+                    <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-black text-emerald-700">Locked</span>
+                </div>
+                <div class="mt-5 space-y-3">
+                    <div class="flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-3 text-white">
+                        <span class="font-black">BUF</span>
+                        <span class="text-sm font-bold text-emerald-300">+1</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3 text-slate-500">
+                        <span class="font-black">MIA</span>
+                        <span class="text-sm font-bold">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="broadcast-swing absolute bottom-2 right-0 w-[250px] rounded-3xl border border-sky-300/20 bg-sky-950/80 p-5 shadow-2xl shadow-black/40 backdrop-blur-xl">
+                <div class="text-xs font-black uppercase tracking-[0.22em] text-sky-200/70">Leaderboard swing</div>
+                <div class="mt-4 flex items-end justify-between">
                     <div>
-                        <h2 class="text-lg font-bold text-text-dark dark:text-white leading-tight">Season Leaderboard</h2>
-                        <p class="text-xs text-text-secondary-light dark:text-text-secondary">Current standings</p>
+                        <div class="text-5xl font-black text-white">+7</div>
+                        <div class="mt-1 text-sm font-semibold text-slate-300">possible points</div>
+                    </div>
+                    <div class="flex h-16 items-end gap-1.5">
+                        <span class="block h-6 w-5 rounded bg-sky-400/50"></span>
+                        <span class="block h-10 w-5 rounded bg-sky-300/70"></span>
+                        <span class="block h-16 w-5 rounded bg-emerald-300"></span>
                     </div>
                 </div>
-                <a href="{% url 'standings' %}" class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white transition-colors">
-                    View All <i class="fas fa-arrow-right ml-1 text-[10px]"></i>
-                </a>
-            </div>
-
-            <div class="space-y-2">
-                {% for player in top_players %}
-                <div class="flex items-center gap-3 p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
-                    <div class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full font-bold text-sm
-                        {% if forloop.counter == 1 %}bg-yellow-500 text-white
-                        {% elif forloop.counter == 2 %}bg-slate-400 text-white
-                        {% elif forloop.counter == 3 %}bg-amber-700 text-white
-                        {% else %}bg-surface-light dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary{% endif %}">
-                        {{ forloop.counter }}
-                    </div>
-                    {% with player.userID|lookupavatar as avatar %}
-                    {% with player.userID|safe_username as username %}
-                    <div class="relative w-9 h-9 flex-shrink-0">
-                        <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold select-none">{{ username|slice:":1"|upper }}</div>
-                        <img src="{{ avatar }}" alt="{{ username }}" class="absolute inset-0 w-9 h-9 rounded-full object-cover" onerror="this.remove()">
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-semibold text-text-dark dark:text-white truncate uppercase text-sm">{{ username|default:"Unknown" }}</div>
-                        <div class="text-xs text-text-secondary-light dark:text-text-secondary">{{ player.total_points|default:0 }} pts</div>
-                    </div>
-                    {% endwith %}
-                    {% endwith %}
-                    {% if current_week_winner and current_week_winner.userID == player.userID %}
-                    <span class="text-xs px-2 py-0.5 bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 rounded-full font-semibold flex-shrink-0">
-                        <i class="fas fa-star text-[10px] mr-0.5"></i>Wk {{ current_week }}
-                    </span>
-                    {% endif %}
-                </div>
-                {% empty %}
-                <div class="text-center py-8 text-text-secondary-light dark:text-text-secondary text-sm">
-                    Season hasn't started yet.
-                </div>
-                {% endfor %}
-            </div>
-
-            {% if recent_winners %}
-            <div class="mt-4 pt-4 border-t border-border-light dark:border-border-subtle">
-                <p class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mb-2">Recent Week Winners</p>
-                <div class="flex flex-wrap gap-2">
-                    {% for wd in recent_winners %}
-                    <div class="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-light dark:bg-slate-700 rounded-lg border border-border-light dark:border-slate-600 text-xs">
-                        <span class="font-bold text-text-dark dark:text-white">W{{ wd.week }}</span>
-                        <i class="fas fa-trophy text-yellow-500 text-[10px]"></i>
-                        <span class="text-text-secondary-light dark:text-text-secondary uppercase">
-                            {% with wd.winner.userID|safe_username as wname %}{{ wname|default:"—"|truncatechars:10 }}{% endwith %}
-                        </span>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- NFL News (client-side fetch) -->
-        <div class="section-container mb-0" id="nfl-news-section">
-            <div class="flex items-center gap-3 mb-4">
-                <i class="fas fa-newspaper text-xl text-primary"></i>
-                <div>
-                    <h2 class="text-lg font-bold text-text-dark dark:text-white leading-tight">NFL News</h2>
-                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Latest from around the league</p>
-                </div>
-            </div>
-
-            <!-- Skeleton while loading -->
-            <div id="nfl-news-loading" class="space-y-3">
-                {% for i in "12345" %}
-                <div class="animate-pulse flex gap-3">
-                    <div class="w-16 h-16 rounded-lg bg-surface-light dark:bg-slate-700 flex-shrink-0"></div>
-                    <div class="flex-1 space-y-2 py-1">
-                        <div class="h-3 bg-surface-light dark:bg-slate-700 rounded w-full"></div>
-                        <div class="h-3 bg-surface-light dark:bg-slate-700 rounded w-4/5"></div>
-                        <div class="h-2.5 bg-surface-light dark:bg-slate-700 rounded w-1/3"></div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-
-            <div id="nfl-news-content" class="space-y-1 hidden"></div>
-            <div id="nfl-news-error" class="hidden text-center py-8 text-text-secondary-light dark:text-text-secondary text-sm">
-                <i class="fas fa-wifi-slash text-2xl mb-2 block text-text-secondary-light dark:text-text-secondary"></i>
-                News temporarily unavailable.
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- ════════════════════════════════ BY THE NUMBERS ═══════════════════════════════════ -->
-    <div class="section-container mb-6">
-        <div class="flex items-center gap-3 mb-4">
-            <i class="fas fa-chart-pie text-xl text-primary"></i>
-            <h2 class="text-lg font-bold text-text-dark dark:text-white">By the Numbers</h2>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div class="text-center p-5 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
-                <div class="text-3xl text-primary mb-1"><i class="fas fa-football-ball"></i></div>
-                <div class="text-3xl font-black text-text-dark dark:text-white">{{ current_games }}</div>
-                <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Games This Week</div>
+    <section id="how-it-works" class="landing-section relative z-10 border-y border-white/10 bg-white text-slate-950">
+        <div class="mx-auto grid max-w-7xl grid-cols-1 gap-0 px-5 py-16 sm:px-8 lg:grid-cols-3 lg:px-10">
+            <div class="border-b border-slate-200 py-8 lg:border-b-0 lg:border-r lg:pr-10">
+                <div class="text-sm font-black uppercase tracking-[0.24em] text-sky-600">Pick before kickoff</div>
+                <h2 class="mt-4 text-3xl font-black leading-tight">Make the call before the whistle.</h2>
+                <p class="mt-4 text-base leading-7 text-slate-600">Each family gets a private pool, a weekly board, and clear pick deadlines.</p>
             </div>
-            <div class="text-center p-5 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
-                <div class="text-3xl text-blue-500 mb-1"><i class="fas fa-users"></i></div>
-                <div class="text-3xl font-black text-text-dark dark:text-white">{{ total_players }}</div>
-                <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Active Players</div>
+            <div class="border-b border-slate-200 py-8 lg:border-b-0 lg:border-r lg:px-10">
+                <div class="text-sm font-black uppercase tracking-[0.24em] text-emerald-600">Watch the leaderboard move</div>
+                <h2 class="mt-4 text-3xl font-black leading-tight">Every live result changes the room.</h2>
+                <p class="mt-4 text-base leading-7 text-slate-600">See the games that matter, the picks behind them, and the points still in play.</p>
             </div>
-            <div class="text-center p-5 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
-                <div class="text-3xl text-green-500 mb-1"><i class="fas fa-check-circle"></i></div>
-                <div class="text-3xl font-black text-text-dark dark:text-white">{{ total_correct_picks|default:0 }}</div>
-                <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Correct Picks</div>
-            </div>
-            <div class="text-center p-5 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
-                <div class="text-3xl text-purple-500 mb-1"><i class="fas fa-percentage"></i></div>
-                <div class="text-3xl font-black text-text-dark dark:text-white">{{ league_accuracy }}%</div>
-                <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">League Accuracy</div>
+            <div class="py-8 lg:pl-10">
+                <div class="text-sm font-black uppercase tracking-[0.24em] text-yellow-600">Win the week</div>
+                <h2 class="mt-4 text-3xl font-black leading-tight">Bragging rights reset every Thursday.</h2>
+                <p class="mt-4 text-base leading-7 text-slate-600">Weekly wins, season totals, and family-only standings keep the competition clean.</p>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- ════════════════════════════════ HOW IT WORKS ═════════════════════════════════════ -->
-    <div class="section-container mb-6">
-        <div class="text-center mb-6">
-            <h2 class="text-xl font-bold text-text-dark dark:text-white mb-1">How It Works</h2>
-            <p class="text-sm text-text-secondary-light dark:text-text-secondary">Three steps to compete each week</p>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="flex flex-col items-center text-center p-6 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
-                <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center mb-4 shadow-md">
-                    <i class="fab fa-google text-white text-2xl"></i>
-                </div>
-                <div class="text-xs font-bold text-text-secondary-light dark:text-text-secondary uppercase tracking-widest mb-1">Step 1</div>
-                <h3 class="text-base font-bold text-text-dark dark:text-white mb-2">Sign In</h3>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Log in with your Google account — no new password to remember.</p>
+    <section class="landing-section relative z-10 bg-slate-950 px-5 py-20 sm:px-8 lg:px-10">
+        <div class="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-[0.8fr_1fr]">
+            <div>
+                <h2 class="text-4xl font-black leading-tight text-white sm:text-5xl">Built for family rivalries, not public noise.</h2>
+                <p class="mt-5 max-w-xl text-lg leading-8 text-slate-300">Create a pool, invite your people, and keep picks, standings, rules, and admin control inside your family.</p>
             </div>
-
-            <div class="flex flex-col items-center text-center p-6 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
-                <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-700 rounded-xl flex items-center justify-center mb-4 shadow-md">
-                    <i class="fas fa-edit text-white text-2xl"></i>
+            <div class="grid gap-3">
+                <div class="family-proof-row flex items-center justify-between border-t border-white/10 py-5">
+                    <span class="text-lg font-bold text-white">Private family pools</span>
+                    <i class="fas fa-lock text-emerald-300" aria-hidden="true"></i>
                 </div>
-                <div class="text-xs font-bold text-text-secondary-light dark:text-text-secondary uppercase tracking-widest mb-1">Step 2</div>
-                <h3 class="text-base font-bold text-text-dark dark:text-white mb-2">Submit Picks</h3>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Pick the winner for every NFL game before kickoff each week.</p>
-            </div>
-
-            <div class="flex flex-col items-center text-center p-6 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
-                <div class="w-14 h-14 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center mb-4 shadow-md">
-                    <i class="fas fa-medal text-white text-2xl"></i>
+                <div class="family-proof-row flex items-center justify-between border-t border-white/10 py-5">
+                    <span class="text-lg font-bold text-white">Live game-day context</span>
+                    <i class="fas fa-bolt text-sky-300" aria-hidden="true"></i>
                 </div>
-                <div class="text-xs font-bold text-text-secondary-light dark:text-text-secondary uppercase tracking-widest mb-1">Step 3</div>
-                <h3 class="text-base font-bold text-text-dark dark:text-white mb-2">Chase the Trophy</h3>
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">Rack up points, win weekly bonuses, and top the season leaderboard.</p>
+                <div class="family-proof-row flex items-center justify-between border-y border-white/10 py-5">
+                    <span class="text-lg font-bold text-white">Weekly and season bragging rights</span>
+                    <i class="fas fa-trophy text-yellow-300" aria-hidden="true"></i>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- ════════════════════════════════ SEASON CHAMPION ═════════════════════════════════ -->
-    {% if season_winner %}
-    <div class="section-container mb-6">
-        <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-yellow-500/20 via-surface-light to-yellow-600/10 dark:from-yellow-500/30 dark:via-surface dark:to-yellow-600/20 border-2 border-yellow-500/50 p-8 text-center">
-            <div class="text-5xl text-yellow-500 mb-3"><i class="fas fa-crown"></i></div>
-            <h3 class="text-xl font-black text-text-dark dark:text-white mb-4">Season Champion</h3>
-            {% with season_winner.userID|safe_username as champion_name %}
-            {% with season_winner.userID|lookupavatar as champion_avatar %}
-            <div class="flex flex-col items-center gap-3">
-                <div class="relative w-20 h-20">
-                    <div class="w-20 h-20 rounded-full bg-primary border-4 border-yellow-500 flex items-center justify-center text-white font-bold text-2xl select-none">{{ champion_name|slice:":1"|upper }}</div>
-                    <img src="{{ champion_avatar }}" alt="{{ champion_name }}" class="absolute inset-0 w-20 h-20 rounded-full border-4 border-yellow-500 object-cover" onerror="this.remove()">
-                </div>
-                <div>
-                    <h4 class="text-xl font-bold text-text-dark dark:text-white uppercase">{{ champion_name|default:"Champion" }}</h4>
-                    <p class="text-sm text-text-secondary-light dark:text-text-secondary">{{ season_winner.total_points }} season points</p>
-                </div>
-            </div>
-            {% endwith %}
-            {% endwith %}
+    <section class="landing-section relative z-10 bg-white px-5 py-20 text-center text-slate-950 sm:px-8 lg:px-10">
+        <div class="mx-auto max-w-3xl">
+            <h2 class="text-4xl font-black leading-tight sm:text-6xl">Ready for kickoff?</h2>
+            <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-600">Sign in, create or join a family, and start making picks before the week gets away from you.</p>
+            <a href="{% url 'account_login' %}" class="mt-9 inline-flex items-center justify-center gap-3 rounded-full bg-slate-950 px-8 py-4 text-base font-black text-white shadow-2xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-slate-800">
+                <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                Sign in to play
+            </a>
         </div>
-    </div>
-    {% endif %}
-
-    <!-- ═════════════════════════════════ BOTTOM CTA ══════════════════════════════════════ -->
-    <div class="mb-8 rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-slate-950 border border-slate-700 dark:border-slate-800 p-8 text-center">
-        <h2 class="text-xl font-bold text-white mb-2">Ready to play?</h2>
-        <p class="text-sm text-slate-400 mb-6">Join the league and start making picks for Week {{ current_week }}.</p>
-        <a href="{% provider_login_url 'google' %}"
-           class="inline-flex items-center gap-3 px-7 py-3 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl text-base transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
-            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            Sign in with Google
-        </a>
-    </div>
-
+    </section>
 </div>
 
-<!-- NFL News: live pull from ESPN public API -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
 <script>
 (function () {
-    var loading = document.getElementById('nfl-news-loading');
-    var content = document.getElementById('nfl-news-content');
-    var error   = document.getElementById('nfl-news-error');
-
-    function timeAgo(dateStr) {
-        var diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-        if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
-        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-        return Math.floor(diff / 86400) + 'd ago';
+    if (!window.gsap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
     }
 
-    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var fetchOpts = ctrl ? { signal: ctrl.signal } : {};
-    if (ctrl) setTimeout(function() { ctrl.abort(); }, 6000);
+    var gsap = window.gsap;
+    if (window.ScrollTrigger) {
+        gsap.registerPlugin(window.ScrollTrigger);
+    }
 
-    fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=6', fetchOpts)
-    .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
-    .then(function(data) {
-        var articles = (data.articles || []).slice(0, 6);
-        if (!articles.length) throw new Error('empty');
-
-        content.innerHTML = articles.map(function(a) {
-            var img  = (a.images || [])[0];
-            var href = (a.links && a.links.web && a.links.web.href) || '#';
-            var when = a.published ? timeAgo(a.published) : '';
-            var imgHtml = img
-                ? '<img src="' + img.url + '" alt="" class="w-14 h-14 rounded-lg object-cover flex-shrink-0 bg-surface-light dark:bg-slate-700">'
-                : '<div class="w-14 h-14 rounded-lg bg-surface-light dark:bg-slate-700 flex-shrink-0 flex items-center justify-center"><i class="fas fa-football-ball text-text-secondary-light dark:text-text-secondary"></i></div>';
-            return '<a href="' + href + '" target="_blank" rel="noopener"'
-                 + ' class="flex gap-3 p-2 rounded-xl hover:bg-surface-light dark:hover:bg-slate-700/60 transition-colors group">'
-                 + imgHtml
-                 + '<div class="flex-1 min-w-0">'
-                 + '<p class="text-sm font-semibold text-text-dark dark:text-white leading-snug line-clamp-2 group-hover:underline">' + (a.headline || '') + '</p>'
-                 + (when ? '<p class="text-xs text-text-secondary-light dark:text-text-secondary mt-0.5">' + when + '</p>' : '')
-                 + '</div></a>';
-        }).join('');
-
-        loading.classList.add('hidden');
-        content.classList.remove('hidden');
-    })
-    .catch(function() {
-        loading.classList.add('hidden');
-        error.classList.remove('hidden');
+    gsap.set(['.landing-brand', '.landing-sign-in', '.landing-title', '.landing-headline', '.landing-subtitle', '.landing-actions', '.broadcast-scoreboard', '.broadcast-pick-slip', '.broadcast-swing'], {
+        autoAlpha: 0,
+        y: 26
     });
+
+    gsap.timeline({ defaults: { ease: 'power3.out' } })
+        .to('.landing-brand, .landing-sign-in', { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.08 })
+        .to('.landing-title', { autoAlpha: 1, y: 0, duration: 0.7 }, '-=0.1')
+        .to('.landing-headline', { autoAlpha: 1, y: 0, duration: 0.55 }, '-=0.35')
+        .to('.landing-subtitle', { autoAlpha: 1, y: 0, duration: 0.45 }, '-=0.25')
+        .to('.landing-actions', { autoAlpha: 1, y: 0, duration: 0.45 }, '-=0.2')
+        .to('.broadcast-scoreboard', { autoAlpha: 1, y: 0, duration: 0.65 }, '-=0.5')
+        .to('.broadcast-pick-slip, .broadcast-swing', { autoAlpha: 1, y: 0, duration: 0.55, stagger: 0.12 }, '-=0.35');
+
+    gsap.to('.broadcast-pick-slip', {
+        y: -6,
+        rotate: -1,
+        duration: 2.7,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true
+    });
+
+    gsap.to('.broadcast-swing', {
+        y: -8,
+        rotate: 1,
+        duration: 3.1,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true
+    });
+
+    if (window.ScrollTrigger) {
+        document.querySelectorAll('.landing-section, .family-proof-row').forEach(function (section) {
+            gsap.from(section, {
+                autoAlpha: 0,
+                y: 34,
+                duration: 0.7,
+                ease: 'power2.out',
+                scrollTrigger: {
+                    trigger: section,
+                    start: 'top 86%',
+                    once: true
+                }
+            });
+        });
+    }
 })();
 </script>
-
 {% endblock %}

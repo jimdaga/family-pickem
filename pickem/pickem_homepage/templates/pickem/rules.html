@@ -9,31 +9,38 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 dark:bg-bg-dark">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+<div data-rules-page class="min-h-screen bg-gray-50 dark:bg-bg-dark">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 space-y-6">
         <!-- Header -->
-        <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-                <div class="text-sm font-semibold uppercase tracking-wide text-primary">League Rules</div>
-                <h1 class="mt-2 text-3xl font-bold text-text-dark dark:text-white">How to Play</h1>
-                <p class="mt-2 text-text-secondary-light dark:text-text-secondary">Official guidelines and regulations for fair play</p>
-            </div>
-            {% if family and pool %}
-            <div class="flex flex-wrap gap-2">
-                <span class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white">
-                    <i class="fas fa-users text-primary"></i>
-                    {{ family.name }} &mdash; {{ pool.name }}
-                </span>
-                {% if pool_settings %}
-                <span class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white">
-                    Locking: {% if pool_settings.picks_lock_at_kickoff %}On{% else %}Off{% endif %}
-                </span>
-                <span class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white">
-                    Tiebreakers: {% if pool_settings.allow_tiebreaker %}On{% else %}Off{% endif %}
-                </span>
+        <header class="rules-scoreboard-header rounded-2xl border border-border-light/80 dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/20">
+                        <i class="fas fa-gavel text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-black uppercase tracking-wide text-primary">League Rules</div>
+                        <h1 class="text-2xl font-black tracking-tight text-text-dark dark:text-white">How to Play</h1>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">Official guidelines and regulations for fair play</p>
+                    </div>
+                </div>
+                {% if family and pool %}
+                <div class="flex flex-wrap gap-2">
+                    <span class="inline-flex items-center gap-2 rounded-full border border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 px-3 py-1.5 text-sm font-semibold text-text-dark dark:text-white">
+                        <i class="fas fa-users text-primary"></i>
+                        {{ family.name }} &mdash; {{ pool.name }}
+                    </span>
+                    {% if pool_settings %}
+                    <span class="inline-flex items-center gap-2 rounded-full border border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 px-3 py-1.5 text-sm font-semibold text-text-dark dark:text-white">
+                        Locking: {% if pool_settings.picks_lock_at_kickoff %}On{% else %}Off{% endif %}
+                    </span>
+                    <span class="inline-flex items-center gap-2 rounded-full border border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 px-3 py-1.5 text-sm font-semibold text-text-dark dark:text-white">
+                        Tiebreakers: {% if pool_settings.allow_tiebreaker %}On{% else %}Off{% endif %}
+                    </span>
+                    {% endif %}
+                </div>
                 {% endif %}
             </div>
-            {% endif %}
         </header>
 
         <!-- Scoring System -->
@@ -42,7 +49,7 @@
             <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">How points are awarded each week</p>
             <div class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- Win -->
-                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm">
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10 text-green-600 dark:text-green-400">
                             <i class="fas fa-check-circle"></i>
@@ -54,7 +61,7 @@
                 </div>
 
                 <!-- Loss -->
-                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm">
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400">
                             <i class="fas fa-times-circle"></i>
@@ -66,7 +73,7 @@
                 </div>
 
                 <!-- Tie -->
-                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm">
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-500/10 text-slate-600 dark:text-slate-300">
                             <i class="fas fa-equals"></i>
@@ -78,7 +85,7 @@
                 </div>
 
                 <!-- Weekly Winner -->
-                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm ring-1 ring-yellow-500/20">
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm ring-1 ring-yellow-500/20">
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
                             <i class="fas fa-trophy"></i>
@@ -97,7 +104,7 @@
             <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Tiebreakers and game mechanics</p>
             <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Primary Tiebreaker -->
-                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm hover:border-primary hover:shadow-md transition-all">
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm hover:border-primary hover:shadow-md transition-all">
                     <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
                         <i class="fas fa-bullseye"></i>
                     </span>
@@ -108,7 +115,7 @@
                 </div>
 
                 <!-- Secondary Tiebreaker -->
-                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm hover:border-primary hover:shadow-md transition-all">
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm hover:border-primary hover:shadow-md transition-all">
                     <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
                         <i class="fas fa-football-ball"></i>
                     </span>
@@ -119,7 +126,7 @@
                 </div>
 
                 <!-- Game Locking -->
-                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm hover:border-primary hover:shadow-md transition-all">
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm hover:border-primary hover:shadow-md transition-all">
                     <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
                         <i class="fas fa-lock"></i>
                     </span>
@@ -137,7 +144,7 @@
             <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Entry fees and special rewards</p>
             <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Perfect Week Bonus -->
-                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm">
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <i class="fas fa-gem"></i>
@@ -149,7 +156,7 @@
                 </div>
 
                 <!-- Entry Fee -->
-                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm">
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <i class="fas fa-dollar-sign"></i>
@@ -161,7 +168,7 @@
                 </div>
 
                 <!-- Championship Tiebreaker -->
-                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm">
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <i class="fas fa-crown"></i>
@@ -174,4 +181,35 @@
         </section>
     </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (!window.gsap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+    }
+
+    var gsap = window.gsap;
+    gsap.set(['.rules-scoreboard-header', '.rules-compact-card'], {
+        autoAlpha: 0,
+        y: 18
+    });
+
+    gsap.timeline({ defaults: { ease: 'power3.out' } })
+        .to('.rules-scoreboard-header', { autoAlpha: 1, y: 0, duration: 0.42 })
+        .to('.rules-compact-card', { autoAlpha: 1, y: 0, duration: 0.28, stagger: 0.035 }, '-=0.16');
+
+    window.rulesCardMotion = function () {
+        document.querySelectorAll('.rules-compact-card').forEach(function (card) {
+            card.addEventListener('mouseenter', function () {
+                gsap.to(card, { y: -3, scale: 1.006, duration: 0.18, ease: 'power2.out' });
+            });
+            card.addEventListener('mouseleave', function () {
+                gsap.to(card, { y: 0, scale: 1, duration: 0.2, ease: 'power2.out' });
+            });
+        });
+    };
+
+    window.rulesCardMotion();
+});
+</script>
 {% endblock %}

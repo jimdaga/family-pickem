@@ -33,6 +33,24 @@ def display_name(user):
     return capfirst(str(name).strip())
 
 @register.filter
+def season_year_range(value):
+    """Format YYZZ season values like 2627 as 2026 - 2027."""
+    if value in (None, ""):
+        return ""
+
+    raw = str(value).strip()
+    if raw.endswith(".0"):
+        raw = raw[:-2]
+    if not raw.isdigit():
+        return value
+
+    raw = raw.zfill(4)
+    if len(raw) != 4:
+        return value
+
+    return f"20{raw[:2]} - 20{raw[2:]}"
+
+@register.filter
 def addstr(arg1, arg2):
     """concatenate arg1 & arg2"""
     return str(arg1) + str(arg2)
