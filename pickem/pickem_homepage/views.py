@@ -342,7 +342,7 @@ def get_valid_invitation_for_code(raw_code):
         return None
 
     invitation = (
-        FamilyInvitation.objects.select_for_update()
+        FamilyInvitation.objects.select_for_update(of=('self',))
         .select_related('family', 'pool')
         .filter(code_hash=hash_invite_code(raw_code))
         .first()
@@ -453,10 +453,10 @@ def create_family(request):
             )
             pool = Pool.objects.create(
                 family=family,
-                name='Main Pickem',
+                name='Pickem Pool',
                 slug=generate_unique_slug(
                     Pool,
-                    'Main Pickem',
+                    'Pickem Pool',
                     scoped_filters={'family': family},
                 ),
                 season=get_season(),
@@ -2027,6 +2027,10 @@ def index(request):
         'user_rankings': user_rankings,
     }
     return HttpResponse(template.render(context, request))
+
+
+def public_home(request):
+    return render(request, 'pickem/home.html', {'gameseason': get_season()})
 
 
 def standings(request):

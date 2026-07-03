@@ -34,13 +34,18 @@
                     Continue with Google
                 </a>
             </div>
-
-            <div class="flex items-center gap-3 mb-5">
-                <div class="flex-1 border-t border-border-light dark:border-border-subtle"></div>
-                <span class="text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">or</span>
-                <div class="flex-1 border-t border-border-light dark:border-border-subtle"></div>
+            {% else %}
+            <div class="px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-500 text-center">
+                Sign-in is temporarily unavailable. Please try again later.
             </div>
             {% endif %}
+
+            {% comment %}
+            Non-SSO username/password login is hidden for now (see TODO: "Remove
+            non-SSO username/password login from the visible login flow"). SSO is
+            the only visible option so additional providers can be added cleanly.
+            Restore this block to bring back password login, self-serve signup,
+            and password reset.
 
             <!-- Username / Password form -->
             <form class="space-y-4" method="POST" action="{% url 'account_login' %}">
@@ -77,6 +82,7 @@
                     Create account →
                 </a>
             </div>
+            {% endcomment %}
         </div>
     </div>
 </div>

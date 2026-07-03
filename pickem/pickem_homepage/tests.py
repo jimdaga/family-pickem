@@ -100,6 +100,22 @@ class ViewSmokeTests(TestCase):
                 self.assertNotContains(resp, 'data-testid="app-primary-nav"')
                 self.assertNotContains(resp, 'id="mobile-menu-btn"')
 
+    def test_public_homepage_loads_gsap_landing_enhancement(self):
+        resp = self.client.get("/")
+
+        self.assertContains(resp, 'data-landing-page="public"')
+        self.assertContains(resp, "gsap.min.js")
+        self.assertContains(resp, "ScrollTrigger.min.js")
+        self.assertContains(resp, "Make every game matter.")
+        self.assertContains(resp, "broadcast-pick-slip")
+        self.assertContains(resp, "/accounts/login/")
+        self.assertNotContains(resp, "/accounts/google/login/")
+        self.assertNotContains(resp, 'role="navigation"')
+        self.assertNotContains(resp, "Today's Games")
+        self.assertNotContains(resp, "Season Leaderboard")
+        self.assertNotContains(resp, "NFL News")
+        self.assertNotContains(resp, "By the Numbers")
+
     # -- API endpoints (AllowAny / IsAdminOrReadOnly at view level) --
 
     def test_api_currentseason_returns_200(self):
@@ -159,6 +175,17 @@ class PostLoginTenantRoutingTests(TestCase):
         self.assertTemplateUsed(response, "pickem/home.html")
         self.assertTemplateUsed(response, "pickem/home.html")
 
+    def test_public_home_route_stays_public_for_signed_in_users(self):
+        family, _pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.user, family)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("public_home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/home.html")
+        self.assertContains(response, "Make every game matter.")
+
     def test_authenticated_user_with_no_active_membership_routes_to_onboarding(self):
         self.client.force_login(self.user)
 
@@ -198,6 +225,29 @@ class PostLoginTenantRoutingTests(TestCase):
             fetch_redirect_response=False,
         )
 
+    def test_authenticated_nav_logo_goes_public_and_lobby_icon_goes_lobby(self):
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.user, family)
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse(
+                "family_pool_home",
+                kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'href="{reverse("public_home")}"')
+        self.assertContains(response, 'aria-label="Family Pick\'em Public Home"')
+        self.assertContains(
+            response,
+            f'href="{reverse("family_pool_home", kwargs={"family_slug": family.slug, "pool_slug": pool.slug})}"',
+        )
+        self.assertContains(response, 'aria-label="Lobby"')
+        self.assertContains(response, "fa-layer-group")
+        self.assertNotContains(response, "fa-home")
+
     def test_authenticated_user_with_multiple_active_memberships_routes_to_picker(self):
         smith, _ = self._family_with_pool("Smith Family", "smith-family")
         jones, _ = self._family_with_pool("Jones Family", "jones-family")
@@ -225,6 +275,8 @@ class PostLoginTenantRoutingTests(TestCase):
         self.assertTemplateUsed(picker_response, "pickem/family_picker.html")
         self.assertContains(picker_response, "Smith Family")
         self.assertContains(picker_response, "Jones Family")
+        self.assertContains(picker_response, "Add a family")
+        self.assertContains(picker_response, f'href="{reverse("create_family")}"')
         self.assertNotContains(picker_response, "Inactive Family")
 
     def test_outsider_direct_tenant_entry_is_denied(self):
@@ -508,6 +560,28 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, "2 pts")
         self.assertNotContains(response, "Jones-player")
         self.assertLess(content.index("Week Points"), content.index("Live This Week"))
+
+    def test_pool_home_is_branded_as_lobby_with_gsap_polish(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        smith_pool.season = 2627
+        smith_pool.save(update_fields=["season"])
+        self._active_membership(self.member, smith_family)
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Smith Family Lobby")
+        self.assertContains(response, "Season 2026 - 2027")
+        self.assertNotContains(response, "Season 2627")
+        self.assertContains(response, "data-lobby-page")
+        self.assertContains(response, "lobby-command-hero")
+        self.assertContains(response, "data-lobby-action")
+        self.assertContains(response, "lobby-action-sheen")
+        self.assertContains(response, "lobbyActionHover")
+        self.assertContains(response, "resetSheen")
+        self.assertContains(response, "gsap.min.js")
+        self.assertContains(response, "ScrollTrigger.min.js")
 
     def test_dashboard_shows_in_progress_current_week_games(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
@@ -908,6 +982,19 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertContains(response, "Submitted Picks")
         self.assertNotContains(response, self.other_member.email)
 
+    def test_tenant_picks_page_includes_compact_polish_hooks(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_picks_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-picks-page")
+        self.assertContains(response, "picks-scoreboard-header")
+        self.assertContains(response, "picks-progress-strip")
+        self.assertContains(response, "picks-games-section")
+        self.assertContains(response, "picksCardMotion")
+        self.assertContains(response, "gsap.min.js")
+
     def test_tenant_post_creates_server_derived_pick_and_ignores_forged_fields(self):
         self.client.force_login(self.member)
 
@@ -1270,6 +1357,26 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertEqual(response.context["picks"].first().pool, self.smith_pool)
         self.assertEqual(list(response.context["week_winner"]), list(userSeasonPoints.objects.filter(pool=self.smith_pool)))
 
+    def test_tenant_scores_page_includes_gsap_polish_hooks(self):
+        self._seed_private_pool_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-scores-page")
+        self.assertContains(response, "scores-scoreboard-header")
+        self.assertContains(response, "scores-filter-bar")
+        self.assertContains(response, "scores-compact-week-winner")
+        self.assertContains(response, "scores-compact-week-points")
+        self.assertContains(response, "scores-kickoff-group")
+        self.assertContains(response, "data-scores-filter")
+        self.assertContains(response, "scores-filter-sheen")
+        self.assertContains(response, "scoresFilterMotion")
+        self.assertContains(response, "scoresLivePulse")
+        self.assertContains(response, "gsap.min.js")
+        self.assertContains(response, "ScrollTrigger.min.js")
+
     def test_tenant_scores_current_user_stats_use_stable_user_identity(self):
         self.week_one_game.statusType = "finished"
         self.week_one_game.statusTitle = "Final"
@@ -1362,6 +1469,22 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertEqual(list(response.context["player_points"]), list(userSeasonPoints.objects.filter(pool=self.smith_pool)))
         self.assertEqual(response.context["weekly_winners"][1][0].pool, self.smith_pool)
 
+    def test_tenant_standings_page_includes_compact_gsap_polish_hooks(self):
+        self._seed_private_pool_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-standings-page")
+        self.assertContains(response, "standings-scoreboard-header")
+        self.assertContains(response, "standings-compact-leaderboard")
+        self.assertContains(response, "standings-compact-weekly-champions")
+        self.assertContains(response, "standings-compact-breakdown")
+        self.assertContains(response, "standingsRowMotion")
+        self.assertContains(response, "gsap.min.js")
+        self.assertContains(response, "ScrollTrigger.min.js")
+
     def test_tenant_rules_display_current_context_settings_and_no_editing_form(self):
         self.client.force_login(self.smith_member)
 
@@ -1376,6 +1499,18 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertNotContains(response, "<form")
         self.assertNotContains(response, "Save settings")
         self.assertEqual(response.context["pool_settings"], self.smith_pool.settings)
+
+    def test_tenant_rules_page_includes_compact_polish_hooks(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_rules"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-rules-page")
+        self.assertContains(response, "rules-scoreboard-header")
+        self.assertContains(response, "rules-compact-card")
+        self.assertContains(response, "rulesCardMotion")
+        self.assertContains(response, "gsap.min.js")
 
     def test_legacy_signed_in_scores_standings_and_rules_redirect_before_private_rendering(self):
         self.client.force_login(self.smith_member)
@@ -2035,6 +2170,18 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
             sorted([self.smith_member.id, self.smith_player.id, self.smith_private.id]),
         )
 
+    def test_tenant_players_page_includes_compact_polish_hooks(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_players"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-players-page")
+        self.assertContains(response, "players-scoreboard-header")
+        self.assertContains(response, "players-compact-card")
+        self.assertContains(response, "playersCardMotion")
+        self.assertContains(response, "gsap.min.js")
+
     def test_tenant_profile_scopes_stats_picks_posts_and_links_to_current_pool(self):
         self._seed_profile_data()
         self.client.force_login(self.smith_member)
@@ -2332,6 +2479,8 @@ class FamilySwitcherContextTests(TestCase):
         self.assertEqual(response.context["current_pool"], pool)
         self.assertEqual(len(response.context["family_switcher_choices"]), 1)
         self.assertContains(response, 'data-testid="family-context-switcher"')
+        self.assertContains(response, 'data-testid="family-switcher-create"')
+        self.assertContains(response, "Create new family")
         self.assertContains(response, "Current family")
         self.assertContains(response, "Smith Family")
         self.assertContains(response, "Main Pickem")
@@ -2683,6 +2832,19 @@ class FamilyAdminExperienceTests(TestCase):
                 self.assertContains(response, self._picks_url())
                 self.assertNotContains(response, "Jones Family")
                 self.assertNotContains(response, "Jones private event")
+
+    def test_admin_hub_includes_compact_polish_hooks(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self._admin_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-admin-page")
+        self.assertContains(response, "admin-scoreboard-header")
+        self.assertContains(response, "admin-compact-stat")
+        self.assertContains(response, "admin-tool-card")
+        self.assertContains(response, "adminCardMotion")
+        self.assertContains(response, "gsap.min.js")
 
     def test_forged_family_pool_slug_combination_cannot_render_other_family_hub(self):
         self.client.force_login(self.owner)
@@ -3918,8 +4080,8 @@ class CreateFamilyFlowTests(TestCase):
         )
         self.assertEqual(family.slug, "smith-family")
         self.assertEqual(family.status, Family.Status.ACTIVE)
-        self.assertEqual(pool.name, "Main Pickem")
-        self.assertEqual(pool.slug, "main-pickem")
+        self.assertEqual(pool.name, "Pickem Pool")
+        self.assertEqual(pool.slug, "pickem-pool")
         self.assertEqual(pool.season, get_season())
         self.assertEqual(pool.competition, "nfl")
         self.assertEqual(pool.status, Pool.Status.ACTIVE)
@@ -3972,7 +4134,7 @@ class CreateFamilyFlowTests(TestCase):
         family = Family.objects.get(slug="smith-family-2")
         pool = Pool.objects.get(family=family)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(pool.slug, "main-pickem")
+        self.assertEqual(pool.slug, "pickem-pool")
 
     def test_client_supplied_tenant_and_role_fields_are_ignored(self):
         attacker_family = Family.objects.create(
@@ -4708,11 +4870,9 @@ class HomepageFamilyScopeModelTests(TestCase):
 class HomepageFamilyBackfillMigrationTests(TestCase):
     """Direct tests for homepage family backfill helpers."""
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.migration = import_module(
-            "pickem_homepage.migrations.0005_add_family_scope"
-        )
+    migration = import_module(
+        "pickem_homepage.migrations.0005_add_family_scope"
+    )
 
     def setUp(self):
         legacy_family = Family.objects.filter(

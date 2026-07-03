@@ -41,12 +41,13 @@
 <body class="bg-gray-50 dark:bg-bg-dark transition-colors duration-200">
     {% load socialaccount %}
     
+    {% block main_navigation %}
     <!-- Main Navigation -->
     <nav class="fixed top-0 w-full bg-slate-800/95 backdrop-blur-lg border-b border-slate-700 z-50 transition-colors duration-200" role="navigation" aria-label="Main navigation">
         <div class="max-w-7xl mx-auto px-6">
             <div class="flex items-center justify-between h-16">
                 <!-- Brand Logo -->
-                <a class="flex items-center space-x-2 hover:opacity-80 transition-opacity" href="/" aria-label="Family Pick'em Home">
+                <a class="flex items-center space-x-2 hover:opacity-80 transition-opacity" href="{% url 'public_home' %}" aria-label="Family Pick'em Public Home">
                     <img src="{% static 'images/logo.png' %}" alt="Family Pick'em Logo" class="h-10 w-auto">
                 </a>
 
@@ -68,8 +69,8 @@
                 <!-- Desktop Navigation -->
                 {% if user.is_authenticated %}
                 <div data-testid="app-primary-nav" class="hidden lg:flex items-center space-x-1 absolute left-1/2 transform -translate-x-1/2">
-                    <a class="nav-link-base" href="{% if current_family and current_pool %}{% url 'family_pool_home' current_family.slug current_pool.slug %}{% else %}/{% endif %}" aria-label="Home">
-                        <i class="fas fa-home"></i>
+                    <a class="nav-link-base" href="{% if current_family and current_pool %}{% url 'family_pool_home' current_family.slug current_pool.slug %}{% else %}{% url 'index' %}{% endif %}" aria-label="Lobby">
+                        <i class="fas fa-layer-group"></i>
                     </a>
 
                     <!-- Scores Dropdown -->
@@ -80,6 +81,7 @@
                         </button>
                         <div class="nav-dropdown absolute left-0 mt-2 w-48 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle hidden z-50 py-2">
                             <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}">Current Week</a>
+                            <a class="block px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400 hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}#live"><i class="fas fa-circle animate-pulse mr-2 text-[0.5rem] align-middle"></i>Live now</a>
                             <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
                             {% for week_number in "123456789"|make_list %}<a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason week_number %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/{{ week_number }}{% endif %}">Week {{ week_number }}</a>{% endfor %}
                             <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 10 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/10{% endif %}">Week 10</a>
@@ -141,6 +143,9 @@
                                 <a class="flex items-center px-4 py-2 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% url 'family_picker' %}">
                                     <i class="fas fa-exchange-alt mr-3"></i>All families
                                 </a>
+                                <a data-testid="family-switcher-create" class="flex items-center px-4 py-2 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% url 'create_family' %}">
+                                    <i class="fas fa-plus mr-3"></i>Create new family
+                                </a>
                             </div>
                         </div>
                         {% elif family_switcher_choices %}
@@ -199,8 +204,8 @@
                         </div>
                     {% else %}
                         <!-- Login Button -->
-                        <a class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all" href="{% provider_login_url 'google' %}" aria-label="Sign in with Google">
-                            <i class="fab fa-google"></i>
+                        <a class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all" href="{% url 'account_login' %}" aria-label="Sign in">
+                            <i class="fas fa-sign-in-alt"></i>
                             <span>Sign in</span>
                         </a>
                     {% endif %}
@@ -212,8 +217,8 @@
             <div id="mobile-menu" class="hidden lg:hidden absolute top-16 left-0 right-0 bg-slate-800 border-b border-slate-700 shadow-lg">
                 <div class="px-4 py-4 space-y-2">
                     <!-- Mobile Navigation Links -->
-                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_home' current_family.slug current_pool.slug %}{% else %}/{% endif %}">
-                        <i class="fas fa-home mr-3"></i>Home
+                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_home' current_family.slug current_pool.slug %}{% else %}{% url 'index' %}{% endif %}">
+                        <i class="fas fa-layer-group mr-3"></i>Lobby
                     </a>
 
                     <!-- Mobile Scores Dropdown -->
@@ -224,6 +229,7 @@
                         </button>
                         <div class="mobile-dropdown-menu hidden pl-8 pr-4 py-2 space-y-1">
                             <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}">Current Week</a>
+                            <a class="block px-4 py-2 text-sm font-semibold text-green-400 hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}#live"><i class="fas fa-circle animate-pulse mr-2 text-[0.5rem] align-middle"></i>Live now</a>
                             <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
                             {% for week_number in "123456789"|make_list %}<a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason week_number %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/{{ week_number }}{% endif %}">Week {{ week_number }}</a>{% endfor %}
                             <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 10 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/10{% endif %}">Week 10</a>
@@ -304,8 +310,8 @@
                     </a>
                     {% else %}
                     <div class="border-t border-slate-700 my-2"></div>
-                    <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="{% provider_login_url 'google' %}">
-                        <i class="fab fa-google mr-2"></i>Sign In with Google
+                    <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="{% url 'account_login' %}">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Sign In
                     </a>
                     {% endif %}
                 </div>
@@ -313,9 +319,10 @@
             {% endif %}
         </div>
     </nav>
+    {% endblock %}
 
      <!-- Main Content -->
-     <main class="pt-16 min-h-screen {% if user.is_authenticated %}pb-24{% endif %}" role="main">
+     <main class="{% block main_class %}pt-16 min-h-screen {% if user.is_authenticated %}pb-24{% endif %}{% endblock %}" role="main">
 
         <!-- Banner Section (Optional) -->
         {% block banner %}

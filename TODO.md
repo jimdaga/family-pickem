@@ -3,43 +3,29 @@ Pickem
 
 ## To Do
 
-#### General Changes 
-High Priority 
-- [ ] Set all the tiebreaker games for 2025-2026
-- [ ] Disable devmode on prod site
-- [ ] setup argocd to auto deploy 
-- [ ] refactor python cron scripts into go app 
+#### Multi-Family / Tenant Follow-Up Backlog
 
-Medium Priority 
-- [ ] Add a cronjob to delete stuck update data jobs
-- [ ] Add dark mode to site {WIP}
-- [ ] Setup pick e-mail reminders -- or --
-- [ ] Send text when picks not made 
+##### Ideas
+- [x] Make the "Live Scores" shortcut jump directly to active game cards when games are live. Consider using an anchor or query parameter on the scores page so users land on the most relevant game instead of the top of the page.
+- [ ] Make more of the rules page editable by family admins. Decide which rules are true settings versus display-only copy before exposing edit controls.
+- [ ] Clarify how submitting picks should work for users in multiple families. Confirm whether one pick submission can apply to multiple pools, or whether picks must always be submitted independently per family/pool.
+- [ ] Give families a way to set and manage a logo. Include validation for image URL/upload, fallback behavior, and admin-only authorization.
+- [ ] Move invites toward an email-based model. Hide or de-emphasize raw invite codes once email invites are available.
+- [ ] Automate email reminders for missing picks. Reminders must be family/pool scoped and should respect notification preferences.
+- [ ] Rebase this work from upstream `main` and resolve merge conflicts carefully, especially around the frontend refactor and multi-tenant schema changes.
+- [ ] Add end-to-end tests for critical flows: sign in, create/join family, switch family, submit picks, view scores/standings, and cross-family isolation.
+- [x] Rename/reframe the main pool page as a "Lobby". Update the top-left logo behavior so it links to the public homepage, while internal navigation has a separate family/pool home affordance.
+- [ ] Evaluate whether a global user points page should exist. If added, define what is global versus family-scoped so it does not leak private pool data.
 
-Low Priority
-- [ ] Add audit database 
-
-#### Standings Page Changes
-
-#### Picks Page Changes
-
-#### Stats Page Changes 
-
-#### Homepage Changes
-Medium Priority 
-- [ ] Add AI Summary of prior week 
-
-#### Scores Page Changes 
-Medium Priority 
-- [ ] Show what % each team was picked 
-- [ ] Add stadium / tv details
-- [ ] Link "preview" to ESPN preview 
-
-#### Long Term Changes 
-- [ ] Concept of "Families" 
-- [ ] Add user profiles and link user avatars 
-- [ ] Prop Bets page 
-- [ ] hall of fame
+##### Fixes
+- [ ] Fix the Submit Picks page so users can clearly see picks they already submitted. Recheck whether edit-before-lock still works after the multi-family changes.
+- [ ] Move banner management into its own focused admin tool/page instead of burying it in broader admin controls.
+- [x] Remove non-SSO username/password login from the visible login flow for now. Login pages should route to a single login page first, not directly to Google, so future auth providers can be added cleanly.
+- [ ] Restore editing and commenting on message board posts. Ensure all actions are family-scoped and protected by membership checks.
+- [ ] Add pagination or incremental loading for message board posts so family lobbies do not become too heavy.
+- [ ] Refactor all update scripts for family/pool awareness. Revisit whether these should become Django management commands/tasks instead of standalone API-calling cron scripts.
+- [x] Change default pool names to "Pickem Pool".
+- [x] Add a "Create new family" action inside the family switcher so multi-family users have an obvious path to add another family.
 
 ## Done 
 - [x] Add % win likely 
