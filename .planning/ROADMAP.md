@@ -145,7 +145,7 @@ Plans:
 - [x] 05-04-PLAN.md — Add simple current-model invite management.
 - [x] 05-05-PLAN.md — Add tenant-scoped manual pick and user-pick retrieval tools.
 - [x] 05-06-PLAN.md — Add week-winner tools and disable legacy commissioner routes.
-- [ ] 05-07-PLAN.md — Complete final cross-feature validation and handoff.
+- [x] 05-07-PLAN.md — Complete final cross-feature validation and handoff.
 
 Scope:
 
