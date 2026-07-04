@@ -881,3 +881,44 @@ class UpdateRecordsCommandTest(TestCase):
 
         self.assertEqual(season_start_year(2526), 2025)
         self.assertEqual(season_start_year(2425), 2024)
+
+
+class UpdateRankingsCommandTest(TestCase):
+    """Pool-aware `update_rankings` management command (replaces cron_update_rankings.py)."""
+
+    def _pool(self, slug):
+        family = Family.objects.create(name=slug, slug=slug, status=Family.Status.ACTIVE)
+        return Pool.objects.create(
+            family=family, name="Pool", slug=slug, season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+
+    def _sp(self, pool, email, points):
+        return userSeasonPoints.objects.create(
+            pool=pool, gameseason=2526, userEmail=email, userID=email,
+            total_points=points,
+        )
+
+    def test_rankings_are_per_pool_with_tie_handling(self):
+        from django.core.management import call_command
+
+        pool_a = self._pool("family-a")
+        pool_b = self._pool("family-b")
+        # Pool A: 100, 100 (tie), 95  -> ranks 1, 1, 3
+        a1 = self._sp(pool_a, "a1@x.com", 100)
+        a2 = self._sp(pool_a, "a2@x.com", 100)
+        a3 = self._sp(pool_a, "a3@x.com", 95)
+        # Pool B ranked independently: 50, 40 -> ranks 1, 2
+        b1 = self._sp(pool_b, "b1@x.com", 50)
+        b2 = self._sp(pool_b, "b2@x.com", 40)
+
+        call_command("update_rankings", season=2526)
+
+        for entry in (a1, a2, a3, b1, b2):
+            entry.refresh_from_db()
+
+        self.assertEqual({a1.current_rank, a2.current_rank}, {1})
+        self.assertEqual(a3.current_rank, 3)
+        # Pool B is independent: its top user is rank 1 despite fewer points.
+        self.assertEqual(b1.current_rank, 1)
+        self.assertEqual(b2.current_rank, 2)
