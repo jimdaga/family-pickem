@@ -46,6 +46,39 @@
                 {% endwith %}
                 {% endwith %}
             </div>
+            {% if can_submit_to_multiple_families %}
+            <div class="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+                <label class="flex items-start gap-3">
+                    <input id="apply-to-all-families"
+                           type="checkbox"
+                           checked
+                           class="mt-1 h-4 w-4 rounded border-border-light text-primary focus:ring-primary"
+                           data-testid="apply-to-all-families">
+                    <span>
+                        <span class="block text-sm font-bold text-text-dark dark:text-white">Submit to all eligible families</span>
+                        <span class="mt-1 block text-xs text-text-secondary-light dark:text-text-secondary">
+                            This pick will be saved to {{ multi_family_pick_targets|length }} family pools. You can still edit each family separately later.
+                        </span>
+                    </span>
+                </label>
+                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                    {% for target_pool in multi_family_pick_targets %}
+                    <label class="flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 px-3 py-2 text-sm">
+                        <input type="checkbox"
+                               name="target_pool_ids"
+                               value="{{ target_pool.id }}"
+                               checked
+                               class="h-4 w-4 rounded border-border-light text-primary focus:ring-primary"
+                               data-testid="multi-family-target-pool">
+                        <span class="min-w-0">
+                            <span class="block truncate font-bold text-text-dark dark:text-white">{{ target_pool.family.name }}</span>
+                            <span class="block truncate text-xs text-text-secondary-light dark:text-text-secondary">{{ target_pool.name }}{% if target_pool.id == pool.id %} &bull; current{% endif %}</span>
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Available Games Section -->
@@ -81,7 +114,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {% for game in game_list %}
                      {% if game.slug not in pick_slugs %}
-                        {% with user.id|addstr:"-"|addstr:game.id as template %}
+                        {% with pool.id|addstr:"-"|addstr:user.id|addstr:"-"|addstr:game.id as template %}
                             {% if template not in pick_ids %}
                                 <div class="picks-game-card game-card flex flex-col bg-surface-light dark:bg-slate-700 rounded-xl overflow-hidden border border-border-light dark:border-slate-600 hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 {% if auth_required %}opacity-50 pointer-events-none{% endif %}" data-game-id="{{ game.id }}">
 
@@ -349,7 +382,7 @@
                     {% if pick_slugs and not auth_required %}
                         {% for game in game_list %}
                         {% if game.slug in pick_slugs %}
-                            {% with user.id|addstr:"-"|addstr:game.id as template %}
+                            {% with pool.id|addstr:"-"|addstr:user.id|addstr:"-"|addstr:game.id as template %}
                                 {% if template in pick_ids %}
                                 <div class="bg-surface-light dark:bg-surface rounded-xl p-5 border border-border-light dark:border-border-subtle hover:border-primary/50 transition-all duration-200 space-y-4">
                                     <!-- Game Header -->
@@ -443,7 +476,7 @@
 
                                     <!-- Edit/Lock Actions -->
                                     <div class="pt-3 border-t border-border-light dark:border-border-subtle">
-                                        {% if not game|is_game_locked %}
+                                        {% if not game|is_game_locked_for_pool:pool %}
                                         {% for p in picks %}
                                             {% if p.slug == game.slug %}
                                         <button class="edit-pick-btn w-full px-4 py-2 bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl font-semibold hover:bg-blue-600/20 dark:hover:bg-blue-600/30 transition-all flex items-center justify-center gap-2"
@@ -482,7 +515,7 @@
                                         {% else %}
                                         <div class="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 dark:bg-red-600/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-semibold">
                                             <i class="fas fa-lock"></i>
-                                            <span>Pick Locked - {{ game|game_lock_reason }}</span>
+                                            <span>Pick Locked - {{ game|game_lock_reason_for_pool:pool }}</span>
                                         </div>
                                         {% endif %}
                                     </div>
@@ -687,6 +720,44 @@
                                 </div>
                             </div>
                         </div>
+
+                        {% if can_submit_to_multiple_families %}
+                            <div class="mt-5 rounded-xl border border-secondary-light/30 dark:border-secondary/30 bg-secondary-light/10 dark:bg-secondary/10 p-4">
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input id="edit-apply-to-all-families"
+                                           type="checkbox"
+                                           name="apply_to_all_families"
+                                           value="1"
+                                           checked
+                                           class="mt-1 h-4 w-4 rounded border-border-light text-secondary-light focus:ring-secondary-light dark:border-border-subtle dark:bg-surface"
+                                           data-testid="edit-apply-to-all-families">
+                                    <span>
+                                        <span class="block font-semibold text-text-dark dark:text-white">Apply edits to all eligible families</span>
+                                        <span class="block text-sm text-text-secondary-light dark:text-text-secondary">
+                                            This will update this pick in {{ multi_family_pick_targets|length }} family pools. Uncheck it to edit only {{ family.name }}.
+                                        </span>
+                                    </span>
+                                </label>
+                                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {% for target_pool in multi_family_pick_targets %}
+                                        <label class="flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle bg-bg-light/70 dark:bg-surface/70 px-3 py-2 text-sm text-text-dark dark:text-white">
+                                            <input type="checkbox"
+                                                   name="edit_target_pool_ids"
+                                                   value="{{ target_pool.id }}"
+                                                   checked
+                                                   class="h-4 w-4 rounded border-border-light text-secondary-light focus:ring-secondary-light dark:border-border-subtle dark:bg-surface"
+                                                   data-testid="edit-multi-family-target-pool">
+                                            <span class="min-w-0">
+                                                <span class="block truncate font-semibold">{{ target_pool.family.name }}</span>
+                                                <span class="block truncate text-xs text-text-secondary-light dark:text-text-secondary">
+                                                    {{ target_pool.name }}{% if target_pool.id == pool.id %} &bull; current{% endif %}
+                                                </span>
+                                            </span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
                     </form>
                 </div>
 
@@ -900,6 +971,13 @@
             
             // Prepare form data
             const formData = new FormData(form);
+            const applyToAllFamilies = document.getElementById('apply-to-all-families');
+            if (applyToAllFamilies && applyToAllFamilies.checked) {
+                formData.set('apply_to_all_families', '1');
+                document.querySelectorAll('input[name="target_pool_ids"]:checked').forEach(input => {
+                    formData.append('target_pool_ids', input.value);
+                });
+            }
             console.log('About to submit form data:', formData);
             
             // Submit the pick
@@ -910,27 +988,42 @@
                     'X-Requested-With': 'XMLHttpRequest',
                 },
             })
-            .then(response => {
+            .then(async response => {
                 console.log('Response received:', response);
+                const payload = await response.json().catch(() => ({}));
                 if (response.ok) {
                     console.log('Save successful');
                     // Show success indicator briefly
                     saveStatus.querySelector('.saving').style.display = 'none';
-                    saveStatus.querySelector('.success').style.display = 'flex';
+                    const successIndicator = saveStatus.querySelector('.success');
+                    const successText = successIndicator.querySelector('span');
+                    if (successText) {
+                        const savedCount = Number(payload.saved_count || 1);
+                        const poolLabel = savedCount === 1 ? 'pool' : 'pools';
+                        const skippedCount = Number(payload.skipped_count || 0);
+                        const skippedText = skippedCount > 0 ? `, ${skippedCount} skipped` : '';
+                        successText.textContent = `Saved to ${savedCount} ${poolLabel}${skippedText}`;
+                    }
+                    successIndicator.style.display = 'flex';
                     
                     // Quick reload to update the page and move card to submitted section
                     setTimeout(() => {
                         window.location.reload();
-                    }, 300);
+                    }, 900);
                 } else {
                     console.error('Save failed with status:', response.status);
-                    throw new Error('Save failed');
+                    throw new Error(payload.message || 'Save failed');
                 }
             })
             .catch(error => {
                 // Show error indicator
                 saveStatus.querySelector('.saving').style.display = 'none';
-                saveStatus.querySelector('.error').style.display = 'flex';
+                const errorIndicator = saveStatus.querySelector('.error');
+                const errorText = errorIndicator.querySelector('span');
+                if (errorText) {
+                    errorText.textContent = error.message || 'Error saving';
+                }
+                errorIndicator.style.display = 'flex';
                 
                 // Hide error after 3 seconds
                 setTimeout(() => {
@@ -1154,6 +1247,23 @@
 
             const formData = new FormData(form);
             formData.set('pick', selectedTeam.dataset.team);
+            const editApplyToAllFamilies = document.getElementById('edit-apply-to-all-families');
+            const editTargetPools = Array.from(document.querySelectorAll('input[name="edit_target_pool_ids"]'));
+            const selectedEditTargetPools = editTargetPools.filter(input => input.checked);
+            formData.delete('edit_target_pool_ids');
+            formData.delete('target_pool_ids');
+            if (editApplyToAllFamilies) {
+                if (selectedEditTargetPools.length === 0) {
+                    alert('Choose at least one family');
+                    return;
+                }
+                formData.set('apply_to_all_families', '1');
+                selectedEditTargetPools.forEach(input => {
+                    formData.append('target_pool_ids', input.value);
+                });
+            } else {
+                formData.delete('apply_to_all_families');
+            }
 
             // Validate tiebreaker if required
             const tiebreakerSection = document.getElementById('editTiebreakerSection');
@@ -1198,6 +1308,19 @@
                 this.innerHTML = '<i class="fas fa-save me-1"></i>Save Changes';
             });
         });
+
+        function syncEditFamilyTargets() {
+            const editApplyToAllFamilies = document.getElementById('edit-apply-to-all-families');
+            if (!editApplyToAllFamilies) {
+                return;
+            }
+            const editTargetPools = document.querySelectorAll('input[name="edit_target_pool_ids"]');
+            editTargetPools.forEach(input => {
+                input.checked = editApplyToAllFamilies.checked;
+            });
+        }
+
+        document.getElementById('edit-apply-to-all-families')?.addEventListener('change', syncEditFamilyTargets);
     });
     </script>
 

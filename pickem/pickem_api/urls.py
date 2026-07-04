@@ -2,7 +2,7 @@ from django.urls import include, path, re_path
 from . import views
 
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('', views.index, name='api_root'),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
     # CURRENT SEASON

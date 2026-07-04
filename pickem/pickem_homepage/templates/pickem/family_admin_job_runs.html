@@ -1,0 +1,135 @@
+{% extends "pickem/base.html" %}
+
+{% block title %}Job Runs - {{ family.name }}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-gray-50 dark:bg-bg-dark">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="text-sm font-semibold uppercase tracking-wide text-primary">Family Admin</div>
+                <h1 class="mt-2 text-3xl font-bold text-text-dark dark:text-white">Job Runs</h1>
+                <p class="mt-2 text-text-secondary-light dark:text-text-secondary">
+                    Scheduler run history for the data-update pipeline (system-wide).
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'family_pool_admin' family.slug pool.slug %}" class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white hover:bg-white dark:hover:bg-surface transition-colors">
+                    <i class="fas fa-arrow-left"></i>
+                    Admin Hub
+                </a>
+                <span class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">
+                    <i class="fas fa-robot"></i>
+                    Commissioner
+                </span>
+            </div>
+        </header>
+
+        <!-- Registered jobs -->
+        <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm" data-testid="job-runs-jobs">
+            <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Scheduled Jobs</h2>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                    Jobs registered with the in-process scheduler and their next run time.
+                </p>
+            </div>
+            <div class="divide-y divide-border-light dark:divide-border-subtle">
+                {% for job in jobs %}
+                <div class="flex items-center justify-between px-5 py-3">
+                    <span class="font-mono text-sm font-semibold text-text-dark dark:text-white">{{ job.id }}</span>
+                    <span class="text-sm text-text-secondary-light dark:text-text-secondary">
+                        Next run:
+                        {% if job.next_run_time %}{{ job.next_run_time|date:"M d, Y H:i:s" }}{% else %}<em>paused</em>{% endif %}
+                    </span>
+                </div>
+                {% empty %}
+                <div class="px-5 py-6 text-center text-sm text-text-secondary-light dark:text-text-secondary">
+                    No jobs registered. The scheduler runs only where <code>RUN_SCHEDULER=true</code> is set.
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Recent executions -->
+        <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm" data-testid="job-runs-executions">
+            <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Recent Runs</h2>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                    Newest first.{% if not can_view_logs %} Full error logs are visible to the site owner only.{% endif %}
+                </p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="border-b border-border-light dark:border-border-subtle text-xs uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">
+                        <tr>
+                            <th class="px-5 py-3">Run time</th>
+                            <th class="px-5 py-3">Job</th>
+                            <th class="px-5 py-3">Status</th>
+                            <th class="px-5 py-3">Duration</th>
+                            <th class="px-5 py-3">Log</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border-light dark:divide-border-subtle">
+                        {% for run in executions %}
+                        <tr>
+                            <td class="whitespace-nowrap px-5 py-3 text-text-dark dark:text-white">{{ run.run_time|date:"M d, Y H:i:s" }}</td>
+                            <td class="whitespace-nowrap px-5 py-3 font-mono text-text-secondary-light dark:text-text-secondary">{{ run.job_id }}</td>
+                            <td class="whitespace-nowrap px-5 py-3">
+                                {% if run.status == 'Executed' %}
+                                <span class="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-semibold text-green-600 dark:text-green-400"><i class="fas fa-check-circle"></i>{{ run.status }}</span>
+                                {% elif run.status == 'Error!' %}
+                                <span class="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400"><i class="fas fa-times-circle"></i>{{ run.status }}</span>
+                                {% else %}
+                                <span class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400"><i class="fas fa-spinner"></i>{{ run.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="whitespace-nowrap px-5 py-3 text-text-secondary-light dark:text-text-secondary">
+                                {% if run.duration %}{{ run.duration }}s{% else %}&mdash;{% endif %}
+                            </td>
+                            <td class="px-5 py-3 text-text-secondary-light dark:text-text-secondary">
+                                {% if run.exception %}
+                                    {% if can_view_logs %}
+                                    <details class="group">
+                                        <summary class="cursor-pointer text-red-600 dark:text-red-400">{{ run.exception|truncatechars:80 }}</summary>
+                                        {% if run.traceback %}<pre class="mt-2 max-w-lg overflow-x-auto whitespace-pre-wrap rounded-md bg-slate-950 p-3 text-xs text-red-200">{{ run.traceback }}</pre>{% endif %}
+                                    </details>
+                                    {% else %}
+                                    <span class="text-red-600 dark:text-red-400">Failed</span>
+                                    {% endif %}
+                                {% else %}&mdash;{% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-5 py-6 text-center text-text-secondary-light dark:text-text-secondary">
+                                No runs recorded yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if executions.paginator.num_pages > 1 %}
+            <div class="flex items-center justify-between border-t border-border-light dark:border-border-subtle px-5 py-3 text-sm">
+                <span class="text-text-secondary-light dark:text-text-secondary">
+                    Page {{ executions.number }} of {{ executions.paginator.num_pages }}
+                    &middot; {{ executions.paginator.count }} run{{ executions.paginator.count|pluralize }}
+                </span>
+                <div class="flex gap-2">
+                    {% if executions.has_previous %}
+                    <a href="?page={{ executions.previous_page_number }}" class="inline-flex items-center gap-1 rounded-lg border border-border-light dark:border-border-subtle px-3 py-1.5 font-semibold text-text-dark dark:text-white hover:bg-white dark:hover:bg-surface transition-colors">
+                        <i class="fas fa-chevron-left text-xs"></i> Previous
+                    </a>
+                    {% endif %}
+                    {% if executions.has_next %}
+                    <a href="?page={{ executions.next_page_number }}" class="inline-flex items-center gap-1 rounded-lg border border-border-light dark:border-border-subtle px-3 py-1.5 font-semibold text-text-dark dark:text-white hover:bg-white dark:hover:bg-surface transition-colors">
+                        Next <i class="fas fa-chevron-right text-xs"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+</main>
+{% endblock %}

@@ -980,6 +980,9 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertEqual(list(response.context["picks"].values_list("pool_id", flat=True)), [self.smith_pool.id])
         self.assertEqual(list(response.context["picks"].values_list("userEmail", flat=True)), [self.member.email])
         self.assertContains(response, "Submitted Picks")
+        # The submitted pick card must actually render (regression: pick id in
+        # the template must include the pool prefix to match pick_ids).
+        self.assertContains(response, "Your Pick")
         self.assertNotContains(response, self.other_member.email)
 
     def test_tenant_picks_page_includes_compact_polish_hooks(self):
@@ -994,6 +997,26 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertContains(response, "picks-games-section")
         self.assertContains(response, "picksCardMotion")
         self.assertContains(response, "gsap.min.js")
+
+    def test_multi_family_picks_page_shows_submit_to_all_option(self):
+        self._active_membership(self.member, self.jones_family)
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_picks_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["can_submit_to_multiple_families"])
+        self.assertContains(response, 'data-testid="apply-to-all-families"')
+        self.assertContains(response, 'data-testid="multi-family-target-pool"')
+        self.assertContains(response, "Submit to all eligible families")
+        self.assertContains(response, "saved to 2 family pools")
+        self.assertContains(response, "Smith Family")
+        self.assertContains(response, "Jones Family")
+        self.assertContains(response, 'data-testid="edit-apply-to-all-families"')
+        self.assertContains(response, 'data-testid="edit-multi-family-target-pool"')
+        self.assertContains(response, "Apply edits to all eligible families")
+        self.assertContains(response, "syncEditFamilyTargets")
+        self.assertContains(response, "Choose at least one family")
 
     def test_tenant_post_creates_server_derived_pick_and_ignores_forged_fields(self):
         self.client.force_login(self.member)
@@ -1036,6 +1059,174 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertEqual(pick.pick, self.game.homeTeamSlug)
         self.assertFalse(pick.pick_correct)
         self.assertFalse(GamePicks.objects.filter(pool=self.jones_pool, userEmail=self.other_member.email).exists())
+
+    def test_multi_family_submit_fans_out_to_current_user_active_pools(self):
+        self._active_membership(self.member, self.jones_family)
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_picks_url(),
+            self._pick_payload(apply_to_all_families="1"),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["saved_count"], 2)
+        smith_pick = GamePicks.objects.get(pool=self.smith_pool, userID=str(self.member.id))
+        jones_pick = GamePicks.objects.get(pool=self.jones_pool, userID=str(self.member.id))
+        self.assertEqual(smith_pick.pick, self.game.homeTeamSlug)
+        self.assertEqual(jones_pick.pick, self.game.homeTeamSlug)
+        self.assertFalse(GamePicks.objects.filter(pool=self.jones_pool, userID=str(self.other_member.id)).exists())
+
+    def test_multi_family_submit_respects_selected_eligible_target_pools(self):
+        self._active_membership(self.member, self.jones_family)
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_picks_url(),
+            self._pick_payload(
+                apply_to_all_families="1",
+                target_pool_ids=[str(self.smith_pool.id)],
+            ),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["saved_pool_ids"], [self.smith_pool.id])
+        self.assertTrue(GamePicks.objects.filter(pool=self.smith_pool, userID=str(self.member.id)).exists())
+        self.assertFalse(GamePicks.objects.filter(pool=self.jones_pool, userID=str(self.member.id)).exists())
+
+    def test_multi_family_submit_ignores_forged_target_pool_ids(self):
+        outsider_family, outsider_pool = self._family_with_pool("Outsider Family", "outsider-family")
+        self._active_membership(self.outsider, outsider_family)
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_picks_url(),
+            self._pick_payload(
+                apply_to_all_families="1",
+                target_pool_ids=[str(self.smith_pool.id), str(outsider_pool.id)],
+            ),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["saved_pool_ids"], [self.smith_pool.id])
+        self.assertTrue(GamePicks.objects.filter(pool=self.smith_pool, userID=str(self.member.id)).exists())
+        self.assertFalse(GamePicks.objects.filter(pool=outsider_pool, userID=str(self.member.id)).exists())
+
+    def test_family_specific_edit_after_fanout_only_updates_current_pool(self):
+        self._active_membership(self.member, self.jones_family)
+        smith_pick = self._create_pick(user=self.member, pool=self.smith_pool, pick=self.game.homeTeamSlug)
+        jones_pick = self._create_pick(user=self.member, pool=self.jones_pool, pick=self.game.homeTeamSlug)
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_edit_url(),
+            {
+                "pick_id": smith_pick.id,
+                "pick": self.game.awayTeamSlug,
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        smith_pick.refresh_from_db()
+        jones_pick.refresh_from_db()
+        self.assertEqual(smith_pick.pick, self.game.awayTeamSlug)
+        self.assertEqual(jones_pick.pick, self.game.homeTeamSlug)
+
+    def test_multi_family_edit_fans_out_to_current_user_active_pools_when_requested(self):
+        self._active_membership(self.member, self.jones_family)
+        smith_pick = self._create_pick(user=self.member, pool=self.smith_pool, pick=self.game.homeTeamSlug)
+        jones_pick = self._create_pick(user=self.member, pool=self.jones_pool, pick=self.game.homeTeamSlug)
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_edit_url(),
+            {
+                "pick_id": smith_pick.id,
+                "pick": self.game.awayTeamSlug,
+                "apply_to_all_families": "1",
+                "target_pool_ids": [str(self.smith_pool.id), str(self.jones_pool.id)],
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["saved_count"], 2)
+        smith_pick.refresh_from_db()
+        jones_pick.refresh_from_db()
+        self.assertEqual(smith_pick.pick, self.game.awayTeamSlug)
+        self.assertEqual(jones_pick.pick, self.game.awayTeamSlug)
+
+    def test_multi_family_edit_respects_selected_eligible_target_pools(self):
+        self._active_membership(self.member, self.jones_family)
+        smith_pick = self._create_pick(user=self.member, pool=self.smith_pool, pick=self.game.homeTeamSlug)
+        jones_pick = self._create_pick(user=self.member, pool=self.jones_pool, pick=self.game.homeTeamSlug)
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_edit_url(),
+            {
+                "pick_id": smith_pick.id,
+                "pick": self.game.awayTeamSlug,
+                "apply_to_all_families": "1",
+                "target_pool_ids": [str(self.smith_pool.id)],
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["saved_pool_ids"], [self.smith_pool.id])
+        smith_pick.refresh_from_db()
+        jones_pick.refresh_from_db()
+        self.assertEqual(smith_pick.pick, self.game.awayTeamSlug)
+        self.assertEqual(jones_pick.pick, self.game.homeTeamSlug)
+
+    def test_multi_family_edit_requires_at_least_one_selected_target_pool(self):
+        self._active_membership(self.member, self.jones_family)
+        smith_pick = self._create_pick(user=self.member, pool=self.smith_pool, pick=self.game.homeTeamSlug)
+        jones_pick = self._create_pick(user=self.member, pool=self.jones_pool, pick=self.game.homeTeamSlug)
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_edit_url(),
+            {
+                "pick_id": smith_pick.id,
+                "pick": self.game.awayTeamSlug,
+                "apply_to_all_families": "1",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("at least one family", response.json()["message"])
+        smith_pick.refresh_from_db()
+        jones_pick.refresh_from_db()
+        self.assertEqual(smith_pick.pick, self.game.homeTeamSlug)
+        self.assertEqual(jones_pick.pick, self.game.homeTeamSlug)
+
+    def test_multi_family_edit_ignores_forged_target_pool_ids(self):
+        outsider_family, outsider_pool = self._family_with_pool("Outsider Family", "outsider-family")
+        self._active_membership(self.outsider, outsider_family)
+        smith_pick = self._create_pick(user=self.member, pool=self.smith_pool, pick=self.game.homeTeamSlug)
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_edit_url(),
+            {
+                "pick_id": smith_pick.id,
+                "pick": self.game.awayTeamSlug,
+                "apply_to_all_families": "1",
+                "target_pool_ids": [str(self.smith_pool.id), str(outsider_pool.id)],
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["saved_pool_ids"], [self.smith_pool.id])
+        self.assertFalse(GamePicks.objects.filter(pool=outsider_pool, userID=str(self.member.id)).exists())
 
     def test_tenant_post_rejects_game_outside_current_week_context(self):
         self.client.force_login(self.member)
@@ -2631,6 +2822,51 @@ class FamilyAdminExperienceTests(TestCase):
             "family_pool_admin",
             kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
         )
+
+    def _job_runs_url(self, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_job_runs",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
+    def test_job_runs_page_is_commissioner_only_and_lists_executions(self):
+        from django_apscheduler.models import DjangoJob, DjangoJobExecution
+
+        job = DjangoJob.objects.create(id="update_all", next_run_time=timezone.now())
+        DjangoJobExecution.objects.create(
+            job=job, status="Executed", run_time=timezone.now(), duration=1.23,
+        )
+        DjangoJobExecution.objects.create(
+            job=job, status="Error!", run_time=timezone.now(), duration=0.5,
+            exception="boom", traceback="SECRET_TRACEBACK_MARKER at /app/secret.py",
+        )
+
+        # A family admin who is not a commissioner cannot see the tool...
+        self.client.force_login(self.admin_user)
+        self.assertEqual(self.client.get(self._job_runs_url()).status_code, 403)
+        # ...and the admin hub hides the Job Runs card for them.
+        self.assertNotContains(self.client.get(self._admin_url()), self._job_runs_url())
+
+        # A commissioner (here, the owner) sees the tool and its run history,
+        # but NOT the raw error logs (owner/superuser only).
+        UserProfile.objects.create(user=self.owner, is_commissioner=True)
+        self.client.force_login(self.owner)
+        response = self.client.get(self._job_runs_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Job Runs")
+        self.assertContains(response, "update_all")
+        self.assertContains(response, "Executed")
+        self.assertNotContains(response, "SECRET_TRACEBACK_MARKER")
+        # The hub now surfaces the card.
+        self.assertContains(self.client.get(self._admin_url()), self._job_runs_url())
+
+        # The site owner (superuser) additionally sees the full traceback.
+        self.owner.is_superuser = True
+        self.owner.save(update_fields=["is_superuser"])
+        owner_response = self.client.get(self._job_runs_url())
+        self.assertContains(owner_response, "SECRET_TRACEBACK_MARKER")
 
     def _settings_url(self, *, family=None, pool=None):
         family = family or self.family

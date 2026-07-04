@@ -23,7 +23,7 @@ Pickem
 - [x] Remove non-SSO username/password login from the visible login flow for now. Login pages should route to a single login page first, not directly to Google, so future auth providers can be added cleanly.
 - [ ] Restore editing and commenting on message board posts. Ensure all actions are family-scoped and protected by membership checks.
 - [ ] Add pagination or incremental loading for message board posts so family lobbies do not become too heavy.
-- [ ] Refactor all update scripts for family/pool awareness. Revisit whether these should become Django management commands/tasks instead of standalone API-calling cron scripts.
+- [x] Refactor all update scripts for family/pool awareness. Revisit whether these should become Django management commands/tasks instead of standalone API-calling cron scripts.
 - [x] Change default pool names to "Pickem Pool".
 - [x] Add a "Create new family" action inside the family switcher so multi-family users have an obvious path to add another family.
 

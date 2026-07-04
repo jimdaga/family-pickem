@@ -23,10 +23,17 @@
             <img src="{% static 'images/logo.png' %}" alt="Family Pick'em" class="h-10 w-10 rounded-xl object-contain shadow-lg shadow-sky-950/40">
             <span class="hidden text-sm font-black uppercase tracking-[0.28em] text-slate-200 sm:inline">Family Pick'em</span>
         </a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'index' %}" class="landing-sign-in inline-flex items-center gap-2 rounded-full border border-white/15 bg-white px-4 py-2 text-sm font-bold text-slate-950 shadow-xl shadow-sky-950/30 transition hover:-translate-y-0.5 hover:bg-slate-100">
+            <i class="fas fa-users text-sm" aria-hidden="true"></i>
+            <span>Lobby</span>
+        </a>
+        {% else %}
         <a href="{% url 'account_login' %}" class="landing-sign-in inline-flex items-center gap-2 rounded-full border border-white/15 bg-white px-4 py-2 text-sm font-bold text-slate-950 shadow-xl shadow-sky-950/30 transition hover:-translate-y-0.5 hover:bg-slate-100">
             <i class="fas fa-sign-in-alt text-sm" aria-hidden="true"></i>
             <span>Sign in</span>
         </a>
+        {% endif %}
     </header>
 
     <section class="relative z-10 mx-auto grid min-h-[500px] w-full max-w-7xl grid-cols-1 items-center gap-8 px-5 pb-8 pt-6 sm:px-8 lg:min-h-[460px] lg:grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] lg:px-10 lg:pb-6">
@@ -38,7 +45,7 @@
                 Make every game matter.
             </p>
             <p class="landing-subtitle mt-6 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl">
-                Pick winners, track live swings, and settle family bragging rights all season.
+                Pick winners, follow live scores, and keep family bragging rights all season.
             </p>
             <div class="broadcast-mobile-preview mt-7 rounded-3xl border border-white/15 bg-slate-950/80 p-4 shadow-2xl shadow-black/30 md:hidden">
                 <div class="mb-4 flex items-center justify-between">
@@ -46,16 +53,23 @@
                     <span class="flex items-center gap-2 text-xs font-bold text-emerald-300"><span class="h-2 w-2 rounded-full bg-emerald-300"></span>Live</span>
                 </div>
                 <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                    <span class="text-3xl font-black text-white">BUF</span>
-                    <span class="rounded-xl bg-white/10 px-3 py-2 text-lg font-black text-emerald-200">24-20</span>
-                    <span class="text-right text-3xl font-black text-slate-400">MIA</span>
+                    <span class="text-3xl font-black text-white">NE</span>
+                    <span class="rounded-xl bg-white/10 px-3 py-2 text-lg font-black text-emerald-200">41-10</span>
+                    <span class="text-right text-3xl font-black text-slate-400">DAL</span>
                 </div>
             </div>
             <div class="landing-actions mt-9 flex flex-col gap-3 sm:flex-row">
+                {% if user.is_authenticated %}
+                <a href="{% url 'index' %}" class="inline-flex items-center justify-center gap-3 rounded-full bg-white px-7 py-4 text-base font-black text-slate-950 shadow-2xl shadow-sky-950/40 transition hover:-translate-y-0.5 hover:bg-slate-100">
+                    <i class="fas fa-users" aria-hidden="true"></i>
+                    Go to your lobby
+                </a>
+                {% else %}
                 <a href="{% url 'account_login' %}" class="inline-flex items-center justify-center gap-3 rounded-full bg-white px-7 py-4 text-base font-black text-slate-950 shadow-2xl shadow-sky-950/40 transition hover:-translate-y-0.5 hover:bg-slate-100">
                     <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
                     Sign in to play
                 </a>
+                {% endif %}
                 <a href="#how-it-works" class="inline-flex items-center justify-center gap-3 rounded-full border border-white/15 bg-white/10 px-7 py-4 text-base font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/15">
                     <i class="fas fa-arrow-down text-sm" aria-hidden="true"></i>
                     How it works
@@ -68,7 +82,7 @@
             <div class="absolute left-1/2 top-0 h-[480px] w-[320px] -translate-x-1/2 rounded-full border border-white/10 opacity-40"></div>
             <div class="absolute left-1/2 top-12 h-[390px] w-[260px] -translate-x-1/2 rounded-full border border-emerald-300/20 opacity-60"></div>
 
-            <div class="broadcast-scoreboard absolute left-1/2 top-12 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
+            <div class="broadcast-scoreboard absolute left-1/2 top-2 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
                 <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
                     <div class="text-xs font-black uppercase tracking-[0.28em] text-slate-400">Sunday board</div>
                     <div class="flex items-center gap-2 text-xs font-bold text-emerald-300">
@@ -78,16 +92,16 @@
                 </div>
                 <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-8">
                     <div class="text-left">
-                        <div class="text-5xl font-black text-white">BUF</div>
-                        <div class="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Picked by 7</div>
+                        <div class="text-5xl font-black text-white">NE</div>
+                        <div class="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Picked by 9</div>
                     </div>
                     <div class="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center">
                         <div class="text-xs font-black uppercase tracking-widest text-slate-400">Q4</div>
-                        <div class="mt-1 text-2xl font-black text-emerald-200">24-20</div>
+                        <div class="mt-1 text-2xl font-black text-emerald-200">41-10</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-5xl font-black text-slate-400">MIA</div>
-                        <div class="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Picked by 3</div>
+                        <div class="text-5xl font-black text-slate-400">DAL</div>
+                        <div class="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Picked by 1</div>
                     </div>
                 </div>
             </div>
@@ -99,27 +113,39 @@
                 </div>
                 <div class="mt-5 space-y-3">
                     <div class="flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-3 text-white">
-                        <span class="font-black">BUF</span>
-                        <span class="text-sm font-bold text-emerald-300">+1</span>
+                        <span class="font-black">NE</span>
+                        <span class="text-sm font-bold text-emerald-300">+31</span>
                     </div>
                     <div class="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3 text-slate-500">
-                        <span class="font-black">MIA</span>
+                        <span class="font-black">DAL</span>
                         <span class="text-sm font-bold">0</span>
                     </div>
                 </div>
             </div>
 
-            <div class="broadcast-swing absolute bottom-2 right-0 w-[250px] rounded-3xl border border-sky-300/20 bg-sky-950/80 p-5 shadow-2xl shadow-black/40 backdrop-blur-xl">
-                <div class="text-xs font-black uppercase tracking-[0.22em] text-sky-200/70">Leaderboard swing</div>
-                <div class="mt-4 flex items-end justify-between">
-                    <div>
-                        <div class="text-5xl font-black text-white">+7</div>
-                        <div class="mt-1 text-sm font-semibold text-slate-300">possible points</div>
+            <div class="broadcast-features absolute bottom-2 right-0 w-[250px] rounded-3xl border border-sky-300/20 bg-sky-950/80 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl">
+                <div class="text-[11px] font-black uppercase tracking-[0.22em] text-sky-200/70">What you get</div>
+                <div class="mt-3 space-y-2.5">
+                    <div class="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                        <i class="fas fa-chart-line mt-0.5 text-xs text-sky-300" aria-hidden="true"></i>
+                        <div class="min-w-0">
+                            <div class="text-sm font-black text-white">Live scores</div>
+                            <div class="text-[11px] font-semibold leading-4 text-slate-300">Follow every game as it updates</div>
+                        </div>
                     </div>
-                    <div class="flex h-16 items-end gap-1.5">
-                        <span class="block h-6 w-5 rounded bg-sky-400/50"></span>
-                        <span class="block h-10 w-5 rounded bg-sky-300/70"></span>
-                        <span class="block h-16 w-5 rounded bg-emerald-300"></span>
+                    <div class="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                        <i class="fas fa-medal mt-0.5 text-xs text-emerald-300" aria-hidden="true"></i>
+                        <div class="min-w-0">
+                            <div class="text-sm font-black text-white">Standings</div>
+                            <div class="text-[11px] font-semibold leading-4 text-slate-300">See weekly and season rankings</div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                        <i class="fas fa-comments mt-0.5 text-xs text-amber-200" aria-hidden="true"></i>
+                        <div class="min-w-0">
+                            <div class="text-sm font-black text-white">Family messages</div>
+                            <div class="text-[11px] font-semibold leading-4 text-slate-300">Keep the conversation in one place</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -136,7 +162,7 @@
             <div class="border-b border-slate-200 py-8 lg:border-b-0 lg:border-r lg:px-10">
                 <div class="text-sm font-black uppercase tracking-[0.24em] text-emerald-600">Watch the leaderboard move</div>
                 <h2 class="mt-4 text-3xl font-black leading-tight">Every live result changes the room.</h2>
-                <p class="mt-4 text-base leading-7 text-slate-600">See the games that matter, the picks behind them, and the points still in play.</p>
+                <p class="mt-4 text-base leading-7 text-slate-600">See live scores, the picks behind them, and the standings that come out of it.</p>
             </div>
             <div class="py-8 lg:pl-10">
                 <div class="text-sm font-black uppercase tracking-[0.24em] text-yellow-600">Win the week</div>
@@ -173,10 +199,17 @@
         <div class="mx-auto max-w-3xl">
             <h2 class="text-4xl font-black leading-tight sm:text-6xl">Ready for kickoff?</h2>
             <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-600">Sign in, create or join a family, and start making picks before the week gets away from you.</p>
+            {% if user.is_authenticated %}
+            <a href="{% url 'index' %}" class="mt-9 inline-flex items-center justify-center gap-3 rounded-full bg-slate-950 px-8 py-4 text-base font-black text-white shadow-2xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-slate-800">
+                <i class="fas fa-users" aria-hidden="true"></i>
+                Go to your lobby
+            </a>
+            {% else %}
             <a href="{% url 'account_login' %}" class="mt-9 inline-flex items-center justify-center gap-3 rounded-full bg-slate-950 px-8 py-4 text-base font-black text-white shadow-2xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-slate-800">
                 <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
                 Sign in to play
             </a>
+            {% endif %}
         </div>
     </section>
 </div>
@@ -194,7 +227,7 @@
         gsap.registerPlugin(window.ScrollTrigger);
     }
 
-    gsap.set(['.landing-brand', '.landing-sign-in', '.landing-title', '.landing-headline', '.landing-subtitle', '.landing-actions', '.broadcast-scoreboard', '.broadcast-pick-slip', '.broadcast-swing'], {
+    gsap.set(['.landing-brand', '.landing-sign-in', '.landing-title', '.landing-headline', '.landing-subtitle', '.landing-actions'], {
         autoAlpha: 0,
         y: 26
     });
@@ -205,8 +238,8 @@
         .to('.landing-headline', { autoAlpha: 1, y: 0, duration: 0.55 }, '-=0.35')
         .to('.landing-subtitle', { autoAlpha: 1, y: 0, duration: 0.45 }, '-=0.25')
         .to('.landing-actions', { autoAlpha: 1, y: 0, duration: 0.45 }, '-=0.2')
-        .to('.broadcast-scoreboard', { autoAlpha: 1, y: 0, duration: 0.65 }, '-=0.5')
-        .to('.broadcast-pick-slip, .broadcast-swing', { autoAlpha: 1, y: 0, duration: 0.55, stagger: 0.12 }, '-=0.35');
+        .from('.broadcast-scoreboard', { autoAlpha: 0, y: 26, duration: 0.65 }, '-=0.2')
+        .from('.broadcast-pick-slip, .broadcast-features', { autoAlpha: 0, y: 22, duration: 0.55, stagger: 0.12 }, '-=0.35');
 
     gsap.to('.broadcast-pick-slip', {
         y: -6,
@@ -217,7 +250,7 @@
         yoyo: true
     });
 
-    gsap.to('.broadcast-swing', {
+    gsap.to('.broadcast-features', {
         y: -8,
         rotate: 1,
         duration: 3.1,

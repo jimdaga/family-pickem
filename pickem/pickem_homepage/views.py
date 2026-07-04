@@ -230,9 +230,9 @@ def get_family_pool_choices(user):
     return choices
 
 
-def build_family_admin_sections(family, pool):
+def build_family_admin_sections(family, pool, user=None):
     route_kwargs = {'family_slug': family.slug, 'pool_slug': pool.slug}
-    return [
+    sections = [
         {
             'label': 'Settings',
             'description': 'Family name, pool name, rules, and display settings.',
@@ -269,6 +269,16 @@ def build_family_admin_sections(family, pool):
             'status': 'Manage winners',
         },
     ]
+    # Scheduler job runs are system-wide data; only expose to commissioners.
+    if user is not None and is_commissioner(user):
+        sections.append({
+            'label': 'Job Runs',
+            'description': 'Scheduler run history for the data-update pipeline.',
+            'icon': 'fas fa-robot',
+            'url': reverse('family_pool_admin_job_runs', kwargs=route_kwargs),
+            'status': 'View job runs',
+        })
+    return sections
 
 
 def get_current_week_context(gameseason):
@@ -328,6 +338,68 @@ def save_server_derived_pick(*, user, pool, game, selected_pick, tiebreaker_scor
     pick.pick_correct = False
     pick.save()
     return pick
+
+
+def get_multi_family_pick_target_pools(
+    *,
+    user,
+    current_pool,
+    game,
+    apply_to_all_families=False,
+    selected_pool_ids=None,
+    always_include_current_when_selected=True,
+):
+    """Return active same-season pools this user can submit this game to."""
+    if not apply_to_all_families:
+        return [current_pool]
+
+    pools = list(
+        Pool.objects.filter(
+            family__memberships__user=user,
+            family__memberships__status=FamilyMembership.Status.ACTIVE,
+            status=Pool.Status.ACTIVE,
+            season=game.gameseason,
+            competition=game.competition,
+        )
+        .select_related("family")
+        .distinct()
+        .order_by("family__name", "name")
+    )
+
+    by_id = {pool.id: pool for pool in pools}
+    by_id[current_pool.id] = current_pool
+    if selected_pool_ids:
+        selected_ids = {current_pool.id} if always_include_current_when_selected else set()
+        for pool_id in selected_pool_ids:
+            try:
+                selected_ids.add(int(pool_id))
+            except (TypeError, ValueError):
+                continue
+        by_id = {
+            pool_id: pool
+            for pool_id, pool in by_id.items()
+            if pool_id in selected_ids
+        }
+
+    return sorted(by_id.values(), key=lambda pool: (pool.id != current_pool.id, pool.family.name, pool.name))
+
+
+def get_multi_family_pick_target_choices(*, user, current_pool, season, competition):
+    pools = list(
+        Pool.objects.filter(
+            family__memberships__user=user,
+            family__memberships__status=FamilyMembership.Status.ACTIVE,
+            status=Pool.Status.ACTIVE,
+            season=season,
+            competition=competition,
+        )
+        .select_related("family")
+        .distinct()
+        .order_by("family__name", "name")
+    )
+    by_id = {pool.id: pool for pool in pools}
+    by_id[current_pool.id] = current_pool
+    return sorted(by_id.values(), key=lambda pool: (pool.id != current_pool.id, pool.family.name, pool.name))
 
 
 def get_invite_audit_context(request):
@@ -804,12 +876,46 @@ def family_pool_admin(request, family_slug, pool_slug):
         'membership': tenant_context.membership,
         'gameseason': pool.season or get_season(),
         'recent_audit_logs': recent_audit_logs,
-        'admin_sections': build_family_admin_sections(family, pool),
+        'admin_sections': build_family_admin_sections(family, pool, request.user),
         'active_member_count': active_member_count,
         'active_invite_count': active_invite_count,
         'pool_settings': pool_settings,
     }
     return render(request, 'pickem/family_admin.html', context)
+
+
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_job_runs(request, family_slug, pool_slug):
+    """View scheduler job runs (django-apscheduler). Commissioner-only, since
+    the scheduler and its execution history are system-wide, not pool-scoped."""
+    from django.core.paginator import Paginator
+    from django.http import HttpResponseForbidden
+    from django_apscheduler.models import DjangoJob, DjangoJobExecution
+
+    tenant_context = request.tenant_context
+    if not is_commissioner(request.user):
+        return HttpResponseForbidden('Commissioner access is required to view job runs.')
+
+    jobs = DjangoJob.objects.all().order_by('id')
+    execution_qs = (
+        DjangoJobExecution.objects.select_related('job').order_by('-run_time')
+    )
+    paginator = Paginator(execution_qs, 25)
+    executions = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'family': tenant_context.family,
+        'pool': tenant_context.pool,
+        'membership': tenant_context.membership,
+        'gameseason': tenant_context.pool.season or get_season(),
+        'jobs': jobs,
+        'executions': executions,
+        # Raw exception/traceback output can leak internal paths and config,
+        # so it is limited to the site owner (superuser); other commissioners
+        # still see run status and duration.
+        'can_view_logs': request.user.is_superuser,
+    }
+    return render(request, 'pickem/family_admin_job_runs.html', context)
 
 
 def build_admin_settings_metadata(*, family, pool, settings, cleaned_data):
@@ -2486,6 +2592,14 @@ def render_pick_page(request, *, tenant_context=None):
         pick_ids = []
 
     wins_losses = Teams.objects.filter(gameseason=gameseason)
+    multi_family_pick_targets = []
+    if tenant_context and request.user.is_authenticated:
+        multi_family_pick_targets = get_multi_family_pick_target_choices(
+            user=request.user,
+            current_pool=tenant_context.pool,
+            season=gameseason,
+            competition=game_competition,
+        )
 
     context = {
         'game_list': game_list,
@@ -2502,6 +2616,8 @@ def render_pick_page(request, *, tenant_context=None):
         'family': tenant_context.family if tenant_context else None,
         'pool': tenant_context.pool if tenant_context else None,
         'is_tenant_pick_page': tenant_context is not None,
+        'multi_family_pick_targets': multi_family_pick_targets,
+        'can_submit_to_multiple_families': len(multi_family_pick_targets) > 1,
         
     }
 
@@ -2526,9 +2642,9 @@ def render_pick_page(request, *, tenant_context=None):
         if selected_pick not in [game.awayTeamSlug, game.homeTeamSlug]:
             return JsonResponse({'error': True, 'message': 'Invalid pick'}, status=400)
 
-        from pickem.utils import is_pick_locked
+        from pickem.utils import is_pick_locked_for_pool
 
-        is_locked, lock_reason = is_pick_locked(game)
+        is_locked, lock_reason = is_pick_locked_for_pool(game, tenant_context.pool)
         if is_locked:
             return JsonResponse({
                 'error': True,
@@ -2543,16 +2659,57 @@ def render_pick_page(request, *, tenant_context=None):
                 'message': 'Tiebreaker fields are required for this game',
             }, status=400)
 
-        pick = save_server_derived_pick(
+        apply_to_all_families = request.POST.get('apply_to_all_families') == '1'
+        selected_pool_ids = request.POST.getlist('target_pool_ids')
+        target_pools = get_multi_family_pick_target_pools(
             user=request.user,
-            pool=tenant_context.pool,
+            current_pool=tenant_context.pool,
             game=game,
-            selected_pick=selected_pick,
-            tiebreaker_score=tiebreaker_score if game.tieBreakerGame else None,
-            tiebreaker_yards=tiebreaker_yards if game.tieBreakerGame else None,
+            apply_to_all_families=apply_to_all_families,
+            selected_pool_ids=selected_pool_ids,
+            always_include_current_when_selected=False,
+        )
+        saved_picks = []
+        skipped_pools = []
+        for target_pool in target_pools:
+            target_locked, target_lock_reason = is_pick_locked_for_pool(game, target_pool)
+            if target_locked:
+                skipped_pools.append({
+                    'pool_id': target_pool.id,
+                    'family': target_pool.family.name,
+                    'pool': target_pool.name,
+                    'reason': target_lock_reason,
+                })
+                continue
+            saved_picks.append(save_server_derived_pick(
+                user=request.user,
+                pool=target_pool,
+                game=game,
+                selected_pick=selected_pick,
+                tiebreaker_score=tiebreaker_score if game.tieBreakerGame else None,
+                tiebreaker_yards=tiebreaker_yards if game.tieBreakerGame else None,
+            ))
+
+        if not saved_picks:
+            return JsonResponse({
+                'error': True,
+                'message': 'Cannot submit pick: all selected family pools are locked',
+                'skipped_pools': skipped_pools,
+            }, status=400)
+
+        current_pick = next(
+            (saved_pick for saved_pick in saved_picks if saved_pick.pool_id == tenant_context.pool.id),
+            saved_picks[0],
         )
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'pick_id': pick.id})
+            return JsonResponse({
+                'success': True,
+                'pick_id': current_pick.id,
+                'saved_count': len(saved_picks),
+                'saved_pool_ids': [saved_pick.pool_id for saved_pick in saved_picks],
+                'skipped_count': len(skipped_pools),
+                'skipped_pools': skipped_pools,
+            })
         return redirect(
             'family_pool_game_picks',
             family_slug=tenant_context.family.slug,
@@ -2571,7 +2728,7 @@ def edit_game_pick(request):
 @family_member_required
 def tenant_edit_game_pick(request, family_slug, pool_slug):
     """Handle editing of existing game picks"""
-    from pickem.utils import is_pick_locked
+    from pickem.utils import is_pick_locked_for_pool
     from django.http import JsonResponse
     
     if request.method != 'POST':
@@ -2609,7 +2766,7 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
             return JsonResponse({'error': True, 'message': 'Game not found'}, status=404)
         
         # Check if the game is locked
-        is_locked, lock_reason = is_pick_locked(game)
+        is_locked, lock_reason = is_pick_locked_for_pool(game, tenant_context.pool)
         if is_locked:
             return JsonResponse({
                 'error': True, 
@@ -2642,18 +2799,61 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
                     'message': 'Tiebreaker values must be numbers'
                 }, status=400)
         
-        save_server_derived_pick(
+        apply_to_all_families = request.POST.get('apply_to_all_families') == '1'
+        selected_pool_ids = request.POST.getlist('target_pool_ids')
+        if apply_to_all_families and not selected_pool_ids:
+            return JsonResponse({
+                'error': True,
+                'message': 'Choose at least one family to edit',
+            }, status=400)
+        target_pools = get_multi_family_pick_target_pools(
             user=request.user,
-            pool=tenant_context.pool,
+            current_pool=tenant_context.pool,
             game=game,
-            selected_pick=new_pick,
-            tiebreaker_score=int(tiebreaker_score) if game.tieBreakerGame and tiebreaker_score else None,
-            tiebreaker_yards=int(tiebreaker_yards) if game.tieBreakerGame and tiebreaker_yards else None,
+            apply_to_all_families=apply_to_all_families,
+            selected_pool_ids=selected_pool_ids,
+            always_include_current_when_selected=False,
         )
+
+        saved_picks = []
+        skipped_pools = []
+        for target_pool in target_pools:
+            target_locked, target_lock_reason = is_pick_locked_for_pool(game, target_pool)
+            if target_locked:
+                skipped_pools.append({
+                    'pool_id': target_pool.id,
+                    'family': target_pool.family.name,
+                    'pool': target_pool.name,
+                    'reason': target_lock_reason,
+                })
+                continue
+
+            saved_picks.append(save_server_derived_pick(
+                user=request.user,
+                pool=target_pool,
+                game=game,
+                selected_pick=new_pick,
+                tiebreaker_score=int(tiebreaker_score) if game.tieBreakerGame and tiebreaker_score else None,
+                tiebreaker_yards=int(tiebreaker_yards) if game.tieBreakerGame and tiebreaker_yards else None,
+            ))
+
+        if not saved_picks:
+            return JsonResponse({
+                'error': True,
+                'message': 'Cannot edit pick: all selected family pools are locked',
+                'skipped_pools': skipped_pools,
+            }, status=400)
         
         # Return success response
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'Pick updated successfully'})
+            return JsonResponse({
+                'success': True,
+                'message': 'Pick updated successfully',
+                'saved_count': len(saved_picks),
+                'saved_pool_ids': [saved_pick.pool_id for saved_pick in saved_picks],
+                'skipped_count': len(skipped_pools),
+                'skipped_pools': skipped_pools,
+            })
         else:
             # For non-AJAX requests, redirect back to picks page
             return redirect(

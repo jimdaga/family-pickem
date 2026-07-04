@@ -276,6 +276,21 @@ def is_game_locked(game):
         return game.statusType != 'notstarted'
 
 @register.filter
+def is_game_locked_for_pool(game, pool):
+    """Check if picks are locked for a game using the current pool settings."""
+    try:
+        from pickem.utils import is_pick_locked_for_pool
+        week_games = GamesAndScores.objects.filter(
+            gameseason=game.gameseason,
+            gameWeek=game.gameWeek,
+            competition=game.competition
+        )
+        is_locked, _lock_reason = is_pick_locked_for_pool(game, pool, week_games)
+        return is_locked
+    except Exception:
+        return is_game_locked(game)
+
+@register.filter
 def game_lock_reason(game):
     """Get the reason why picks are locked for a specific game"""
     try:
@@ -291,6 +306,21 @@ def game_lock_reason(game):
     except:
         # Fallback to old logic if there's an error
         return "Game has started" if game.statusType != 'notstarted' else "Available"
+
+@register.filter
+def game_lock_reason_for_pool(game, pool):
+    """Get the lock reason for a game using the current pool settings."""
+    try:
+        from pickem.utils import is_pick_locked_for_pool
+        week_games = GamesAndScores.objects.filter(
+            gameseason=game.gameseason,
+            gameWeek=game.gameWeek,
+            competition=game.competition
+        )
+        is_locked, lock_reason = is_pick_locked_for_pool(game, pool, week_games)
+        return lock_reason if is_locked else "Available"
+    except Exception:
+        return game_lock_reason(game)
 
 
 @register.filter

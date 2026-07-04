@@ -143,3 +143,7 @@ legacy_css_definitions.json
 # Database dumps (contain production data)
 docker/postgres/init/*.sql.gz
 docker/postgres/init/*.sql
+
+# Helm vendored subcharts (fetched via `helm dependency build`)
+charts/family-pickem/charts/
+charts/family-pickem/Chart.lock

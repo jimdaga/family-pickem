@@ -106,6 +106,30 @@ def is_pick_locked(game, week_games=None):
             return True, "Late game picks locked at Sunday 1PM EST"
         return False, "Before Sunday 1PM EST cutoff"
 
+
+def is_pick_locked_for_pool(game, pool=None, week_games=None):
+    """Determine pick lock status using pool-specific locking settings."""
+    if pool is None:
+        return is_pick_locked(game, week_games)
+
+    from pickem_api.models import PoolSettings
+
+    settings = getattr(pool, "settings", None)
+    if settings is None:
+        settings = PoolSettings.objects.filter(pool=pool).first()
+
+    if not settings or settings.picks_lock_at_kickoff:
+        est = pytz.timezone('US/Eastern')
+        now_est = datetime.now(est)
+        if game.statusType != 'notstarted':
+            return True, "Game has already started"
+        game_start_est = game.startTimestamp.astimezone(est)
+        if now_est >= game_start_est:
+            return True, "Game has started"
+        return False, "Game not started yet"
+
+    return is_pick_locked(game, week_games)
+
 def are_picks_locked_for_week(week_games):
     """
     Check if any picks are locked for the week based on the new rules.
