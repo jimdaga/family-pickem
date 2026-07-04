@@ -5358,3 +5358,47 @@ class DjangoSystemCheckTests(TestCase):
         out = StringIO()
         call_command("check", stdout=out, stderr=StringIO())
         # If check passes, no exception is raised
+
+
+class PoolLockTemplateTagTests(TestCase):
+    def setUp(self):
+        self.family = Family.objects.create(name="Smith Family", slug="smith-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="main",
+            season=2526,
+            competition="nfl",
+        )
+        self.game = GamesAndScores.objects.create(
+            id=100,
+            slug="home-away",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now(),
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=1,
+            homeTeamSlug="home",
+            homeTeamName="Home",
+            awayTeamId=2,
+            awayTeamSlug="away",
+            awayTeamName="Away",
+        )
+
+    def test_pool_lock_helpers_do_not_swallow_unexpected_query_errors(self):
+        from pickem_homepage.templatetags.pickem_homepage_extras import (
+            game_lock_reason_for_pool,
+            is_game_locked_for_pool,
+        )
+
+        with patch(
+            "pickem_homepage.templatetags.pickem_homepage_extras.GamesAndScores.objects.filter",
+            side_effect=RuntimeError("db broke"),
+        ):
+            with self.assertRaisesMessage(RuntimeError, "db broke"):
+                is_game_locked_for_pool(self.game, self.pool)
+            with self.assertRaisesMessage(RuntimeError, "db broke"):
+                game_lock_reason_for_pool(self.game, self.pool)

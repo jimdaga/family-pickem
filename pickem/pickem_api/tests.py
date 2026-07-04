@@ -1,9 +1,11 @@
 from datetime import timedelta
 import importlib
+from importlib import import_module
 from unittest.mock import patch
 
 from django.apps import apps
 from django.contrib import admin
+from django.core.management.base import CommandError
 from django.test import Client
 from django.test import TestCase
 from django.contrib.auth.models import User
@@ -1083,3 +1085,92 @@ class UpdateGamesCommandTest(TestCase):
         mock_fetch.return_value = self.PAYLOAD
         call_command("update_games", season=2526, week=1)
         self.assertEqual(GamesAndScores.objects.filter(id=401).count(), 1)
+
+    def test_parse_scoreboard_skips_malformed_competition_and_continues(self):
+        from pickem_api.management.commands.update_games import parse_scoreboard
+
+        payload = {
+            "week": {"number": 1},
+            "events": [
+                {
+                    "id": "bad-event",
+                    "competitions": [
+                        {
+                            "id": "999",
+                            "date": "2025-09-08T00:20Z",
+                            # Missing status / competitors on purpose.
+                        }
+                    ],
+                },
+                self.PAYLOAD["events"][0],
+            ],
+        }
+
+        parsed = list(parse_scoreboard(payload, season=2526, game_year=2025))
+
+        self.assertEqual(len(parsed), 1)
+        self.assertEqual(parsed[0][0], 401)
+
+
+class UpdateAllCommandTest(TestCase):
+    @patch("pickem_api.management.commands.update_all.call_command")
+    def test_raises_command_error_when_any_pipeline_step_fails(self, mock_call_command):
+        from django.core.management import call_command
+        from pickem_api.management.commands.update_all import PIPELINE
+
+        def side_effect(command, **_kwargs):
+            if command == "update_games":
+                raise RuntimeError("espn down")
+            return None
+
+        mock_call_command.side_effect = side_effect
+
+        with self.assertRaisesMessage(
+            CommandError, "Pipeline finished with 1 failed step(s)."
+        ):
+            call_command("update_all", season=2526)
+
+        self.assertEqual(mock_call_command.call_count, len(PIPELINE))
+
+
+class PickemApiConfigReadyTest(TestCase):
+    @patch("pickem_api.scheduler.start")
+    def test_ready_starts_scheduler_only_for_runserver_child(self, mock_start):
+        from pickem_api.apps import PickemApiConfig
+
+        config = PickemApiConfig("pickem_api", import_module("pickem_api"))
+
+        with patch.dict(
+            "os.environ",
+            {
+                "RUN_SCHEDULER": "true",
+                "RUN_WEB_SERVER": "true",
+                "RUN_MAIN": "true",
+            },
+            clear=False,
+        ):
+            with patch("sys.argv", ["manage.py", "runserver"]):
+                config.ready()
+
+        mock_start.assert_called_once_with()
+
+    @patch("pickem_api.scheduler.start")
+    def test_ready_skips_scheduler_for_non_web_or_parent_processes(self, mock_start):
+        from pickem_api.apps import PickemApiConfig
+
+        config = PickemApiConfig("pickem_api", import_module("pickem_api"))
+
+        with patch.dict(
+            "os.environ",
+            {
+                "RUN_SCHEDULER": "true",
+                "RUN_WEB_SERVER": "true",
+            },
+            clear=False,
+        ):
+            with patch("sys.argv", ["manage.py", "migrate"]):
+                config.ready()
+            with patch("sys.argv", ["manage.py", "runserver"]):
+                config.ready()
+
+        mock_start.assert_not_called()

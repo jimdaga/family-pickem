@@ -1,10 +1,11 @@
 """In-process APScheduler that runs the update pipeline on an interval.
 
 Started from ``PickemApiConfig.ready()`` only when ``RUN_SCHEDULER=true`` is
-set in the environment. That guard is important: with multiple gunicorn
-workers, an unguarded scheduler would start in every worker and fire the job
-several times per tick. Set ``RUN_SCHEDULER=true`` on exactly one process
-(e.g. a single-replica web deployment or a dedicated scheduler pod).
+set in the environment and the actual web-server process is starting. That
+guard is important: with Django's autoreloader or multiple workers, an
+unguarded scheduler would start multiple times and fire duplicate jobs. Set
+``RUN_SCHEDULER=true`` on exactly one process (e.g. a single-replica web
+deployment or a dedicated scheduler pod).
 
 Job state is persisted in the database via django-apscheduler's DjangoJobStore,
 so ``replace_existing`` keeps a single ``update_all`` job registered across

@@ -287,7 +287,7 @@ def is_game_locked_for_pool(game, pool):
         )
         is_locked, _lock_reason = is_pick_locked_for_pool(game, pool, week_games)
         return is_locked
-    except Exception:
+    except ImportError:
         return is_game_locked(game)
 
 @register.filter
@@ -319,7 +319,7 @@ def game_lock_reason_for_pool(game, pool):
         )
         is_locked, lock_reason = is_pick_locked_for_pool(game, pool, week_games)
         return lock_reason if is_locked else "Available"
-    except Exception:
+    except ImportError:
         return game_lock_reason(game)
 
 

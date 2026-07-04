@@ -102,7 +102,7 @@
 | Invites | forged invite IDs, unsafe role requests, raw-code redisplay, CSRF | `test_admin_and_owner_can_create_member_invites_with_one_time_raw_display`, `test_admin_invite_page_lists_safe_current_family_metadata_only`, `test_admin_cannot_create_admin_role_invite_but_owner_can`, `test_cross_family_invitation_ids_cannot_be_revoked_or_replaced`, `test_invite_mutations_deny_member_outsider_inactive_anonymous_and_csrf` |
 | Manual picks | forged user/game/pool/season/week/correctness fields, JSON denial split, CSRF | `test_admin_and_owner_can_retrieve_current_pool_picks_for_active_family_users_only`, `test_manual_pick_submission_server_derives_scope_and_writes_audit`, `test_manual_pick_submission_rejects_invalid_team_cross_family_user_and_wrong_game_scope`, `test_manual_pick_access_denies_member_outsider_inactive_anonymous_and_csrf` |
 | Week winners | invalid weeks, forged winner user, cross-pool rows, CSRF | `test_winner_post_sets_current_pool_winner_bonus_total_and_audit`, `test_winner_post_rejects_invalid_weeks_before_dynamic_fields`, `test_winner_post_rejects_forged_users_and_missing_current_pool_standings`, `test_winner_access_denies_member_outsider_inactive_anonymous_and_csrf` |
-| Legacy commissioner | old page/JSON URLs no longer render or mutate global admin tools | `test_legacy_commissioner_routes_are_disabled_without_login_html_or_global_mutation`; `curl -s -i --max-time 5 http://localhost:8000/commissioners/ | head -20` |
+| Legacy commissioner | old page/JSON URLs no longer render or mutate global admin tools | `test_legacy_commissioner_routes_are_disabled_without_login_html_or_global_mutation`; `curl -s -i --max-time 5 http://localhost:8000/commissioners/ \| head -20` |
 
 ## Final Verification Results
 

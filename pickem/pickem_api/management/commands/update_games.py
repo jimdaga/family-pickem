@@ -129,81 +129,95 @@ def _gamecast_url(event):
 
 def parse_scoreboard(payload, season, game_year, slug_lookup=team_slug):
     """Yield (game_id, defaults) tuples parsed from an ESPN scoreboard payload."""
-    game_week = payload["week"]["number"]
+    game_week = ((payload or {}).get("week") or {}).get("number")
+    if game_week is None:
+        logger.warning("Skipping ESPN scoreboard payload missing week.number")
+        return
+
     for event in payload.get("events", []):
         for competition in event.get("competitions", []):
-            game_id = _int(competition["id"])
-            status_name = competition["status"]["type"]["name"]
-            status_type = STATUS_MAP.get(status_name, status_name)
-            status_detail = competition["status"]["type"]
-            status_title = (
-                status_detail["detail"]
-                if status_type == "inprogress"
-                else status_detail["description"]
-            )
+            try:
+                game_id = _int(competition["id"])
+                status_detail = competition["status"]["type"]
+                status_name = status_detail["name"]
+                status_type = STATUS_MAP.get(status_name, status_name)
+                status_title = (
+                    status_detail["detail"]
+                    if status_type == "inprogress"
+                    else status_detail["description"]
+                )
 
-            teams = {"home": {}, "away": {}}
-            for competitor in competition["competitors"]:
-                side = competitor["homeAway"]
-                p1, p2, p3, p4, ot = _linescores(competitor)
-                teams[side] = {
-                    "id": _int(competitor["id"]),
-                    "slug": slug_lookup(competitor["id"]),
-                    "name": competitor["team"]["displayName"],
-                    "winner": competitor.get("winner", False),
-                    "score": _int(competitor.get("score")),
-                    "p": (p1, p2, p3, p4, ot),
+                teams = {"home": {}, "away": {}}
+                for competitor in competition["competitors"]:
+                    side = competitor["homeAway"]
+                    p1, p2, p3, p4, ot = _linescores(competitor)
+                    teams[side] = {
+                        "id": _int(competitor["id"]),
+                        "slug": slug_lookup(competitor["id"]),
+                        "name": competitor["team"]["displayName"],
+                        "winner": competitor.get("winner", False),
+                        "score": _int(competitor.get("score")),
+                        "p": (p1, p2, p3, p4, ot),
+                    }
+
+                home, away = teams["home"], teams["away"]
+                if home.get("winner"):
+                    winner = home["slug"]
+                elif away.get("winner"):
+                    winner = away["slug"]
+                else:
+                    winner = ""
+
+                spread, over_under, home_prob, away_prob = _win_probabilities(competition)
+                temperature, condition = _weather(event, game_id)
+
+                defaults = {
+                    "slug": "{}-{}".format(home["slug"], away["slug"]),
+                    "competition": "nfl",
+                    "gameWeek": str(game_week),
+                    "gameyear": str(game_year),
+                    "gameseason": int(season),
+                    "startTimestamp": parse_datetime(competition["date"]),
+                    "gameWinner": winner,
+                    "statusType": status_type,
+                    "statusTitle": status_title,
+                    "homeTeamId": home["id"],
+                    "homeTeamSlug": home["slug"],
+                    "homeTeamName": home["name"],
+                    "homeTeamScore": home["score"],
+                    "homeTeamPeriod1": home["p"][0],
+                    "homeTeamPeriod2": home["p"][1],
+                    "homeTeamPeriod3": home["p"][2],
+                    "homeTeamPeriod4": home["p"][3],
+                    "homeTeamPeriodOT": home["p"][4],
+                    "awayTeamId": away["id"],
+                    "awayTeamSlug": away["slug"],
+                    "awayTeamName": away["name"],
+                    "awayTeamScore": away["score"],
+                    "awayTeamPeriod1": away["p"][0],
+                    "awayTeamPeriod2": away["p"][1],
+                    "awayTeamPeriod3": away["p"][2],
+                    "awayTeamPeriod4": away["p"][3],
+                    "awayTeamPeriodOT": away["p"][4],
+                    "homeTeamWinProbability": home_prob,
+                    "awayTeamWinProbability": away_prob,
+                    "spread": spread,
+                    "overUnder": over_under,
+                    "temperature": temperature,
+                    "weatherCondition": condition,
+                    "venueIndoor": (competition.get("venue") or {}).get("indoor", False),
+                    "broadcast": _broadcast(competition),
+                    "gamecastUrl": _gamecast_url(event),
                 }
+            except (KeyError, TypeError, ValueError) as exc:
+                logger.warning(
+                    "Skipping malformed ESPN competition payload for event=%s competition=%s: %s",
+                    event.get("id"),
+                    competition.get("id"),
+                    exc,
+                )
+                continue
 
-            home, away = teams["home"], teams["away"]
-            if home.get("winner"):
-                winner = home["slug"]
-            elif away.get("winner"):
-                winner = away["slug"]
-            else:
-                winner = ""
-
-            spread, over_under, home_prob, away_prob = _win_probabilities(competition)
-            temperature, condition = _weather(event, game_id)
-
-            defaults = {
-                "slug": "{}-{}".format(home["slug"], away["slug"]),
-                "competition": "nfl",
-                "gameWeek": str(game_week),
-                "gameyear": str(game_year),
-                "gameseason": int(season),
-                "startTimestamp": parse_datetime(competition["date"]),
-                "gameWinner": winner,
-                "statusType": status_type,
-                "statusTitle": status_title,
-                "homeTeamId": home["id"],
-                "homeTeamSlug": home["slug"],
-                "homeTeamName": home["name"],
-                "homeTeamScore": home["score"],
-                "homeTeamPeriod1": home["p"][0],
-                "homeTeamPeriod2": home["p"][1],
-                "homeTeamPeriod3": home["p"][2],
-                "homeTeamPeriod4": home["p"][3],
-                "homeTeamPeriodOT": home["p"][4],
-                "awayTeamId": away["id"],
-                "awayTeamSlug": away["slug"],
-                "awayTeamName": away["name"],
-                "awayTeamScore": away["score"],
-                "awayTeamPeriod1": away["p"][0],
-                "awayTeamPeriod2": away["p"][1],
-                "awayTeamPeriod3": away["p"][2],
-                "awayTeamPeriod4": away["p"][3],
-                "awayTeamPeriodOT": away["p"][4],
-                "homeTeamWinProbability": home_prob,
-                "awayTeamWinProbability": away_prob,
-                "spread": spread,
-                "overUnder": over_under,
-                "temperature": temperature,
-                "weatherCondition": condition,
-                "venueIndoor": (competition.get("venue") or {}).get("indoor", False),
-                "broadcast": _broadcast(competition),
-                "gamecastUrl": _gamecast_url(event),
-            }
             yield game_id, defaults
 
 

@@ -41,6 +41,9 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
+          {{- if and .Values.scheduler.enabled .Values.autoscaling.enabled }}
+          {{ fail "scheduler.enabled requires autoscaling.enabled=false" }}
+          {{- end }}
           {{- if .Values.scheduler.enabled }}
           # In-process APScheduler runs the update pipeline. Safe only because
           # the web Deployment is single-replica; do not enable with replicaCount > 1.

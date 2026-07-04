@@ -48,4 +48,5 @@ python manage.py makemigrations
 python manage.py migrate 
 
 # Start Server
+export RUN_WEB_SERVER=true
 python manage.py runserver 0.0.0.0:8000
