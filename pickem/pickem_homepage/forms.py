@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-from pickem_api.models import FamilyMembership, GamePicks, userSeasonPoints
+from pickem_api.models import FamilyMembership, GamePicks, PoolSettings, userSeasonPoints
 from .models import MessageBoardPost, MessageBoardComment, SiteBanner
 
 
@@ -115,6 +115,76 @@ class FamilyAdminSettingsForm(forms.Form):
             'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
         }),
     )
+
+    # Scoring rules
+    win_points = forms.IntegerField(
+        label="Points per win",
+        min_value=0,
+        max_value=99,
+        widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    tie_points = forms.IntegerField(
+        label="Points per tie",
+        min_value=0,
+        max_value=99,
+        widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    weekly_winner_points = forms.IntegerField(
+        label="Weekly winner bonus",
+        min_value=0,
+        max_value=99,
+        widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    primary_tiebreaker = forms.ChoiceField(
+        label="Primary tiebreaker",
+        choices=PoolSettings.PrimaryTiebreaker.choices,
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    secondary_tiebreaker = forms.ChoiceField(
+        label="Secondary tiebreaker",
+        choices=PoolSettings.SecondaryTiebreaker.choices,
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    perfect_week_bonus_enabled = forms.BooleanField(
+        label="Perfect week bonus",
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
+    perfect_week_bonus_points = forms.IntegerField(
+        label="Perfect week bonus points",
+        min_value=0,
+        max_value=99,
+        widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    entry_fee_enabled = forms.BooleanField(
+        label="Entry fee",
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
+    entry_fee_amount = forms.IntegerField(
+        label="Entry fee (whole dollars)",
+        min_value=0,
+        max_value=100000,
+        widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('perfect_week_bonus_enabled') and not cleaned.get('perfect_week_bonus_points'):
+            self.add_error(
+                'perfect_week_bonus_points',
+                "Set a bonus value (at least 1) when the perfect week bonus is enabled.",
+            )
+        if cleaned.get('entry_fee_enabled') and not cleaned.get('entry_fee_amount'):
+            self.add_error(
+                'entry_fee_amount',
+                "Set an entry fee amount (at least $1) when the entry fee is enabled.",
+            )
+        return cleaned
 
     def clean_family_name(self):
         name = self.cleaned_data.get('family_name', '').strip()

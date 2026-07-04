@@ -2878,6 +2878,94 @@ class FamilyAdminExperienceTests(TestCase):
             kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
         )
 
+    @staticmethod
+    def _default_scoring_fields(**overrides):
+        """POST payload for the scoring/rules fields at their model defaults."""
+        fields = {
+            "win_points": 1,
+            "tie_points": 0,
+            "weekly_winner_points": 2,
+            "primary_tiebreaker": "total_score",
+            "secondary_tiebreaker": "combined_yards",
+            "perfect_week_bonus_points": 3,
+            "entry_fee_amount": 0,
+        }
+        fields.update(overrides)
+        return fields
+
+    def test_scoring_rules_roundtrip_and_render_on_rules_page(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            self._settings_url(),
+            {
+                "family_name": self.family.name,
+                "pool_name": self.pool.name,
+                "picks_lock_at_kickoff": "on",
+                "allow_tiebreaker": "on",
+                **self._default_scoring_fields(
+                    win_points=2,
+                    tie_points=1,
+                    weekly_winner_points=5,
+                    primary_tiebreaker="combined_yards",
+                    secondary_tiebreaker="coin_flip",
+                    perfect_week_bonus_points=7,
+                    entry_fee_amount=40,
+                ),
+                "perfect_week_bonus_enabled": "on",
+                "entry_fee_enabled": "on",
+            },
+        )
+        self.assertRedirects(response, self._settings_url())
+
+        settings = self.pool.settings
+        settings.refresh_from_db()
+        self.assertEqual(settings.win_points, 2)
+        self.assertEqual(settings.tie_points, 1)
+        self.assertEqual(settings.weekly_winner_points, 5)
+        self.assertEqual(settings.primary_tiebreaker, "combined_yards")
+        self.assertEqual(settings.secondary_tiebreaker, "coin_flip")
+        self.assertTrue(settings.perfect_week_bonus_enabled)
+        self.assertEqual(settings.perfect_week_bonus_points, 7)
+        self.assertTrue(settings.entry_fee_enabled)
+        self.assertEqual(settings.entry_fee_amount, 40)
+
+        # The rules page renders the configured values.
+        rules_url = reverse(
+            "family_pool_rules",
+            kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
+        )
+        rules = self.client.get(rules_url)
+        self.assertEqual(rules.status_code, 200)
+        self.assertContains(rules, "+2")   # win points
+        self.assertContains(rules, "+5")   # weekly winner bonus
+        self.assertContains(rules, "+7")   # perfect week bonus
+        self.assertContains(rules, "$40")  # entry fee
+        self.assertContains(rules, "coin flip")
+
+    def test_scoring_rules_validation_requires_value_when_bonus_enabled(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            self._settings_url(),
+            {
+                "family_name": self.family.name,
+                "pool_name": self.pool.name,
+                "allow_tiebreaker": "on",
+                **self._default_scoring_fields(perfect_week_bonus_points=0, entry_fee_amount=0),
+                "perfect_week_bonus_enabled": "on",
+                "entry_fee_enabled": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Set a bonus value")
+        self.assertContains(response, "Set an entry fee amount")
+        settings = self.pool.settings
+        settings.refresh_from_db()
+        self.assertFalse(settings.perfect_week_bonus_enabled)
+        self.assertFalse(settings.entry_fee_enabled)
+
     def _members_url(self, *, family=None, pool=None):
         family = family or self.family
         pool = pool or self.pool
@@ -3172,6 +3260,7 @@ class FamilyAdminExperienceTests(TestCase):
                 "pool_name": "Updated Main Pickem",
                 "picks_lock_at_kickoff": "",
                 "allow_tiebreaker": "on",
+                **self._default_scoring_fields(),
                 "family_id": self.other_family.id,
                 "pool_id": self.other_pool.id,
                 "site_banner_id": SiteBanner.objects.create(

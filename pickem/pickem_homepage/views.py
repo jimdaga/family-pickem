@@ -958,19 +958,36 @@ def family_pool_admin_job_runs(request, family_slug, pool_slug):
     return render(request, 'pickem/family_admin_job_runs.html', context)
 
 
+# PoolSettings fields managed by the family admin settings form. The form,
+# initial values, audit metadata, and save path all iterate this list, so a
+# new rule only needs a model field + form field + template input.
+ADMIN_POOL_SETTINGS_FIELDS = [
+    'picks_lock_at_kickoff',
+    'allow_tiebreaker',
+    'win_points',
+    'tie_points',
+    'weekly_winner_points',
+    'primary_tiebreaker',
+    'secondary_tiebreaker',
+    'perfect_week_bonus_enabled',
+    'perfect_week_bonus_points',
+    'entry_fee_enabled',
+    'entry_fee_amount',
+]
+
+
 def build_admin_settings_metadata(*, family, pool, settings, cleaned_data):
     before = {
         'family.name': family.name,
         'pool.name': pool.name,
-        'settings.picks_lock_at_kickoff': settings.picks_lock_at_kickoff,
-        'settings.allow_tiebreaker': settings.allow_tiebreaker,
     }
     after = {
         'family.name': cleaned_data['family_name'],
         'pool.name': cleaned_data['pool_name'],
-        'settings.picks_lock_at_kickoff': cleaned_data['picks_lock_at_kickoff'],
-        'settings.allow_tiebreaker': cleaned_data['allow_tiebreaker'],
     }
+    for field in ADMIN_POOL_SETTINGS_FIELDS:
+        before[f'settings.{field}'] = getattr(settings, field)
+        after[f'settings.{field}'] = cleaned_data[field]
     changed_fields = [
         field for field, before_value in before.items()
         if before_value != after[field]
@@ -999,9 +1016,9 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
     initial = {
         'family_name': family.name,
         'pool_name': pool.name,
-        'picks_lock_at_kickoff': pool_settings.picks_lock_at_kickoff,
-        'allow_tiebreaker': pool_settings.allow_tiebreaker,
     }
+    for field in ADMIN_POOL_SETTINGS_FIELDS:
+        initial[field] = getattr(pool_settings, field)
     banner_form = FamilyBannerForm()
 
     action = request.POST.get('action') if request.method == 'POST' else None
@@ -1098,16 +1115,10 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
                     locked_pool.name = form.cleaned_data['pool_name']
                     locked_pool.save(update_fields=['name', 'updated_at'])
                 settings_fields = []
-                if 'settings.picks_lock_at_kickoff' in changed_fields:
-                    locked_settings.picks_lock_at_kickoff = form.cleaned_data[
-                        'picks_lock_at_kickoff'
-                    ]
-                    settings_fields.append('picks_lock_at_kickoff')
-                if 'settings.allow_tiebreaker' in changed_fields:
-                    locked_settings.allow_tiebreaker = form.cleaned_data[
-                        'allow_tiebreaker'
-                    ]
-                    settings_fields.append('allow_tiebreaker')
+                for field in ADMIN_POOL_SETTINGS_FIELDS:
+                    if f'settings.{field}' in changed_fields:
+                        setattr(locked_settings, field, form.cleaned_data[field])
+                        settings_fields.append(field)
                 if settings_fields:
                     locked_settings.save(update_fields=settings_fields + ['updated_at'])
 
@@ -1140,6 +1151,12 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
         'banner_form': banner_form,
         'pool_settings': pool_settings,
         'current_family_banners': current_family_banners,
+        'scoring_point_fields': [
+            form['win_points'], form['tie_points'], form['weekly_winner_points'],
+        ],
+        'tiebreaker_fields': [
+            form['primary_tiebreaker'], form['secondary_tiebreaker'],
+        ],
     }
     return render(request, 'pickem/family_admin_settings.html', context)
 
@@ -2300,6 +2317,10 @@ def render_rules_page(request, *, tenant_context=None):
             pool_settings = tenant_context.pool.settings
         except PoolSettings.DoesNotExist:
             pool_settings = None
+    if pool_settings is None:
+        # Unsaved instance -> model defaults, so the rules page can always
+        # render values (public page shows the default rule set).
+        pool_settings = PoolSettings()
 
     context = {
         'gameseason': gameseason,

@@ -7,7 +7,7 @@ Pickem
 
 ##### Ideas
 - [x] Make the "Live Scores" shortcut jump directly to active game cards when games are live. Consider using an anchor or query parameter on the scores page so users land on the most relevant game instead of the top of the page.
-- [ ] Make more of the rules page editable by family admins. Decide which rules are true settings versus display-only copy before exposing edit controls.
+- [x] Make more of the rules page editable by family admins. Decide which rules are true settings versus display-only copy before exposing edit controls.
 - [ ] Clarify how submitting picks should work for users in multiple families. Confirm whether one pick submission can apply to multiple pools, or whether picks must always be submitted independently per family/pool.
 - [ ] Give families a way to set and manage a logo. Include validation for image URL/upload, fallback behavior, and admin-only authorization.
 - [ ] Move invites toward an email-based model. Hide or de-emphasize raw invite codes once email invites are available.

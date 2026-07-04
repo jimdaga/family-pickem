@@ -56,7 +56,7 @@
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10 text-green-600 dark:text-green-400">
                             <i class="fas fa-check-circle"></i>
                         </span>
-                        <div class="text-3xl font-bold text-text-dark dark:text-white">+1</div>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">+{{ pool_settings.win_points }}</div>
                     </div>
                     <div class="font-bold text-text-dark dark:text-white">Wins</div>
                     <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Correctly pick the winning team</p>
@@ -80,10 +80,10 @@
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-500/10 text-slate-600 dark:text-slate-300">
                             <i class="fas fa-equals"></i>
                         </span>
-                        <div class="text-3xl font-bold text-text-dark dark:text-white">0</div>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">{% if pool_settings.tie_points %}+{{ pool_settings.tie_points }}{% else %}0{% endif %}</div>
                     </div>
                     <div class="font-bold text-text-dark dark:text-white">Ties</div>
-                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Tied games award no points</p>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">{% if pool_settings.tie_points %}Points when a picked game ends in a tie{% else %}Tied games award no points{% endif %}</p>
                 </div>
 
                 <!-- Weekly Winner -->
@@ -92,7 +92,7 @@
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
                             <i class="fas fa-trophy"></i>
                         </span>
-                        <div class="text-3xl font-bold text-text-dark dark:text-white">+2</div>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">+{{ pool_settings.weekly_winner_points }}</div>
                     </div>
                     <div class="font-bold text-text-dark dark:text-white">Weekly Winner</div>
                     <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Bonus for most points in a week</p>
@@ -112,7 +112,7 @@
                     </span>
                     <div class="font-bold text-text-dark dark:text-white mb-1">Primary Tiebreaker</div>
                     <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
-                        Determined by <strong class="text-text-dark dark:text-white">closest total score</strong>. No Price is Right rules &mdash; you can go over!
+                        Determined by <strong class="text-text-dark dark:text-white">{{ pool_settings.get_primary_tiebreaker_display|lower }}</strong>{% if pool_settings.primary_tiebreaker == 'total_score' %}. No Price is Right rules &mdash; you can go over!{% endif %}
                     </p>
                 </div>
 
@@ -123,7 +123,7 @@
                     </span>
                     <div class="font-bold text-text-dark dark:text-white mb-1">Secondary Tiebreaker</div>
                     <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
-                        Uses <strong class="text-text-dark dark:text-white">combined yards</strong> from the Monday Night Football game
+                        Uses <strong class="text-text-dark dark:text-white">{{ pool_settings.get_secondary_tiebreaker_display|lower }}</strong>{% if pool_settings.secondary_tiebreaker == 'combined_yards' %} from the designated tiebreaker game{% endif %}
                     </p>
                 </div>
 
@@ -134,7 +134,11 @@
                     </span>
                     <div class="font-bold text-text-dark dark:text-white mb-1">Game Locking</div>
                     <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
+                        {% if pool_settings.picks_lock_at_kickoff %}
                         Games <strong class="text-text-dark dark:text-white">lock automatically</strong> when they start &mdash; no late picks allowed
+                        {% else %}
+                        Kickoff locking is <strong class="text-text-dark dark:text-white">off</strong> for this pool &mdash; standard weekly deadlines apply
+                        {% endif %}
                     </p>
                 </div>
             </div>
@@ -151,10 +155,16 @@
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <i class="fas fa-gem"></i>
                         </span>
-                        <div class="text-3xl font-bold text-text-dark dark:text-white">$10</div>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">{% if pool_settings.perfect_week_bonus_enabled %}+{{ pool_settings.perfect_week_bonus_points }}{% else %}&mdash;{% endif %}</div>
                     </div>
                     <div class="font-bold text-text-dark dark:text-white">Perfect Week Bonus</div>
-                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Get all picks correct and earn <strong class="text-text-dark dark:text-white">$10 from each participant</strong></p>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                        {% if pool_settings.perfect_week_bonus_enabled %}
+                        Get all picks correct in a week and earn <strong class="text-text-dark dark:text-white">{{ pool_settings.perfect_week_bonus_points }} bonus point{{ pool_settings.perfect_week_bonus_points|pluralize }}</strong>
+                        {% else %}
+                        Not enabled for this pool
+                        {% endif %}
+                    </p>
                 </div>
 
                 <!-- Entry Fee -->
@@ -163,10 +173,16 @@
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <i class="fas fa-dollar-sign"></i>
                         </span>
-                        <div class="text-3xl font-bold text-text-dark dark:text-white">$40</div>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">{% if pool_settings.entry_fee_enabled %}${{ pool_settings.entry_fee_amount }}{% else %}Free{% endif %}</div>
                     </div>
                     <div class="font-bold text-text-dark dark:text-white">Entry Fee</div>
-                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Per person entry. Champion determined by <strong class="text-text-dark dark:text-white">most total points</strong></p>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                        {% if pool_settings.entry_fee_enabled %}
+                        Per person entry. Champion determined by <strong class="text-text-dark dark:text-white">most total points</strong>
+                        {% else %}
+                        No entry fee &mdash; champion determined by <strong class="text-text-dark dark:text-white">most total points</strong>
+                        {% endif %}
+                    </p>
                 </div>
 
                 <!-- Championship Tiebreaker -->

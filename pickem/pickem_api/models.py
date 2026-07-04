@@ -162,6 +162,17 @@ class FamilyMembership(models.Model):
 
 
 class PoolSettings(models.Model):
+    class PrimaryTiebreaker(models.TextChoices):
+        TOTAL_SCORE = 'total_score', 'Closest total score'
+        TOTAL_SCORE_NO_OVER = 'total_score_no_over', 'Closest total score without going over'
+        COMBINED_YARDS = 'combined_yards', 'Closest combined yards'
+
+    class SecondaryTiebreaker(models.TextChoices):
+        COMBINED_YARDS = 'combined_yards', 'Closest combined yards'
+        TOTAL_SCORE = 'total_score', 'Closest total score'
+        SPLIT_POINTS = 'split_points', 'Split the points'
+        COIN_FLIP = 'coin_flip', 'Coin flip'
+
     pool = models.OneToOneField(Pool, on_delete=models.PROTECT, related_name='settings')
     picks_lock_at_kickoff = models.BooleanField(
         default=True,
@@ -171,6 +182,49 @@ class PoolSettings(models.Model):
         default=True,
         help_text="Allow tiebreaker predictions",
     )
+
+    # Scoring rules (display/config now; automated scoring reads these later)
+    win_points = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Points awarded per correct pick",
+    )
+    tie_points = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Points awarded when a picked game ends in a tie",
+    )
+    weekly_winner_points = models.PositiveSmallIntegerField(
+        default=2,
+        help_text="Bonus points awarded to the weekly winner",
+    )
+    primary_tiebreaker = models.CharField(
+        max_length=32,
+        choices=PrimaryTiebreaker.choices,
+        default=PrimaryTiebreaker.TOTAL_SCORE,
+        help_text="First tiebreaker used to settle weekly ties",
+    )
+    secondary_tiebreaker = models.CharField(
+        max_length=32,
+        choices=SecondaryTiebreaker.choices,
+        default=SecondaryTiebreaker.COMBINED_YARDS,
+        help_text="Second tiebreaker if the primary is also tied",
+    )
+    perfect_week_bonus_enabled = models.BooleanField(
+        default=False,
+        help_text="Award a bonus for picking every game correctly in a week",
+    )
+    perfect_week_bonus_points = models.PositiveSmallIntegerField(
+        default=3,
+        help_text="Bonus points for a perfect week",
+    )
+    entry_fee_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether this pool collects an entry fee",
+    )
+    entry_fee_amount = models.PositiveIntegerField(
+        default=0,
+        help_text="Entry fee per player, in whole dollars",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
