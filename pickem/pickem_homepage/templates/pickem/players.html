@@ -1,6 +1,8 @@
 {% extends 'pickem/base.html' %}
 {% load static %}
 
+{% block title %}Players{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
 {% block mobile_title %}
     <div class="mobile-subtitle">
         <i class="fas fa-users mr-2"></i>{{ family.name }} Players
@@ -38,7 +40,7 @@
             {% for player in players %}
                 <a href="{% url 'family_pool_user_profile' family.slug pool.slug player.id %}" class="players-compact-card group px-3 py-2 rounded-lg border border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/30 hover:border-primary/50 transition-colors">
                     <div class="flex items-center gap-3">
-                        <img src="{{ player.socialaccount_set.all.0.get_avatar_url|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                        <img src="{{ player.socialaccount_set.all.0.get_avatar_url|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
                              alt="{{ player.username }}"
                              class="w-9 h-9 rounded-full border border-border-light dark:border-border-subtle group-hover:border-primary">
                         <div class="min-w-0">

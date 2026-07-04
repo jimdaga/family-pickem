@@ -1,6 +1,8 @@
 {% extends 'pickem/base.html' %}
 {% load static %}
 
+{% block title %}Private Profile{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
 {% block mobile_title %}
     <div class="mobile-page-header">
         <h2 class="mobile-title-text">

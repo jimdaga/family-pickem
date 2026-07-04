@@ -3,6 +3,8 @@
 {% load socialaccount %}
 {% load pickem_homepage_extras %}
 
+{% block title %}Standings{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
 {% block mobile_title %}
     <div class="mobile-subtitle">
         <i class="fas fa-trophy mr-2"></i>Standings
@@ -67,7 +69,7 @@
             {% with avatars|lookup:season_winner.userID as champion_avatar %}
             <div class="flex flex-col items-center gap-2">
                 <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug season_winner.userID %}{% else %}{% url 'user_profile' season_winner.userID %}{% endif %}" class="group">
-                    <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                    <img src="{{ champion_avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
                          alt="Profile picture for {{ champion_name }}"
                          class="w-16 h-16 rounded-full border-4 border-yellow-500 shadow-glow-primary group-hover:scale-110 transition-transform duration-200">
                 </a>

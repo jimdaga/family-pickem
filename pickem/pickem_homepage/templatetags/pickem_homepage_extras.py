@@ -74,7 +74,7 @@ def lookupavatar(user_id):
             email_hash = hashlib.md5(user.email.lower().encode('utf-8')).hexdigest()
             avatar_url = f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=64"
         except User.DoesNotExist:
-            avatar_url = "https://www.wmata.com/systemimages/icons/menu-car-icon.png"
+            avatar_url = "https://www.gravatar.com/avatar/?d=identicon&s=64"
     
     return avatar_url
 

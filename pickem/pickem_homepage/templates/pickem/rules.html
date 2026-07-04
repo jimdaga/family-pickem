@@ -2,6 +2,8 @@
 {% load static %}
 {% load socialaccount %}
 
+{% block title %}Rules{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
 {% block mobile_title %}
     <div class="mobile-subtitle">
         <i class="fas fa-gavel mr-2"></i>League Rules

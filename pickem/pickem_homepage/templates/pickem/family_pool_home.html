@@ -52,10 +52,14 @@
                             <div class="w-12 h-12 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center text-white font-bold text-lg select-none">
                                 {{ request.user|display_name|slice:":1"|upper }}
                             </div>
-                            <img src="{{ request.user.socialaccount_set.all.0.get_avatar_url }}"
+                            {% with request.user.socialaccount_set.all.0 as social_account %}
+                            {% if social_account %}
+                            <img src="{{ social_account.get_avatar_url }}"
                                  alt="Your avatar"
                                  class="absolute inset-0 w-12 h-12 rounded-full border-2 border-white/40 object-cover"
                                  onerror="this.remove()">
+                            {% endif %}
+                            {% endwith %}
                         </div>
                         <div class="text-left">
                             <p class="font-bold text-white text-lg leading-tight">

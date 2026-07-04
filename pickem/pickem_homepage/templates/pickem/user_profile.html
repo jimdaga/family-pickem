@@ -2,6 +2,8 @@
 {% load static %}
 {% load pickem_homepage_extras %}
 
+{% block title %}Player Profile{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
 {% block mobile_title %}
     <div class="mobile-subtitle">
         <i class="fas fa-user-circle mr-2"></i>{{ profile_user.first_name|default:profile_user.username }}'s Profile
@@ -14,9 +16,13 @@
     <div class="page-header-clean">
         <div class="flex items-center gap-4 flex-wrap">
             <div class="relative flex-shrink-0">
-                <img src="{{ profile_user.socialaccount_set.all.0.get_avatar_url }}"
+                {% with profile_user.socialaccount_set.all.0 as social_account %}
+                {% if social_account %}
+                <img src="{{ social_account.get_avatar_url }}"
                      alt="Profile picture"
                      class="w-14 h-14 rounded-full border-2 border-primary">
+                {% endif %}
+                {% endwith %}
             </div>
             <div class="flex-1 min-w-0">
                 <h1 class="text-xl font-bold text-text-dark dark:text-white">{{ profile_user.first_name|default:profile_user.username }} {{ profile_user.last_name }}</h1>

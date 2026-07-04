@@ -20,10 +20,6 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="description" content="Family Pick'em - Your ultimate NFL pick 'em league experience">
     
-    <!-- Bootstrap CSS -->
-    <!-- TEMPORARILY DISABLED FOR TESTING
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    -->
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous">
     <!-- Google Fonts - Inter & Urbanist -->
@@ -35,9 +31,6 @@
     <link rel="shortcut icon" type="image/png" href="{% static 'images/windowlogo.png' %}">
     <!-- Tailwind CSS -->
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={{ static_version }}">
-    <!-- OLD CSS FILES REMOVED - Tailwind migration in progress -->
-    <!-- <link rel="stylesheet" href="{% static 'css/style.css' %}"> -->
-    <!-- <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}"> -->
 </head>
 
 <body class="bg-gray-50 dark:bg-bg-dark transition-colors duration-200">
@@ -85,16 +78,7 @@
                             <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}">Current Week</a>
                             <a class="block px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400 hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}#live"><i class="fas fa-circle animate-pulse mr-2 text-[0.5rem] align-middle"></i>Live now</a>
                             <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
-                            {% for week_number in "123456789"|make_list %}<a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason week_number %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/{{ week_number }}{% endif %}">Week {{ week_number }}</a>{% endfor %}
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 10 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/10{% endif %}">Week 10</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 11 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/11{% endif %}">Week 11</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 12 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/12{% endif %}">Week 12</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 13 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/13{% endif %}">Week 13</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 14 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/14{% endif %}">Week 14</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 15 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/15{% endif %}">Week 15</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 16 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/16{% endif %}">Week 16</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 17 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/17{% endif %}">Week 17</a>
-                            <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 18 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/18{% endif %}">Week 18</a>
+                            {% for week_number in 18|times %}<a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason week_number %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/{{ week_number }}{% endif %}">Week {{ week_number }}</a>{% endfor %}
                         </div>
                     </div>
 
@@ -173,10 +157,14 @@
                                     aria-label="User menu" onclick="toggleDropdown(event, this)">
                                 <div class="relative w-8 h-8 flex-shrink-0">
                                     <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold select-none">{{ user|display_name|slice:":1"|upper }}</div>
-                                    <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                                    {% with user.socialaccount_set.all.0 as social_account %}
+                                    {% if social_account %}
+                                    <img src="{{ social_account.get_avatar_url }}"
                                          alt="Profile picture"
                                          class="absolute inset-0 w-8 h-8 rounded-full object-cover"
                                          onerror="this.remove()">
+                                    {% endif %}
+                                    {% endwith %}
                                 </div>
                                 <span class="text-white font-medium">
                                     {{ user|display_name }}
@@ -236,16 +224,7 @@
                             <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}">Current Week</a>
                             <a class="block px-4 py-2 text-sm font-semibold text-green-400 hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}#live"><i class="fas fa-circle animate-pulse mr-2 text-[0.5rem] align-middle"></i>Live now</a>
                             <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
-                            {% for week_number in "123456789"|make_list %}<a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason week_number %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/{{ week_number }}{% endif %}">Week {{ week_number }}</a>{% endfor %}
-                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 10 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/10{% endif %}">Week 10</a>
-                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 11 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/11{% endif %}">Week 11</a>
-                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 12 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/12{% endif %}">Week 12</a>
-                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 13 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/13{% endif %}">Week 13</a>
-                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 14 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/14{% endif %}">Week 14</a>
-                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 15 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/15{% endif %}">Week 15</a>
-                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 16 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/16{% endif %}">Week 16</a>
-                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 17 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/17{% endif %}">Week 17</a>
-                            <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason 18 %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/18{% endif %}">Week 18</a>
+                            {% for week_number in 18|times %}<a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason week_number %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/{{ week_number }}{% endif %}">Week {{ week_number }}</a>{% endfor %}
                         </div>
                     </div>
 
@@ -408,10 +387,14 @@
             <div class="flex items-center gap-3">
                 <div class="relative w-8 h-8 flex-shrink-0">
                     <div class="w-8 h-8 rounded-full bg-primary border-2 border-border-subtle flex items-center justify-center text-white text-xs font-bold select-none">{{ user|display_name|slice:":1"|upper }}</div>
-                    <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                    {% with user.socialaccount_set.all.0 as social_account %}
+                    {% if social_account %}
+                    <img src="{{ social_account.get_avatar_url }}"
                          alt="Your avatar"
                          class="absolute inset-0 w-8 h-8 rounded-full object-cover border-2 border-border-light dark:border-border-subtle"
                          onerror="this.remove()">
+                    {% endif %}
+                    {% endwith %}
                 </div>
                 <span class="text-white font-semibold truncate">
                     {{ user|display_name }}
@@ -442,14 +425,6 @@
         </div>
     </div>
     {% endif %}
-
-    <!-- Bootstrap JS (Keep temporarily for other components) -->
-    <!-- TEMPORARILY DISABLED FOR TESTING
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.min.js"
-            integrity="sha384-Atwg2Pkwv9vp0ygtn1JAojH0nYbwNJLPhwyoVbhoPwBhjQPR5VtM2+xf0Uwh9KtT"
-            crossorigin="anonymous"></script>
-    -->
 
     <!-- Dropdown and Mobile Menu Toggle -->
     <script>
@@ -709,7 +684,5 @@
     window.ThemeManager = ThemeManager;
     </script>
 
-    <!-- Legacy dark mode JS removed - now using Tailwind ThemeManager -->
-    <!-- <script src="{% static 'css/dark-mode.js' %}"></script> -->
 </body>
 </html>

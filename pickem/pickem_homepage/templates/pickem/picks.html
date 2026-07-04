@@ -2,6 +2,8 @@
 {% load static %}
 {% load pickem_homepage_extras %}
 
+{% block title %}Submit Picks{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
 {% block content %}
     <div data-picks-page class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
         <!-- Combined header + pick progress summary -->

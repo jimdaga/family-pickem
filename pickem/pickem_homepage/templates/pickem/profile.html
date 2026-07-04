@@ -1,6 +1,8 @@
 {% extends 'pickem/base.html' %}
 {% load static %}
 
+{% block title %}My Profile{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
 {# This page renders messages inline within its own layout. #}
 {% block flash_messages %}{% endblock %}
 
@@ -18,9 +20,13 @@
     <div class="page-header-clean">
         <div class="flex items-center gap-4">
             <div class="relative flex-shrink-0">
-                <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
+                {% with user.socialaccount_set.all.0 as social_account %}
+                {% if social_account %}
+                <img src="{{ social_account.get_avatar_url }}"
                      alt="Your profile picture"
                      class="w-14 h-14 rounded-full border-2 border-primary">
+                {% endif %}
+                {% endwith %}
                 <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-surface rounded-full"></div>
             </div>
             <div>
