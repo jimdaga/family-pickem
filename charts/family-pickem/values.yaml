@@ -77,6 +77,12 @@ postgresql:
         # password: ""
         database: "pickem"
 
+# In-process update scheduler (django-apscheduler). When enabled, sets
+# RUN_SCHEDULER=true on the single web replica so it runs the update_all
+# pipeline internally; the legacy cron CronJob below should be suspended.
+scheduler:
+  enabled: false
+
 cron:
   schedule: "* * * * *"
   command: "/code/pickem_api/cron.sh"
