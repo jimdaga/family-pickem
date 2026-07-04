@@ -792,7 +792,7 @@
     </div>
 
     <!-- Auto-save JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" integrity="sha384-HOvlOYPIs/zjoIkWUGXkVmXsjr8GuZLV+Q+rcPwmJOVZVpvTSXQChiN4t9Euv9Vc" crossorigin="anonymous"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         if (!window.gsap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -1151,12 +1151,17 @@
                 if (spread && spread !== '') {
                     const spreadValue = parseFloat(spread);
                     const spreadElement = document.getElementById('editSpreadValue');
-                    
-                    if (spreadValue > 0) {
-                        spreadElement.innerHTML = `<img src="${homeLogo}" alt="${homeName} logo" class="w-4 h-4 object-contain inline-block align-middle"> -${Math.abs(spreadValue).toFixed(1)}`;
-                    } else {
-                        spreadElement.innerHTML = `<img src="${awayLogo}" alt="${awayName} logo" class="w-4 h-4 object-contain inline-block align-middle"> -${Math.abs(spreadValue).toFixed(1)}`;
-                    }
+
+                    // Build with DOM APIs (not innerHTML) so team names/logos
+                    // are treated as data, never markup.
+                    const favoredLogo = document.createElement('img');
+                    favoredLogo.src = spreadValue > 0 ? homeLogo : awayLogo;
+                    favoredLogo.alt = `${spreadValue > 0 ? homeName : awayName} logo`;
+                    favoredLogo.className = 'w-4 h-4 object-contain inline-block align-middle';
+                    spreadElement.replaceChildren(
+                        favoredLogo,
+                        document.createTextNode(` -${Math.abs(spreadValue).toFixed(1)}`)
+                    );
                     spreadInfo.style.display = 'flex';
                     hasStats = true;
                 } else {

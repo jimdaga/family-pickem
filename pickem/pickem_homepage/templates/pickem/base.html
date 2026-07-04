@@ -25,7 +25,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet">
     -->
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous">
     <!-- Google Fonts - Inter & Urbanist -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -360,7 +360,7 @@
                     {% if banner_icon %}
                     <i class="{{ banner_icon }} text-lg flex-shrink-0" aria-hidden="true"></i>
                     {% endif %}
-                    <div class="min-w-0 flex-1 text-sm font-semibold leading-snug">{{ banner_message|safe }}</div>
+                    <div class="min-w-0 flex-1 text-sm font-semibold leading-snug">{{ banner_message }}</div>
                     {% if banner_dismissible %}
                     <button type="button" class="banner-close -mr-1 flex-shrink-0 rounded-lg p-1.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors" aria-label="Dismiss banner">
                         <i class="fas fa-times"></i>

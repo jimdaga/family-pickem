@@ -2936,18 +2936,6 @@ def rules(request):
     return render_rules_page(request)
 
 
-def home_view(request):
-    gameseason = get_season()
-    context = {
-        'banner_message': 'Week 15 picks are due by Sunday at 1 PM EST!',
-        'banner_type': 'warning',
-        'banner_icon': 'fas fa-clock',
-        'banner_dismissible': True,
-        'gameseason': gameseason
-    }
-    return render(request, 'pickem/home.html', context)
-
-
 @login_required
 def profile(request):
     gameseason = get_season()
@@ -3234,11 +3222,13 @@ def render_user_profile(request, user_id, *, tenant_context=None):
         'gameseason': gameseason,
         'gameseason_display': gameseason_display,
         'is_own_profile': request.user == profile_user,
-        'team_chart_data': json.dumps(team_chart_data),
-        'team_chart_labels': json.dumps(team_chart_labels),
-        'team_chart_colors': json.dumps(team_chart_colors),
-        'team_chart_slugs': json.dumps(team_chart_slugs),
-        'team_chart_logos': json.dumps(team_chart_logos),
+        # Raw lists; the template serialises them with |json_script (safe
+        # against </script> breakouts, unlike json.dumps + |safe).
+        'team_chart_data': team_chart_data,
+        'team_chart_labels': team_chart_labels,
+        'team_chart_colors': team_chart_colors,
+        'team_chart_slugs': team_chart_slugs,
+        'team_chart_logos': team_chart_logos,
         'most_picked_teams': most_picked_teams,
         'family': tenant_context.family if tenant_context else None,
         'pool': tenant_context.pool if tenant_context else None,

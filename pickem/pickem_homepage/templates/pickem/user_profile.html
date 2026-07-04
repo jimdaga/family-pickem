@@ -447,6 +447,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
+    {% if team_chart_data and team_chart_labels %}
+    {{ team_chart_slugs|json_script:"team-chart-slugs" }}
+    {{ team_chart_labels|json_script:"team-chart-labels" }}
+    {{ team_chart_data|json_script:"team-chart-data" }}
+    {{ team_chart_colors|json_script:"team-chart-colors" }}
+    {{ team_chart_logos|json_script:"team-chart-logos" }}
+    {% endif %}
+
     <script>
     {% if team_chart_data and team_chart_labels %}
     document.addEventListener('DOMContentLoaded', function() {
@@ -455,20 +463,21 @@
         // Check if dark mode is active
         const isDarkMode = document.documentElement.classList.contains('dark');
 
-        // Team data for custom legend
-        const teamSlugs = {{ team_chart_slugs|safe }};
-        const teamLabels = {{ team_chart_labels|safe }};
-        const teamData = {{ team_chart_data|safe }};
-        const teamColors = {{ team_chart_colors|safe }};
-        const teamLogos = {{ team_chart_logos|safe }};
+        // Team data for custom legend (parsed from json_script tags, which
+        // safely escape HTML — never inject JSON into JS with |safe).
+        const teamSlugs = JSON.parse(document.getElementById('team-chart-slugs').textContent);
+        const teamLabels = JSON.parse(document.getElementById('team-chart-labels').textContent);
+        const teamData = JSON.parse(document.getElementById('team-chart-data').textContent);
+        const teamColors = JSON.parse(document.getElementById('team-chart-colors').textContent);
+        const teamLogos = JSON.parse(document.getElementById('team-chart-logos').textContent);
 
         const teamPickChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: {{ team_chart_labels|safe }},
+                labels: teamLabels,
                 datasets: [{
-                    data: {{ team_chart_data|safe }},
-                    backgroundColor: {{ team_chart_colors|safe }},
+                    data: teamData,
+                    backgroundColor: teamColors,
                     borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)',
                     borderWidth: 3,
                     hoverOffset: 8,
