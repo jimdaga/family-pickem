@@ -922,3 +922,100 @@ class UpdateRankingsCommandTest(TestCase):
         # Pool B is independent: its top user is rank 1 despite fewer points.
         self.assertEqual(b1.current_rank, 1)
         self.assertEqual(b2.current_rank, 2)
+
+
+class UpdatePicksCommandTest(TestCase):
+    """ORM-based `update_picks` scoring command (replaces cron_update_picks.py)."""
+
+    def _pool(self, slug):
+        family = Family.objects.create(name=slug, slug=slug, status=Family.Status.ACTIVE)
+        return Pool.objects.create(
+            family=family, name="Pool", slug=slug, season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+
+    def _game(self, gid, slug, winner, status="finished"):
+        return GamesAndScores.objects.create(
+            id=gid, slug=slug, competition="nfl", gameWeek="1", gameyear="2025",
+            gameseason=2526, startTimestamp=timezone.now(), statusType=status,
+            statusTitle="Final", gameWinner=winner, gameScored=False,
+            homeTeamId=1, homeTeamSlug="eagles", homeTeamName="Eagles",
+            awayTeamId=2, awayTeamSlug="chiefs", awayTeamName="Chiefs",
+        )
+
+    def _pick(self, pid, pool, game, pick):
+        return GamePicks.objects.create(
+            id=pid, pool=pool, pick_game_id=game.id, slug=game.slug,
+            userID=pid, gameWeek="1", gameyear="2025", gameseason=2526,
+            competition="nfl", pick=pick, pick_correct=False,
+        )
+
+    def test_scores_correct_picks_across_pools_and_marks_game_scored(self):
+        from django.core.management import call_command
+
+        pool_a, pool_b = self._pool("fa"), self._pool("fb")
+        game = self._game(100, "eagles-chiefs", winner="eagles")
+        # Correct in pool A, wrong in pool B, correct again in pool B.
+        a_ok = self._pick("1-1-100", pool_a, game, "eagles")
+        b_wrong = self._pick("2-2-100", pool_b, game, "chiefs")
+        b_ok = self._pick("2-3-100", pool_b, game, "eagles")
+        # A finished game with no winner yet must be left unscored.
+        no_winner = self._game(200, "jets-bills", winner=None)
+        pending = self._pick("1-1-200", pool_a, no_winner, "jets")
+
+        call_command("update_picks", season=2526)
+
+        for obj in (a_ok, b_wrong, b_ok, pending, game, no_winner):
+            obj.refresh_from_db()
+
+        self.assertTrue(a_ok.pick_correct)
+        self.assertTrue(b_ok.pick_correct)
+        self.assertFalse(b_wrong.pick_correct)
+        self.assertTrue(game.gameScored)
+        # Winnerless game untouched.
+        self.assertFalse(no_winner.gameScored)
+        self.assertFalse(pending.pick_correct)
+
+
+class UpdateStandingsCommandTest(TestCase):
+    """Pool-aware `update_standings` command (replaces cron_update_standings.py)."""
+
+    def _pool(self, slug):
+        family = Family.objects.create(name=slug, slug=slug, status=Family.Status.ACTIVE)
+        return Pool.objects.create(
+            family=family, name="Pool", slug=slug, season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+
+    def _pick(self, pid, pool, uid, week, correct):
+        return GamePicks.objects.create(
+            id=pid, pool=pool, pick_game_id=int(pid.split("-")[-1]), slug=f"g{pid}",
+            userID=uid, userEmail=f"{uid}@x.com", gameWeek=str(week), gameyear="2025",
+            gameseason=2526, competition="nfl", pick="eagles", pick_correct=correct,
+        )
+
+    def test_recomputes_points_per_pool_and_folds_bonus_into_total(self):
+        from django.core.management import call_command
+
+        pool_a, pool_b = self._pool("fa"), self._pool("fb")
+        self._pick("a-1-101", pool_a, "u1", 1, True)
+        self._pick("a-1-102", pool_a, "u1", 1, True)
+        self._pick("a-1-103", pool_a, "u1", 1, False)
+        self._pick("a-1-201", pool_a, "u1", 2, True)
+        self._pick("b-1-101", pool_b, "u1", 1, True)
+
+        userSeasonPoints.objects.create(
+            pool=pool_a, userID="u1", userEmail="u1@x.com", gameseason=2526,
+            week_1_bonus=5,
+        )
+
+        call_command("update_standings", season=2526)
+
+        a_row = userSeasonPoints.objects.get(pool=pool_a, userID="u1")
+        self.assertEqual(a_row.week_1_points, 2)
+        self.assertEqual(a_row.week_2_points, 1)
+        self.assertEqual(a_row.total_points, 2 + 1 + 5)
+
+        b_row = userSeasonPoints.objects.get(pool=pool_b, userID="u1")
+        self.assertEqual(b_row.week_1_points, 1)
+        self.assertEqual(b_row.total_points, 1)
