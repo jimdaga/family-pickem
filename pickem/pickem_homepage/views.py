@@ -74,6 +74,46 @@ def is_commissioner(user):
 def current_user_picks(picks, user):
     return picks.filter(Q(userID=str(user.id)) | Q(uid=user.id)).distinct()
 
+
+def build_user_display_maps(user_ids):
+    """Return ({userID: display_name}, {userID: avatar_url}) with two queries.
+
+    Batch replacement for the per-row safe_username / lookupavatar template
+    filters, which issue one query per player per section on list pages
+    (standings called them dozens of times per render). Keys are strings to
+    match the userID CharFields on points models.
+    """
+    from allauth.socialaccount.models import SocialAccount
+
+    raw_ids = {str(uid) for uid in user_ids if uid}
+    numeric_ids = {int(uid) for uid in raw_ids if uid.isdigit()}
+    users = User.objects.in_bulk(numeric_ids)
+    social_accounts = {}
+    for account in SocialAccount.objects.filter(user_id__in=numeric_ids):
+        social_accounts.setdefault(account.user_id, account)
+
+    usernames, avatars = {}, {}
+    for key in raw_ids:
+        user = users.get(int(key)) if key.isdigit() else None
+        if user:
+            usernames[key] = user.username or (
+                user.email.split('@')[0] if user.email else f"User {key}"
+            )
+        elif key.isdigit():
+            usernames[key] = "Unknown User"
+        else:
+            usernames[key] = f"User {key}"
+
+        account = social_accounts.get(int(key)) if key.isdigit() else None
+        if account:
+            avatars[key] = account.get_avatar_url()
+        elif user:
+            email_hash = hashlib.md5((user.email or '').lower().encode('utf-8')).hexdigest()
+            avatars[key] = f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=64"
+        else:
+            avatars[key] = f"https://www.gravatar.com/avatar/?d=identicon&s=64"
+    return usernames, avatars
+
 def select_dashboard_snapshot_games(games, *, today=None):
     today = today or timezone.localdate()
     weekday = today.weekday()
@@ -2194,7 +2234,14 @@ def render_standings_page(request, *, tenant_context=None):
                 'value': str(season),
                 'display': f"{start_year}-{end_year}"
             })
-    
+
+    # Human-readable version of the selected season for the header chip,
+    # matching the dropdown labels (e.g. "2026-2027" instead of "2627").
+    selected_season_display = next(
+        (s['display'] for s in formatted_seasons if s['value'] == selected_season),
+        selected_season,
+    )
+
     User = get_user_model()
     if tenant_context:
         member_user_ids = FamilyMembership.objects.filter(
@@ -2206,13 +2253,25 @@ def render_standings_page(request, *, tenant_context=None):
     else:
         players = User.objects.filter(is_active=True)
 
+    # One batched lookup for every name/avatar the template needs, instead of
+    # the per-row safe_username/lookupavatar filter queries.
+    display_ids = [entry.userID for entry in player_points]
+    for winners in weekly_winners.values():
+        display_ids.extend(winner.userID for winner in winners)
+    if season_winner:
+        display_ids.append(season_winner.userID)
+    usernames, avatars = build_user_display_maps(display_ids)
+
     context = {
         'players': players,
+        'usernames': usernames,
+        'avatars': avatars,
         'player_points': player_points,
         'season_winner': season_winner,
         'weekly_winners': weekly_winners,
         'all_seasons': formatted_seasons,
         'selected_season': selected_season,
+        'selected_season_display': selected_season_display,
         'gameseason': selected_season,
         'family': tenant_context.family if tenant_context else None,
         'pool': tenant_context.pool if tenant_context else None,

@@ -37,7 +37,7 @@
                     </div>
                     <div class="px-2 py-1.5">
                         <div class="text-[10px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Season</div>
-                        <div class="text-lg font-black text-text-dark dark:text-white">{{ selected_season }}</div>
+                        <div class="text-lg font-black text-text-dark dark:text-white">{{ selected_season_display }}</div>
                     </div>
                 </div>
             </div>
@@ -63,8 +63,8 @@
             </h3>
 
             <!-- Champion Info -->
-            {% with season_winner.userID|safe_username as champion_name %}
-            {% with season_winner.userID|lookupavatar as champion_avatar %}
+            {% with usernames|lookup:season_winner.userID as champion_name %}
+            {% with avatars|lookup:season_winner.userID as champion_avatar %}
             <div class="flex flex-col items-center gap-2">
                 <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug season_winner.userID %}{% else %}{% url 'user_profile' season_winner.userID %}{% endif %}" class="group">
                     <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
@@ -136,8 +136,8 @@
             <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}"
                class="standings-row block bg-white/60 dark:bg-bg-dark/30 rounded-lg px-3 py-2 border border-border-light dark:border-border-subtle hover:border-primary/50 dark:hover:border-primary/50 hover:shadow-card-hover transition-all duration-200"
                style="animation-delay: {{ forloop.counter0|add:1|floatformat:2 }}s">
-                {% with player.userID|safe_username as username %}
-                {% with player.userID|lookupavatar as avatar %}
+                {% with usernames|lookup:player.userID as username %}
+                {% with avatars|lookup:player.userID as avatar %}
 
                 <div class="flex items-center gap-3">
                     <!-- Rank Badge -->
@@ -194,8 +194,8 @@
                 <div class="flex flex-col items-center justify-center">
                     {% with weekly_winners|lookup:i as winnername %}
                         {% for x in winnername %}
-	                            {% with x.userID|safe_username as username %}
-	                            {% with x.userID|lookupavatar as avatar %}
+	                            {% with usernames|lookup:x.userID as username %}
+	                            {% with avatars|lookup:x.userID as avatar %}
 	                            <div class="text-center">
 	                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug x.userID %}{% else %}{% url 'user_profile' x.userID %}{% endif %}" class="block mb-1.5">
 	                                    <img src="{{ avatar }}"
@@ -233,11 +233,11 @@
         <div class="space-y-3">
             {% for player in player_points %}
             <div class="standings-breakdown-card bg-white/60 dark:bg-bg-dark/30 rounded-lg p-3 border border-border-light dark:border-border-subtle">
-                {% with player.userID|safe_username as username %}
+                {% with usernames|lookup:player.userID as username %}
 
                 <!-- Player Header -->
                 <div class="flex items-center gap-3 mb-3 pb-3 border-b border-border-light dark:border-border-subtle">
-                    {% with player.userID|lookupavatar as avatar %}
+                    {% with avatars|lookup:player.userID as avatar %}
                     <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}">
 	                        <img src="{{ avatar }}"
 	                             alt="Profile picture for {{ username }}"
