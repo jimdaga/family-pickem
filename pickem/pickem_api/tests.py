@@ -1019,3 +1019,67 @@ class UpdateStandingsCommandTest(TestCase):
         b_row = userSeasonPoints.objects.get(pool=pool_b, userID="u1")
         self.assertEqual(b_row.week_1_points, 1)
         self.assertEqual(b_row.total_points, 1)
+
+
+class UpdateGamesCommandTest(TestCase):
+    """ORM-based `update_games` command (replaces cron_update_games_v2.py)."""
+
+    PAYLOAD = {
+        "week": {"number": 1},
+        "events": [{
+            "weather": {"temperature": 60, "displayValue": "Clear"},
+            "links": [{"text": "Gamecast", "href": "http://gc"}],
+            "competitions": [{
+                "id": "401",
+                "date": "2025-09-08T00:20Z",
+                "status": {"type": {"name": "STATUS_FINAL",
+                                    "description": "Final", "detail": "Final"}},
+                "venue": {"indoor": True},
+                "odds": [{"spread": -3, "overUnder": 45,
+                          "homeTeamOdds": {"favorite": True},
+                          "awayTeamOdds": {"favorite": False}}],
+                "broadcasts": [{"names": ["CBS"]}],
+                "competitors": [
+                    {"homeAway": "home", "id": "1", "team": {"displayName": "Home Team"},
+                     "winner": True, "score": "24",
+                     "linescores": [{"value": 7}, {"value": 7}, {"value": 3}, {"value": 7}]},
+                    {"homeAway": "away", "id": "2", "team": {"displayName": "Away Team"},
+                     "winner": False, "score": "20",
+                     "linescores": [{"value": 3}, {"value": 7}, {"value": 7}, {"value": 3}]},
+                ],
+            }],
+        }],
+    }
+
+    def setUp(self):
+        Teams.objects.create(id=1, teamNameSlug="home", teamNameName="Home Team")
+        Teams.objects.create(id=2, teamNameSlug="away", teamNameName="Away Team")
+
+    @patch("pickem_api.management.commands.update_games.fetch_scoreboard")
+    def test_upserts_game_with_scores_odds_and_weather(self, mock_fetch):
+        from django.core.management import call_command
+
+        mock_fetch.return_value = self.PAYLOAD
+        call_command("update_games", season=2526, week=1)
+
+        game = GamesAndScores.objects.get(id=401)
+        self.assertEqual(game.statusType, "finished")
+        self.assertEqual(game.gameWinner, "home")
+        self.assertEqual(game.slug, "home-away")
+        self.assertEqual(game.gameseason, 2526)
+        self.assertEqual(game.gameyear, "2025")
+        self.assertEqual(game.homeTeamScore, 24)
+        self.assertEqual(game.homeTeamPeriod1, 7)
+        self.assertEqual(game.awayTeamScore, 20)
+        self.assertEqual(game.spread, -3)
+        self.assertEqual(game.weatherCondition, "Clear")
+        self.assertTrue(game.venueIndoor)
+        self.assertEqual(game.broadcast, "CBS")
+        self.assertEqual(game.gamecastUrl, "http://gc")
+        # Home favorite by 3: probability boosted above 50.
+        self.assertGreater(game.homeTeamWinProbability, 50)
+
+        # Idempotent: a re-run updates the same row, no duplicate.
+        mock_fetch.return_value = self.PAYLOAD
+        call_command("update_games", season=2526, week=1)
+        self.assertEqual(GamesAndScores.objects.filter(id=401).count(), 1)

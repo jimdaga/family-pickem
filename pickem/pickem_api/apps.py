@@ -1,3 +1,5 @@
+import os
+
 from django.apps import AppConfig
 
 
@@ -6,5 +8,8 @@ class PickemApiConfig(AppConfig):
     name = 'pickem_api'
 
     def ready(self):
-        from . import updater
-        updater.start()
+        # Start the in-process update scheduler only where explicitly enabled.
+        # See pickem_api/scheduler.py for the single-process guard rationale.
+        if os.environ.get('RUN_SCHEDULER') == 'true':
+            from . import scheduler
+            scheduler.start()

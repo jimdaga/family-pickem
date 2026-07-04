@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
+    'django_apscheduler',
     'bootstrap5',
     # 'django_ratelimit',  # Disabled for now - enable later when ready
     'allauth',
