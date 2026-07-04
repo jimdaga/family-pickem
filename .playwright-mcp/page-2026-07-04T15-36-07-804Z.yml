@@ -1,0 +1,266 @@
+- generic [ref=f5e1]:
+  - navigation "Main navigation" [ref=f5e2]:
+    - generic [ref=f5e3]:
+      - generic [ref=f5e4]:
+        - link "Family Pick'em Public Home" [ref=f5e5] [cursor=pointer]:
+          - /url: /public/
+          - img "Family Pick'em Logo" [ref=f5e6]
+        - text: 
+        - button "Toggle navigation" [expanded] [active] [ref=f5e263] [cursor=pointer]:
+          - generic [ref=f5e264]: 
+        - text:         +    
+      - generic [ref=f5e266]:
+        - link " Lobby" [ref=f5e267] [cursor=pointer]:
+          - /url: /families/nannys-gang/pools/pickem-pool/
+          - generic [ref=f5e268]: 
+          - text: Lobby
+        - generic [ref=f5e269]:
+          - button " Scores " [ref=f5e270] [cursor=pointer]:
+            - generic [ref=f5e271]:
+              - generic [ref=f5e272]: 
+              - text: Scores
+            - generic [ref=f5e273]: 
+          - text: 
+        - link " Standings" [ref=f5e274] [cursor=pointer]:
+          - /url: /families/nannys-gang/pools/pickem-pool/standings/
+          - generic [ref=f5e275]: 
+          - text: Standings
+        - link " Rules" [ref=f5e276] [cursor=pointer]:
+          - /url: /families/nannys-gang/pools/pickem-pool/rules/
+          - generic [ref=f5e277]: 
+          - text: Rules
+        - generic [ref=f5e279]:
+          - generic [ref=f5e280]: Current family
+          - generic [ref=f5e281]: Nanny’s Gang
+          - generic [ref=f5e282]: Pickem Pool
+        - button " Switch family " [ref=f5e284] [cursor=pointer]:
+          - generic [ref=f5e285]:
+            - generic [ref=f5e286]: 
+            - text: Switch family
+          - generic [ref=f5e287]: 
+        - link " Submit Weekly Picks" [ref=f5e288] [cursor=pointer]:
+          - /url: /families/nannys-gang/pools/pickem-pool/picks/
+          - generic [ref=f5e289]: 
+          - text: Submit Weekly Picks
+        - link " My Profile" [ref=f5e290] [cursor=pointer]:
+          - /url: /families/nannys-gang/pools/pickem-pool/user/4/
+          - generic [ref=f5e291]: 
+          - text: My Profile
+        - link " Settings" [ref=f5e292] [cursor=pointer]:
+          - /url: /profile/
+          - generic [ref=f5e293]: 
+          - text: Settings
+        - link " Sign Out" [ref=f5e294] [cursor=pointer]:
+          - /url: /logout
+          - generic [ref=f5e295]: 
+          - text: Sign Out
+  - main [ref=f5e31]:
+    - generic [ref=f5e32]:
+      - generic [ref=f5e35]:
+        - generic [ref=f5e36]:
+          - generic [ref=f5e38]: 
+          - generic [ref=f5e39]:
+            - heading "League Standings" [level=2] [ref=f5e40]
+            - paragraph [ref=f5e41]: Current season rankings and weekly champions
+        - generic [ref=f5e42]:
+          - generic [ref=f5e43]:
+            - generic [ref=f5e44]: Players
+            - generic [ref=f5e45]: "1"
+          - generic [ref=f5e46]:
+            - generic [ref=f5e47]: Weeks
+            - generic [ref=f5e48]: "18"
+          - generic [ref=f5e49]:
+            - generic [ref=f5e50]: Season
+            - generic [ref=f5e51]: "2627"
+      - generic [ref=f5e52]:
+        - generic [ref=f5e53]:
+          - heading " Leaderboard" [level=3] [ref=f5e54]:
+            - generic [ref=f5e55]: 
+            - text: Leaderboard
+          - button "2026-2027 " [ref=f5e57] [cursor=pointer]:
+            - generic [ref=f5e58]: 2026-2027
+            - generic [ref=f5e59]: 
+        - link "1 Profile picture for webmaster webmaster Go eat some pickles 0 Points" [ref=f5e61] [cursor=pointer]:
+          - /url: /families/nannys-gang/pools/pickem-pool/user/2/
+          - generic [ref=f5e62]:
+            - generic [ref=f5e63]: "1"
+            - img "Profile picture for webmaster" [ref=f5e64]
+            - generic [ref=f5e65]:
+              - heading "webmaster" [level=5] [ref=f5e66]
+              - paragraph [ref=f5e67]: Go eat some pickles
+            - generic [ref=f5e68]:
+              - generic [ref=f5e69]: "0"
+              - generic [ref=f5e70]: Points
+      - generic [ref=f5e71]:
+        - heading " Weekly Champions" [level=3] [ref=f5e72]:
+          - generic [ref=f5e73]: 
+          - text: Weekly Champions
+        - generic [ref=f5e74]:
+          - generic [ref=f5e75]:
+            - generic [ref=f5e77]: Week 1
+            - generic [ref=f5e78]:
+              - img "TBD User Profile Picture" [ref=f5e79]
+              - generic [ref=f5e80]: TBD
+          - generic [ref=f5e81]:
+            - generic [ref=f5e83]: Week 2
+            - generic [ref=f5e84]:
+              - img "TBD User Profile Picture" [ref=f5e85]
+              - generic [ref=f5e86]: TBD
+          - generic [ref=f5e87]:
+            - generic [ref=f5e89]: Week 3
+            - generic [ref=f5e90]:
+              - img "TBD User Profile Picture" [ref=f5e91]
+              - generic [ref=f5e92]: TBD
+          - generic [ref=f5e93]:
+            - generic [ref=f5e95]: Week 4
+            - generic [ref=f5e96]:
+              - img "TBD User Profile Picture" [ref=f5e97]
+              - generic [ref=f5e98]: TBD
+          - generic [ref=f5e99]:
+            - generic [ref=f5e101]: Week 5
+            - generic [ref=f5e102]:
+              - img "TBD User Profile Picture" [ref=f5e103]
+              - generic [ref=f5e104]: TBD
+          - generic [ref=f5e105]:
+            - generic [ref=f5e107]: Week 6
+            - generic [ref=f5e108]:
+              - img "TBD User Profile Picture" [ref=f5e109]
+              - generic [ref=f5e110]: TBD
+          - generic [ref=f5e111]:
+            - generic [ref=f5e113]: Week 7
+            - generic [ref=f5e114]:
+              - img "TBD User Profile Picture" [ref=f5e115]
+              - generic [ref=f5e116]: TBD
+          - generic [ref=f5e117]:
+            - generic [ref=f5e119]: Week 8
+            - generic [ref=f5e120]:
+              - img "TBD User Profile Picture" [ref=f5e121]
+              - generic [ref=f5e122]: TBD
+          - generic [ref=f5e123]:
+            - generic [ref=f5e125]: Week 9
+            - generic [ref=f5e126]:
+              - img "TBD User Profile Picture" [ref=f5e127]
+              - generic [ref=f5e128]: TBD
+          - generic [ref=f5e129]:
+            - generic [ref=f5e131]: Week 10
+            - generic [ref=f5e132]:
+              - img "TBD User Profile Picture" [ref=f5e133]
+              - generic [ref=f5e134]: TBD
+          - generic [ref=f5e135]:
+            - generic [ref=f5e137]: Week 11
+            - generic [ref=f5e138]:
+              - img "TBD User Profile Picture" [ref=f5e139]
+              - generic [ref=f5e140]: TBD
+          - generic [ref=f5e141]:
+            - generic [ref=f5e143]: Week 12
+            - generic [ref=f5e144]:
+              - img "TBD User Profile Picture" [ref=f5e145]
+              - generic [ref=f5e146]: TBD
+          - generic [ref=f5e147]:
+            - generic [ref=f5e149]: Week 13
+            - generic [ref=f5e150]:
+              - img "TBD User Profile Picture" [ref=f5e151]
+              - generic [ref=f5e152]: TBD
+          - generic [ref=f5e153]:
+            - generic [ref=f5e155]: Week 14
+            - generic [ref=f5e156]:
+              - img "TBD User Profile Picture" [ref=f5e157]
+              - generic [ref=f5e158]: TBD
+          - generic [ref=f5e159]:
+            - generic [ref=f5e161]: Week 15
+            - generic [ref=f5e162]:
+              - img "TBD User Profile Picture" [ref=f5e163]
+              - generic [ref=f5e164]: TBD
+          - generic [ref=f5e165]:
+            - generic [ref=f5e167]: Week 16
+            - generic [ref=f5e168]:
+              - img "TBD User Profile Picture" [ref=f5e169]
+              - generic [ref=f5e170]: TBD
+          - generic [ref=f5e171]:
+            - generic [ref=f5e173]: Week 17
+            - generic [ref=f5e174]:
+              - img "TBD User Profile Picture" [ref=f5e175]
+              - generic [ref=f5e176]: TBD
+          - generic [ref=f5e177]:
+            - generic [ref=f5e179]: Week 18
+            - generic [ref=f5e180]:
+              - img "TBD User Profile Picture" [ref=f5e181]
+              - generic [ref=f5e182]: TBD
+      - generic [ref=f5e183]:
+        - heading " Detailed Breakdown" [level=3] [ref=f5e184]:
+          - generic [ref=f5e185]: 
+          - text: Detailed Breakdown
+        - generic [ref=f5e187]:
+          - generic [ref=f5e188]:
+            - link "Profile picture for webmaster" [ref=f5e189] [cursor=pointer]:
+              - /url: /families/nannys-gang/pools/pickem-pool/user/2/
+              - img "Profile picture for webmaster" [ref=f5e190]
+            - generic [ref=f5e191]:
+              - heading "webmaster" [level=5] [ref=f5e192]
+              - paragraph [ref=f5e193]:
+                - text: "Total:"
+                - strong [ref=f5e194]: 0 points
+          - generic [ref=f5e195]:
+            - generic [ref=f5e196]:
+              - generic [ref=f5e197]: W1
+              - generic [ref=f5e198]: "0"
+            - generic [ref=f5e199]:
+              - generic [ref=f5e200]: W2
+              - generic [ref=f5e201]: "0"
+            - generic [ref=f5e202]:
+              - generic [ref=f5e203]: W3
+              - generic [ref=f5e204]: "0"
+            - generic [ref=f5e205]:
+              - generic [ref=f5e206]: W4
+              - generic [ref=f5e207]: "0"
+            - generic [ref=f5e208]:
+              - generic [ref=f5e209]: W5
+              - generic [ref=f5e210]: "0"
+            - generic [ref=f5e211]:
+              - generic [ref=f5e212]: W6
+              - generic [ref=f5e213]: "0"
+            - generic [ref=f5e214]:
+              - generic [ref=f5e215]: W7
+              - generic [ref=f5e216]: "0"
+            - generic [ref=f5e217]:
+              - generic [ref=f5e218]: W8
+              - generic [ref=f5e219]: "0"
+            - generic [ref=f5e220]:
+              - generic [ref=f5e221]: W9
+              - generic [ref=f5e222]: "0"
+            - generic [ref=f5e223]:
+              - generic [ref=f5e224]: W10
+              - generic [ref=f5e225]: "0"
+            - generic [ref=f5e226]:
+              - generic [ref=f5e227]: W11
+              - generic [ref=f5e228]: "0"
+            - generic [ref=f5e229]:
+              - generic [ref=f5e230]: W12
+              - generic [ref=f5e231]: "0"
+            - generic [ref=f5e232]:
+              - generic [ref=f5e233]: W13
+              - generic [ref=f5e234]: "0"
+            - generic [ref=f5e235]:
+              - generic [ref=f5e236]: W14
+              - generic [ref=f5e237]: "0"
+            - generic [ref=f5e238]:
+              - generic [ref=f5e239]: W15
+              - generic [ref=f5e240]: "0"
+            - generic [ref=f5e241]:
+              - generic [ref=f5e242]: W16
+              - generic [ref=f5e243]: "0"
+            - generic [ref=f5e244]:
+              - generic [ref=f5e245]: W17
+              - generic [ref=f5e246]: "0"
+            - generic [ref=f5e247]:
+              - generic [ref=f5e248]: W18
+              - generic [ref=f5e249]: "0"
+  - generic [ref=f5e251]:
+    - generic [ref=f5e252]:
+      - generic [ref=f5e254]: F
+      - generic [ref=f5e255]: Frontend-review-tmp
+    - generic: 
+    - link " Submit Picks" [ref=f5e260] [cursor=pointer]:
+      - /url: /families/nannys-gang/pools/pickem-pool/picks/
+      - generic [ref=f5e261]: 
+      - generic [ref=f5e262]: Submit Picks

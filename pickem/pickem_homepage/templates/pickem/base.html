@@ -2,7 +2,8 @@
 {% load pickem_homepage_extras %}
 <html lang="en" class="{% if user_theme_preference == 'dark' %}dark{% endif %}">
 <head>
-    <!-- Google tag (gtag.js) -->
+    {% if not debug_mode %}
+    <!-- Google tag (gtag.js) — production only -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-LJ2FN8G22Z"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -10,6 +11,7 @@
         gtag('js', new Date());
         gtag('config', 'G-LJ2FN8G22Z');
     </script>
+    {% endif %}
 
     <title>{% block title %}Family Pick'em{% endblock %}</title>
     <meta charset="utf-8">
@@ -32,7 +34,7 @@
     {% load static %}
     <link rel="shortcut icon" type="image/png" href="{% static 'images/windowlogo.png' %}">
     <!-- Tailwind CSS -->
-    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={{ static_version }}">
     <!-- OLD CSS FILES REMOVED - Tailwind migration in progress -->
     <!-- <link rel="stylesheet" href="{% static 'css/style.css' %}"> -->
     <!-- <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}"> -->
@@ -197,9 +199,12 @@
                                 <a class="flex items-center px-4 py-2 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% url 'profile' %}">
                                     <i class="fas fa-edit mr-3"></i>Settings
                                 </a>
-                                <a class="flex items-center px-4 py-2 text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="/logout">
-                                    <i class="fas fa-sign-out-alt mr-3"></i>Sign Out
-                                </a>
+                                <form method="post" action="/logout">
+                                    {% csrf_token %}
+                                    <button type="submit" class="flex w-full items-center px-4 py-2 text-left text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors">
+                                        <i class="fas fa-sign-out-alt mr-3"></i>Sign Out
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     {% else %}
@@ -305,9 +310,12 @@
                     <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% url 'profile' %}">
                         <i class="fas fa-edit mr-3"></i>Settings
                     </a>
-                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="/logout">
-                        <i class="fas fa-sign-out-alt mr-3"></i>Sign Out
-                    </a>
+                    <form method="post" action="/logout">
+                        {% csrf_token %}
+                        <button type="submit" class="block w-full px-4 py-3 text-left text-white hover:bg-slate-700 rounded-lg transition-colors">
+                            <i class="fas fa-sign-out-alt mr-3"></i>Sign Out
+                        </button>
+                    </form>
                     {% else %}
                     <div class="border-t border-slate-700 my-2"></div>
                     <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="{% url 'account_login' %}">
@@ -360,6 +368,25 @@
                     {% endif %}
                 </div>
             </div>
+        </div>
+        {% endif %}
+        {% endblock %}
+
+        {% block flash_messages %}
+        {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-4 space-y-2" role="status" aria-live="polite">
+            {% for message in messages %}
+            <div class="flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm font-semibold
+                {% if message.tags == 'success' %}border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300
+                {% elif message.tags == 'error' %}border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300
+                {% elif message.tags == 'warning' %}border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300
+                {% else %}border-primary/30 bg-primary/10 text-text-dark dark:text-white{% endif %}">
+                <span>{{ message }}</span>
+                <button type="button" class="opacity-60 hover:opacity-100 transition-opacity" aria-label="Dismiss message" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            {% endfor %}
         </div>
         {% endif %}
         {% endblock %}

@@ -26,8 +26,7 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 ACCOUNT_DEFAULT_HTTP_PROTOCOL='https'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = os.getenv('DEBUG', False) == 'True'
-DEBUG='True'
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # Allowed Host(s)
 ALLOWED_HOSTS = ['localhost', 'corticolous-unarbitrarily-noel.ngrok-free.dev']
@@ -106,8 +105,7 @@ CACHES = {
 }
 
 # Rate limiting configuration
-import os
-if DEBUG == 'True' or os.environ.get('DEBUG') == 'true':
+if DEBUG:
     # Development: Disable rate limiting to avoid cache backend issues
     RATELIMIT_ENABLE = False
 else:
@@ -247,6 +245,13 @@ USE_TZ = True
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
+
+# Cache-buster appended to static asset URLs (?v=...). Stable for the life of
+# the process so browsers can cache assets, but changes on redeploy/restart.
+# Set APP_VERSION in the environment (e.g. the release tag) for a stable
+# per-release value across replicas.
+import time
+STATIC_VERSION = os.getenv('APP_VERSION') or str(int(time.time()))
 
 
 REST_FRAMEWORK = {

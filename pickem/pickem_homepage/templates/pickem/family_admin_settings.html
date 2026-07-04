@@ -25,16 +25,6 @@
             </div>
         </header>
 
-        {% if messages %}
-        <section class="space-y-3">
-            {% for message in messages %}
-            <div class="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-semibold text-text-dark dark:text-white">
-                {{ message }}
-            </div>
-            {% endfor %}
-        </section>
-        {% endif %}
-
         <form method="post" class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden">
             {% csrf_token %}
             <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">

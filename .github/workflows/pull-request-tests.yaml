@@ -7,7 +7,7 @@ on:
 
 jobs:
   run_tests:
-    name: Run Test Suite
+    name: Django and Frontend Checks
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
@@ -21,5 +21,23 @@ jobs:
       - name: Install dependencies
         run: pip install -r pickem/requirements.txt
 
+      - name: Run Django system checks
+        run: cd pickem && python manage.py check --settings=pickem.test_settings
+
+      - name: Check for missing migrations
+        run: cd pickem && python manage.py makemigrations --check --dry-run --settings=pickem.test_settings
+
       - name: Run tests
         run: cd pickem && python manage.py test --settings=pickem.test_settings --verbosity=2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tailwind CSS
+        run: npm run build:prod

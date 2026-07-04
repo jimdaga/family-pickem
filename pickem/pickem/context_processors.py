@@ -6,6 +6,7 @@ to all templates for consistent dark mode functionality.
 """
 
 from datetime import date
+from django.conf import settings
 from django.db.models import F, Q
 from django.urls import reverse
 from django.utils import timezone
@@ -36,6 +37,9 @@ def theme_context(request):
         'user_dark_mode': None,
         'user_theme_preference': None,
         'user_is_commissioner': False,
+        # Stable per-deployment cache-buster for static assets (see settings).
+        'static_version': settings.STATIC_VERSION,
+        'debug_mode': settings.DEBUG,
     }
     
     if request.user.is_authenticated:

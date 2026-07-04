@@ -55,9 +55,12 @@
     </section>
 
     <section class="mt-6">
-        <a href="/logout" class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary hover:text-primary transition-colors">
-            Sign out
-        </a>
+        <form method="post" action="/logout">
+            {% csrf_token %}
+            <button type="submit" class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary hover:text-primary transition-colors">
+                Sign out
+            </button>
+        </form>
     </section>
 </main>
 {% endblock %}

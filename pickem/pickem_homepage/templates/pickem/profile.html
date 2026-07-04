@@ -1,6 +1,9 @@
 {% extends 'pickem/base.html' %}
 {% load static %}
 
+{# This page renders messages inline within its own layout. #}
+{% block flash_messages %}{% endblock %}
+
 {% block mobile_title %}
     <div class="mobile-page-header">
         <h2 class="mobile-title-text">

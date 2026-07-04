@@ -147,7 +147,9 @@ urlpatterns = [
     path('standings/', views.standings, name='standings'),
     path('rules/', views.rules, name='rules'),
     path('accounts/', include('allauth.urls')),
-    path('logout', LogoutView.as_view()),
+    # POST-only: logout via GET is deprecated (removed in Django 5) and would
+    # let third-party pages log users out (CSRF).
+    path('logout', LogoutView.as_view(http_method_names=['post', 'options']), name='logout'),
     re_path(
         r'^scores/competition/(?P<competition>[0-9]+)/season/(?P<gameseason>[0-9]+)/week/(?P<week>[0-9]+)$', views.scores_long, name='scores_long'),
     path('picks/', views.submit_game_picks, name='game_picks'),

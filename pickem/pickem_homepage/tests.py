@@ -1687,7 +1687,9 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertContains(response, "Main Pickem")
         self.assertContains(response, "Locking: Off")
         self.assertContains(response, "Tiebreakers: On")
-        self.assertNotContains(response, "<form")
+        # No settings-editing form for non-admins. (The base nav includes a
+        # logout POST form, so check for editing controls specifically.)
+        self.assertNotContains(response, 'name="picks_lock_at_kickoff"')
         self.assertNotContains(response, "Save settings")
         self.assertEqual(response.context["pool_settings"], self.smith_pool.settings)
 
