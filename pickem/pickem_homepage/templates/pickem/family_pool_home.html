@@ -596,8 +596,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 messageList.className = 'space-y-3';
                 const newMessage = document.createElement('div');
                 newMessage.className = 'p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle';
-                newMessage.innerHTML = '<p class="font-semibold text-text-dark dark:text-white text-sm leading-snug"></p><p class="text-xs text-text-secondary-light dark:text-text-secondary mt-0.5">by {{ request.user|display_name|escapejs }} &bull; just now</p>';
-                newMessage.querySelector('p').textContent = content.length > 50 ? content.slice(0, 50) + '...' : content;
+                const title = document.createElement('p');
+                title.className = 'font-semibold text-text-dark dark:text-white text-sm leading-snug';
+                title.textContent = content.length > 50 ? content.slice(0, 50) + '...' : content;
+                const meta = document.createElement('p');
+                meta.className = 'text-xs text-text-secondary-light dark:text-text-secondary mt-0.5';
+                meta.textContent = 'by {{ request.user|display_name|escapejs }} • just now';
+                newMessage.append(title, meta);
                 messageList.prepend(newMessage);
             }
         } catch (error) {
