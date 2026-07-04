@@ -1,5 +1,6 @@
 from datetime import timedelta
 import importlib
+from unittest.mock import patch
 
 from django.apps import apps
 from django.contrib import admin
@@ -838,3 +839,45 @@ class GamePicksSerializerTest(TestCase):
         self.assertEqual(data['pick_game_id'], 300)
         self.assertEqual(data['pick'], 'eagles')
         self.assertNotIn('userEmail', data)
+
+
+class UpdateRecordsCommandTest(TestCase):
+    """ORM-based `update_records` management command (replaces cron_update_records.py)."""
+
+    SAMPLE_TEAM = {
+        "id": "17",
+        "slug": "new-england-patriots",
+        "displayName": "New England Patriots",
+        "color": "002244",
+        "alternateColor": "c60c30",
+        "logos": [{"href": "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png"}],
+    }
+
+    @patch("pickem_api.management.commands.update_records.fetch_team_record")
+    @patch("pickem_api.management.commands.update_records.fetch_team_list")
+    def test_creates_and_updates_team_record(self, mock_list, mock_record):
+        from django.core.management import call_command
+
+        mock_list.return_value = [self.SAMPLE_TEAM]
+        mock_record.return_value = (11, 3, 0)
+
+        call_command("update_records", season=2526)
+
+        team = Teams.objects.get(id=17)
+        self.assertEqual(team.gameseason, 2526)
+        self.assertEqual(team.teamNameSlug, "new-england-patriots")
+        self.assertEqual((team.teamWins, team.teamLosses, team.teamTies), (11, 3, 0))
+        self.assertEqual(team.teamLogo, self.SAMPLE_TEAM["logos"][0]["href"])
+        self.assertEqual(team.color, "002244")
+
+        # A second run with a new record updates the existing row (no duplicate).
+        mock_record.return_value = (12, 3, 0)
+        call_command("update_records", season=2526)
+        self.assertEqual(Teams.objects.filter(id=17).count(), 1)
+        self.assertEqual(Teams.objects.get(id=17).teamWins, 12)
+
+    def test_season_start_year_conversion(self):
+        from pickem_api.management.commands.update_records import season_start_year
+
+        self.assertEqual(season_start_year(2526), 2025)
+        self.assertEqual(season_start_year(2425), 2024)
