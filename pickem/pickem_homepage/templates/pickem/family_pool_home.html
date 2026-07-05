@@ -240,9 +240,7 @@
                         {% if game.statusType == 'finished' and game.gameWinner == group.team_slug %}
                         <!-- Winning pick group: subtle green tint + check -->
                         <div class="text-xs" data-testid="winning-pick-group">
-                            <span class="font-bold text-green-600 dark:text-green-400">
-                                <i class="fas fa-check-circle mr-0.5" aria-hidden="true"></i>{{ group.team_name }}
-                            </span>
+                            <span class="font-bold text-green-600 dark:text-green-400">{{ group.team_name }}</span>
                             <span class="text-green-700/80 dark:text-green-300/80">
                                 {% for picker in group.users %}
                                     {{ picker|display_name }}{% if not forloop.last %}, {% endif %}

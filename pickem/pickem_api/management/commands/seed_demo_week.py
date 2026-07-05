@@ -32,6 +32,7 @@ from pickem_api.models import (
     GamesAndScores,
     Pool,
     PoolSettings,
+    Teams,
     userSeasonPoints,
 )
 
@@ -135,6 +136,21 @@ class Command(BaseCommand):
                 },
             )
 
+        # Teams rows so pick/score cards can render logos and colors.
+        demo_teams = [
+            (999911, 'demo-sharks', 'Demo Sharks', '0ea5e9'),
+            (999912, 'demo-eagles', 'Demo Eagles', '16a34a'),
+            (999913, 'demo-colts', 'Demo Colts', '2563eb'),
+            (999914, 'demo-bears', 'Demo Bears', 'ea580c'),
+            (999915, 'demo-lions', 'Demo Lions', 'ca8a04'),
+            (999916, 'demo-tigers', 'Demo Tigers', 'dc2626'),
+        ]
+        for team_id, slug, name, color in demo_teams:
+            Teams.objects.update_or_create(id=team_id, defaults=dict(
+                gameseason=DEMO_SEASON, teamNameSlug=slug, teamNameName=name,
+                teamLogo='/static/images/nfl.svg', teamWins=0, teamLosses=0,
+                teamTies=0, color=color, alternateColor='334155'))
+
         kickoff = timezone.now() - timedelta(days=2)
         for game_id, home, home_name, away, away_name, hs, as_, winner, is_mnf in GAMES:
             GamesAndScores.objects.update_or_create(
@@ -201,6 +217,7 @@ class Command(BaseCommand):
             'picks': GamePicks.objects.filter(gameseason=DEMO_SEASON).delete()[0],
             'standings': userSeasonPoints.objects.filter(gameseason=DEMO_SEASON).delete()[0],
             'games': GamesAndScores.objects.filter(gameseason=DEMO_SEASON).delete()[0],
+            'teams': Teams.objects.filter(gameseason=DEMO_SEASON).delete()[0],
         }
         if family:
             deleted['audit'] = FamilyAuditLog.objects.filter(family=family).delete()[0]
