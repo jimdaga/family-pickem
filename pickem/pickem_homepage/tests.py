@@ -754,6 +754,50 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, "ATL Home")
         self.assertNotContains(response, "Pool picks")
 
+    def test_final_game_shows_winner_trophy_and_highlights_winning_pickers(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        self._active_membership(self.smith_player, smith_family)
+        game = self._dashboard_game(
+            game_id=1041,
+            start_date=date(2025, 9, 4),
+            home="atl",
+            away="ari",
+            status="finished",
+            title="Final",
+        )
+        game.gameWinner = game.homeTeamSlug  # ATL won 21-17
+        game.save(update_fields=["gameWinner"])
+        for user, pick in ((self.member, game.homeTeamSlug), (self.smith_player, game.awayTeamSlug)):
+            GamePicks.objects.create(
+                id=f"{smith_pool.id}-{user.id}-{game.id}",
+                pool=smith_pool,
+                userEmail=user.email,
+                uid=user.id,
+                userID=str(user.id),
+                slug=game.slug,
+                competition=game.competition,
+                gameWeek=game.gameWeek,
+                gameyear=game.gameyear,
+                gameseason=game.gameseason,
+                pick_game_id=game.id,
+                pick=pick,
+            )
+        self.client.force_login(self.member)
+
+        with patch("pickem_homepage.views.timezone.localdate", return_value=date(2025, 9, 4)):
+            response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        markup = response.content.decode()
+        # Trophy icon marks the winning team's score line.
+        self.assertContains(response, 'title="ATL Home won"')
+        # Winning pickers are subtly highlighted; losing group is dimmed.
+        self.assertContains(response, 'data-testid="winning-pick-group"')
+        winning_section = markup.split('data-testid="winning-pick-group"')[1][:600]
+        self.assertIn("Smith-member", winning_section)
+        self.assertNotIn("Smith-player", winning_section)
+
     def test_dashboard_snapshot_cards_show_team_logos(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         self._active_membership(self.member, smith_family)

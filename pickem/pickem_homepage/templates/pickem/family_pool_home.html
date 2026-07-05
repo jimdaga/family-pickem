@@ -206,23 +206,29 @@
                     <span class="text-xs text-text-secondary-light dark:text-text-secondary">{{ game|game_start_label }}</span>
                 </div>
                 <div class="space-y-2 text-sm">
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center justify-between gap-3{% if game.statusType == 'finished' and game.gameWinner and game.gameWinner != game.awayTeamSlug %} opacity-60{% endif %}">
                         <span class="flex min-w-0 items-center gap-2 font-semibold text-text-dark dark:text-white">
                             {% with game.awayTeamSlug|lookuplogo as away_team %}
                             <img src="{{ away_team.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="h-6 w-6 flex-shrink-0 object-contain">
                             {% endwith %}
                             <span class="truncate">{{ game.awayTeamName }}</span>
                         </span>
-                        <span class="font-black text-text-dark dark:text-white">{{ game.awayTeamScore|default:"-" }}</span>
+                        <span class="flex items-center gap-1.5 font-black text-text-dark dark:text-white">
+                            {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}<i class="fas fa-trophy text-xs text-yellow-500" title="{{ game.awayTeamName }} won" aria-label="Winner"></i>{% endif %}
+                            {{ game.awayTeamScore|default:"-" }}
+                        </span>
                     </div>
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center justify-between gap-3{% if game.statusType == 'finished' and game.gameWinner and game.gameWinner != game.homeTeamSlug %} opacity-60{% endif %}">
                         <span class="flex min-w-0 items-center gap-2 font-semibold text-text-dark dark:text-white">
                             {% with game.homeTeamSlug|lookuplogo as home_team %}
                             <img src="{{ home_team.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="h-6 w-6 flex-shrink-0 object-contain">
                             {% endwith %}
                             <span class="truncate">{{ game.homeTeamName }}</span>
                         </span>
-                        <span class="font-black text-text-dark dark:text-white">{{ game.homeTeamScore|default:"-" }}</span>
+                        <span class="flex items-center gap-1.5 font-black text-text-dark dark:text-white">
+                            {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}<i class="fas fa-trophy text-xs text-yellow-500" title="{{ game.homeTeamName }} won" aria-label="Winner"></i>{% endif %}
+                            {{ game.homeTeamScore|default:"-" }}
+                        </span>
                     </div>
                 </div>
                 {% if game.statusType == 'inprogress' or game.statusType == 'finished' %}
@@ -231,7 +237,20 @@
                     {% if game.dashboard_pick_groups %}
                     <div class="space-y-2">
                         {% for group in game.dashboard_pick_groups %}
-                        <div class="text-xs">
+                        {% if game.statusType == 'finished' and game.gameWinner == group.team_slug %}
+                        <!-- Winning pick group: subtle green tint + check -->
+                        <div class="text-xs" data-testid="winning-pick-group">
+                            <span class="font-bold text-green-600 dark:text-green-400">
+                                <i class="fas fa-check-circle mr-0.5" aria-hidden="true"></i>{{ group.team_name }}
+                            </span>
+                            <span class="text-green-700/80 dark:text-green-300/80">
+                                {% for picker in group.users %}
+                                    {{ picker|display_name }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </span>
+                        </div>
+                        {% else %}
+                        <div class="text-xs{% if game.statusType == 'finished' and game.gameWinner %} opacity-60{% endif %}">
                             <span class="font-bold text-text-dark dark:text-white">{{ group.team_name }}</span>
                             <span class="text-text-secondary-light dark:text-text-secondary">
                                 {% for picker in group.users %}
@@ -239,6 +258,7 @@
                                 {% endfor %}
                             </span>
                         </div>
+                        {% endif %}
                         {% endfor %}
                     </div>
                     {% else %}
