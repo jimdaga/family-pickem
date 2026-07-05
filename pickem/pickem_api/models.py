@@ -113,7 +113,8 @@ class Pool(models.Model):
 
 class FamilyMembership(models.Model):
     class Role(models.TextChoices):
-        OWNER = 'owner', 'Owner'
+        # DB value stays 'owner' (pre-rebrand); the family-facing name is Commissioner.
+        OWNER = 'owner', 'Commissioner'
         ADMIN = 'admin', 'Admin'
         MEMBER = 'member', 'Member'
 

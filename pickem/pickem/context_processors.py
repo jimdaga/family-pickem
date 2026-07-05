@@ -51,7 +51,17 @@ def theme_context(request):
             context['user_dark_mode'] = user_profile.dark_mode
             context['user_theme_preference'] = 'dark' if user_profile.dark_mode else 'light'
             context['user_is_commissioner'] = user_profile.is_commissioner or request.user.is_superuser
-            context['user_is_commissioner_flag'] = user_profile.is_commissioner
+            # Family commissioners: the owner role in the family model
+            # (rebranded to "Commissioner"), or the legacy profile flag.
+            from pickem_api.models import FamilyMembership
+            context['user_is_commissioner_flag'] = (
+                user_profile.is_commissioner
+                or FamilyMembership.objects.filter(
+                    user=request.user,
+                    role=FamilyMembership.Role.OWNER,
+                    status=FamilyMembership.Status.ACTIVE,
+                ).exists()
+            )
         except Exception as e:
             # Fallback to default values if there's any issue
             context['user_dark_mode'] = False

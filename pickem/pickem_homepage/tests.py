@@ -2971,6 +2971,14 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertNotContains(page, 'data-testid="commissioner-badge"')
         self.assertNotContains(page, 'data-testid="superuser-badge"')
 
+        # The family owner role (rebranded "Commissioner") earns the badge
+        # without any profile flag.
+        self.client.force_login(self.owner)
+        page = self.client.get(lobby_url)
+        self.assertContains(page, 'data-testid="commissioner-badge"')
+        self.assertNotContains(page, 'data-testid="superuser-badge"')
+        self.client.force_login(self.member)
+
         # Commissioner flag -> commissioner badge only. (The first page view
         # auto-creates the profile, so update rather than create.)
         UserProfile.objects.update_or_create(
@@ -3606,7 +3614,7 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(admin_response.status_code, 200)
         self.assertContains(admin_response, 'data-testid="family-admin-members"')
         self.assertContains(admin_response, 'data-testid="membership-readonly-state"')
-        self.assertContains(admin_response, "Owner role required")
+        self.assertContains(admin_response, "Commissioner role required")
         self.assertNotContains(admin_response, 'data-testid="membership-update-form"')
         self.assertNotContains(admin_response, self._member_update_url())
 
