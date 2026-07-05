@@ -1174,3 +1174,214 @@ class PickemApiConfigReadyTest(TestCase):
                 config.ready()
 
         mock_start.assert_not_called()
+
+
+class WeeklyWinnerEngineTest(TestCase):
+    """Weekly winner engine: strategies, tie chains, idempotency, triggering."""
+
+    class StubStats:
+        """GameStatsProvider stand-in — no network."""
+        def __init__(self, yards=700):
+            self.yards = yards
+            self.calls = 0
+
+        def combined_yards(self, game_id):
+            self.calls += 1
+            return self.yards
+
+    def setUp(self):
+        self.family = Family.objects.create(name="Smith", slug="smith")
+        self.pool = Pool.objects.create(
+            family=self.family, name="Pool", slug="main", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        self.settings = PoolSettings.objects.create(pool=self.pool)
+        # Week 1: one ordinary game and the (later) MNF tiebreaker game.
+        GamesAndScores.objects.create(
+            id=900, slug="a-b", competition="nfl", gameWeek="1", gameyear="2025",
+            gameseason=2526, startTimestamp=timezone.now(), statusType="finished",
+            statusTitle="Final", gameScored=True,
+            homeTeamId=1, homeTeamSlug="a", homeTeamName="A",
+            awayTeamId=2, awayTeamSlug="b", awayTeamName="B",
+        )
+        self.mnf = GamesAndScores.objects.create(
+            id=901, slug="c-d", competition="nfl", gameWeek="1", gameyear="2025",
+            gameseason=2526, startTimestamp=timezone.now() + timedelta(days=1),
+            statusType="finished", statusTitle="Final", gameScored=True,
+            tieBreakerGame=True, homeTeamScore=24, awayTeamScore=20,
+            homeTeamId=3, homeTeamSlug="c", homeTeamName="C",
+            awayTeamId=4, awayTeamSlug="d", awayTeamName="D",
+        )
+
+    def _player(self, uid, week1_points):
+        return userSeasonPoints.objects.create(
+            pool=self.pool, gameseason=2526, userID=uid,
+            userEmail=f"{uid}@x.com", week_1_points=week1_points,
+        )
+
+    def _tb_pick(self, uid, score=None, yards=None):
+        return GamePicks.objects.create(
+            id=f"{self.pool.id}-{uid}-901", pool=self.pool, pick_game_id=901,
+            slug="c-d", userID=uid, gameWeek="1", gameyear="2025",
+            gameseason=2526, competition="nfl", pick="c",
+            tieBreakerScore=score, tieBreakerYards=yards,
+        )
+
+    def _award(self, stats=None, **kwargs):
+        from pickem_api.weekly_winners import award_weekly_winners
+        return award_weekly_winners(
+            self.pool, 2526, 1, stats_provider=stats or self.StubStats(), **kwargs
+        )
+
+    def test_outright_winner_gets_flag_bonus_total_and_audit(self):
+        top = self._player("u1", 10)
+        other = self._player("u2", 7)
+
+        result = self._award()
+
+        top.refresh_from_db(); other.refresh_from_db()
+        self.assertEqual(result["winners"], ["u1"])
+        self.assertEqual(result["method"], "top_score")
+        self.assertTrue(top.week_1_winner)
+        self.assertEqual(top.week_1_bonus, 2)      # default weekly_winner_points
+        self.assertEqual(top.total_points, 12)     # 10 + 2
+        self.assertFalse(other.week_1_winner)
+        self.assertEqual(other.total_points, 7)
+        audit = FamilyAuditLog.objects.get(
+            pool=self.pool, action=FamilyAuditLog.Action.WEEK_WINNER_UPDATED
+        )
+        self.assertEqual(audit.metadata["winners"], ["u1"])
+
+    def test_tie_resolved_by_closest_total_score(self):
+        a = self._player("u1", 9); b = self._player("u2", 9)
+        self._tb_pick("u1", score=41)   # off by 3 (actual 44)
+        self._tb_pick("u2", score=50)   # off by 6
+
+        result = self._award()
+
+        self.assertEqual(result["winners"], ["u1"])
+        self.assertEqual(result["method"], "total_score")
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertTrue(a.week_1_winner); self.assertFalse(b.week_1_winner)
+
+    def test_primary_dead_heat_falls_to_secondary_yards_via_provider(self):
+        self._player("u1", 9); self._player("u2", 9)
+        self._tb_pick("u1", score=42, yards=690)   # scores equidistant (both off 2)
+        self._tb_pick("u2", score=46, yards=800)   # yards: u1 off 10, u2 off 100
+        stats = self.StubStats(yards=700)
+
+        result = self._award(stats=stats)
+
+        self.assertEqual(result["winners"], ["u1"])
+        self.assertEqual(result["method"], "combined_yards")
+        self.assertEqual(stats.calls, 1)  # ESPN hit exactly once, lazily
+
+    def test_unresolvable_tie_produces_co_winners_with_full_bonus(self):
+        a = self._player("u1", 9); b = self._player("u2", 9)
+        # No tiebreaker predictions at all -> chain can't narrow.
+        result = self._award()
+
+        self.assertEqual(result["winners"], ["u1", "u2"])
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertTrue(a.week_1_winner and b.week_1_winner)
+        self.assertEqual((a.week_1_bonus, b.week_1_bonus), (2, 2))
+
+    def test_split_points_secondary_divides_bonus(self):
+        self.settings.secondary_tiebreaker = "split_points"
+        self.settings.weekly_winner_points = 5
+        self.settings.save()
+        a = self._player("u1", 9); b = self._player("u2", 9)
+        self._tb_pick("u1", score=42); self._tb_pick("u2", score=46)  # dead heat
+
+        result = self._award()
+
+        self.assertEqual(result["winners"], ["u1", "u2"])
+        self.assertEqual(result["bonus_each"], 2)  # 5 // 2
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertEqual((a.week_1_bonus, b.week_1_bonus), (2, 2))
+
+    def test_coin_flip_is_deterministic_across_forced_reruns(self):
+        self.settings.secondary_tiebreaker = "coin_flip"
+        self.settings.save()
+        self._player("u1", 9); self._player("u2", 9)
+
+        first = self._award()
+        second = self._award(force=True)
+
+        self.assertEqual(len(first["winners"]), 1)
+        self.assertEqual(first["winners"], second["winners"])
+
+    def test_no_over_variant_unresolved_when_everyone_goes_over(self):
+        self.settings.primary_tiebreaker = "total_score_no_over"
+        self.settings.save()
+        self._player("u1", 9); self._player("u2", 9)
+        self._tb_pick("u1", score=45, yards=650)  # both OVER 44
+        self._tb_pick("u2", score=60, yards=710)
+        stats = self.StubStats(yards=700)
+
+        result = self._award(stats=stats)
+
+        # Primary can't apply (Price is Right bust) -> secondary yards decides.
+        self.assertEqual(result["winners"], ["u2"])
+        self.assertEqual(result["method"], "combined_yards")
+
+    def test_candidate_without_prediction_loses_to_one_with_prediction(self):
+        self._player("u1", 9); self._player("u2", 9)
+        self._tb_pick("u1", score=30)  # only u1 predicted
+
+        result = self._award()
+
+        self.assertEqual(result["winners"], ["u1"])
+
+    def test_allow_tiebreaker_off_means_co_winners(self):
+        self.settings.allow_tiebreaker = False
+        self.settings.save()
+        self._player("u1", 9); self._player("u2", 9)
+        self._tb_pick("u1", score=44)  # would win the tiebreak — must be ignored
+
+        result = self._award()
+
+        self.assertEqual(result["winners"], ["u1", "u2"])
+        self.assertEqual(result["method"], "co_winners")
+
+    def test_idempotent_second_run_is_a_noop(self):
+        top = self._player("u1", 10)
+
+        self.assertIsNotNone(self._award())
+        self.assertIsNone(self._award())  # already awarded
+
+        top.refresh_from_db()
+        self.assertEqual(top.total_points, 12)  # bonus not applied twice
+
+    def test_nothing_awarded_when_nobody_scored(self):
+        self._player("u1", 0)
+        self.assertIsNone(self._award())
+
+    def test_command_waits_for_week_completion(self):
+        from django.core.management import call_command
+        from io import StringIO
+
+        self._player("u1", 10)
+        self.mnf.statusType = "inprogress"  # MNF still going
+        self.mnf.save(update_fields=["statusType"])
+
+        out = StringIO()
+        call_command("update_weekly_winners", season=2526, stdout=out)
+        self.assertIn("No completed week", out.getvalue())
+        self.assertFalse(
+            userSeasonPoints.objects.filter(pool=self.pool, week_1_winner=True).exists()
+        )
+
+        # MNF ends -> the same command now awards.
+        self.mnf.statusType = "finished"
+        self.mnf.save(update_fields=["statusType"])
+        with patch(
+            "pickem_api.management.commands.update_weekly_winners.EspnGameStatsProvider"
+        ) as provider:
+            provider.return_value = self.StubStats()
+            out = StringIO()
+            call_command("update_weekly_winners", season=2526, stdout=out)
+        self.assertIn("awarded winners in 1 pool(s)", out.getvalue())
+        self.assertTrue(
+            userSeasonPoints.objects.get(pool=self.pool, userID="u1").week_1_winner
+        )

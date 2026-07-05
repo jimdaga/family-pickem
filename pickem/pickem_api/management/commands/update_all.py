@@ -5,11 +5,12 @@ a failure in one step is logged and the pipeline continues so a transient
 error (e.g. ESPN hiccup) doesn't block the rest.
 
 Order matters:
-  1. update_records  - team win/loss records (independent)
-  2. update_games    - fetch scores + winners from ESPN
-  3. update_picks    - score picks against game winners
-  4. update_standings- recompute per-pool weekly/total points
-  5. update_rankings - rank pool members by total points
+  1. update_records        - team win/loss records (independent)
+  2. update_games          - fetch scores + winners from ESPN
+  3. update_picks          - score picks against game winners
+  4. update_standings      - recompute per-pool weekly/total points
+  5. update_weekly_winners - award winner bonuses once the week completes
+  6. update_rankings       - rank pool members by total points (incl. bonus)
 """
 
 import logging
@@ -24,6 +25,7 @@ PIPELINE = [
     "update_games",
     "update_picks",
     "update_standings",
+    "update_weekly_winners",
     "update_rankings",
 ]
 
