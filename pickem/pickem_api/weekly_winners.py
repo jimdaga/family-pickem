@@ -258,6 +258,7 @@ def week_is_complete(season, week, competition='nfl'):
 def latest_complete_week(season, competition='nfl'):
     weeks = (
         GamesAndScores.objects.filter(gameseason=season, competition=competition)
+        .order_by()  # clear Meta.ordering so DISTINCT applies to gameWeek only
         .values_list('gameWeek', flat=True)
         .distinct()
     )

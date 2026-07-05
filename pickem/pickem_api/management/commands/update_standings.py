@@ -44,6 +44,9 @@ class Command(BaseCommand):
 
         combos = (
             GamePicks.objects.filter(gameseason=season)
+            # order_by() clears Meta.ordering (gameWeek), which would leak
+            # into the SELECT and break DISTINCT on (pool_id, userID).
+            .order_by()
             .values_list("pool_id", "userID")
             .distinct()
         )

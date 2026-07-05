@@ -64,6 +64,9 @@ class Command(BaseCommand):
 
         pool_ids = (
             userSeasonPoints.objects.filter(gameseason=season)
+            # order_by() clears Meta.ordering (total_points), which would
+            # otherwise leak into the SELECT and break DISTINCT on pool_id.
+            .order_by()
             .values_list("pool_id", flat=True)
             .distinct()
         )
