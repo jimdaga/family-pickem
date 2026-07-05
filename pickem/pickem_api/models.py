@@ -173,6 +173,25 @@ class PoolSettings(models.Model):
         SPLIT_POINTS = 'split_points', 'Split the points'
         COIN_FLIP = 'coin_flip', 'Coin flip'
 
+    class PickType(models.TextChoices):
+        STRAIGHT_UP = 'straight_up', 'Straight up (pick the winner)'
+        AGAINST_SPREAD = 'against_spread', 'Against the spread (coming soon)'
+
+    class MissedPickPolicy(models.TextChoices):
+        ZERO_POINTS = 'zero_points', 'No points for missed picks'
+        AUTO_HOME = 'auto_home', 'Auto-pick the home team'
+        AUTO_FAVORITE = 'auto_favorite', 'Auto-pick the favorite'
+
+    class LateJoinPolicy(models.TextChoices):
+        OPEN = 'open', 'Members can join all season'
+        LOCK_AFTER_WEEK_1 = 'lock_after_week_1', 'Entries lock after Week 1'
+
+    class PayoutStructure(models.TextChoices):
+        WINNER_TAKES_ALL = 'winner_takes_all', '1st place takes the whole pool'
+        NINETY_TEN = 'ninety_ten', '1st gets 90%, 2nd gets 10%'
+        SEVENTY_TWENTY_TEN = 'seventy_twenty_ten', '1st 70%, 2nd 20%, 3rd 10%'
+        SECOND_GETS_FEE_BACK = 'second_gets_fee_back', '1st takes the pool, 2nd gets their entry fee back'
+
     pool = models.OneToOneField(Pool, on_delete=models.PROTECT, related_name='settings')
     picks_lock_at_kickoff = models.BooleanField(
         default=True,
@@ -210,11 +229,11 @@ class PoolSettings(models.Model):
     )
     perfect_week_bonus_enabled = models.BooleanField(
         default=False,
-        help_text="Award a bonus for picking every game correctly in a week",
+        help_text="Award a cash bonus for picking every game correctly in a week",
     )
-    perfect_week_bonus_points = models.PositiveSmallIntegerField(
-        default=3,
-        help_text="Bonus points for a perfect week",
+    perfect_week_bonus_amount = models.PositiveIntegerField(
+        default=10,
+        help_text="Perfect week bonus, in whole dollars",
     )
     entry_fee_enabled = models.BooleanField(
         default=False,
@@ -223,6 +242,34 @@ class PoolSettings(models.Model):
     entry_fee_amount = models.PositiveIntegerField(
         default=0,
         help_text="Entry fee per player, in whole dollars",
+    )
+    pick_type = models.CharField(
+        max_length=32,
+        choices=PickType.choices,
+        default=PickType.STRAIGHT_UP,
+        help_text="How picks are made (against-the-spread is not yet available)",
+    )
+    missed_pick_policy = models.CharField(
+        max_length=32,
+        choices=MissedPickPolicy.choices,
+        default=MissedPickPolicy.ZERO_POINTS,
+        help_text="What happens when a member doesn't submit a pick",
+    )
+    include_playoffs = models.BooleanField(
+        default=False,
+        help_text="Continue the pool through the playoffs (scoring logic coming later)",
+    )
+    late_join_policy = models.CharField(
+        max_length=32,
+        choices=LateJoinPolicy.choices,
+        default=LateJoinPolicy.OPEN,
+        help_text="Whether members can join after the season starts",
+    )
+    payout_structure = models.CharField(
+        max_length=32,
+        choices=PayoutStructure.choices,
+        default=PayoutStructure.WINNER_TAKES_ALL,
+        help_text="How the pot is split when an entry fee is collected",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

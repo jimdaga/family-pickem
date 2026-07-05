@@ -16,6 +16,8 @@ Pickem
 - [ ] Add end-to-end tests for critical flows: sign in, create/join family, switch family, submit picks, view scores/standings, and cross-family isolation.
 - [x] Rename/reframe the main pool page as a "Lobby". Update the top-left logo behavior so it links to the public homepage, while internal navigation has a separate family/pool home affordance.
 - [ ] Evaluate whether a global user points page should exist. If added, define what is global versus family-scoped so it does not leak private pool data.
+- [ ] Add a "Confidence points" pick type (rank picks 1-16 each week; correct picks earn their rank). Popular on ESPN/Yahoo. Big scoring-logic lift — pick type setting already exists, so this becomes a third option alongside straight-up and against-the-spread.
+- [ ] Implement the logic behind the new pool rule settings: against-the-spread scoring, missed-pick auto-assignment, playoff continuation, late-join enforcement, and tiebreaker automation. Settings exist and display on the rules page; the scorer/joins need to consume them.
 
 ##### Fixes
 - [ ] Fix the Submit Picks page so users can clearly see picks they already submitted. Recheck whether edit-before-lock still works after the multi-family changes.

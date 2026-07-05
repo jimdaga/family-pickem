@@ -970,9 +970,14 @@ ADMIN_POOL_SETTINGS_FIELDS = [
     'primary_tiebreaker',
     'secondary_tiebreaker',
     'perfect_week_bonus_enabled',
-    'perfect_week_bonus_points',
+    'perfect_week_bonus_amount',
     'entry_fee_enabled',
     'entry_fee_amount',
+    'pick_type',
+    'missed_pick_policy',
+    'include_playoffs',
+    'late_join_policy',
+    'payout_structure',
 ]
 
 
@@ -1156,6 +1161,10 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
         ],
         'tiebreaker_fields': [
             form['primary_tiebreaker'], form['secondary_tiebreaker'],
+        ],
+        'rule_choice_fields': [
+            form['pick_type'], form['missed_pick_policy'],
+            form['late_join_policy'], form['payout_structure'],
         ],
     }
     return render(request, 'pickem/family_admin_settings.html', context)

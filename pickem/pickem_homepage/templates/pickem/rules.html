@@ -141,6 +141,49 @@
                         {% endif %}
                     </p>
                 </div>
+
+                <!-- Pick Type -->
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm hover:border-primary hover:shadow-md transition-all">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
+                        <i class="fas fa-hand-pointer"></i>
+                    </span>
+                    <div class="font-bold text-text-dark dark:text-white mb-1">Pick Type</div>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
+                        Picks are made <strong class="text-text-dark dark:text-white">{% if pool_settings.pick_type == 'against_spread' %}against the spread{% else %}straight up{% endif %}</strong> &mdash; just pick the winner of each game
+                    </p>
+                </div>
+
+                <!-- Missed Picks -->
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm hover:border-primary hover:shadow-md transition-all">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
+                        <i class="fas fa-user-clock"></i>
+                    </span>
+                    <div class="font-bold text-text-dark dark:text-white mb-1">Missed Picks</div>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
+                        {% if pool_settings.missed_pick_policy == 'auto_home' %}
+                        Forgot to pick? You're <strong class="text-text-dark dark:text-white">auto-assigned the home team</strong>
+                        {% elif pool_settings.missed_pick_policy == 'auto_favorite' %}
+                        Forgot to pick? You're <strong class="text-text-dark dark:text-white">auto-assigned the favorite</strong>
+                        {% else %}
+                        Missed picks earn <strong class="text-text-dark dark:text-white">no points</strong> &mdash; get them in before kickoff!
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- Playoffs -->
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm hover:border-primary hover:shadow-md transition-all">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
+                        <i class="fas fa-snowflake"></i>
+                    </span>
+                    <div class="font-bold text-text-dark dark:text-white mb-1">Playoffs</div>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
+                        {% if pool_settings.include_playoffs %}
+                        The pool <strong class="text-text-dark dark:text-white">continues through the playoffs</strong>
+                        {% else %}
+                        The pool covers the <strong class="text-text-dark dark:text-white">regular season only</strong> (Weeks 1&ndash;18)
+                        {% endif %}
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -155,12 +198,12 @@
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <i class="fas fa-gem"></i>
                         </span>
-                        <div class="text-3xl font-bold text-text-dark dark:text-white">{% if pool_settings.perfect_week_bonus_enabled %}+{{ pool_settings.perfect_week_bonus_points }}{% else %}&mdash;{% endif %}</div>
+                        <div class="text-3xl font-bold text-text-dark dark:text-white">{% if pool_settings.perfect_week_bonus_enabled %}${{ pool_settings.perfect_week_bonus_amount }}{% else %}&mdash;{% endif %}</div>
                     </div>
                     <div class="font-bold text-text-dark dark:text-white">Perfect Week Bonus</div>
                     <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
                         {% if pool_settings.perfect_week_bonus_enabled %}
-                        Get all picks correct in a week and earn <strong class="text-text-dark dark:text-white">{{ pool_settings.perfect_week_bonus_points }} bonus point{{ pool_settings.perfect_week_bonus_points|pluralize }}</strong>
+                        Get all picks correct in a week and earn a <strong class="text-text-dark dark:text-white">${{ pool_settings.perfect_week_bonus_amount }} bonus</strong>
                         {% else %}
                         Not enabled for this pool
                         {% endif %}
@@ -194,6 +237,40 @@
                     </div>
                     <div class="font-bold text-text-dark dark:text-white">Championship Tiebreaker</div>
                     <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Tied champions continue into <strong class="text-text-dark dark:text-white">the playoffs</strong> to determine the winner</p>
+                </div>
+
+                <!-- Payout Structure -->
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <i class="fas fa-sack-dollar"></i>
+                        </span>
+                    </div>
+                    <div class="font-bold text-text-dark dark:text-white">Payout Structure</div>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                        {% if pool_settings.entry_fee_enabled %}
+                        <strong class="text-text-dark dark:text-white">{{ pool_settings.get_payout_structure_display }}</strong>
+                        {% else %}
+                        Bragging rights only &mdash; no entry fee, no payouts
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- Late Join -->
+                <div class="rules-compact-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <i class="fas fa-door-open"></i>
+                        </span>
+                    </div>
+                    <div class="font-bold text-text-dark dark:text-white">Joining Late</div>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                        {% if pool_settings.late_join_policy == 'lock_after_week_1' %}
+                        Entries <strong class="text-text-dark dark:text-white">lock after Week 1</strong> &mdash; join before kickoff weekend
+                        {% else %}
+                        New members can <strong class="text-text-dark dark:text-white">join any time</strong> during the season
+                        {% endif %}
+                    </p>
                 </div>
             </div>
         </section>

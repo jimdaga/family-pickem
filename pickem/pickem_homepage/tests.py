@@ -2887,8 +2887,12 @@ class FamilyAdminExperienceTests(TestCase):
             "weekly_winner_points": 2,
             "primary_tiebreaker": "total_score",
             "secondary_tiebreaker": "combined_yards",
-            "perfect_week_bonus_points": 3,
+            "perfect_week_bonus_amount": 10,
             "entry_fee_amount": 0,
+            "pick_type": "straight_up",
+            "missed_pick_policy": "zero_points",
+            "late_join_policy": "open",
+            "payout_structure": "winner_takes_all",
         }
         fields.update(overrides)
         return fields
@@ -2909,9 +2913,13 @@ class FamilyAdminExperienceTests(TestCase):
                     weekly_winner_points=5,
                     primary_tiebreaker="combined_yards",
                     secondary_tiebreaker="coin_flip",
-                    perfect_week_bonus_points=7,
+                    perfect_week_bonus_amount=25,
                     entry_fee_amount=40,
+                    missed_pick_policy="auto_home",
+                    late_join_policy="lock_after_week_1",
+                    payout_structure="ninety_ten",
                 ),
+                "include_playoffs": "on",
                 "perfect_week_bonus_enabled": "on",
                 "entry_fee_enabled": "on",
             },
@@ -2926,9 +2934,14 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(settings.primary_tiebreaker, "combined_yards")
         self.assertEqual(settings.secondary_tiebreaker, "coin_flip")
         self.assertTrue(settings.perfect_week_bonus_enabled)
-        self.assertEqual(settings.perfect_week_bonus_points, 7)
+        self.assertEqual(settings.perfect_week_bonus_amount, 25)
         self.assertTrue(settings.entry_fee_enabled)
         self.assertEqual(settings.entry_fee_amount, 40)
+        self.assertEqual(settings.pick_type, "straight_up")
+        self.assertEqual(settings.missed_pick_policy, "auto_home")
+        self.assertTrue(settings.include_playoffs)
+        self.assertEqual(settings.late_join_policy, "lock_after_week_1")
+        self.assertEqual(settings.payout_structure, "ninety_ten")
 
         # The rules page renders the configured values.
         rules_url = reverse(
@@ -2939,9 +2952,32 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(rules.status_code, 200)
         self.assertContains(rules, "+2")   # win points
         self.assertContains(rules, "+5")   # weekly winner bonus
-        self.assertContains(rules, "+7")   # perfect week bonus
+        self.assertContains(rules, "$25")  # perfect week bonus (dollars)
         self.assertContains(rules, "$40")  # entry fee
         self.assertContains(rules, "coin flip")
+        self.assertContains(rules, "auto-assigned the home team")
+        self.assertContains(rules, "continues through the playoffs")
+        self.assertContains(rules, "lock after Week 1")
+        self.assertContains(rules, "1st gets 90%, 2nd gets 10%")
+
+    def test_against_the_spread_pick_type_is_rejected_for_now(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            self._settings_url(),
+            {
+                "family_name": self.family.name,
+                "pool_name": self.pool.name,
+                "allow_tiebreaker": "on",
+                **self._default_scoring_fields(pick_type="against_spread"),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "coming soon")
+        settings = self.pool.settings
+        settings.refresh_from_db()
+        self.assertEqual(settings.pick_type, "straight_up")
 
     def test_scoring_rules_validation_requires_value_when_bonus_enabled(self):
         self.client.force_login(self.admin_user)
@@ -2952,7 +2988,7 @@ class FamilyAdminExperienceTests(TestCase):
                 "family_name": self.family.name,
                 "pool_name": self.pool.name,
                 "allow_tiebreaker": "on",
-                **self._default_scoring_fields(perfect_week_bonus_points=0, entry_fee_amount=0),
+                **self._default_scoring_fields(perfect_week_bonus_amount=0, entry_fee_amount=0),
                 "perfect_week_bonus_enabled": "on",
                 "entry_fee_enabled": "on",
             },

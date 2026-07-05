@@ -80,6 +80,21 @@ ADMIN_TEXT_INPUT_CLASSES = (
 )
 
 
+class DisabledOptionSelect(forms.Select):
+    """Select widget that renders specific option values as disabled
+    (greyed out and unselectable) — used for "coming soon" choices."""
+
+    def __init__(self, *args, disabled_choices=(), **kwargs):
+        self.disabled_choices = set(disabled_choices)
+        super().__init__(*args, **kwargs)
+
+    def create_option(self, name, value, *args, **kwargs):
+        option = super().create_option(name, value, *args, **kwargs)
+        if value in self.disabled_choices:
+            option['attrs']['disabled'] = True
+        return option
+
+
 class FamilyAdminSettingsForm(forms.Form):
     family_name = forms.CharField(
         label="Family display name",
@@ -152,10 +167,10 @@ class FamilyAdminSettingsForm(forms.Form):
             'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
         }),
     )
-    perfect_week_bonus_points = forms.IntegerField(
-        label="Perfect week bonus points",
+    perfect_week_bonus_amount = forms.IntegerField(
+        label="Perfect week bonus ($)",
         min_value=0,
-        max_value=99,
+        max_value=100000,
         widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
     )
     entry_fee_enabled = forms.BooleanField(
@@ -171,13 +186,51 @@ class FamilyAdminSettingsForm(forms.Form):
         max_value=100000,
         widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
     )
+    pick_type = forms.ChoiceField(
+        label="Pick type",
+        choices=PoolSettings.PickType.choices,
+        widget=DisabledOptionSelect(
+            disabled_choices={PoolSettings.PickType.AGAINST_SPREAD},
+            attrs={'class': ADMIN_TEXT_INPUT_CLASSES},
+        ),
+    )
+    missed_pick_policy = forms.ChoiceField(
+        label="Missed pick policy",
+        choices=PoolSettings.MissedPickPolicy.choices,
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    include_playoffs = forms.BooleanField(
+        label="Include playoffs",
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
+    late_join_policy = forms.ChoiceField(
+        label="Late join policy",
+        choices=PoolSettings.LateJoinPolicy.choices,
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    payout_structure = forms.ChoiceField(
+        label="Payout structure",
+        choices=PoolSettings.PayoutStructure.choices,
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+
+    def clean_pick_type(self):
+        pick_type = self.cleaned_data['pick_type']
+        if pick_type == PoolSettings.PickType.AGAINST_SPREAD:
+            raise forms.ValidationError(
+                "Against-the-spread pools are coming soon and can't be selected yet."
+            )
+        return pick_type
 
     def clean(self):
         cleaned = super().clean()
-        if cleaned.get('perfect_week_bonus_enabled') and not cleaned.get('perfect_week_bonus_points'):
+        if cleaned.get('perfect_week_bonus_enabled') and not cleaned.get('perfect_week_bonus_amount'):
             self.add_error(
-                'perfect_week_bonus_points',
-                "Set a bonus value (at least 1) when the perfect week bonus is enabled.",
+                'perfect_week_bonus_amount',
+                "Set a bonus value (at least $1) when the perfect week bonus is enabled.",
             )
         if cleaned.get('entry_fee_enabled') and not cleaned.get('entry_fee_amount'):
             self.add_error(
