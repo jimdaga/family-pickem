@@ -37,6 +37,8 @@ def theme_context(request):
         'user_dark_mode': None,
         'user_theme_preference': None,
         'user_is_commissioner': False,
+        # Pure profile flag (no superuser OR) — drives the Commissioner badge.
+        'user_is_commissioner_flag': False,
         # Stable per-deployment cache-buster for static assets (see settings).
         'static_version': settings.STATIC_VERSION,
         'debug_mode': settings.DEBUG,
@@ -49,6 +51,7 @@ def theme_context(request):
             context['user_dark_mode'] = user_profile.dark_mode
             context['user_theme_preference'] = 'dark' if user_profile.dark_mode else 'light'
             context['user_is_commissioner'] = user_profile.is_commissioner or request.user.is_superuser
+            context['user_is_commissioner_flag'] = user_profile.is_commissioner
         except Exception as e:
             # Fallback to default values if there's any issue
             context['user_dark_mode'] = False

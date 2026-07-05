@@ -53,6 +53,13 @@
                         Superuser
                     </span>
                     {% endif %}
+                    {% if user_is_commissioner_flag %}
+                    <!-- Commissioner indicator: single-family governance role -->
+                    <span data-testid="commissioner-badge" class="inline-flex items-center gap-1.5 rounded-full border border-sky-400/60 bg-sky-400/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-sky-300" title="You are a commissioner of your family's pool.">
+                        <i class="fas fa-gavel" aria-hidden="true"></i>
+                        Commissioner
+                    </span>
+                    {% endif %}
                 </div>
 
                 <!-- Mobile Page Title - HIDDEN (using fancy banner instead) -->
@@ -178,6 +185,11 @@
                                 <span class="text-white font-medium">
                                     {{ user|display_name }}
                                 </span>
+                                {% if user_current_rank %}
+                                <span data-testid="navbar-rank" class="inline-flex items-center gap-1 rounded-full bg-slate-700/80 px-2 py-0.5 text-xs font-bold text-yellow-400" title="Your current rank in this pool">
+                                    <i class="fas fa-trophy text-[10px]" aria-hidden="true"></i>#{{ user_current_rank }}
+                                </span>
+                                {% endif %}
                                 <i class="fas fa-chevron-down text-xs text-slate-400"></i>
                             </button>
 
@@ -318,7 +330,7 @@
     {% endblock %}
 
      <!-- Main Content -->
-     <main class="{% block main_class %}pt-16 min-h-screen {% if user.is_authenticated %}pb-24{% endif %}{% endblock %}" role="main">
+     <main class="{% block main_class %}pt-16 min-h-screen{% endblock %}" role="main">
 
         <!-- Banner Section (Optional) -->
         {% block banner %}
@@ -387,59 +399,6 @@
             </div>
         {% endblock %}
     </main>
-
-    <!-- Fixed Bottom Status Bar (for authenticated users) -->
-    {% if user.is_authenticated %}
-    <div class="fixed bottom-0 left-0 right-0 bg-slate-800/95 backdrop-blur-lg border-t border-slate-700 z-40 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-4 grid grid-cols-3 items-center gap-4 text-base">
-            <!-- Left: User Info -->
-            <div class="flex items-center gap-3">
-                <div class="relative w-8 h-8 flex-shrink-0">
-                    <div class="w-8 h-8 rounded-full bg-primary border-2 border-border-subtle flex items-center justify-center text-white text-xs font-bold select-none">{{ user|display_name|slice:":1"|upper }}</div>
-                    {% with user.socialaccount_set.all.0 as social_account %}
-                    {% if social_account %}
-                    <img src="{{ social_account.get_avatar_url }}"
-                         alt="Your avatar"
-                         class="absolute inset-0 w-8 h-8 rounded-full object-cover border-2 border-border-light dark:border-border-subtle"
-                         onerror="this.remove()">
-                    {% endif %}
-                    {% endwith %}
-                </div>
-                <span class="text-white font-semibold truncate">
-                    {{ user|display_name }}
-                </span>
-                {% if user.is_superuser %}
-                <span class="inline-flex items-center gap-1 rounded-full border border-yellow-400/60 bg-yellow-400/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-yellow-300" title="Signed in as a Django superuser">
-                    <i class="fas fa-bolt" aria-hidden="true"></i>
-                    Super
-                </span>
-                {% endif %}
-            </div>
-
-            <!-- Center: Week & Rank -->
-            <div class="flex items-center justify-center gap-4">
-                <span class="text-white font-semibold hidden sm:inline-flex items-center">
-                    <i class="fas fa-calendar-week mr-1.5 text-primary"></i>
-                    Week {{ current_week|default:"--" }}
-                </span>
-                {% if user_current_rank %}
-                <span class="text-white font-semibold inline-flex items-center">
-                    <i class="fas fa-trophy mr-1.5 text-yellow-500"></i>
-                    Rank #{{ user_current_rank }}
-                </span>
-                {% endif %}
-            </div>
-
-            <!-- Right: Submit Picks Button -->
-            <div class="flex justify-end">
-                <a href="{% if current_family and current_pool %}{% url 'family_pool_game_picks' current_family.slug current_pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}" class="px-4 py-1.5 bg-primary hover:bg-primary/80 text-white rounded-lg font-semibold transition-colors flex items-center gap-2">
-                    <i class="fas fa-check-circle"></i>
-                    <span>Submit Picks</span>
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Dropdown and Mobile Menu Toggle -->
     <script>

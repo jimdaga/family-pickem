@@ -2035,6 +2035,9 @@ class Phase4SharedContextScopeTests(TestCase):
 
         self.assertEqual(response.context["user_current_rank"], 4)
         self.assertEqual(response.context["user_correct_picks_week"], 1)
+        # The rank renders as a chip in the top-right profile button.
+        self.assertContains(response, 'data-testid="navbar-rank"')
+        self.assertContains(response, "#4")
 
     def test_footer_stats_context_suppresses_private_stats_without_safe_pool(self):
         userSeasonPoints.objects.create(
@@ -2955,6 +2958,34 @@ class FamilyAdminExperienceTests(TestCase):
                     kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug})
         )
         self.assertNotContains(own_lobby, 'data-testid="superuser-badge"')
+
+    def test_commissioner_badge_shows_for_flag_and_stacks_with_superuser(self):
+        lobby_url = reverse(
+            "family_pool_home",
+            kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
+        )
+
+        # Plain member: no badges.
+        self.client.force_login(self.member)
+        page = self.client.get(lobby_url)
+        self.assertNotContains(page, 'data-testid="commissioner-badge"')
+        self.assertNotContains(page, 'data-testid="superuser-badge"')
+
+        # Commissioner flag -> commissioner badge only. (The first page view
+        # auto-creates the profile, so update rather than create.)
+        UserProfile.objects.update_or_create(
+            user=self.member, defaults={"is_commissioner": True}
+        )
+        page = self.client.get(lobby_url)
+        self.assertContains(page, 'data-testid="commissioner-badge"')
+        self.assertNotContains(page, 'data-testid="superuser-badge"')
+
+        # Commissioner + superuser -> both badges.
+        self.member.is_superuser = True
+        self.member.save(update_fields=["is_superuser"])
+        page = self.client.get(lobby_url)
+        self.assertContains(page, 'data-testid="commissioner-badge"')
+        self.assertContains(page, 'data-testid="superuser-badge"')
 
     def _settings_url(self, *, family=None, pool=None):
         family = family or self.family
