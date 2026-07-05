@@ -299,10 +299,19 @@ class TenantAuthorizationHelperTest(TestCase):
         with self.assertRaises(AuthenticationRequired):
             require_family_membership(AnonymousUser(), self.family)
 
-    def test_superuser_and_legacy_commissioner_do_not_bypass_membership(self):
-        with self.assertRaises(TenantNotFound):
-            require_family_membership(self.superuser, self.family)
+    def test_superuser_gets_god_mode_but_commissioner_stays_family_scoped(self):
+        # Superusers are site operators (like SREs): they may observe and
+        # administer every family via a synthetic, never-persisted owner
+        # membership.
+        membership = require_family_membership(self.superuser, self.family)
+        self.assertEqual(membership.role, FamilyMembership.Role.OWNER)
+        self.assertIsNone(membership.pk)  # synthetic — never saved
+        self.assertFalse(
+            FamilyMembership.objects.filter(user=self.superuser).exists()
+        )
 
+        # A commissioner governs a single family only — the profile flag
+        # grants nothing outside their own memberships.
         with self.assertRaises(TenantNotFound):
             require_family_membership(self.commissioner, self.family)
 

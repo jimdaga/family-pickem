@@ -137,6 +137,29 @@ def get_legacy_default_pool() -> Pool:
     return pool
 
 
+def _is_superuser(user):
+    """Django superusers (site operators) get god-mode tenant access.
+
+    Deliberately NOT UserProfile.is_commissioner: a commissioner governs a
+    single family only, never the whole site.
+    """
+    return getattr(user, 'is_superuser', False)
+
+
+def _superuser_membership(user, family) -> FamilyMembership:
+    """Synthetic, never-saved owner membership for superuser oversight.
+
+    Unsaved on purpose: superusers must be able to observe/administer any
+    family without a membership row appearing in that family's roster.
+    """
+    return FamilyMembership(
+        family=family,
+        user=user,
+        role=FamilyMembership.Role.OWNER,
+        status=FamilyMembership.Status.ACTIVE,
+    )
+
+
 def require_family_membership(
     user,
     family: FamilyRef,
@@ -151,8 +174,14 @@ def require_family_membership(
         status=FamilyMembership.Status.ACTIVE,
     ).first()
     if not membership:
+        if _is_superuser(user):
+            return _superuser_membership(user, resolved_family)
         raise TenantNotFound()
     if not role_allows(membership.role, minimum_role):
+        if _is_superuser(user):
+            # Superuser holds a lesser real membership here; elevate with a
+            # synthetic owner context rather than mutating their real row.
+            return _superuser_membership(user, resolved_family)
         raise PermissionDeniedForTenant()
     return membership
 
@@ -201,8 +230,25 @@ def require_tenant_context(
 
 def get_user_family_memberships(user):
     _require_authenticated(user)
-    return FamilyMembership.objects.filter(
+    memberships = FamilyMembership.objects.filter(
         user=user,
         status=FamilyMembership.Status.ACTIVE,
         family__status=Family.Status.ACTIVE,
     ).select_related('family').order_by('family__name', 'family__slug')
+
+    if not _is_superuser(user):
+        return memberships
+
+    # God mode: superusers (site operators, like SREs) see every active
+    # family. Real memberships are kept as-is; the rest get synthetic,
+    # never-saved owner memberships so nothing shows up in family rosters.
+    real = list(memberships)
+    covered_family_ids = {m.family_id for m in real}
+    extras = [
+        _superuser_membership(user, family)
+        for family in Family.objects.filter(status=Family.Status.ACTIVE)
+        .exclude(id__in=covered_family_ids)
+    ]
+    combined = real + extras
+    combined.sort(key=lambda m: (m.family.name, m.family.slug))
+    return combined

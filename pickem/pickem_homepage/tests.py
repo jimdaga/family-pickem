@@ -2833,7 +2833,7 @@ class FamilyAdminExperienceTests(TestCase):
             kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
         )
 
-    def test_job_runs_page_is_commissioner_only_and_lists_executions(self):
+    def test_job_runs_page_is_superuser_only_and_lists_executions(self):
         from django_apscheduler.models import DjangoJob, DjangoJobExecution
 
         job = DjangoJob.objects.create(id="update_all", next_run_time=timezone.now())
@@ -2845,30 +2845,72 @@ class FamilyAdminExperienceTests(TestCase):
             exception="boom", traceback="SECRET_TRACEBACK_MARKER at /app/secret.py",
         )
 
-        # A family admin who is not a commissioner cannot see the tool...
+        # A family admin cannot see the tool...
         self.client.force_login(self.admin_user)
         self.assertEqual(self.client.get(self._job_runs_url()).status_code, 403)
         # ...and the admin hub hides the Job Runs card for them.
         self.assertNotContains(self.client.get(self._admin_url()), self._job_runs_url())
 
-        # A commissioner (here, the owner) sees the tool and its run history,
-        # but NOT the raw error logs (owner/superuser only).
+        # A profile-flag commissioner is still scoped to their family: no
+        # system-wide scheduler data.
         UserProfile.objects.create(user=self.owner, is_commissioner=True)
         self.client.force_login(self.owner)
+        self.assertEqual(self.client.get(self._job_runs_url()).status_code, 403)
+        self.assertNotContains(self.client.get(self._admin_url()), self._job_runs_url())
+
+        # A superuser (site operator) sees the tool, the hub card, and the
+        # full traceback.
+        self.owner.is_superuser = True
+        self.owner.save(update_fields=["is_superuser"])
         response = self.client.get(self._job_runs_url())
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Job Runs")
         self.assertContains(response, "update_all")
         self.assertContains(response, "Executed")
-        self.assertNotContains(response, "SECRET_TRACEBACK_MARKER")
-        # The hub now surfaces the card.
+        self.assertContains(response, "SECRET_TRACEBACK_MARKER")
         self.assertContains(self.client.get(self._admin_url()), self._job_runs_url())
 
-        # The site owner (superuser) additionally sees the full traceback.
-        self.owner.is_superuser = True
-        self.owner.save(update_fields=["is_superuser"])
-        owner_response = self.client.get(self._job_runs_url())
-        self.assertContains(owner_response, "SECRET_TRACEBACK_MARKER")
+    def test_superuser_god_mode_accesses_any_family_with_badge(self):
+        # A superuser with NO membership anywhere sees any family's pages.
+        sre = User.objects.create_user(
+            "site-sre", email="sre@example.com", password="pass", is_superuser=True
+        )
+        self.client.force_login(sre)
+
+        lobby = self.client.get(
+            reverse("family_pool_home",
+                    kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug})
+        )
+        self.assertEqual(lobby.status_code, 200)
+        # Always-visible superuser indicator in the navbar.
+        self.assertContains(lobby, 'data-testid="superuser-badge"')
+
+        # Admin pages too (synthetic owner context), across BOTH families.
+        for family, pool in ((self.family, self.pool), (self.other_family, self.other_pool)):
+            admin_page = self.client.get(self._admin_url(family=family, pool=pool))
+            self.assertEqual(admin_page.status_code, 200)
+
+        # The switcher lists every active family (incl. any legacy family)...
+        self.assertLessEqual(
+            {self.family.slug, self.other_family.slug},
+            {c["family"].slug for c in lobby.context["family_switcher_choices"]},
+        )
+        # ...without creating any membership rows (no roster contamination).
+        self.assertFalse(FamilyMembership.objects.filter(user=sre).exists())
+
+        # Regular members get neither god mode nor the badge.
+        self.client.force_login(self.member)
+        other_lobby = self.client.get(
+            reverse("family_pool_home",
+                    kwargs={"family_slug": self.other_family.slug,
+                            "pool_slug": self.other_pool.slug})
+        )
+        self.assertNotEqual(other_lobby.status_code, 200)
+        own_lobby = self.client.get(
+            reverse("family_pool_home",
+                    kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug})
+        )
+        self.assertNotContains(own_lobby, 'data-testid="superuser-badge"')
 
     def _settings_url(self, *, family=None, pool=None):
         family = family or self.family

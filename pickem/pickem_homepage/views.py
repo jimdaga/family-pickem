@@ -309,8 +309,9 @@ def build_family_admin_sections(family, pool, user=None):
             'status': 'Manage winners',
         },
     ]
-    # Scheduler job runs are system-wide data; only expose to commissioners.
-    if user is not None and is_commissioner(user):
+    # Scheduler job runs are system-wide data; superuser-only (commissioners
+    # govern a single family, not the site).
+    if user is not None and getattr(user, 'is_superuser', False):
         sections.append({
             'label': 'Job Runs',
             'description': 'Scheduler run history for the data-update pipeline.',
@@ -926,15 +927,16 @@ def family_pool_admin(request, family_slug, pool_slug):
 
 @family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
 def family_pool_admin_job_runs(request, family_slug, pool_slug):
-    """View scheduler job runs (django-apscheduler). Commissioner-only, since
-    the scheduler and its execution history are system-wide, not pool-scoped."""
+    """View scheduler job runs (django-apscheduler). Superuser-only: the
+    scheduler and its execution history are system-wide, and commissioners
+    only govern a single family."""
     from django.core.paginator import Paginator
     from django.http import HttpResponseForbidden
     from django_apscheduler.models import DjangoJob, DjangoJobExecution
 
     tenant_context = request.tenant_context
-    if not is_commissioner(request.user):
-        return HttpResponseForbidden('Commissioner access is required to view job runs.')
+    if not request.user.is_superuser:
+        return HttpResponseForbidden('Superuser access is required to view job runs.')
 
     jobs = DjangoJob.objects.all().order_by('id')
     execution_qs = (

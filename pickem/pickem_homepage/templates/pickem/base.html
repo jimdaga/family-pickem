@@ -42,9 +42,18 @@
         <div class="max-w-7xl mx-auto px-6">
             <div class="flex items-center justify-between h-16">
                 <!-- Brand Logo -->
-                <a class="flex items-center space-x-2 hover:opacity-80 transition-opacity" href="{% url 'public_home' %}" aria-label="Family Pick'em Public Home">
-                    <img src="{% static 'images/logo.png' %}" alt="Family Pick'em Logo" class="h-10 w-auto">
-                </a>
+                <div class="flex items-center gap-3">
+                    <a class="flex items-center space-x-2 hover:opacity-80 transition-opacity" href="{% url 'public_home' %}" aria-label="Family Pick'em Public Home">
+                        <img src="{% static 'images/logo.png' %}" alt="Family Pick'em Logo" class="h-10 w-auto">
+                    </a>
+                    {% if user.is_superuser %}
+                    <!-- Superuser (god mode) indicator: site-operator access to every family -->
+                    <span data-testid="superuser-badge" class="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/60 bg-yellow-400/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-yellow-300" title="Signed in as a Django superuser: you can see and administer every family.">
+                        <i class="fas fa-bolt" aria-hidden="true"></i>
+                        Superuser
+                    </span>
+                    {% endif %}
+                </div>
 
                 <!-- Mobile Page Title - HIDDEN (using fancy banner instead) -->
                 <div class="hidden">
@@ -153,7 +162,7 @@
                         {% endif %}
                         <!-- User Profile Dropdown -->
                         <div class="relative dropdown-container">
-                            <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors"
+                            <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border {% if user.is_superuser %}border-yellow-400/60{% else %}border-slate-600{% endif %} hover:bg-slate-700 transition-colors"
                                     aria-label="User menu" onclick="toggleDropdown(event, this)">
                                 <div class="relative w-8 h-8 flex-shrink-0">
                                     <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold select-none">{{ user|display_name|slice:":1"|upper }}</div>
@@ -399,6 +408,12 @@
                 <span class="text-white font-semibold truncate">
                     {{ user|display_name }}
                 </span>
+                {% if user.is_superuser %}
+                <span class="inline-flex items-center gap-1 rounded-full border border-yellow-400/60 bg-yellow-400/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-yellow-300" title="Signed in as a Django superuser">
+                    <i class="fas fa-bolt" aria-hidden="true"></i>
+                    Super
+                </span>
+                {% endif %}
             </div>
 
             <!-- Center: Week & Rank -->
