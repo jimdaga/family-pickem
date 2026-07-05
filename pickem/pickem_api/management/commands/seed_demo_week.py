@@ -74,6 +74,11 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--wipe', action='store_true', help='Remove all demo data.')
+        parser.add_argument(
+            '--owner', default=None,
+            help='Optionally add this real username as an owner of the demo family '
+                 'so it is browsable in the UI.',
+        )
 
     def handle(self, *args, **options):
         if not django_settings.DEBUG:
@@ -114,10 +119,16 @@ class Command(BaseCommand):
                 },
             )
 
-        # Add any real superusers so the demo league is visible in their UI.
-        for admin in User.objects.filter(is_superuser=True, is_active=True):
+        # Optionally add one real account so the demo league is browsable in
+        # the UI. Explicit opt-in only: auto-adding real users makes the demo
+        # family look like cross-tenant contamination.
+        owner_username = options.get('owner')
+        if owner_username:
+            owner = User.objects.filter(username=owner_username).first()
+            if owner is None:
+                raise CommandError(f"--owner user '{owner_username}' not found.")
             FamilyMembership.objects.get_or_create(
-                family=family, user=admin,
+                family=family, user=owner,
                 defaults={
                     'role': FamilyMembership.Role.OWNER,
                     'status': FamilyMembership.Status.ACTIVE,
