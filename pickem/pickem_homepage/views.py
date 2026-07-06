@@ -111,7 +111,7 @@ def build_user_display_maps(user_ids):
             email_hash = hashlib.md5((user.email or '').lower().encode('utf-8')).hexdigest()
             avatars[key] = f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=64"
         else:
-            avatars[key] = f"https://www.gravatar.com/avatar/?d=identicon&s=64"
+            avatars[key] = "https://www.gravatar.com/avatar/?d=identicon&s=64"
     return usernames, avatars
 
 def select_dashboard_snapshot_games(games, *, today=None):
