@@ -105,7 +105,8 @@ jobs:
 
       - name: Update ArgoCD app version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/family-pickem-}
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#family-pickem-}
           echo "Updating pickem-prd targetRevision to ${VERSION}"
           sed -i "s/targetRevision: \"[0-9][^\"]*\"/targetRevision: \"${VERSION}\"/" infra/argocd/applications/pickem-prd.yaml
           cat infra/argocd/applications/pickem-prd.yaml
