@@ -147,3 +147,7 @@ docker/postgres/init/*.sql
 # Helm vendored subcharts (fetched via `helm dependency build`)
 charts/family-pickem/charts/
 charts/family-pickem/Chart.lock
+
+# Local test artifacts
+.playwright-mcp/
+/*.jpeg

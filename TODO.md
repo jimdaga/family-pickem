@@ -3,6 +3,12 @@ Pickem
 
 ## To Do
 
+#### Infra & Maintenance (July 2026)
+- [ ] Cut a GitHub Release to bump prd off chart `0.0.118-latest`. Picks up the backup-cronjob password fix (ESO `DATABASE_PASS`, commit 8337f69 on main) — prd nightly backups have failed with postgres auth errors since Feb 8. Verify a backup job succeeds and lands in S3 afterward.
+- [ ] Remove the `update-data` CronJob — but only after the redesign branch merges and the django-apscheduler scheduler is verified in dev/prd. It is still the only data updater in both envs today (main's `updater.py` is a commented-out stub). The branch already sets `scheduler.enabled: true` + `cron.suspend: true` in values-prd. Note: prd update-data was silently stalled for 15 days in June/July behind a hung job (`concurrencyPolicy: Forbid`).
+- [ ] Decide on migrating pickemctl into Django scheduled tasks (recommended): ~6 aggregate queries writing to `userStats`, would retire the separate repo, Docker image, K8s deployment, and pickemctl ESO secret. Raw SQL there has already broken once from Django column renames.
+- [ ] pickemctl: branch `refactor/cleanup-phase-1` in ~/git/pickemctl (4 commits, unpushed) — module rename, removed committed 12MB binary, deduped topPicked/leastPicked, extracted pickStats query helpers. Push/PR it, or drop it if the Django migration proceeds.
+
 #### Multi-Family / Tenant Follow-Up Backlog
 
 ##### Ideas
