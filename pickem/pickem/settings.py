@@ -26,8 +26,7 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 ACCOUNT_DEFAULT_HTTP_PROTOCOL='https'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = os.getenv('DEBUG', False) == 'True'
-DEBUG='True'
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # Allowed Host(s)
 ALLOWED_HOSTS = ['localhost', 'corticolous-unarbitrarily-noel.ngrok-free.dev']
@@ -68,6 +67,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
+    'django_apscheduler',
     'bootstrap5',
     # 'django_ratelimit',  # Disabled for now - enable later when ready
     'allauth',
@@ -80,12 +80,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
+    'pickem_homepage.middleware.RequireLoginForInternalPagesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -103,8 +104,7 @@ CACHES = {
 }
 
 # Rate limiting configuration
-import os
-if DEBUG == 'True' or os.environ.get('DEBUG') == 'true':
+if DEBUG:
     # Development: Disable rate limiting to avoid cache backend issues
     RATELIMIT_ENABLE = False
 else:
@@ -129,6 +129,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'pickem.context_processors.theme_context',
+                'pickem.context_processors.family_switcher_context',
                 'pickem.context_processors.site_banner_context',
                 'pickem.context_processors.footer_stats_context',
             ],
@@ -243,6 +244,13 @@ USE_TZ = True
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
+
+# Cache-buster appended to static asset URLs (?v=...). Stable for the life of
+# the process so browsers can cache assets, but changes on redeploy/restart.
+# Set APP_VERSION in the environment (e.g. the release tag) for a stable
+# per-release value across replicas.
+import time
+STATIC_VERSION = os.getenv('APP_VERSION') or str(int(time.time()))
 
 
 REST_FRAMEWORK = {

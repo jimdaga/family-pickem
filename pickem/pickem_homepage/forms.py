@@ -1,7 +1,46 @@
 from django import forms
 from django.contrib.auth.models import User
-from pickem_api.models import GamePicks, userSeasonPoints
+from pickem_api.models import FamilyMembership, GamePicks, PoolSettings, userSeasonPoints
 from .models import MessageBoardPost, MessageBoardComment, SiteBanner
+
+
+class CreateFamilyForm(forms.Form):
+    name = forms.CharField(
+        label="Family name",
+        max_length=200,
+        min_length=2,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
+            'placeholder': 'Smith Family',
+            'autocomplete': 'organization',
+        }),
+    )
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '').strip()
+        if not name:
+            raise forms.ValidationError("Family name is required.")
+        return " ".join(name.split())
+
+
+class JoinFamilyForm(forms.Form):
+    code = forms.CharField(
+        label="Invite code",
+        max_length=200,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
+            'placeholder': 'Invite code',
+            'autocomplete': 'off',
+        }),
+    )
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code', '').strip()
+        if not code:
+            raise forms.ValidationError("Invite code is required.")
+        return code
 
 
 class GamePicksForm(forms.ModelForm):
@@ -24,6 +63,258 @@ class GamePicksForm(forms.ModelForm):
             'tieBreakerScore',
             'tieBreakerYards'
         )
+
+
+class PickSubmissionForm(forms.Form):
+    game_id = forms.IntegerField(required=True)
+    pick = forms.CharField(max_length=250, required=True, strip=True)
+    tieBreakerScore = forms.IntegerField(required=False, min_value=0, max_value=200)
+    tieBreakerYards = forms.IntegerField(required=False, min_value=0, max_value=2000)
+
+
+ADMIN_TEXT_INPUT_CLASSES = (
+    'w-full rounded-lg border border-border-light dark:border-border-subtle '
+    'bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary '
+    'placeholder-slate-500 focus:border-primary focus:outline-none '
+    'focus:ring-2 focus:ring-primary/20'
+)
+
+
+class DisabledOptionSelect(forms.Select):
+    """Select widget that renders specific option values as disabled
+    (greyed out and unselectable) — used for "coming soon" choices."""
+
+    def __init__(self, *args, disabled_choices=(), **kwargs):
+        self.disabled_choices = set(disabled_choices)
+        super().__init__(*args, **kwargs)
+
+    def create_option(self, name, value, *args, **kwargs):
+        option = super().create_option(name, value, *args, **kwargs)
+        if value in self.disabled_choices:
+            option['attrs']['disabled'] = True
+        return option
+
+
+class FamilyAdminSettingsForm(forms.Form):
+    family_name = forms.CharField(
+        label="Family display name",
+        max_length=200,
+        min_length=2,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'autocomplete': 'organization',
+        }),
+    )
+    pool_name = forms.CharField(
+        label="Pool display name",
+        max_length=200,
+        min_length=2,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'autocomplete': 'off',
+        }),
+    )
+    picks_lock_at_kickoff = forms.BooleanField(
+        label="Pick Locking",
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
+    allow_tiebreaker = forms.BooleanField(
+        label="Tiebreakers",
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
+
+    # Scoring rules
+    win_points = forms.IntegerField(
+        label="Points per win",
+        min_value=0,
+        max_value=99,
+        widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    tie_points = forms.IntegerField(
+        label="Points per tie",
+        min_value=0,
+        max_value=99,
+        widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    weekly_winner_points = forms.IntegerField(
+        label="Weekly winner bonus",
+        min_value=0,
+        max_value=99,
+        widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    primary_tiebreaker = forms.ChoiceField(
+        label="Primary tiebreaker",
+        choices=PoolSettings.PrimaryTiebreaker.choices,
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    secondary_tiebreaker = forms.ChoiceField(
+        label="Secondary tiebreaker",
+        choices=PoolSettings.SecondaryTiebreaker.choices,
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    perfect_week_bonus_enabled = forms.BooleanField(
+        label="Perfect week bonus",
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
+    perfect_week_bonus_amount = forms.IntegerField(
+        label="Perfect week bonus ($)",
+        min_value=0,
+        max_value=100000,
+        widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    entry_fee_enabled = forms.BooleanField(
+        label="Entry fee",
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
+    entry_fee_amount = forms.IntegerField(
+        label="Entry fee (whole dollars)",
+        min_value=0,
+        max_value=100000,
+        widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    pick_type = forms.ChoiceField(
+        label="Pick type",
+        choices=PoolSettings.PickType.choices,
+        widget=DisabledOptionSelect(
+            disabled_choices={PoolSettings.PickType.AGAINST_SPREAD},
+            attrs={'class': ADMIN_TEXT_INPUT_CLASSES},
+        ),
+    )
+    missed_pick_policy = forms.ChoiceField(
+        label="Missed pick policy",
+        choices=PoolSettings.MissedPickPolicy.choices,
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    include_playoffs = forms.BooleanField(
+        label="Include playoffs",
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
+    late_join_policy = forms.ChoiceField(
+        label="Late join policy",
+        choices=PoolSettings.LateJoinPolicy.choices,
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+    payout_structure = forms.ChoiceField(
+        label="Payout structure",
+        choices=PoolSettings.PayoutStructure.choices,
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+    )
+
+    def clean_pick_type(self):
+        pick_type = self.cleaned_data['pick_type']
+        if pick_type == PoolSettings.PickType.AGAINST_SPREAD:
+            raise forms.ValidationError(
+                "Against-the-spread pools are coming soon and can't be selected yet."
+            )
+        return pick_type
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('perfect_week_bonus_enabled') and not cleaned.get('perfect_week_bonus_amount'):
+            self.add_error(
+                'perfect_week_bonus_amount',
+                "Set a bonus value (at least $1) when the perfect week bonus is enabled.",
+            )
+        if cleaned.get('entry_fee_enabled') and not cleaned.get('entry_fee_amount'):
+            self.add_error(
+                'entry_fee_amount',
+                "Set an entry fee amount (at least $1) when the entry fee is enabled.",
+            )
+        return cleaned
+
+    def clean_family_name(self):
+        name = self.cleaned_data.get('family_name', '').strip()
+        if not name:
+            raise forms.ValidationError("Family display name is required.")
+        return " ".join(name.split())
+
+    def clean_pool_name(self):
+        name = self.cleaned_data.get('pool_name', '').strip()
+        if not name:
+            raise forms.ValidationError("Pool display name is required.")
+        return " ".join(name.split())
+
+
+class FamilyMembershipUpdateForm(forms.Form):
+    membership_id = forms.IntegerField(required=True, min_value=1)
+    role = forms.ChoiceField(
+        choices=FamilyMembership.Role.choices,
+        required=True,
+    )
+    status = forms.ChoiceField(
+        choices=FamilyMembership.Status.choices,
+        required=True,
+    )
+
+
+class FamilyManualPickForm(forms.Form):
+    target_user_id = forms.IntegerField(required=True, min_value=1)
+    week = forms.IntegerField(required=True, min_value=1, max_value=18)
+    game_id = forms.IntegerField(required=True, min_value=1)
+    pick = forms.CharField(max_length=250, required=True, strip=True)
+    tieBreakerScore = forms.IntegerField(required=False, min_value=0, max_value=200)
+    tieBreakerYards = forms.IntegerField(required=False, min_value=0, max_value=2000)
+
+
+class FamilyWeekWinnerForm(forms.Form):
+    week_number = forms.IntegerField(required=True, min_value=1, max_value=18)
+    winner_uid = forms.IntegerField(required=True, min_value=1)
+
+
+class FamilyInviteCreateForm(forms.Form):
+    role = forms.ChoiceField(required=True)
+    expires_in_days = forms.IntegerField(
+        label="Expires after",
+        min_value=1,
+        max_value=365,
+        initial=14,
+        widget=forms.NumberInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+        }),
+    )
+    max_uses = forms.IntegerField(
+        label="Max uses",
+        min_value=1,
+        max_value=1000,
+        initial=20,
+        widget=forms.NumberInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+        }),
+    )
+
+    def __init__(self, *args, allowed_roles=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        allowed_roles = allowed_roles or [FamilyMembership.Role.MEMBER]
+        role_labels = dict(FamilyMembership.Role.choices)
+        self.fields['role'].choices = [
+            (role, role_labels[role])
+            for role in allowed_roles
+            if role in role_labels
+        ]
+        self.fields['role'].widget.attrs.update({
+            'class': (
+                'w-full rounded-lg border border-border-light dark:border-border-subtle '
+                'bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary '
+                'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
+            ),
+        })
 
 
 class MessageBoardPostForm(forms.ModelForm):
@@ -218,8 +509,55 @@ class SiteBannerForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         # Set default values for new banners
         if not self.instance.pk:
             self.fields['priority'].initial = 1
+            self.fields['show_close_button'].initial = True
+
+
+class FamilyBannerForm(forms.ModelForm):
+    """Lightweight form for family admins to publish a pool banner."""
+
+    class Meta:
+        model = SiteBanner
+        fields = ['title', 'description', 'banner_type', 'icon', 'show_close_button']
+        labels = {
+            'title': 'Message',
+            'description': 'Details (optional)',
+            'banner_type': 'Style',
+            'icon': 'Icon',
+            'show_close_button': 'Let members dismiss it',
+        }
+        help_texts = {
+            'title': 'The headline members will see across the site.',
+            'description': 'Optional supporting text shown beneath the message.',
+            'icon': 'Font Awesome class, e.g. fas fa-bullhorn.',
+        }
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': ADMIN_TEXT_INPUT_CLASSES,
+                'placeholder': 'e.g. Picks lock Sunday at 1pm!',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': ADMIN_TEXT_INPUT_CLASSES,
+                'rows': 2,
+                'placeholder': 'Optional details…',
+            }),
+            'banner_type': forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+            'icon': forms.TextInput(attrs={
+                'class': ADMIN_TEXT_INPUT_CLASSES,
+                'placeholder': 'fas fa-bullhorn',
+            }),
+            'show_close_button': forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['title'].required = True
+        self.fields['description'].required = False
+        if not self.instance.pk:
+            self.fields['icon'].initial = 'fas fa-bullhorn'
             self.fields['show_close_button'].initial = True

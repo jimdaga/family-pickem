@@ -1,0 +1,62 @@
+- generic [active] [ref=f10e1]:
+  - navigation "Main navigation" [ref=f10e2]:
+    - generic [ref=f10e3]:
+      - generic [ref=f10e4]:
+        - generic [ref=f10e5]:
+          - link "Family Pick'em Public Home" [ref=f10e6] [cursor=pointer]:
+            - /url: /public/
+            - img "Family Pick'em Logo" [ref=f10e7]
+          - 'generic "Signed in as a Django superuser: you can see and administer every family." [ref=f10e8]':
+            - generic [ref=f10e9]: 
+            - text: Superuser
+          - generic "You are a commissioner of your family's pool." [ref=f10e10]:
+            - generic [ref=f10e11]: 
+            - text: Commissioner
+        - button "Toggle navigation" [ref=f10e12] [cursor=pointer]:
+          - generic [ref=f10e13]: 
+        - text:           +    
+      - text:             
+  - main [ref=f10e14]:
+    - generic [ref=f10e15]:
+      - generic [ref=f10e19]:
+        - generic [ref=f10e20]:
+          - img "Family Pick'em logo" [ref=f10e21]
+          - generic [ref=f10e22]:
+            - paragraph [ref=f10e23]: Pool Lobby
+            - heading "Demo Engine Test Lobby" [level=1] [ref=f10e24]
+        - paragraph [ref=f10e25]: Demo Pool • Season 2099 - 2099
+        - generic [ref=f10e27]:
+          - generic [ref=f10e29]: B
+          - generic [ref=f10e30]:
+            - paragraph [ref=f10e31]: Welcome back, Badge-test-tmp!
+            - paragraph [ref=f10e32]: Owner • Week 1
+      - generic [ref=f10e33]:
+        - generic [ref=f10e35]:
+          - generic [ref=f10e36]:
+            - generic [ref=f10e37]:
+              - generic [ref=f10e38]: 
+              - generic [ref=f10e39]:
+                - heading "Week Points" [level=2] [ref=f10e40]
+                - paragraph [ref=f10e41]: Week 1
+            - link "Full standings " [ref=f10e42] [cursor=pointer]:
+              - /url: /families/demo-engine-test/pools/demo-pool/standings/
+              - text: Full standings
+              - generic [ref=f10e43]: 
+          - generic [ref=f10e44]:
+            - generic [ref=f10e45]:
+              - generic [ref=f10e46]:
+                - generic [ref=f10e47]: "#1"
+                - generic [ref=f10e48]: Demo-alice
+              - generic [ref=f10e49]: 2 pts
+            - generic [ref=f10e50]:
+              - generic [ref=f10e51]:
+                - generic [ref=f10e52]: "#2"
+                - generic [ref=f10e53]: Demo-bob
+              - generic [ref=f10e54]: 2 pts
+            - generic [ref=f10e55]:
+              - generic [ref=f10e56]:
+                - generic [ref=f10e57]: "#3"
+                - generic [ref=f10e58]: Demo-carol
+              - generic [ref=f10e59]: 1 pts
+        - textbox "Message" [ref=f10e63]:
+          - /placeholder: Post a family message

@@ -1,0 +1,897 @@
+- generic [active] [ref=f3e1]:
+  - navigation "Main navigation" [ref=f3e2]:
+    - generic [ref=f3e3]:
+      - generic [ref=f3e4]:
+        - link "Family Pick'em Public Home" [ref=f3e5] [cursor=pointer]:
+          - /url: /public/
+          - img "Family Pick'em Logo" [ref=f3e6]
+        - text: 
+        - generic [ref=f3e7]:
+          - link "Lobby" [ref=f3e8] [cursor=pointer]:
+            - /url: /families/nannys-gang/pools/pickem-pool/
+            - generic [ref=f3e9]: 
+          - generic [ref=f3e10]:
+            - button "Scores menu" [ref=f3e11] [cursor=pointer]:
+              - generic [ref=f3e12]: 
+              - generic [ref=f3e13]: 
+            - text: 
+          - link "Standings" [ref=f3e14] [cursor=pointer]:
+            - /url: /families/nannys-gang/pools/pickem-pool/standings/
+            - generic [ref=f3e15]: 
+          - link "Rules" [ref=f3e16] [cursor=pointer]:
+            - /url: /families/nannys-gang/pools/pickem-pool/rules/
+            - generic [ref=f3e17]: 
+        - generic [ref=f3e18]:
+          - generic [ref=f3e19]:
+            - button "Switch family" [ref=f3e20] [cursor=pointer]:
+              - generic [ref=f3e21]: 
+              - generic [ref=f3e22]:
+                - generic [ref=f3e23]: Nanny’s Gang
+                - generic [ref=f3e24]: Pickem Pool
+            - text:  +
+          - generic [ref=f3e25]:
+            - button "User menu" [ref=f3e26] [cursor=pointer]:
+              - generic [ref=f3e28]: F
+              - generic [ref=f3e29]: Frontend-review-tmp
+              - generic [ref=f3e30]: 
+            - text:   
+      - text:            
+  - main [ref=f3e31]:
+    - generic [ref=f3e32]:
+      - generic [ref=f3e34]:
+        - generic [ref=f3e35]:
+          - generic [ref=f3e37]: 
+          - generic [ref=f3e38]:
+            - heading "Submit Your Picks" [level=2] [ref=f3e39]
+            - paragraph [ref=f3e40]: Regular Season • Week 1
+        - generic [ref=f3e42]:
+          - generic [ref=f3e43]:
+            - generic [ref=f3e44]: Submitted
+            - generic [ref=f3e45]: 0/16
+          - generic [ref=f3e48]: 16 remaining
+      - generic [ref=f3e49]:
+        - generic [ref=f3e50]:
+          - generic [ref=f3e51]:
+            - generic [ref=f3e52]: 
+            - generic [ref=f3e53]: Wed, Sep 09
+          - generic [ref=f3e55]: 8:20 PM
+        - generic [ref=f3e56]:
+          - generic [ref=f3e57]:
+            - generic [ref=f3e58]: 
+            - generic [ref=f3e59]: "Spread:"
+            - generic [ref=f3e60]:
+              - img "New England Patriots logo" [ref=f3e61]
+              - text: "-3.5"
+          - generic [ref=f3e62]:
+            - generic [ref=f3e63]: 
+            - generic [ref=f3e64]: "O/U:"
+            - generic [ref=f3e65]: "44.5"
+        - generic [ref=f3e66]:
+          - generic [ref=f3e67]:
+            - generic [ref=f3e68] [cursor=pointer]:
+              - generic [ref=f3e69]:
+                - img "New England Patriots logo" [ref=f3e70]
+                - generic [ref=f3e72]: 
+              - generic [ref=f3e73]:
+                - generic [ref=f3e74]: New England Patriots
+                - generic [ref=f3e75]:
+                  - generic [ref=f3e76]: (0-0)
+                  - generic [ref=f3e77]:
+                    - generic [ref=f3e78]: "%"
+                    - generic [ref=f3e79]: 41% chance
+            - generic [ref=f3e80] [cursor=pointer]:
+              - generic [ref=f3e81]:
+                - img "Seattle Seahawks logo" [ref=f3e82]
+                - generic [ref=f3e84]: 
+              - generic [ref=f3e85]:
+                - generic [ref=f3e86]: Seattle Seahawks
+                - generic [ref=f3e87]:
+                  - generic [ref=f3e88]: (0-0)
+                  - generic [ref=f3e89]:
+                    - generic [ref=f3e90]: "%"
+                    - generic [ref=f3e91]: 59% chance
+          - text:   
+        - generic [ref=f3e92]:
+          - link " Preview" [ref=f3e93] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872656/patriots-seahawks
+            - generic [ref=f3e94]: 
+            - generic [ref=f3e95]: Preview
+          - generic [ref=f3e96]:
+            - generic [ref=f3e97]: 
+            - generic [ref=f3e98]: NBC
+      - generic [ref=f3e99]:
+        - generic [ref=f3e100]:
+          - generic [ref=f3e101]:
+            - generic [ref=f3e102]: 
+            - generic [ref=f3e103]: Thu, Sep 10
+          - generic [ref=f3e105]: 8:35 PM
+        - generic [ref=f3e106]:
+          - generic [ref=f3e107]:
+            - generic [ref=f3e108]: 
+            - generic [ref=f3e109]: "Spread:"
+            - generic [ref=f3e110]:
+              - img "San Francisco 49ers logo" [ref=f3e111]
+              - text: "-3.0"
+          - generic [ref=f3e112]:
+            - generic [ref=f3e113]: 
+            - generic [ref=f3e114]: "O/U:"
+            - generic [ref=f3e115]: "48.5"
+        - generic [ref=f3e116]:
+          - generic [ref=f3e117]:
+            - generic [ref=f3e118] [cursor=pointer]:
+              - generic [ref=f3e119]:
+                - img "San Francisco 49ers logo" [ref=f3e120]
+                - generic [ref=f3e122]: 
+              - generic [ref=f3e123]:
+                - generic [ref=f3e124]: San Francisco 49ers
+                - generic [ref=f3e125]:
+                  - generic [ref=f3e126]: (0-0)
+                  - generic [ref=f3e127]:
+                    - generic [ref=f3e128]: "%"
+                    - generic [ref=f3e129]: 42% chance
+            - generic [ref=f3e130] [cursor=pointer]:
+              - generic [ref=f3e131]:
+                - img "Los Angeles Rams logo" [ref=f3e132]
+                - generic [ref=f3e134]: 
+              - generic [ref=f3e135]:
+                - generic [ref=f3e136]: Los Angeles Rams
+                - generic [ref=f3e137]:
+                  - generic [ref=f3e138]: (0-0)
+                  - generic [ref=f3e139]:
+                    - generic [ref=f3e140]: "%"
+                    - generic [ref=f3e141]: 58% chance
+          - text:   
+        - generic [ref=f3e142]:
+          - link " Preview" [ref=f3e143] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872657/49ers-rams
+            - generic [ref=f3e144]: 
+            - generic [ref=f3e145]: Preview
+          - generic [ref=f3e146]:
+            - generic [ref=f3e147]: 
+            - generic [ref=f3e148]: Netflix
+      - generic [ref=f3e149]:
+        - generic [ref=f3e150]:
+          - generic [ref=f3e151]:
+            - generic [ref=f3e152]: 
+            - generic [ref=f3e153]: Sun, Sep 13
+          - generic [ref=f3e155]: 1:00 PM
+        - generic [ref=f3e156]:
+          - generic [ref=f3e157]:
+            - generic [ref=f3e158]: 
+            - generic [ref=f3e159]: "Spread:"
+            - generic [ref=f3e160]:
+              - img "Atlanta Falcons logo" [ref=f3e161]
+              - text: "-3.0"
+          - generic [ref=f3e162]:
+            - generic [ref=f3e163]: 
+            - generic [ref=f3e164]: "O/U:"
+            - generic [ref=f3e165]: "42.5"
+        - generic [ref=f3e166]:
+          - generic [ref=f3e167]:
+            - generic [ref=f3e168] [cursor=pointer]:
+              - generic [ref=f3e169]:
+                - img "Atlanta Falcons logo" [ref=f3e170]
+                - generic [ref=f3e172]: 
+              - generic [ref=f3e173]:
+                - generic [ref=f3e174]: Atlanta Falcons
+                - generic [ref=f3e175]:
+                  - generic [ref=f3e176]: (0-0)
+                  - generic [ref=f3e177]:
+                    - generic [ref=f3e178]: "%"
+                    - generic [ref=f3e179]: 42% chance
+            - generic [ref=f3e180] [cursor=pointer]:
+              - generic [ref=f3e181]:
+                - img "Pittsburgh Steelers logo" [ref=f3e182]
+                - generic [ref=f3e184]: 
+              - generic [ref=f3e185]:
+                - generic [ref=f3e186]: Pittsburgh Steelers
+                - generic [ref=f3e187]:
+                  - generic [ref=f3e188]: (0-0)
+                  - generic [ref=f3e189]:
+                    - generic [ref=f3e190]: "%"
+                    - generic [ref=f3e191]: 58% chance
+          - text:   
+        - generic [ref=f3e192]:
+          - link " Preview" [ref=f3e193] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872658/falcons-steelers
+            - generic [ref=f3e194]: 
+            - generic [ref=f3e195]: Preview
+          - generic [ref=f3e196]:
+            - generic [ref=f3e197]: 
+            - generic [ref=f3e198]: FOX
+      - generic [ref=f3e199]:
+        - generic [ref=f3e200]:
+          - generic [ref=f3e201]:
+            - generic [ref=f3e202]: 
+            - generic [ref=f3e203]: Sun, Sep 13
+          - generic [ref=f3e205]: 1:00 PM
+        - generic [ref=f3e206]:
+          - generic [ref=f3e207]:
+            - generic [ref=f3e208]: 
+            - generic [ref=f3e209]: "Spread:"
+            - generic [ref=f3e210]:
+              - img "Indianapolis Colts logo" [ref=f3e211]
+              - text: "-3.5"
+          - generic [ref=f3e212]:
+            - generic [ref=f3e213]: 
+            - generic [ref=f3e214]: "O/U:"
+            - generic [ref=f3e215]: "49.5"
+          - generic [ref=f3e216]:
+            - generic [ref=f3e217]: 
+            - generic [ref=f3e218]: Indoor
+        - generic [ref=f3e219]:
+          - generic [ref=f3e220]:
+            - generic [ref=f3e221] [cursor=pointer]:
+              - generic [ref=f3e222]:
+                - img "Baltimore Ravens logo" [ref=f3e223]
+                - generic [ref=f3e225]: 
+              - generic [ref=f3e226]:
+                - generic [ref=f3e227]: Baltimore Ravens
+                - generic [ref=f3e228]:
+                  - generic [ref=f3e229]: (0-0)
+                  - generic [ref=f3e230]:
+                    - generic [ref=f3e231]: "%"
+                    - generic [ref=f3e232]: 59% chance
+            - generic [ref=f3e233] [cursor=pointer]:
+              - generic [ref=f3e234]:
+                - img "Indianapolis Colts logo" [ref=f3e235]
+                - generic [ref=f3e237]: 
+              - generic [ref=f3e238]:
+                - generic [ref=f3e239]: Indianapolis Colts
+                - generic [ref=f3e240]:
+                  - generic [ref=f3e241]: (0-0)
+                  - generic [ref=f3e242]:
+                    - generic [ref=f3e243]: "%"
+                    - generic [ref=f3e244]: 41% chance
+          - text:   
+        - generic [ref=f3e245]:
+          - link " Preview" [ref=f3e246] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872659/ravens-colts
+            - generic [ref=f3e247]: 
+            - generic [ref=f3e248]: Preview
+          - generic [ref=f3e249]:
+            - generic [ref=f3e250]: 
+            - generic [ref=f3e251]: CBS
+      - generic [ref=f3e252]:
+        - generic [ref=f3e253]:
+          - generic [ref=f3e254]:
+            - generic [ref=f3e255]: 
+            - generic [ref=f3e256]: Sun, Sep 13
+          - generic [ref=f3e258]: 1:00 PM
+        - generic [ref=f3e259]:
+          - generic [ref=f3e260]:
+            - generic [ref=f3e261]: 
+            - generic [ref=f3e262]: "Spread:"
+            - generic [ref=f3e263]:
+              - img "Houston Texans logo" [ref=f3e264]
+              - text: "-1.5"
+          - generic [ref=f3e265]:
+            - generic [ref=f3e266]: 
+            - generic [ref=f3e267]: "O/U:"
+            - generic [ref=f3e268]: "45.5"
+          - generic [ref=f3e269]:
+            - generic [ref=f3e270]: 
+            - generic [ref=f3e271]: Indoor
+        - generic [ref=f3e272]:
+          - generic [ref=f3e273]:
+            - generic [ref=f3e274] [cursor=pointer]:
+              - generic [ref=f3e275]:
+                - img "Buffalo Bills logo" [ref=f3e276]
+                - generic [ref=f3e278]: 
+              - generic [ref=f3e279]:
+                - generic [ref=f3e280]: Buffalo Bills
+                - generic [ref=f3e281]:
+                  - generic [ref=f3e282]: (0-0)
+                  - generic [ref=f3e283]:
+                    - generic [ref=f3e284]: "%"
+                    - generic [ref=f3e285]: 55% chance
+            - generic [ref=f3e286] [cursor=pointer]:
+              - generic [ref=f3e287]:
+                - img "Houston Texans logo" [ref=f3e288]
+                - generic [ref=f3e290]: 
+              - generic [ref=f3e291]:
+                - generic [ref=f3e292]: Houston Texans
+                - generic [ref=f3e293]:
+                  - generic [ref=f3e294]: (0-0)
+                  - generic [ref=f3e295]:
+                    - generic [ref=f3e296]: "%"
+                    - generic [ref=f3e297]: 45% chance
+          - text:   
+        - generic [ref=f3e298]:
+          - link " Preview" [ref=f3e299] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872660/bills-texans
+            - generic [ref=f3e300]: 
+            - generic [ref=f3e301]: Preview
+          - generic [ref=f3e302]:
+            - generic [ref=f3e303]: 
+            - generic [ref=f3e304]: CBS
+      - generic [ref=f3e305]:
+        - generic [ref=f3e306]:
+          - generic [ref=f3e307]:
+            - generic [ref=f3e308]: 
+            - generic [ref=f3e309]: Sun, Sep 13
+          - generic [ref=f3e311]: 1:00 PM
+        - generic [ref=f3e312]:
+          - generic [ref=f3e313]:
+            - generic [ref=f3e314]: 
+            - generic [ref=f3e315]: "Spread:"
+            - generic [ref=f3e316]:
+              - img "Carolina Panthers logo" [ref=f3e317]
+              - text: "-2.5"
+          - generic [ref=f3e318]:
+            - generic [ref=f3e319]: 
+            - generic [ref=f3e320]: "O/U:"
+            - generic [ref=f3e321]: "44.5"
+        - generic [ref=f3e322]:
+          - generic [ref=f3e323]:
+            - generic [ref=f3e324] [cursor=pointer]:
+              - generic [ref=f3e325]:
+                - img "Chicago Bears logo" [ref=f3e326]
+                - generic [ref=f3e328]: 
+              - generic [ref=f3e329]:
+                - generic [ref=f3e330]: Chicago Bears
+                - generic [ref=f3e331]:
+                  - generic [ref=f3e332]: (0-0)
+                  - generic [ref=f3e333]:
+                    - generic [ref=f3e334]: "%"
+                    - generic [ref=f3e335]: 57% chance
+            - generic [ref=f3e336] [cursor=pointer]:
+              - generic [ref=f3e337]:
+                - img "Carolina Panthers logo" [ref=f3e338]
+                - generic [ref=f3e340]: 
+              - generic [ref=f3e341]:
+                - generic [ref=f3e342]: Carolina Panthers
+                - generic [ref=f3e343]:
+                  - generic [ref=f3e344]: (0-0)
+                  - generic [ref=f3e345]:
+                    - generic [ref=f3e346]: "%"
+                    - generic [ref=f3e347]: 43% chance
+          - text:   
+        - generic [ref=f3e348]:
+          - link " Preview" [ref=f3e349] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872661/bears-panthers
+            - generic [ref=f3e350]: 
+            - generic [ref=f3e351]: Preview
+          - generic [ref=f3e352]:
+            - generic [ref=f3e353]: 
+            - generic [ref=f3e354]: FOX
+      - generic [ref=f3e355]:
+        - generic [ref=f3e356]:
+          - generic [ref=f3e357]:
+            - generic [ref=f3e358]: 
+            - generic [ref=f3e359]: Sun, Sep 13
+          - generic [ref=f3e361]: 1:00 PM
+        - generic [ref=f3e362]:
+          - generic [ref=f3e363]:
+            - generic [ref=f3e364]: 
+            - generic [ref=f3e365]: "Spread:"
+            - generic [ref=f3e366]:
+              - img "Cleveland Browns logo" [ref=f3e367]
+              - text: "-7.5"
+          - generic [ref=f3e368]:
+            - generic [ref=f3e369]: 
+            - generic [ref=f3e370]: "O/U:"
+            - generic [ref=f3e371]: "40.5"
+        - generic [ref=f3e372]:
+          - generic [ref=f3e373]:
+            - generic [ref=f3e374] [cursor=pointer]:
+              - generic [ref=f3e375]:
+                - img "Cleveland Browns logo" [ref=f3e376]
+                - generic [ref=f3e378]: 
+              - generic [ref=f3e379]:
+                - generic [ref=f3e380]: Cleveland Browns
+                - generic [ref=f3e381]:
+                  - generic [ref=f3e382]: (0-0)
+                  - generic [ref=f3e383]:
+                    - generic [ref=f3e384]: "%"
+                    - generic [ref=f3e385]: 33% chance
+            - generic [ref=f3e386] [cursor=pointer]:
+              - generic [ref=f3e387]:
+                - img "Jacksonville Jaguars logo" [ref=f3e388]
+                - generic [ref=f3e390]: 
+              - generic [ref=f3e391]:
+                - generic [ref=f3e392]: Jacksonville Jaguars
+                - generic [ref=f3e393]:
+                  - generic [ref=f3e394]: (0-0)
+                  - generic [ref=f3e395]:
+                    - generic [ref=f3e396]: "%"
+                    - generic [ref=f3e397]: 67% chance
+          - text:   
+        - generic [ref=f3e398]:
+          - link " Preview" [ref=f3e399] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872922/browns-jaguars
+            - generic [ref=f3e400]: 
+            - generic [ref=f3e401]: Preview
+          - generic [ref=f3e402]:
+            - generic [ref=f3e403]: 
+            - generic [ref=f3e404]: CBS
+      - generic [ref=f3e405]:
+        - generic [ref=f3e406]:
+          - generic [ref=f3e407]:
+            - generic [ref=f3e408]: 
+            - generic [ref=f3e409]: Sun, Sep 13
+          - generic [ref=f3e411]: 1:00 PM
+        - generic [ref=f3e412]:
+          - generic [ref=f3e413]:
+            - generic [ref=f3e414]: 
+            - generic [ref=f3e415]: "Spread:"
+            - generic [ref=f3e416]:
+              - img "New Orleans Saints logo" [ref=f3e417]
+              - text: "-7.0"
+          - generic [ref=f3e418]:
+            - generic [ref=f3e419]: 
+            - generic [ref=f3e420]: "O/U:"
+            - generic [ref=f3e421]: "48.5"
+          - generic [ref=f3e422]:
+            - generic [ref=f3e423]: 
+            - generic [ref=f3e424]: Indoor
+        - generic [ref=f3e425]:
+          - generic [ref=f3e426]:
+            - generic [ref=f3e427] [cursor=pointer]:
+              - generic [ref=f3e428]:
+                - img "New Orleans Saints logo" [ref=f3e429]
+                - generic [ref=f3e431]: 
+              - generic [ref=f3e432]:
+                - generic [ref=f3e433]: New Orleans Saints
+                - generic [ref=f3e434]:
+                  - generic [ref=f3e435]: (0-0)
+                  - generic [ref=f3e436]:
+                    - generic [ref=f3e437]: "%"
+                    - generic [ref=f3e438]: 34% chance
+            - generic [ref=f3e439] [cursor=pointer]:
+              - generic [ref=f3e440]:
+                - img "Detroit Lions logo" [ref=f3e441]
+                - generic [ref=f3e443]: 
+              - generic [ref=f3e444]:
+                - generic [ref=f3e445]: Detroit Lions
+                - generic [ref=f3e446]:
+                  - generic [ref=f3e447]: (0-0)
+                  - generic [ref=f3e448]:
+                    - generic [ref=f3e449]: "%"
+                    - generic [ref=f3e450]: 66% chance
+          - text:   
+        - generic [ref=f3e451]:
+          - link " Preview" [ref=f3e452] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872923/saints-lions
+            - generic [ref=f3e453]: 
+            - generic [ref=f3e454]: Preview
+          - generic [ref=f3e455]:
+            - generic [ref=f3e456]: 
+            - generic [ref=f3e457]: FOX
+      - generic [ref=f3e458]:
+        - generic [ref=f3e459]:
+          - generic [ref=f3e460]:
+            - generic [ref=f3e461]: 
+            - generic [ref=f3e462]: Sun, Sep 13
+          - generic [ref=f3e464]: 1:00 PM
+        - generic [ref=f3e465]:
+          - generic [ref=f3e466]:
+            - generic [ref=f3e467]: 
+            - generic [ref=f3e468]: "Spread:"
+            - generic [ref=f3e469]:
+              - img "New York Jets logo" [ref=f3e470]
+              - text: "-3.0"
+          - generic [ref=f3e471]:
+            - generic [ref=f3e472]: 
+            - generic [ref=f3e473]: "O/U:"
+            - generic [ref=f3e474]: "39.5"
+        - generic [ref=f3e475]:
+          - generic [ref=f3e476]:
+            - generic [ref=f3e477] [cursor=pointer]:
+              - generic [ref=f3e478]:
+                - img "New York Jets logo" [ref=f3e479]
+                - generic [ref=f3e481]: 
+              - generic [ref=f3e482]:
+                - generic [ref=f3e483]: New York Jets
+                - generic [ref=f3e484]:
+                  - generic [ref=f3e485]: (0-0)
+                  - generic [ref=f3e486]:
+                    - generic [ref=f3e487]: "%"
+                    - generic [ref=f3e488]: 42% chance
+            - generic [ref=f3e489] [cursor=pointer]:
+              - generic [ref=f3e490]:
+                - img "Tennessee Titans logo" [ref=f3e491]
+                - generic [ref=f3e493]: 
+              - generic [ref=f3e494]:
+                - generic [ref=f3e495]: Tennessee Titans
+                - generic [ref=f3e496]:
+                  - generic [ref=f3e497]: (0-0)
+                  - generic [ref=f3e498]:
+                    - generic [ref=f3e499]: "%"
+                    - generic [ref=f3e500]: 58% chance
+          - text:   
+        - generic [ref=f3e501]:
+          - link " Preview" [ref=f3e502] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872924/jets-titans
+            - generic [ref=f3e503]: 
+            - generic [ref=f3e504]: Preview
+          - generic [ref=f3e505]:
+            - generic [ref=f3e506]: 
+            - generic [ref=f3e507]: CBS
+      - generic [ref=f3e508]:
+        - generic [ref=f3e509]:
+          - generic [ref=f3e510]:
+            - generic [ref=f3e511]: 
+            - generic [ref=f3e512]: Sun, Sep 13
+          - generic [ref=f3e514]: 1:00 PM
+        - generic [ref=f3e515]:
+          - generic [ref=f3e516]:
+            - generic [ref=f3e517]: 
+            - generic [ref=f3e518]: "Spread:"
+            - generic [ref=f3e519]:
+              - img "Tampa Bay Buccaneers logo" [ref=f3e520]
+              - text: "-3.5"
+          - generic [ref=f3e521]:
+            - generic [ref=f3e522]: 
+            - generic [ref=f3e523]: "O/U:"
+            - generic [ref=f3e524]: "50.5"
+        - generic [ref=f3e525]:
+          - generic [ref=f3e526]:
+            - generic [ref=f3e527] [cursor=pointer]:
+              - generic [ref=f3e528]:
+                - img "Tampa Bay Buccaneers logo" [ref=f3e529]
+                - generic [ref=f3e531]: 
+              - generic [ref=f3e532]:
+                - generic [ref=f3e533]: Tampa Bay Buccaneers
+                - generic [ref=f3e534]:
+                  - generic [ref=f3e535]: (0-0)
+                  - generic [ref=f3e536]:
+                    - generic [ref=f3e537]: "%"
+                    - generic [ref=f3e538]: 41% chance
+            - generic [ref=f3e539] [cursor=pointer]:
+              - generic [ref=f3e540]:
+                - img "Cincinnati Bengals logo" [ref=f3e541]
+                - generic [ref=f3e543]: 
+              - generic [ref=f3e544]:
+                - generic [ref=f3e545]: Cincinnati Bengals
+                - generic [ref=f3e546]:
+                  - generic [ref=f3e547]: (0-0)
+                  - generic [ref=f3e548]:
+                    - generic [ref=f3e549]: "%"
+                    - generic [ref=f3e550]: 59% chance
+          - text:   
+        - generic [ref=f3e551]:
+          - link " Preview" [ref=f3e552] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872925/buccaneers-bengals
+            - generic [ref=f3e553]: 
+            - generic [ref=f3e554]: Preview
+          - generic [ref=f3e555]:
+            - generic [ref=f3e556]: 
+            - generic [ref=f3e557]: FOX
+      - generic [ref=f3e558]:
+        - generic [ref=f3e559]:
+          - generic [ref=f3e560]:
+            - generic [ref=f3e561]: 
+            - generic [ref=f3e562]: Sun, Sep 13
+          - generic [ref=f3e564]: 4:25 PM
+        - generic [ref=f3e565]:
+          - generic [ref=f3e566]:
+            - generic [ref=f3e567]: 
+            - generic [ref=f3e568]: "Spread:"
+            - generic [ref=f3e569]:
+              - img "Arizona Cardinals logo" [ref=f3e570]
+              - text: "-11.5"
+          - generic [ref=f3e571]:
+            - generic [ref=f3e572]: 
+            - generic [ref=f3e573]: "O/U:"
+            - generic [ref=f3e574]: "45.5"
+        - generic [ref=f3e575]:
+          - generic [ref=f3e576]:
+            - generic [ref=f3e577] [cursor=pointer]:
+              - generic [ref=f3e578]:
+                - img "Arizona Cardinals logo" [ref=f3e579]
+                - generic [ref=f3e581]: 
+              - generic [ref=f3e582]:
+                - generic [ref=f3e583]: Arizona Cardinals
+                - generic [ref=f3e584]:
+                  - generic [ref=f3e585]: (0-0)
+                  - generic [ref=f3e586]:
+                    - generic [ref=f3e587]: "%"
+                    - generic [ref=f3e588]: 25% chance
+            - generic [ref=f3e589] [cursor=pointer]:
+              - generic [ref=f3e590]:
+                - img "Los Angeles Chargers logo" [ref=f3e591]
+                - generic [ref=f3e593]: 
+              - generic [ref=f3e594]:
+                - generic [ref=f3e595]: Los Angeles Chargers
+                - generic [ref=f3e596]:
+                  - generic [ref=f3e597]: (0-0)
+                  - generic [ref=f3e598]:
+                    - generic [ref=f3e599]: "%"
+                    - generic [ref=f3e600]: 75% chance
+          - text:   
+        - generic [ref=f3e601]:
+          - link " Preview" [ref=f3e602] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872926/cardinals-chargers
+            - generic [ref=f3e603]: 
+            - generic [ref=f3e604]: Preview
+          - generic [ref=f3e605]:
+            - generic [ref=f3e606]: 
+            - generic [ref=f3e607]: CBS
+      - generic [ref=f3e608]:
+        - generic [ref=f3e609]:
+          - generic [ref=f3e610]:
+            - generic [ref=f3e611]: 
+            - generic [ref=f3e612]: Sun, Sep 13
+          - generic [ref=f3e614]: 4:25 PM
+        - generic [ref=f3e615]:
+          - generic [ref=f3e616]:
+            - generic [ref=f3e617]: 
+            - generic [ref=f3e618]: "Spread:"
+            - generic [ref=f3e619]:
+              - img "Minnesota Vikings logo" [ref=f3e620]
+              - text: "-1.5"
+          - generic [ref=f3e621]:
+            - generic [ref=f3e622]: 
+            - generic [ref=f3e623]: "O/U:"
+            - generic [ref=f3e624]: "44.5"
+          - generic [ref=f3e625]:
+            - generic [ref=f3e626]: 
+            - generic [ref=f3e627]: Indoor
+        - generic [ref=f3e628]:
+          - generic [ref=f3e629]:
+            - generic [ref=f3e630] [cursor=pointer]:
+              - generic [ref=f3e631]:
+                - img "Green Bay Packers logo" [ref=f3e632]
+                - generic [ref=f3e634]: 
+              - generic [ref=f3e635]:
+                - generic [ref=f3e636]: Green Bay Packers
+                - generic [ref=f3e637]:
+                  - generic [ref=f3e638]: (0-0)
+                  - generic [ref=f3e639]:
+                    - generic [ref=f3e640]: "%"
+                    - generic [ref=f3e641]: 55% chance
+            - generic [ref=f3e642] [cursor=pointer]:
+              - generic [ref=f3e643]:
+                - img "Minnesota Vikings logo" [ref=f3e644]
+                - generic [ref=f3e646]: 
+              - generic [ref=f3e647]:
+                - generic [ref=f3e648]: Minnesota Vikings
+                - generic [ref=f3e649]:
+                  - generic [ref=f3e650]: (0-0)
+                  - generic [ref=f3e651]:
+                    - generic [ref=f3e652]: "%"
+                    - generic [ref=f3e653]: 45% chance
+          - text:   
+        - generic [ref=f3e654]:
+          - link " Preview" [ref=f3e655] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872927/packers-vikings
+            - generic [ref=f3e656]: 
+            - generic [ref=f3e657]: Preview
+          - generic [ref=f3e658]:
+            - generic [ref=f3e659]: 
+            - generic [ref=f3e660]: CBS
+      - generic [ref=f3e661]:
+        - generic [ref=f3e662]:
+          - generic [ref=f3e663]:
+            - generic [ref=f3e664]: 
+            - generic [ref=f3e665]: Sun, Sep 13
+          - generic [ref=f3e667]: 4:25 PM
+        - generic [ref=f3e668]:
+          - generic [ref=f3e669]:
+            - generic [ref=f3e670]: 
+            - generic [ref=f3e671]: "Spread:"
+            - generic [ref=f3e672]:
+              - img "Miami Dolphins logo" [ref=f3e673]
+              - text: "-3.0"
+          - generic [ref=f3e674]:
+            - generic [ref=f3e675]: 
+            - generic [ref=f3e676]: "O/U:"
+            - generic [ref=f3e677]: "41.5"
+          - generic [ref=f3e678]:
+            - generic [ref=f3e679]: 
+            - generic [ref=f3e680]: Indoor
+        - generic [ref=f3e681]:
+          - generic [ref=f3e682]:
+            - generic [ref=f3e683] [cursor=pointer]:
+              - generic [ref=f3e684]:
+                - img "Miami Dolphins logo" [ref=f3e685]
+                - generic [ref=f3e687]: 
+              - generic [ref=f3e688]:
+                - generic [ref=f3e689]: Miami Dolphins
+                - generic [ref=f3e690]:
+                  - generic [ref=f3e691]: (0-0)
+                  - generic [ref=f3e692]:
+                    - generic [ref=f3e693]: "%"
+                    - generic [ref=f3e694]: 42% chance
+            - generic [ref=f3e695] [cursor=pointer]:
+              - generic [ref=f3e696]:
+                - img "Las Vegas Raiders logo" [ref=f3e697]
+                - generic [ref=f3e699]: 
+              - generic [ref=f3e700]:
+                - generic [ref=f3e701]: Las Vegas Raiders
+                - generic [ref=f3e702]:
+                  - generic [ref=f3e703]: (0-0)
+                  - generic [ref=f3e704]:
+                    - generic [ref=f3e705]: "%"
+                    - generic [ref=f3e706]: 58% chance
+          - text:   
+        - generic [ref=f3e707]:
+          - link " Preview" [ref=f3e708] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872928/dolphins-raiders
+            - generic [ref=f3e709]: 
+            - generic [ref=f3e710]: Preview
+          - generic [ref=f3e711]:
+            - generic [ref=f3e712]: 
+            - generic [ref=f3e713]: FOX
+      - generic [ref=f3e714]:
+        - generic [ref=f3e715]:
+          - generic [ref=f3e716]:
+            - generic [ref=f3e717]: 
+            - generic [ref=f3e718]: Sun, Sep 13
+          - generic [ref=f3e720]: 4:25 PM
+        - generic [ref=f3e721]:
+          - generic [ref=f3e722]:
+            - generic [ref=f3e723]: 
+            - generic [ref=f3e724]: "Spread:"
+            - generic [ref=f3e725]:
+              - img "Washington Commanders logo" [ref=f3e726]
+              - text: "-5.5"
+          - generic [ref=f3e727]:
+            - generic [ref=f3e728]: 
+            - generic [ref=f3e729]: "O/U:"
+            - generic [ref=f3e730]: "46.5"
+        - generic [ref=f3e731]:
+          - generic [ref=f3e732]:
+            - generic [ref=f3e733] [cursor=pointer]:
+              - generic [ref=f3e734]:
+                - img "Washington Commanders logo" [ref=f3e735]
+                - generic [ref=f3e737]: 
+              - generic [ref=f3e738]:
+                - generic [ref=f3e739]: Washington Commanders
+                - generic [ref=f3e740]:
+                  - generic [ref=f3e741]: (0-0)
+                  - generic [ref=f3e742]:
+                    - generic [ref=f3e743]: "%"
+                    - generic [ref=f3e744]: 37% chance
+            - generic [ref=f3e745] [cursor=pointer]:
+              - generic [ref=f3e746]:
+                - img "Philadelphia Eagles logo" [ref=f3e747]
+                - generic [ref=f3e749]: 
+              - generic [ref=f3e750]:
+                - generic [ref=f3e751]: Philadelphia Eagles
+                - generic [ref=f3e752]:
+                  - generic [ref=f3e753]: (0-0)
+                  - generic [ref=f3e754]:
+                    - generic [ref=f3e755]: "%"
+                    - generic [ref=f3e756]: 63% chance
+          - text:   
+        - generic [ref=f3e757]:
+          - link " Preview" [ref=f3e758] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872929/commanders-eagles
+            - generic [ref=f3e759]: 
+            - generic [ref=f3e760]: Preview
+          - generic [ref=f3e761]:
+            - generic [ref=f3e762]: 
+            - generic [ref=f3e763]: FOX
+      - generic [ref=f3e764]:
+        - generic [ref=f3e765]:
+          - generic [ref=f3e766]:
+            - generic [ref=f3e767]: 
+            - generic [ref=f3e768]: Sun, Sep 13
+          - generic [ref=f3e770]: 8:20 PM
+        - generic [ref=f3e771]:
+          - generic [ref=f3e772]:
+            - generic [ref=f3e773]: 
+            - generic [ref=f3e774]: "Spread:"
+            - generic [ref=f3e775]:
+              - img "New York Giants logo" [ref=f3e776]
+              - text: "-2.5"
+          - generic [ref=f3e777]:
+            - generic [ref=f3e778]: 
+            - generic [ref=f3e779]: "O/U:"
+            - generic [ref=f3e780]: "48.5"
+        - generic [ref=f3e781]:
+          - generic [ref=f3e782]:
+            - generic [ref=f3e783] [cursor=pointer]:
+              - generic [ref=f3e784]:
+                - img "Dallas Cowboys logo" [ref=f3e785]
+                - generic [ref=f3e787]: 
+              - generic [ref=f3e788]:
+                - generic [ref=f3e789]: Dallas Cowboys
+                - generic [ref=f3e790]:
+                  - generic [ref=f3e791]: (0-0)
+                  - generic [ref=f3e792]:
+                    - generic [ref=f3e793]: "%"
+                    - generic [ref=f3e794]: 57% chance
+            - generic [ref=f3e795] [cursor=pointer]:
+              - generic [ref=f3e796]:
+                - img "New York Giants logo" [ref=f3e797]
+                - generic [ref=f3e799]: 
+              - generic [ref=f3e800]:
+                - generic [ref=f3e801]: New York Giants
+                - generic [ref=f3e802]:
+                  - generic [ref=f3e803]: (0-0)
+                  - generic [ref=f3e804]:
+                    - generic [ref=f3e805]: "%"
+                    - generic [ref=f3e806]: 43% chance
+          - text:   
+        - generic [ref=f3e807]:
+          - link " Preview" [ref=f3e808] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872930/cowboys-giants
+            - generic [ref=f3e809]: 
+            - generic [ref=f3e810]: Preview
+          - generic [ref=f3e811]:
+            - generic [ref=f3e812]: 
+            - generic [ref=f3e813]: NBC
+      - generic [ref=f3e814]:
+        - generic [ref=f3e815]:
+          - generic [ref=f3e816]:
+            - generic [ref=f3e817]: 
+            - generic [ref=f3e818]: Mon, Sep 14
+          - generic [ref=f3e820]: 8:15 PM
+        - generic [ref=f3e821]:
+          - generic [ref=f3e822]:
+            - generic [ref=f3e823]: 
+            - generic [ref=f3e824]: "Spread:"
+            - generic [ref=f3e825]:
+              - img "Denver Broncos logo" [ref=f3e826]
+              - text: "-2.5"
+          - generic [ref=f3e827]:
+            - generic [ref=f3e828]: 
+            - generic [ref=f3e829]: "O/U:"
+            - generic [ref=f3e830]: "42.5"
+        - generic [ref=f3e831]:
+          - generic [ref=f3e832]:
+            - generic [ref=f3e833] [cursor=pointer]:
+              - generic [ref=f3e834]:
+                - img "Denver Broncos logo" [ref=f3e835]
+                - generic [ref=f3e837]: 
+              - generic [ref=f3e838]:
+                - generic [ref=f3e839]: Denver Broncos
+                - generic [ref=f3e840]:
+                  - generic [ref=f3e841]: (0-0)
+                  - generic [ref=f3e842]:
+                    - generic [ref=f3e843]: "%"
+                    - generic [ref=f3e844]: 43% chance
+            - generic [ref=f3e845] [cursor=pointer]:
+              - generic [ref=f3e846]:
+                - img "Kansas City Chiefs logo" [ref=f3e847]
+                - generic [ref=f3e849]: 
+              - generic [ref=f3e850]:
+                - generic [ref=f3e851]: Kansas City Chiefs
+                - generic [ref=f3e852]:
+                  - generic [ref=f3e853]: (0-0)
+                  - generic [ref=f3e854]:
+                    - generic [ref=f3e855]: "%"
+                    - generic [ref=f3e856]: 57% chance
+          - generic [ref=f3e857]:
+            - generic [ref=f3e858]:
+              - generic [ref=f3e859]: 
+              - generic [ref=f3e860]: Tiebreakers Required
+            - generic [ref=f3e861]:
+              - generic [ref=f3e862]:
+                - generic [ref=f3e863]: Total Points Scored
+                - spinbutton "Total Points Scored" [ref=f3e864]
+              - generic [ref=f3e865]:
+                - generic [ref=f3e866]: Total Yards
+                - spinbutton "Total Yards" [ref=f3e867]
+          - text:   
+        - generic [ref=f3e868]:
+          - link " Preview" [ref=f3e869] [cursor=pointer]:
+            - /url: https://www.espn.com/nfl/game/_/gameId/401872931/broncos-chiefs
+            - generic [ref=f3e870]: 
+            - generic [ref=f3e871]: Preview
+          - generic [ref=f3e872]:
+            - generic [ref=f3e873]: 
+            - generic [ref=f3e874]: ESPN
+      - generic [ref=f3e875]:
+        - heading " Submitted Picks 0" [level=3] [ref=f3e876]:
+          - generic [ref=f3e877]: 
+          - generic [ref=f3e878]: Submitted Picks
+          - generic [ref=f3e879]: "0"
+        - generic [ref=f3e881]:
+          - generic [ref=f3e882]: 
+          - paragraph [ref=f3e883]: No picks submitted yet. Get started above!
+    - text:        %  %    
+  - generic [ref=f3e885]:
+    - generic [ref=f3e886]:
+      - generic [ref=f3e888]: F
+      - generic [ref=f3e889]: Frontend-review-tmp
+    - generic [ref=f3e891]:
+      - generic [ref=f3e892]: 
+      - text: Week 1
+    - link " Submit Picks" [ref=f3e894] [cursor=pointer]:
+      - /url: /families/nannys-gang/pools/pickem-pool/picks/
+      - generic [ref=f3e895]: 
+      - generic [ref=f3e896]: Submit Picks

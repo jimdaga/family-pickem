@@ -1,0 +1,91 @@
+{% extends 'pickem/base.html' %}
+{% load static %}
+
+{% block title %}Players{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
+{% block mobile_title %}
+    <div class="mobile-subtitle">
+        <i class="fas fa-users mr-2"></i>{{ family.name }} Players
+    </div>
+{% endblock %}
+
+{% block content %}
+<div data-players-page class="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
+    <div class="mb-4">
+        <a href="{% url 'family_pool_home' family.slug pool.slug %}" class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white inline-flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i>Back to {{ pool.name }}
+        </a>
+    </div>
+
+    <div class="players-scoreboard-header rounded-2xl border border-border-light/80 dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 px-4 py-4 shadow-sm backdrop-blur sm:px-5 mb-5">
+        <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/20">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-black tracking-tight text-text-dark dark:text-white">Players</h2>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary">{{ family.name }}</p>
+                </div>
+            </div>
+            <div class="rounded-xl border border-border-light/80 dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 px-3 py-2 text-center">
+                <div class="text-lg font-black text-text-dark dark:text-white">{{ players|length }}</div>
+                <div class="text-[10px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">active</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 p-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for player in players %}
+                <a href="{% url 'family_pool_user_profile' family.slug pool.slug player.id %}" class="players-compact-card group px-3 py-2 rounded-lg border border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/30 hover:border-primary/50 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <img src="{{ player.socialaccount_set.all.0.get_avatar_url|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
+                             alt="{{ player.username }}"
+                             class="w-9 h-9 rounded-full border border-border-light dark:border-border-subtle group-hover:border-primary">
+                        <div class="min-w-0">
+                            <div class="font-bold text-text-dark dark:text-white truncate">{{ player.first_name|default:player.username }} {{ player.last_name }}</div>
+                            <div class="text-sm text-text-secondary-light dark:text-text-secondary truncate">@{{ player.username }}</div>
+                        </div>
+                    </div>
+                </a>
+            {% empty %}
+                <div class="col-span-full text-center py-10 text-text-secondary-light dark:text-text-secondary">
+                    No active players yet.
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" integrity="sha384-HOvlOYPIs/zjoIkWUGXkVmXsjr8GuZLV+Q+rcPwmJOVZVpvTSXQChiN4t9Euv9Vc" crossorigin="anonymous"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (!window.gsap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+    }
+
+    var gsap = window.gsap;
+    gsap.set(['.players-scoreboard-header', '.players-compact-card'], {
+        autoAlpha: 0,
+        y: 18
+    });
+
+    gsap.timeline({ defaults: { ease: 'power3.out' } })
+        .to('.players-scoreboard-header', { autoAlpha: 1, y: 0, duration: 0.42 })
+        .to('.players-compact-card', { autoAlpha: 1, y: 0, duration: 0.26, stagger: 0.035 }, '-=0.16');
+
+    window.playersCardMotion = function () {
+        document.querySelectorAll('.players-compact-card').forEach(function (card) {
+            card.addEventListener('mouseenter', function () {
+                gsap.to(card, { y: -3, scale: 1.01, duration: 0.18, ease: 'power2.out' });
+            });
+            card.addEventListener('mouseleave', function () {
+                gsap.to(card, { y: 0, scale: 1, duration: 0.2, ease: 'power2.out' });
+            });
+        });
+    };
+
+    window.playersCardMotion();
+});
+</script>
+{% endblock %}

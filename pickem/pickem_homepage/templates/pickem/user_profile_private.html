@@ -1,6 +1,8 @@
 {% extends 'pickem/base.html' %}
 {% load static %}
 
+{% block title %}Private Profile{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
 {% block mobile_title %}
     <div class="mobile-page-header">
         <h2 class="mobile-title-text">
@@ -18,7 +20,7 @@
                 {{ profile_user.first_name|default:profile_user.username }} has chosen to keep their profile private.
             </p>
             <div>
-                <a href="{% url 'index' %}" class="btn-primary inline-flex items-center gap-2">
+                <a href="{% if family and pool %}{% url 'family_pool_home' family.slug pool.slug %}{% else %}{% url 'index' %}{% endif %}" class="btn-primary inline-flex items-center gap-2">
                     <i class="fas fa-home"></i>Back to Home
                 </a>
             </div>

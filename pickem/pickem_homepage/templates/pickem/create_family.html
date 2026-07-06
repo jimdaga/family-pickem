@@ -1,0 +1,51 @@
+{% extends 'pickem/base.html' %}
+
+{% block title %}Create Family - Family Pick'em{% endblock %}
+
+{% block content %}
+<main class="max-w-3xl mx-auto px-6 py-10">
+    <section class="mb-8">
+        <p class="text-sm font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-3">Create family</p>
+        <h1 class="text-3xl lg:text-4xl font-black text-text-dark dark:text-white mb-4">
+            Name your family league
+        </h1>
+        <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
+            This creates a private family with one default NFL pick'em pool for the current season.
+        </p>
+    </section>
+
+    <section class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-6">
+        <form method="post" action="{% url 'create_family' %}" class="space-y-5" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <div>
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
+                    {{ form.name.label }}
+                </label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                <div class="mt-2 text-sm font-medium text-red-600 dark:text-red-400">
+                    {{ form.name.errors }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+                <button type="submit" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-plus"></i>
+                    <span>Create family</span>
+                </button>
+                <a href="{% url 'onboarding' %}" class="inline-flex items-center justify-center px-5 py-3 rounded-lg border border-border-light dark:border-border-subtle text-text-dark dark:text-white font-semibold hover:bg-border-light dark:hover:bg-surface-hover transition-colors">
+                    Back
+                </a>
+            </div>
+        </form>
+    </section>
+</main>
+{% endblock %}

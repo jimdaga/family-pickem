@@ -1,0 +1,317 @@
+{% extends "pickem/base.html" %}
+
+{% block title %}Admin Settings - {{ family.name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-bg-dark">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="text-sm font-semibold uppercase tracking-wide text-primary">Family Admin</div>
+                <h1 class="mt-2 text-3xl font-bold text-text-dark dark:text-white">Settings</h1>
+                <p class="mt-2 text-text-secondary-light dark:text-text-secondary">
+                    {{ family.name }} - {{ pool.name }} - {{ pool.season }} {{ pool.competition|upper }}
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'family_pool_admin' family.slug pool.slug %}" class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white hover:bg-white dark:hover:bg-surface transition-colors">
+                    <i class="fas fa-arrow-left"></i>
+                    Admin Hub
+                </a>
+                <a href="{% url 'family_pool_rules' family.slug pool.slug %}" class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white hover:bg-white dark:hover:bg-surface transition-colors">
+                    <i class="fas fa-gavel"></i>
+                    Rules
+                </a>
+            </div>
+        </header>
+
+        <form method="post" class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden">
+            {% csrf_token %}
+            <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Basic Settings</h2>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                    Updates apply only to this family and pool.
+                </p>
+            </div>
+
+            <div class="grid gap-6 p-5 md:grid-cols-2">
+                <div>
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ form.family_name.id_for_label }}">
+                        {{ form.family_name.label }}
+                    </label>
+                    <div class="mt-2">{{ form.family_name }}</div>
+                    {% for error in form.family_name.errors %}
+                    <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ form.pool_name.id_for_label }}">
+                        {{ form.pool_name.label }}
+                    </label>
+                    <div class="mt-2">{{ form.pool_name }}</div>
+                    {% for error in form.pool_name.errors %}
+                    <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="grid gap-4 border-t border-border-light dark:border-border-subtle p-5 md:grid-cols-2">
+                <label class="flex items-start gap-3 rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark p-4">
+                    {{ form.picks_lock_at_kickoff }}
+                    <span>
+                        <span class="block font-bold text-text-dark dark:text-white">Pick Locking</span>
+                        <span class="mt-1 block text-sm text-text-secondary-light dark:text-text-secondary">
+                            Lock each game when kickoff arrives.
+                        </span>
+                    </span>
+                </label>
+                <label class="flex items-start gap-3 rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark p-4">
+                    {{ form.allow_tiebreaker }}
+                    <span>
+                        <span class="block font-bold text-text-dark dark:text-white">Tiebreakers</span>
+                        <span class="mt-1 block text-sm text-text-secondary-light dark:text-text-secondary">
+                            Allow score and yardage tiebreaker predictions.
+                        </span>
+                    </span>
+                </label>
+                <label class="flex items-start gap-3 rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark p-4">
+                    {{ form.include_playoffs }}
+                    <span>
+                        <span class="block font-bold text-text-dark dark:text-white">Include Playoffs</span>
+                        <span class="mt-1 block text-sm text-text-secondary-light dark:text-text-secondary">
+                            Continue the pool through the postseason. (Playoff scoring logic coming soon.)
+                        </span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="border-t border-border-light dark:border-border-subtle px-5 py-4" data-testid="scoring-rules-section">
+                <h3 class="text-lg font-bold text-text-dark dark:text-white">Scoring &amp; Rules</h3>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                    Point values and tiebreakers shown on the rules page. Automated scoring will follow these settings.
+                </p>
+            </div>
+
+            <div class="grid gap-6 px-5 pb-5 md:grid-cols-3">
+                {% for field in scoring_point_fields %}
+                <div>
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+                    <div class="mt-2">{{ field }}</div>
+                    {% for error in field.errors %}
+                    <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="grid gap-6 px-5 pb-5 md:grid-cols-2">
+                {% for field in tiebreaker_fields %}
+                <div>
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+                    <div class="mt-2">{{ field }}</div>
+                    {% for error in field.errors %}
+                    <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="grid gap-6 px-5 pb-5 md:grid-cols-2">
+                {% for field in rule_choice_fields %}
+                <div>
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+                    <div class="mt-2">{{ field }}</div>
+                    {% if field.name == 'pick_type' %}
+                    <p class="mt-2 text-xs text-text-secondary-light dark:text-text-secondary">
+                        Against-the-spread pools are coming soon.
+                    </p>
+                    {% endif %}
+                    {% for error in field.errors %}
+                    <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="grid gap-4 px-5 pb-5 md:grid-cols-2">
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark p-4">
+                    <label class="flex items-start gap-3">
+                        {{ form.perfect_week_bonus_enabled }}
+                        <span>
+                            <span class="block font-bold text-text-dark dark:text-white">Perfect Week Bonus</span>
+                            <span class="mt-1 block text-sm text-text-secondary-light dark:text-text-secondary">
+                                Award a cash bonus for picking every game correctly in a week.
+                            </span>
+                        </span>
+                    </label>
+                    <div class="mt-3">
+                        <label class="block text-xs font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary" for="{{ form.perfect_week_bonus_amount.id_for_label }}">
+                            Bonus amount (whole dollars)
+                        </label>
+                        <div class="mt-1">{{ form.perfect_week_bonus_amount }}</div>
+                        {% for error in form.perfect_week_bonus_amount.errors %}
+                        <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark p-4">
+                    <label class="flex items-start gap-3">
+                        {{ form.entry_fee_enabled }}
+                        <span>
+                            <span class="block font-bold text-text-dark dark:text-white">Entry Fee</span>
+                            <span class="mt-1 block text-sm text-text-secondary-light dark:text-text-secondary">
+                                Track a per-player buy-in for this pool.
+                            </span>
+                        </span>
+                    </label>
+                    <div class="mt-3">
+                        <label class="block text-xs font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary" for="{{ form.entry_fee_amount.id_for_label }}">
+                            Amount (whole dollars)
+                        </label>
+                        <div class="mt-1">{{ form.entry_fee_amount }}</div>
+                        {% for error in form.entry_fee_amount.errors %}
+                        <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            {% if form.non_field_errors %}
+            <div class="px-5 pb-5">
+                {% for error in form.non_field_errors %}
+                <p class="text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="flex justify-end border-t border-border-light dark:border-border-subtle px-5 py-4">
+                <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-save"></i>
+                    Save Settings
+                </button>
+            </div>
+        </form>
+
+        <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden">
+            <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Announcement Banner</h2>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                    Publish a banner shown across this family's pages. Publishing replaces any banner that's currently live.
+                </p>
+            </div>
+
+            <form method="post" class="space-y-5 p-5">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_banner">
+
+                <div>
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ banner_form.title.id_for_label }}">
+                        {{ banner_form.title.label }}
+                    </label>
+                    <div class="mt-2">{{ banner_form.title }}</div>
+                    {% for error in banner_form.title.errors %}
+                    <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ banner_form.description.id_for_label }}">
+                        {{ banner_form.description.label }}
+                    </label>
+                    <div class="mt-2">{{ banner_form.description }}</div>
+                    {% for error in banner_form.description.errors %}
+                    <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="grid gap-5 md:grid-cols-2">
+                    <div>
+                        <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ banner_form.banner_type.id_for_label }}">
+                            {{ banner_form.banner_type.label }}
+                        </label>
+                        <div class="mt-2">{{ banner_form.banner_type }}</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ banner_form.icon.id_for_label }}">
+                            {{ banner_form.icon.label }}
+                        </label>
+                        <div class="mt-2">{{ banner_form.icon }}</div>
+                        <p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary">{{ banner_form.icon.help_text }}</p>
+                    </div>
+                </div>
+
+                <label class="flex items-start gap-3 rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark p-4">
+                    {{ banner_form.show_close_button }}
+                    <span>
+                        <span class="block font-bold text-text-dark dark:text-white">{{ banner_form.show_close_button.label }}</span>
+                        <span class="mt-1 block text-sm text-text-secondary-light dark:text-text-secondary">
+                            Members can close the banner; leave off to keep it pinned.
+                        </span>
+                    </span>
+                </label>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white hover:bg-primary/90 transition-colors">
+                        <i class="fas fa-bullhorn"></i>
+                        Publish Banner
+                    </button>
+                </div>
+            </form>
+
+            <div class="border-t border-border-light dark:border-border-subtle px-5 py-4">
+                <h3 class="font-bold text-text-dark dark:text-white">Recent banners</h3>
+            </div>
+
+            {% if current_family_banners %}
+            <div class="divide-y divide-border-light dark:divide-border-subtle">
+                {% for banner in current_family_banners %}
+                <div class="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 font-bold text-text-dark dark:text-white">
+                            {% if banner.icon %}<i class="{{ banner.icon }} text-primary"></i>{% endif %}
+                            <span class="truncate">{{ banner.title }}</span>
+                        </div>
+                        {% if banner.description %}
+                        <div class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">{{ banner.description }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">
+                        <span class="rounded border border-border-light dark:border-border-subtle px-2 py-1">{{ banner.banner_type }}</span>
+                        {% if banner.is_active %}
+                        <span class="rounded border border-green-500/40 bg-green-500/10 px-2 py-1 text-green-600 dark:text-green-400">Active</span>
+                        <form method="post" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="deactivate_banner">
+                            <input type="hidden" name="banner_id" value="{{ banner.id }}">
+                            <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-border-light dark:border-border-subtle px-3 py-1.5 text-xs font-semibold normal-case text-text-dark dark:text-white hover:bg-gray-50 dark:hover:bg-bg-dark transition-colors">
+                                <i class="fas fa-eye-slash"></i>
+                                Deactivate
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="rounded border border-border-light dark:border-border-subtle px-2 py-1">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="px-5 py-10 text-center">
+                <div class="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-text-secondary-light dark:bg-slate-800 dark:text-text-secondary">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <p class="mt-4 font-semibold text-text-dark dark:text-white">No banners yet</p>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Publish one above to announce it across your family's pages.</p>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

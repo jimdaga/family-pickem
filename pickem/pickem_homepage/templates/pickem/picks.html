@@ -2,68 +2,85 @@
 {% load static %}
 {% load pickem_homepage_extras %}
 
-{% block content %}
-    <!-- Page Header (Responsive) -->
-    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 overflow-hidden shadow-xl">
-        <!-- Subtle background pattern -->
-        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
-        <div class="relative z-10">
-            <div class="flex items-center justify-center mb-3 lg:mb-4">
-                <i class="fas fa-football-ball text-4xl lg:text-6xl text-primary"></i>
-            </div>
-            <h2 class="text-3xl lg:text-5xl font-black tracking-tight mb-2 lg:mb-3" style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
-                Submit Your Picks
-            </h2>
-            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium">
-                {% if competition == 'nfl-preseason' %}
-                    Preseason - Week {{ week }}
-                {% else %}
-                    Regular Season - Week {{ week }}
-                {% endif %}
-            </p>
-        </div>
-    </div>
+{% block title %}Submit Picks{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
 
-    <div class="max-w-7xl mx-auto px-6 py-6">
-        <!-- Pick Progress Summary -->
-        <div class="section-container mb-6">
-            {% with game_list|length as total_games %}
-            {% with pick_slugs|length as submitted_picks %}
-            <div class="space-y-4">
-                <!-- Stats Display -->
-                <div class="flex items-center justify-center gap-2 text-center">
-                    <div class="flex-1">
-                        <div class="text-4xl font-bold text-primary">{{ submitted_picks }}</div>
-                        <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Picks Submitted</div>
+{% block content %}
+    <div data-picks-page class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
+        <!-- Combined header + pick progress summary -->
+        <div class="picks-scoreboard-header rounded-2xl border border-border-light/80 dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 px-4 py-4 shadow-sm backdrop-blur sm:px-5 mb-5">
+            <!-- Header -->
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/20">
+                        <i class="fas fa-football-ball text-xl"></i>
                     </div>
-                    <div class="text-3xl text-text-secondary-light dark:text-text-secondary font-light">/</div>
-                    <div class="flex-1">
-                        <div class="text-4xl font-bold text-text-dark dark:text-white">{{ total_games }}</div>
-                        <div class="text-sm text-text-secondary-light dark:text-text-secondary uppercase tracking-wide mt-1">Total Games</div>
+                    <div>
+                        <h2 class="text-2xl font-black tracking-tight text-text-dark dark:text-white">Submit Your Picks</h2>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                            {% if competition == 'nfl-preseason' %}Preseason &bull; Week {{ week }}{% else %}Regular Season &bull; Week {{ week }}{% endif %}
+                        </p>
                     </div>
                 </div>
 
-                <!-- Progress Bar -->
-                <div class="space-y-2">
-                    <div class="w-full bg-surface-light dark:bg-surface-hover rounded-full h-4 overflow-hidden border border-border-light dark:border-border-subtle">
-                        <div class="h-full bg-gradient-to-r from-primary to-orange-600 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
-                             style="width: {% widthratio submitted_picks total_games 100 %}%">
-                            {% if submitted_picks > 0 %}
-                            <span class="text-xs font-semibold text-white">{% widthratio submitted_picks total_games 100 %}%</span>
-                            {% endif %}
+                {% with game_list|length as total_games %}
+                {% with pick_slugs|length as submitted_picks %}
+                <div class="picks-progress-strip rounded-xl border border-border-light/80 dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 p-3 sm:min-w-[380px]">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <div class="text-[10px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Submitted</div>
+                            <div class="text-2xl font-black text-text-dark dark:text-white">{{ submitted_picks }}<span class="text-sm text-text-secondary-light dark:text-text-secondary">/{{ total_games }}</span></div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="w-full bg-surface-light dark:bg-surface-hover rounded-full h-3 overflow-hidden border border-border-light dark:border-border-subtle">
+                                <div class="h-full bg-primary rounded-full transition-all duration-500"
+                                     style="width: {% widthratio submitted_picks total_games 100 %}%"></div>
+                            </div>
+                            <div class="mt-1 text-right text-xs font-semibold {% if submitted_picks == total_games and total_games > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">
+                                {% if submitted_picks == total_games and total_games > 0 %}
+                                    <i class="fas fa-check-circle mr-1"></i>Complete
+                                {% else %}
+                                    {{ total_games|sub:submitted_picks }} remaining
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                    <div class="text-center text-sm font-semibold {% if submitted_picks == total_games and total_games > 0 %}text-secondary-light dark:text-secondary{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">
-                        {% if submitted_picks == total_games and total_games > 0 %}
-                            <i class="fas fa-check-circle mr-1"></i>All picks complete!
-                        {% else %}
-                            {% widthratio submitted_picks total_games 100 %}% Complete - {{ total_games|sub:submitted_picks }} remaining
-                        {% endif %}
-                    </div>
+                </div>
+                {% endwith %}
+                {% endwith %}
+            </div>
+            {% if can_submit_to_multiple_families %}
+            <div class="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+                <label class="flex items-start gap-3">
+                    <input id="apply-to-all-families"
+                           type="checkbox"
+                           checked
+                           class="mt-1 h-4 w-4 rounded border-border-light text-primary focus:ring-primary"
+                           data-testid="apply-to-all-families">
+                    <span>
+                        <span class="block text-sm font-bold text-text-dark dark:text-white">Submit to all eligible families</span>
+                        <span class="mt-1 block text-xs text-text-secondary-light dark:text-text-secondary">
+                            This pick will be saved to {{ multi_family_pick_targets|length }} family pools. You can still edit each family separately later.
+                        </span>
+                    </span>
+                </label>
+                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                    {% for target_pool in multi_family_pick_targets %}
+                    <label class="flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 px-3 py-2 text-sm">
+                        <input type="checkbox"
+                               name="target_pool_ids"
+                               value="{{ target_pool.id }}"
+                               checked
+                               class="h-4 w-4 rounded border-border-light text-primary focus:ring-primary"
+                               data-testid="multi-family-target-pool">
+                        <span class="min-w-0">
+                            <span class="block truncate font-bold text-text-dark dark:text-white">{{ target_pool.family.name }}</span>
+                            <span class="block truncate text-xs text-text-secondary-light dark:text-text-secondary">{{ target_pool.name }}{% if target_pool.id == pool.id %} &bull; current{% endif %}</span>
+                        </span>
+                    </label>
+                    {% endfor %}
                 </div>
             </div>
-            {% endwith %}
-            {% endwith %}
+            {% endif %}
         </div>
 
         <!-- Available Games Section -->
@@ -72,16 +89,16 @@
             <i class="fas fa-lock text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
             <h4 class="text-xl font-semibold text-text-dark dark:text-white mb-2">Sign in to submit your picks</h4>
             <p class="text-text-secondary-light dark:text-text-secondary mb-6">You need to be logged in to make or edit picks. Please sign in and try again.</p>
-            <a href="/accounts/google/login/" class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/80 text-white rounded-xl font-semibold transition-all">
-                <i class="fab fa-google"></i>
-                <span>Sign in with Google</span>
+            <a href="{% url 'account_login' %}" class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/80 text-white rounded-xl font-semibold transition-all">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Sign in</span>
             </a>
         </div>
         {% elif game_list %}
-        <div class="section-container mb-6">
+        <div class="picks-games-section rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 p-4 mb-5">
             {% with game_list|length as total_games %}
             {% with pick_slugs|length as submitted_picks %}
-            <h3 class="section-title">
+            <h3 class="section-title" id="make-picks-header">
                 {% if total_games == submitted_picks and total_games > 0 %}
                     <i class="fas fa-check-circle mr-2 text-secondary-light dark:text-secondary"></i>
                     <span>You've submitted all your picks!</span>
@@ -99,36 +116,32 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {% for game in game_list %}
                      {% if game.slug not in pick_slugs %}
-                        {% with user.id|addstr:"-"|addstr:game.id as template %}
+                        {% with pool.id|addstr:"-"|addstr:user.id|addstr:"-"|addstr:game.id as template %}
                             {% if template not in pick_ids %}
-                                <div class="game-card flex flex-col bg-surface-light dark:bg-surface rounded-2xl p-6 border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 space-y-4 {% if auth_required %}opacity-50 pointer-events-none{% endif %}" data-game-id="{{ game.id }}">
-                                    <!-- Game Header -->
-                                    <div class="flex items-center justify-between flex-wrap gap-2">
-                                        <div class="flex items-center gap-2 text-sm text-text-secondary-light dark:text-text-secondary">
-                                            <i class="fas fa-calendar"></i>
+                                <div class="picks-game-card game-card flex flex-col bg-surface-light dark:bg-slate-700 rounded-xl overflow-hidden border border-border-light dark:border-slate-600 hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 {% if auth_required %}opacity-50 pointer-events-none{% endif %}" data-game-id="{{ game.id }}">
+
+                                    <!-- Status Bar -->
+                                    <div class="flex items-center justify-between px-3 py-1.5 text-sm font-semibold text-white
+                                        {% if game.statusType == 'inprogress' %}bg-gradient-to-r from-green-600 to-green-700
+                                        {% elif game.statusType == 'finished' %}bg-gradient-to-r from-blue-600 to-blue-700
+                                        {% else %}bg-gradient-to-r from-slate-500 to-slate-600 dark:from-slate-600 dark:to-slate-700{% endif %}">
+                                        <div class="flex items-center gap-2">
+                                            <i class="fas {% if game.statusType == 'inprogress' %}fa-circle animate-pulse{% elif game.statusType == 'finished' %}fa-check-circle{% else %}fa-clock{% endif %}"></i>
                                             <span>{{ game.startTimestamp|date:"D, M d" }}</span>
                                         </div>
-                                        <div class="text-sm font-medium text-text-dark dark:text-white">
-                                            {{ game.startTimestamp|date:"g:i A" }}
+                                        <div class="flex items-center gap-2 text-xs opacity-90">
+                                            <span>{{ game|game_start_label }}</span>
+                                            {% if game.statusType != 'notstarted' %}
+                                            <span class="px-2 py-0.5 bg-white/20 rounded font-bold">LOCKED</span>
+                                            {% endif %}
                                         </div>
-                                        {% if game.statusType != 'notstarted' %}
-                                        <div class="px-3 py-1 bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-semibold flex items-center gap-1">
-                                            <i class="fas fa-lock"></i>
-                                            <span>Locked</span>
-                                        </div>
-                                        {% else %}
-                                        <div class="px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg text-sm font-semibold flex items-center gap-1">
-                                            <i class="fas fa-check-circle"></i>
-                                            <span>Available</span>
-                                        </div>
-                                        {% endif %}
                                     </div>
 
-                                    <!-- Game Info (Spread, Weather, etc.) -->
+                                    <!-- Spread / Weather row (darker slate, edge-to-edge) -->
                                     {% if game.spread or game.overUnder or game.temperature or game.weatherCondition %}
-                                    <div class="flex flex-wrap items-center gap-3 text-sm text-text-secondary-light dark:text-text-secondary">
+                                    <div class="flex flex-wrap items-center justify-center gap-3 px-3 py-1.5 text-xs text-text-dark dark:text-text-secondary border-b border-border-light dark:border-slate-600 bg-border-light dark:bg-slate-800">
                                         {% if game.spread %}
-                                        <div class="flex items-center gap-1.5">
+                                        <div class="flex items-center gap-1">
                                             <i class="fas fa-chart-line"></i>
                                             <span class="font-medium">Spread:</span>
                                             <span class="flex items-center gap-1 font-semibold text-text-dark dark:text-white">
@@ -147,36 +160,36 @@
                                         </div>
                                         {% endif %}
                                         {% if game.overUnder %}
-                                        <div class="flex items-center gap-1.5">
+                                        <div class="flex items-center gap-1">
                                             <i class="fas fa-calculator"></i>
                                             <span class="font-medium">O/U:</span>
                                             <span class="font-semibold text-text-dark dark:text-white">{{ game.overUnder|floatformat:1 }}</span>
                                         </div>
                                         {% endif %}
                                         {% if game.temperature and game.weatherCondition %}
-                                        <div class="flex items-center gap-1.5">
+                                        <div class="flex items-center gap-1">
                                             {% if 'Sun' in game.weatherCondition or 'Clear' in game.weatherCondition %}
-                                                <i class="fas fa-sun text-yellow-500" title="Sunny/Clear"></i>
+                                                <i class="fas fa-sun text-yellow-500"></i>
                                             {% elif 'Cloud' in game.weatherCondition %}
-                                                <i class="fas fa-cloud" title="Cloudy"></i>
+                                                <i class="fas fa-cloud"></i>
                                             {% elif 'Rain' in game.weatherCondition or 'Shower' in game.weatherCondition %}
-                                                <i class="fas fa-cloud-rain text-blue-500" title="Rainy"></i>
+                                                <i class="fas fa-cloud-rain text-blue-500"></i>
                                             {% elif 'Snow' in game.weatherCondition %}
-                                                <i class="fas fa-snowflake text-blue-300" title="Snowy"></i>
+                                                <i class="fas fa-snowflake text-blue-300"></i>
                                             {% elif 'Storm' in game.weatherCondition or 'Thunder' in game.weatherCondition %}
-                                                <i class="fas fa-bolt text-purple-500" title="Stormy"></i>
+                                                <i class="fas fa-bolt text-purple-500"></i>
                                             {% elif 'Wind' in game.weatherCondition %}
-                                                <i class="fas fa-wind" title="Windy"></i>
+                                                <i class="fas fa-wind"></i>
                                             {% elif 'Fog' in game.weatherCondition %}
-                                                <i class="fas fa-smog" title="Foggy"></i>
+                                                <i class="fas fa-smog"></i>
                                             {% else %}
-                                                <i class="fas fa-thermometer-half" title="Weather"></i>
+                                                <i class="fas fa-thermometer-half"></i>
                                             {% endif %}
                                             <span>{{ game.temperature }}°F, {{ game.weatherCondition }}</span>
                                         </div>
                                         {% endif %}
                                         {% if game.venueIndoor %}
-                                        <div class="flex items-center gap-1.5">
+                                        <div class="flex items-center gap-1">
                                             <i class="fas fa-home"></i>
                                             <span>Indoor</span>
                                         </div>
@@ -184,15 +197,17 @@
                                     </div>
                                     {% endif %}
 
+                                    <!-- Inner padded content -->
+                                    <div class="p-4 space-y-3 flex flex-col flex-1">
+
                                     <!-- Team Selection -->
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <!-- Away Team -->
                                         {% for team in wins_losses %}
                                             {% if team.teamNameSlug == game.awayTeamSlug %}
-                                        <div class="team-option relative group rounded-xl border-2 border-transparent hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game.statusType != 'notstarted' or auth_required %}opacity-50 pointer-events-none{% endif %}"
+                                        <div class="team-option relative group rounded-xl border-2 border-border-light dark:border-slate-600 hover:border-primary dark:hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game.statusType != 'notstarted' or auth_required %}opacity-50 pointer-events-none{% endif %}"
                                              data-team="{{ game.awayTeamSlug }}"
                                              data-team-name="{{ game.awayTeamName }}">
-                                            <!-- Top Half - Team Color Background with Logo -->
                                             <div class="relative h-[100px] flex items-center justify-center py-2"
                                                  style="background: linear-gradient(135deg, #{{ team.alternateColor|default:'666666' }}40 0%, #{{ team.color|default:'333333' }} 50%, #{{ team.color|default:'333333' }} 100%);">
                                                 {% with game.awayTeamSlug|lookuplogo as logo_url %}
@@ -201,22 +216,14 @@
                                                      class="w-16 h-16 object-contain drop-shadow-lg relative z-10"
                                                      {% if 'jets' in game.awayTeamSlug %}style="filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));"{% endif %}>
                                                 {% endwith %}
-                                                <!-- Selection Indicator -->
                                                 <div class="team-selection-indicator absolute top-2 right-2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <i class="fas fa-check"></i>
                                                 </div>
                                             </div>
-                                            <!-- Bottom Half - Original Background with Text -->
-                                            <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-surface-light dark:bg-surface-hover">
+                                            <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-border-light dark:bg-slate-800">
                                                 <div class="font-bold text-lg text-text-dark dark:text-white mb-1">{{ game.awayTeamName }}</div>
                                                 <div class="text-sm text-text-secondary-light dark:text-text-secondary space-y-1">
-                                                    <div>
-                                                        {% if team.teamTies > 0 %}
-                                                            ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
-                                                        {% else %}
-                                                            ({{ team.teamWins }}-{{ team.teamLosses }})
-                                                        {% endif %}
-                                                    </div>
+                                                    <div>{% if team.teamTies > 0 %}({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }}){% else %}({{ team.teamWins }}-{{ team.teamLosses }}){% endif %}</div>
                                                     {% if game.awayTeamWinProbability %}
                                                     <div class="flex items-center justify-center gap-1 text-xs">
                                                         <i class="fas fa-percentage"></i>
@@ -232,10 +239,9 @@
                                         <!-- Home Team -->
                                         {% for team in wins_losses %}
                                             {% if team.teamNameSlug == game.homeTeamSlug %}
-                                        <div class="team-option relative group rounded-xl border-2 border-transparent hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game.statusType != 'notstarted' or auth_required %}opacity-50 pointer-events-none{% endif %}"
+                                        <div class="team-option relative group rounded-xl border-2 border-border-light dark:border-slate-600 hover:border-primary dark:hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game.statusType != 'notstarted' or auth_required %}opacity-50 pointer-events-none{% endif %}"
                                              data-team="{{ game.homeTeamSlug }}"
                                              data-team-name="{{ game.homeTeamName }}">
-                                            <!-- Top Half - Team Color Background with Logo -->
                                             <div class="relative h-[100px] flex items-center justify-center py-2"
                                                  style="background: linear-gradient(135deg, #{{ team.alternateColor|default:'666666' }}40 0%, #{{ team.color|default:'333333' }} 50%, #{{ team.color|default:'333333' }} 100%);">
                                                 {% with game.homeTeamSlug|lookuplogo as logo_url %}
@@ -244,22 +250,14 @@
                                                      class="w-16 h-16 object-contain drop-shadow-lg relative z-10"
                                                      {% if 'jets' in game.homeTeamSlug %}style="filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));"{% endif %}>
                                                 {% endwith %}
-                                                <!-- Selection Indicator -->
                                                 <div class="team-selection-indicator absolute top-2 right-2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <i class="fas fa-check"></i>
                                                 </div>
                                             </div>
-                                            <!-- Bottom Half - Original Background with Text -->
-                                            <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-surface-light dark:bg-surface-hover">
+                                            <div class="flex-1 flex flex-col items-center justify-center p-3 text-center bg-border-light dark:bg-slate-800">
                                                 <div class="font-bold text-lg text-text-dark dark:text-white mb-1">{{ game.homeTeamName }}</div>
                                                 <div class="text-sm text-text-secondary-light dark:text-text-secondary space-y-1">
-                                                    <div>
-                                                        {% if team.teamTies > 0 %}
-                                                            ({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }})
-                                                        {% else %}
-                                                            ({{ team.teamWins }}-{{ team.teamLosses }})
-                                                        {% endif %}
-                                                    </div>
+                                                    <div>{% if team.teamTies > 0 %}({{ team.teamWins }}-{{ team.teamLosses }}-{{ team.teamTies }}){% else %}({{ team.teamWins }}-{{ team.teamLosses }}){% endif %}</div>
                                                     {% if game.homeTeamWinProbability %}
                                                     <div class="flex items-center justify-center gap-1 text-xs">
                                                         <i class="fas fa-percentage"></i>
@@ -271,7 +269,7 @@
                                         </div>
                                             {% endif %}
                                         {% endfor %}
-                                    </div>
+                                    </div>{# /team grid #}
 
                                     <!-- Tiebreaker Section -->
                                     {% if game.tieBreakerGame %}
@@ -319,42 +317,10 @@
                                     </div>
                                     {% endif %}
 
-                                    <!-- Game Footer (ESPN-style) - Always at bottom -->
-                                    {% if game.broadcast or game.gamecastUrl %}
-                                    <div class="mt-auto pt-3 border-t border-border-light dark:border-border-subtle">
-                                        <div class="flex items-center justify-between">
-                                            <!-- Gamecast Link (Left) -->
-                                            <div>
-                                                {% if game.gamecastUrl %}
-                                                <a href="{{ game.gamecastUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors font-medium">
-                                                    <i class="fas fa-external-link-alt"></i>
-                                                    <span>{% if game.statusType == 'finished' %}Final{% else %}Preview{% endif %}</span>
-                                                </a>
-                                                {% endif %}
-                                            </div>
-                                            <!-- Broadcast Network (Right) -->
-                                            <div>
-                                                {% if game.broadcast %}
-                                                <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">{{ game.broadcast }}</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-
                                     <!-- Hidden Form Data -->
                                     <form class="pick-form" style="display: none;">
                                         {% csrf_token %}
-                                        <input type="hidden" name="id" value="{{ user.id }}-{{ game.id }}">
-                                        <input type="hidden" name="userEmail" value="{{ user.email }}">
-                                        <input type="hidden" name="userID" value="{{ user.id }}">
-                                        <input type="hidden" name="uid" value="{{ user.id }}">
-                                        <input type="hidden" name="slug" value="{{ game.slug }}">
-                                        <input type="hidden" name="competition" value="{{ game.competition }}">
-                                        <input type="hidden" name="gameWeek" value="{{ game.gameWeek }}">
-                                        <input type="hidden" name="gameyear" value="{{ game.gameyear }}">
-                                        <input type="hidden" name="gameseason" value="{{ game.gameseason }}">
-                                        <input type="hidden" name="pick_game_id" value="{{ game.id }}">
+                                        <input type="hidden" name="game_id" value="{{ game.id }}">
                                         <input type="hidden" name="pick" value="">
                                         <input type="hidden" name="tieBreakerScore" value="">
                                         <input type="hidden" name="tieBreakerYards" value="">
@@ -366,7 +332,7 @@
                                             <i class="fas fa-spinner fa-spin"></i>
                                             <span>Saving...</span>
                                         </div>
-                                        <div class="save-indicator success flex items-center justify-center gap-2 px-4 py-2 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-xl border border-secondary-light/30 dark:border-secondary/40">
+                                        <div class="save-indicator success flex items-center justify-center gap-2 px-4 py-2 bg-secondary-light/20 dark:bg-secondary/20 text-text-dark dark:text-white rounded-xl border border-secondary-light/30 dark:border-secondary/40">
                                             <i class="fas fa-check-circle"></i>
                                             <span>Saved!</span>
                                         </div>
@@ -375,7 +341,28 @@
                                             <span>Error saving</span>
                                         </div>
                                     </div>
-                                </div>
+                                    </div>{# /inner padded content #}
+
+                                    <!-- Game Footer — full-bleed with bg, matching scores page exactly -->
+                                    {% if game.broadcast or game.gamecastUrl %}
+                                    <div class="flex items-center justify-between px-4 py-3 border-t border-border-light dark:border-border-subtle bg-border-light dark:bg-surface-hover mt-auto">
+                                        {% if game.gamecastUrl %}
+                                        <a href="{{ game.gamecastUrl }}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1 bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 rounded-lg transition-colors">
+                                            <i class="fas fa-external-link-alt text-primary"></i>
+                                            <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">{% if game.statusType == 'finished' %}Final{% else %}Preview{% endif %}</span>
+                                        </a>
+                                        {% else %}
+                                        <div></div>
+                                        {% endif %}
+                                        {% if game.broadcast %}
+                                        <div class="flex items-center gap-2 ml-auto">
+                                            <i class="fas fa-tv text-primary"></i>
+                                            <span class="text-sm font-semibold text-text-dark dark:text-white">{{ game.broadcast }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>{# /game-card #}
                             {% endif %}
                         {% endwith %}
                     {% endif %}
@@ -384,11 +371,11 @@
             </div>
 
             <!-- Submitted Picks Section -->
-            <div class="section-container">
+            <div class="section-container" id="submitted-picks-section">
                 <h3 class="section-title">
                     <i class="fas fa-check-square mr-2"></i>
                     <span>Submitted Picks</span>
-                    <span class="ml-3 px-3 py-1 text-sm font-semibold bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-full">
+                    <span class="ml-3 px-3 py-1 text-sm font-semibold bg-secondary-light/20 dark:bg-secondary/20 text-text-dark dark:text-white rounded-full">
                         {{ pick_slugs|length }}
                     </span>
                 </h3>
@@ -397,15 +384,15 @@
                     {% if pick_slugs and not auth_required %}
                         {% for game in game_list %}
                         {% if game.slug in pick_slugs %}
-                            {% with user.id|addstr:"-"|addstr:game.id as template %}
+                            {% with pool.id|addstr:"-"|addstr:user.id|addstr:"-"|addstr:game.id as template %}
                                 {% if template in pick_ids %}
-                                <div class="bg-surface-light dark:bg-surface rounded-xl p-5 border border-border-light dark:border-border-subtle hover:border-secondary-light/50 dark:hover:border-secondary/50 transition-all duration-200 space-y-4">
+                                <div data-submitted-game="{{ game.id }}" class="bg-surface-light dark:bg-surface rounded-xl p-5 border border-border-light dark:border-border-subtle hover:border-primary/50 transition-all duration-200 space-y-4">
                                     <!-- Game Header -->
                                     <div class="flex items-center justify-between">
                                         <div class="text-sm text-text-secondary-light dark:text-text-secondary">
                                             {{ game.startTimestamp|date:"M d @ g:i A" }}
                                         </div>
-                                        <div class="px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-secondary-light dark:text-secondary rounded-lg text-sm font-semibold flex items-center gap-1">
+                                        <div class="px-3 py-1 bg-secondary-light/20 dark:bg-secondary/20 text-text-dark dark:text-white rounded-lg text-sm font-semibold flex items-center gap-1">
                                             <i class="fas fa-check"></i>
                                             <span>Submitted</span>
                                         </div>
@@ -431,7 +418,7 @@
                                                     <div class="bg-surface-light dark:bg-surface-hover p-2 text-center">
                                                         <div class="font-bold text-sm text-text-dark dark:text-white">{{ game.awayTeamName }}</div>
                                                         {% if p.pick == game.awayTeamSlug %}
-                                                        <div class="flex items-center justify-center gap-1 mt-1 text-primary text-xs font-semibold">
+                                                        <div class="flex items-center justify-center gap-1 mt-1 text-text-secondary-light dark:text-text-secondary text-xs font-semibold">
                                                             <i class="fas fa-star"></i>
                                                             <span>Your Pick</span>
                                                         </div>
@@ -460,7 +447,7 @@
                                                     <div class="bg-surface-light dark:bg-surface-hover p-2 text-center">
                                                         <div class="font-bold text-sm text-text-dark dark:text-white">{{ game.homeTeamName }}</div>
                                                         {% if p.pick == game.homeTeamSlug %}
-                                                        <div class="flex items-center justify-center gap-1 mt-1 text-primary text-xs font-semibold">
+                                                        <div class="flex items-center justify-center gap-1 mt-1 text-text-secondary-light dark:text-text-secondary text-xs font-semibold">
                                                             <i class="fas fa-star"></i>
                                                             <span>Your Pick</span>
                                                         </div>
@@ -491,7 +478,7 @@
 
                                     <!-- Edit/Lock Actions -->
                                     <div class="pt-3 border-t border-border-light dark:border-border-subtle">
-                                        {% if not game|is_game_locked %}
+                                        {% if not game|is_game_locked_for_pool:pool %}
                                         {% for p in picks %}
                                             {% if p.slug == game.slug %}
                                         <button class="edit-pick-btn w-full px-4 py-2 bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl font-semibold hover:bg-blue-600/20 dark:hover:bg-blue-600/30 transition-all flex items-center justify-center gap-2"
@@ -530,7 +517,7 @@
                                         {% else %}
                                         <div class="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 dark:bg-red-600/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-semibold">
                                             <i class="fas fa-lock"></i>
-                                            <span>Pick Locked - {{ game|game_lock_reason }}</span>
+                                            <span>Pick Locked - {{ game|game_lock_reason_for_pool:pool }}</span>
                                         </div>
                                         {% endif %}
                                     </div>
@@ -551,7 +538,7 @@
             <div class="section-container text-center py-12">
                 <i class="fas fa-calendar-times text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
                 {% if is_default_week %}
-                <h4 class="text-2xl font-bold text-primary mb-3">Ready for Week {{ week }}?</h4>
+                <h4 class="text-2xl font-bold text-text-dark dark:text-white mb-3">Ready for Week {{ week }}?</h4>
                 <p class="text-text-secondary-light dark:text-text-secondary mb-6 max-w-2xl mx-auto">
                     The NFL schedule for Week {{ week }} is being finalized. Games will appear here once released, but you can check back soon to start making your picks!
                 </p>
@@ -576,6 +563,16 @@
                 </div>
 
                 <div class="flex items-center justify-center gap-3 mt-6">
+                    {% if is_tenant_pick_page %}
+                    <a href="{% url 'family_pool_scores' family_slug=family.slug pool_slug=pool.slug %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all">
+                        <i class="fas fa-chart-line"></i>
+                        <span>View Scores</span>
+                    </a>
+                    <a href="{% url 'family_pool_standings' family_slug=family.slug pool_slug=pool.slug %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-border-light dark:border-border-subtle text-text-dark dark:text-white rounded-xl font-semibold hover:bg-surface-hover transition-all">
+                        <i class="fas fa-trophy"></i>
+                        <span>Standings</span>
+                    </a>
+                    {% else %}
                     <a href="{% url 'scores' %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary hover:text-white transition-all">
                         <i class="fas fa-chart-line"></i>
                         <span>View Scores</span>
@@ -584,6 +581,7 @@
                         <i class="fas fa-trophy"></i>
                         <span>Standings</span>
                     </a>
+                    {% endif %}
                 </div>
                 {% else %}
                 <h4 class="text-2xl font-bold text-text-secondary-light dark:text-text-secondary mb-3">No games available for this week</h4>
@@ -621,11 +619,6 @@
                     <form id="editPickForm">
                         {% csrf_token %}
                         <input type="hidden" id="editPickId" name="pick_id">
-                        <input type="hidden" id="editGameId" name="game_id">
-                        <input type="hidden" id="editGameSlug" name="slug">
-                        <input type="hidden" name="userEmail" value="{{ user.email }}">
-                        <input type="hidden" name="userID" value="{{ user.id }}">
-                        <input type="hidden" name="uid" value="{{ user.id }}">
 
                         <!-- Game Info -->
                         <div class="mb-6 text-center">
@@ -729,6 +722,44 @@
                                 </div>
                             </div>
                         </div>
+
+                        {% if can_submit_to_multiple_families %}
+                            <div class="mt-5 rounded-xl border border-secondary-light/30 dark:border-secondary/30 bg-secondary-light/10 dark:bg-secondary/10 p-4">
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input id="edit-apply-to-all-families"
+                                           type="checkbox"
+                                           name="apply_to_all_families"
+                                           value="1"
+                                           checked
+                                           class="mt-1 h-4 w-4 rounded border-border-light text-secondary-light focus:ring-secondary-light dark:border-border-subtle dark:bg-surface"
+                                           data-testid="edit-apply-to-all-families">
+                                    <span>
+                                        <span class="block font-semibold text-text-dark dark:text-white">Apply edits to all eligible families</span>
+                                        <span class="block text-sm text-text-secondary-light dark:text-text-secondary">
+                                            This will update this pick in {{ multi_family_pick_targets|length }} family pools. Uncheck it to edit only {{ family.name }}.
+                                        </span>
+                                    </span>
+                                </label>
+                                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {% for target_pool in multi_family_pick_targets %}
+                                        <label class="flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle bg-bg-light/70 dark:bg-surface/70 px-3 py-2 text-sm text-text-dark dark:text-white">
+                                            <input type="checkbox"
+                                                   name="edit_target_pool_ids"
+                                                   value="{{ target_pool.id }}"
+                                                   checked
+                                                   class="h-4 w-4 rounded border-border-light text-secondary-light focus:ring-secondary-light dark:border-border-subtle dark:bg-surface"
+                                                   data-testid="edit-multi-family-target-pool">
+                                            <span class="min-w-0">
+                                                <span class="block truncate font-semibold">{{ target_pool.family.name }}</span>
+                                                <span class="block truncate text-xs text-text-secondary-light dark:text-text-secondary">
+                                                    {{ target_pool.name }}{% if target_pool.id == pool.id %} &bull; current{% endif %}
+                                                </span>
+                                            </span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
                     </form>
                 </div>
 
@@ -736,7 +767,7 @@
                 <div id="editGameFooter" class="border-t border-border-light dark:border-border-subtle px-6 py-3" style="display: none;">
                     <div class="flex items-center justify-between">
                         <div>
-                            <a id="editPreviewLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors font-medium">
+                            <a id="editPreviewLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white transition-colors font-medium">
                                 <i class="fas fa-external-link-alt"></i>
                                 <span id="editPreviewText">Preview</span>
                             </a>
@@ -763,7 +794,43 @@
     </div>
 
     <!-- Auto-save JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" integrity="sha384-HOvlOYPIs/zjoIkWUGXkVmXsjr8GuZLV+Q+rcPwmJOVZVpvTSXQChiN4t9Euv9Vc" crossorigin="anonymous"></script>
     <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!window.gsap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+
+        var gsap = window.gsap;
+        gsap.set(['.picks-scoreboard-header', '.picks-games-section', '.picks-game-card'], {
+            autoAlpha: 0,
+            y: 18
+        });
+
+        gsap.timeline({ defaults: { ease: 'power3.out' } })
+            .to('.picks-scoreboard-header', { autoAlpha: 1, y: 0, duration: 0.42 })
+            .to('.picks-games-section', { autoAlpha: 1, y: 0, duration: 0.32 }, '-=0.16')
+            .to('.picks-game-card', { autoAlpha: 1, y: 0, duration: 0.28, stagger: 0.035 }, '-=0.12');
+
+        window.picksCardMotion = function () {
+            document.querySelectorAll('.picks-game-card').forEach(function (card) {
+                card.addEventListener('mouseenter', function () {
+                    gsap.to(card, { y: -3, scale: 1.006, duration: 0.18, ease: 'power2.out' });
+                });
+                card.addEventListener('mouseleave', function () {
+                    gsap.to(card, { y: 0, scale: 1, duration: 0.2, ease: 'power2.out' });
+                });
+            });
+        };
+
+        window.picksCardMotion();
+    });
+    </script>
+
+    <script>
+    const pickSubmitUrl = "{% if is_tenant_pick_page %}{% url 'family_pool_game_picks' family_slug=family.slug pool_slug=pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}";
+    const pickEditUrl = "{% if is_tenant_pick_page %}{% url 'family_pool_edit_game_pick' family_slug=family.slug pool_slug=pool.slug %}{% else %}{% url 'edit_game_pick' %}{% endif %}";
+
     // Modal helper functions
     function openEditModal() {
         const modal = document.getElementById('editPickModal');
@@ -795,6 +862,67 @@
     });
 
     document.addEventListener('DOMContentLoaded', function() {
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // Refresh the counters and Submitted Picks section in place (no page
+        // reload): re-fetch this page, swap the display-only regions, then
+        // highlight the newly submitted card.
+        function refreshPickSections(gameId) {
+            return fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(response => response.text())
+                .then(html => {
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    ['.picks-progress-strip', '#make-picks-header', '#submitted-picks-section'].forEach(selector => {
+                        const current = document.querySelector(selector);
+                        const next = doc.querySelector(selector);
+                        if (current && next) current.replaceWith(next);
+                    });
+                    bindEditPickButtons();
+                    const newCard = document.querySelector('#submitted-picks-section [data-submitted-game="' + gameId + '"]');
+                    if (newCard && window.gsap && !prefersReducedMotion) {
+                        gsap.from(newCard, { autoAlpha: 0, y: 18, duration: 0.45, ease: 'power2.out' });
+                        gsap.fromTo(newCard,
+                            { boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.45)' },
+                            { boxShadow: '0 0 0 0 rgba(34, 197, 94, 0)', duration: 1.4, ease: 'power2.out', clearProps: 'boxShadow' });
+                    }
+                })
+                .catch(() => { window.location.reload(); });
+        }
+
+        // Animate the picked card away, FLIP-shift the remaining tiles into
+        // the gap, then refresh the submitted section.
+        function animatePickSaved(form) {
+            const card = form.closest('.picks-game-card');
+            if (!card) { window.location.reload(); return; }
+            const gameId = card.dataset.gameId;
+            const grid = card.parentElement;
+
+            const removeAndRefresh = () => {
+                const siblings = Array.from(grid.querySelectorAll('.picks-game-card')).filter(c => c !== card);
+                const firstRects = new Map(siblings.map(c => [c, c.getBoundingClientRect()]));
+                card.remove();
+                if (window.gsap && !prefersReducedMotion) {
+                    siblings.forEach(sibling => {
+                        const last = sibling.getBoundingClientRect();
+                        const first = firstRects.get(sibling);
+                        const dx = first.left - last.left;
+                        const dy = first.top - last.top;
+                        if (dx || dy) {
+                            gsap.fromTo(sibling, { x: dx, y: dy },
+                                { x: 0, y: 0, duration: 0.4, ease: 'power2.out', clearProps: 'transform' });
+                        }
+                    });
+                }
+                refreshPickSections(gameId);
+            };
+
+            if (window.gsap && !prefersReducedMotion) {
+                gsap.to(card, { autoAlpha: 0, scale: 0.94, duration: 0.28, ease: 'power2.in', onComplete: removeAndRefresh });
+            } else {
+                removeAndRefresh();
+            }
+        }
+
         // Handle team selection clicks
         document.querySelectorAll('.team-option:not(.disabled)').forEach(option => {
             option.addEventListener('click', function() {
@@ -906,37 +1034,60 @@
             
             // Prepare form data
             const formData = new FormData(form);
+            const applyToAllFamilies = document.getElementById('apply-to-all-families');
+            if (applyToAllFamilies && applyToAllFamilies.checked) {
+                formData.set('apply_to_all_families', '1');
+                document.querySelectorAll('input[name="target_pool_ids"]:checked').forEach(input => {
+                    formData.append('target_pool_ids', input.value);
+                });
+            }
             console.log('About to submit form data:', formData);
             
             // Submit the pick
-            fetch('/picks/', {
+            fetch(pickSubmitUrl, {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                 },
             })
-            .then(response => {
+            .then(async response => {
                 console.log('Response received:', response);
+                const payload = await response.json().catch(() => ({}));
                 if (response.ok) {
                     console.log('Save successful');
                     // Show success indicator briefly
                     saveStatus.querySelector('.saving').style.display = 'none';
-                    saveStatus.querySelector('.success').style.display = 'flex';
+                    const successIndicator = saveStatus.querySelector('.success');
+                    const successText = successIndicator.querySelector('span');
+                    if (successText) {
+                        const savedCount = Number(payload.saved_count || 1);
+                        const poolLabel = savedCount === 1 ? 'pool' : 'pools';
+                        const skippedCount = Number(payload.skipped_count || 0);
+                        const skippedText = skippedCount > 0 ? `, ${skippedCount} skipped` : '';
+                        successText.textContent = `Saved to ${savedCount} ${poolLabel}${skippedText}`;
+                    }
+                    successIndicator.style.display = 'flex';
                     
-                    // Quick reload to update the page and move card to submitted section
+                    // Animate the tile into the Submitted section instead of
+                    // reloading the whole page.
                     setTimeout(() => {
-                        window.location.reload();
-                    }, 300);
+                        animatePickSaved(form);
+                    }, 450);
                 } else {
                     console.error('Save failed with status:', response.status);
-                    throw new Error('Save failed');
+                    throw new Error(payload.message || 'Save failed');
                 }
             })
             .catch(error => {
                 // Show error indicator
                 saveStatus.querySelector('.saving').style.display = 'none';
-                saveStatus.querySelector('.error').style.display = 'flex';
+                const errorIndicator = saveStatus.querySelector('.error');
+                const errorText = errorIndicator.querySelector('span');
+                if (errorText) {
+                    errorText.textContent = error.message || 'Error saving';
+                }
+                errorIndicator.style.display = 'flex';
                 
                 // Hide error after 3 seconds
                 setTimeout(() => {
@@ -948,11 +1099,12 @@
         }
 
         // Edit Pick Functionality
+        function bindEditPickButtons() {
         document.querySelectorAll('.edit-pick-btn').forEach(button => {
+            if (button.dataset.editBound) return;
+            button.dataset.editBound = '1';
             button.addEventListener('click', function() {
-                const gameId = this.dataset.gameId;
                 const pickId = this.dataset.pickId;
-                const gameSlug = this.dataset.gameSlug;
                 const currentPick = this.dataset.currentPick;
                 const awayTeam = this.dataset.awayTeam;
                 const awayName = this.dataset.awayName;
@@ -980,8 +1132,6 @@
 
                 // Populate modal with game data
                 document.getElementById('editPickId').value = pickId;
-                document.getElementById('editGameId').value = gameId;
-                document.getElementById('editGameSlug').value = gameSlug;
                 document.getElementById('editGameTitle').textContent = `${awayName} @ ${homeName}`;
                 
                 // Set team information
@@ -1068,12 +1218,17 @@
                 if (spread && spread !== '') {
                     const spreadValue = parseFloat(spread);
                     const spreadElement = document.getElementById('editSpreadValue');
-                    
-                    if (spreadValue > 0) {
-                        spreadElement.innerHTML = `<img src="${homeLogo}" alt="${homeName} logo" class="w-4 h-4 object-contain inline-block align-middle"> -${Math.abs(spreadValue).toFixed(1)}`;
-                    } else {
-                        spreadElement.innerHTML = `<img src="${awayLogo}" alt="${awayName} logo" class="w-4 h-4 object-contain inline-block align-middle"> -${Math.abs(spreadValue).toFixed(1)}`;
-                    }
+
+                    // Build with DOM APIs (not innerHTML) so team names/logos
+                    // are treated as data, never markup.
+                    const favoredLogo = document.createElement('img');
+                    favoredLogo.src = spreadValue > 0 ? homeLogo : awayLogo;
+                    favoredLogo.alt = `${spreadValue > 0 ? homeName : awayName} logo`;
+                    favoredLogo.className = 'w-4 h-4 object-contain inline-block align-middle';
+                    spreadElement.replaceChildren(
+                        favoredLogo,
+                        document.createTextNode(` -${Math.abs(spreadValue).toFixed(1)}`)
+                    );
                     spreadInfo.style.display = 'flex';
                     hasStats = true;
                 } else {
@@ -1141,6 +1296,8 @@
                 openEditModal();
             });
         });
+        }
+        bindEditPickButtons();
 
         // Edit modal team selection
         document.querySelectorAll('.team-option-edit').forEach(option => {
@@ -1164,6 +1321,23 @@
 
             const formData = new FormData(form);
             formData.set('pick', selectedTeam.dataset.team);
+            const editApplyToAllFamilies = document.getElementById('edit-apply-to-all-families');
+            const editTargetPools = Array.from(document.querySelectorAll('input[name="edit_target_pool_ids"]'));
+            const selectedEditTargetPools = editTargetPools.filter(input => input.checked);
+            formData.delete('edit_target_pool_ids');
+            formData.delete('target_pool_ids');
+            if (editApplyToAllFamilies) {
+                if (selectedEditTargetPools.length === 0) {
+                    alert('Choose at least one family');
+                    return;
+                }
+                formData.set('apply_to_all_families', '1');
+                selectedEditTargetPools.forEach(input => {
+                    formData.append('target_pool_ids', input.value);
+                });
+            } else {
+                formData.delete('apply_to_all_families');
+            }
 
             // Validate tiebreaker if required
             const tiebreakerSection = document.getElementById('editTiebreakerSection');
@@ -1182,7 +1356,7 @@
             this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
 
             // Submit update
-            fetch('/picks/edit/', {
+            fetch(pickEditUrl, {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -1208,6 +1382,19 @@
                 this.innerHTML = '<i class="fas fa-save me-1"></i>Save Changes';
             });
         });
+
+        function syncEditFamilyTargets() {
+            const editApplyToAllFamilies = document.getElementById('edit-apply-to-all-families');
+            if (!editApplyToAllFamilies) {
+                return;
+            }
+            const editTargetPools = document.querySelectorAll('input[name="edit_target_pool_ids"]');
+            editTargetPools.forEach(input => {
+                input.checked = editApplyToAllFamilies.checked;
+            });
+        }
+
+        document.getElementById('edit-apply-to-all-families')?.addEventListener('change', syncEditFamilyTargets);
     });
     </script>
 

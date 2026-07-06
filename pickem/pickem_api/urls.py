@@ -2,11 +2,18 @@ from django.urls import include, path, re_path
 from . import views
 
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('', views.index, name='api_root'),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
     # CURRENT SEASON
     re_path(r'^currentseason', views.get_current_season_api, name='get_current_season'),
+
+    # TENANT AUTHORIZATION PROOF
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/authz-check/',
+        views.family_pool_authz_check,
+        name='family_pool_authz_check',
+    ),
 
     # GAMES
     re_path(r'^games/(?P<pk>[0-9]+)$', views.game_detail),

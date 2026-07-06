@@ -34,10 +34,14 @@ postgresql:
       storageClass: "manual"
       size: 10Gi
 
+# In-process scheduler replaces the legacy cron.sh CronJob (suspended below).
+scheduler:
+  enabled: true
+
 cron:
   schedule: "*/5 * * * *"
   command: "/code/pickem_api/cron.sh"
-  suspend: false
+  suspend: true
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   concurrencyPolicy: Forbid

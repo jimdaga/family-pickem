@@ -9,34 +9,29 @@
 @layer components {
   /* Cards */
   .card-base {
-    @apply rounded-2xl p-6 bg-surface-light dark:bg-surface-hover shadow-xl border border-border-light dark:border-border-subtle transition-all;
+    @apply rounded-xl p-5 bg-surface-light dark:bg-surface-hover shadow-sm border border-border-light dark:border-border-subtle transition-all;
   }
 
   .card-hover {
-    @apply hover:shadow-card-hover hover:-translate-y-1;
+    @apply hover:shadow-card-hover hover:-translate-y-0.5;
   }
 
   /* Buttons */
   .btn-primary {
-    @apply px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:bg-primary/80 transition-all duration-200;
+    @apply px-4 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-all duration-200;
   }
 
   .btn-secondary {
-    @apply px-4 py-2 border border-border-subtle text-white rounded-xl hover:bg-surface-hover transition-all;
+    @apply px-4 py-2 border border-border-light dark:border-border-subtle text-text-dark dark:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-surface-hover transition-all;
   }
 
   .btn-gradient {
-    @apply bg-gradient-to-r from-primary to-orange-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-glow-primary transition-all;
+    @apply bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-all;
   }
 
   /* Status Cards */
   .status-card {
-    @apply bg-surface-light dark:bg-surface-hover rounded-2xl p-4 border border-border-light dark:border-border-subtle space-y-2;
-  }
-
-  /* Game Cards */
-  .game-card {
-    @apply bg-surface-light dark:bg-surface-hover rounded-2xl p-5 border border-border-light dark:border-border-subtle shadow-lg transition-all space-y-4;
+    @apply bg-surface-light dark:bg-surface-hover rounded-xl p-4 border border-border-light dark:border-border-subtle space-y-2;
   }
 
   /* Team Selection States */
@@ -52,12 +47,20 @@
 
   /* Leaderboard Items */
   .leaderboard-card {
-    @apply bg-surface-light dark:bg-surface-hover rounded-2xl p-4 border border-border-light dark:border-border-subtle flex items-center justify-between hover:shadow-card-hover hover:-translate-y-1 transition-all;
+    @apply bg-surface-light dark:bg-surface-hover rounded-xl p-4 border border-border-light dark:border-border-subtle flex items-center justify-between hover:shadow-md hover:-translate-y-0.5 transition-all;
   }
 
   /* Section Container */
   .section-container {
-    @apply bg-bg-light dark:bg-slate-900 rounded-2xl p-2 sm:p-4 lg:p-6 shadow-xl border border-border-light dark:border-border-subtle mb-4;
+    @apply bg-surface-light dark:bg-slate-800 rounded-xl p-4 sm:p-5 shadow-sm border border-border-light dark:border-border-subtle mb-4;
+  }
+
+  /* Family pool hero banner — NFL Navy in light, deep slate in dark */
+  .family-hero-banner {
+    background: linear-gradient(135deg, #0B3D91 0%, #0d44a8 50%, #0a3580 100%);
+  }
+  .dark .family-hero-banner {
+    background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%);
   }
 
   .section-title {
@@ -66,13 +69,12 @@
 
   /* Navigation */
   .nav-link-base {
-    @apply w-10 h-10 flex items-center justify-center rounded-full text-gray-300 hover:text-white hover:bg-slate-600/50 dark:hover:bg-purple-600/30 transition-all duration-200;
+    @apply w-10 h-10 flex items-center justify-center rounded-full text-gray-300 hover:text-white hover:bg-slate-700/60 transition-all duration-200;
   }
 
-  /* Site Banner */
+  /* Site Banner — in-flow bar directly beneath the fixed navbar */
   .site-banner {
-    @apply fixed left-0 right-0 z-40;
-    top: 64px; /* Below the navbar (h-16 = 64px) */
+    @apply relative z-30;
   }
 
   .site-banner.banner-hidden {
@@ -90,7 +92,7 @@
 
   /* Scores Page Components */
   .teams-matchup {
-    @apply p-3 bg-surface-light dark:bg-transparent m-0;
+    @apply p-3 bg-surface-light dark:bg-slate-700 m-0;
   }
 
   .team-score-row {
@@ -102,11 +104,11 @@
   }
 
   .quarter-score {
-    @apply px-2 py-1 text-xs min-w-6 text-center bg-surface-light dark:bg-surface-hover rounded border border-border-light dark:border-border-subtle text-text-dark dark:text-gray-200;
+    @apply px-2 py-1 text-xs min-w-6 text-center bg-surface-light dark:bg-slate-700 rounded border border-border-light dark:border-slate-600 text-text-dark dark:text-gray-200;
   }
 
   .game-status-display {
-    @apply text-center py-4 px-8 bg-bg-light dark:bg-surface border-t border-border-light dark:border-border-subtle;
+    @apply text-center py-4 px-8 bg-bg-light dark:bg-slate-800 border-t border-border-light dark:border-slate-600;
   }
 
   .game-status {
@@ -122,7 +124,7 @@
   }
 
   .game-status.upcoming {
-    @apply bg-gradient-to-r from-blue-600 to-indigo-600 text-white;
+    @apply bg-primary text-white;
   }
 
   .performance-item {
@@ -215,7 +217,7 @@
   }
 
   .page-header-clean {
-    @apply bg-gradient-to-br from-slate-100 via-blue-100 to-indigo-100 dark:from-slate-800 dark:via-blue-900/30 dark:to-indigo-900/30 text-text-dark dark:text-white py-6 px-8 rounded-2xl shadow-xl mb-6;
+    @apply bg-surface-light dark:bg-slate-800 text-text-dark dark:text-white py-5 px-6 rounded-xl shadow-sm border border-border-light dark:border-border-subtle mb-6;
   }
 
   .stats-content {
@@ -227,7 +229,7 @@
   }
 
   .stats-player-card {
-    @apply p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all;
+    @apply p-4 bg-surface-light dark:bg-surface-hover rounded-xl border border-border-light dark:border-border-subtle shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all;
   }
 
   .stats-card-header {
@@ -357,7 +359,7 @@
 
   /* Rules Page Components */
   .rule-card {
-    @apply bg-surface-light dark:bg-surface-hover rounded-xl mb-4 border border-border-light dark:border-border-subtle shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-0.5 transition-all;
+    @apply bg-surface-light dark:bg-surface-hover rounded-xl mb-4 border border-border-light dark:border-border-subtle shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all;
   }
 
   .rule-header {
@@ -373,7 +375,7 @@
   }
 
   .rule-icon-container {
-    @apply w-16 h-16 bg-gradient-to-br from-primary to-orange-600 rounded-xl flex items-center justify-center flex-shrink-0;
+    @apply w-16 h-16 bg-primary rounded-xl flex items-center justify-center flex-shrink-0;
   }
 
   .rule-icon {
@@ -528,7 +530,7 @@
 
   /* Gradient text */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary to-orange-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent;
   }
 
   /* Scrollbar styling for dark mode */
@@ -566,10 +568,10 @@
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(255, 107, 26, 0.4);
+    box-shadow: 0 0 0 0 rgba(11, 61, 145, 0.4);
   }
   50% {
-    box-shadow: 0 0 20px 10px rgba(255, 107, 26, 0);
+    box-shadow: 0 0 20px 10px rgba(11, 61, 145, 0);
   }
 }
 
@@ -633,6 +635,14 @@
    ======================================== */
 
 @layer base {
+  /* Primary color: NFL navy in light mode, bright blue in dark mode */
+  :root {
+    --color-primary: 11 61 145; /* #0B3D91 */
+  }
+  html.dark {
+    --color-primary: 59 130 246; /* #3B82F6 */
+  }
+
   /* Dark mode by default */
   html.dark {
     color-scheme: dark;
@@ -644,7 +654,7 @@
 
   /* Light mode adjustments */
   html:not(.dark) body {
-    @apply bg-gray-50 text-text-dark;
+    @apply bg-bg-light text-text-dark;
   }
 
   /* Links */
@@ -660,6 +670,21 @@
   /* Focus visible for accessibility */
   *:focus-visible {
     @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-bg-dark;
+  }
+
+  /* Style Django-rendered native form widgets that have no Tailwind classes */
+  input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    @apply px-3 py-2 rounded-lg border border-border-light dark:border-border-subtle
+           bg-white dark:bg-surface text-text-dark dark:text-white
+           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+           transition-all;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    @apply accent-primary cursor-pointer;
   }
 }
 

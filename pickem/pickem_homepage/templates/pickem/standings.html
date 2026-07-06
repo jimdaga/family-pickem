@@ -3,6 +3,8 @@
 {% load socialaccount %}
 {% load pickem_homepage_extras %}
 
+{% block title %}Standings{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
 {% block mobile_title %}
     <div class="mobile-subtitle">
         <i class="fas fa-trophy mr-2"></i>Standings
@@ -11,36 +13,42 @@
 
 {% block content %}
 
-    <!-- Hero Header -->
-    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 shadow-xl animate-fade-in">
-        <!-- Subtle background pattern -->
-        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
+<div data-standings-page class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
+    <!-- Scoreboard Header -->
+    <div class="standings-top-panel mb-5">
+        <div class="standings-scoreboard-header rounded-2xl border border-border-light/80 dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/20">
+                        <i class="fas fa-trophy text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black tracking-tight text-text-dark dark:text-white">League Standings</h2>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">Current season rankings and weekly champions</p>
+                    </div>
+                </div>
 
-        <!-- Content -->
-        <div class="relative z-10">
-            <!-- Icon -->
-            <div class="flex items-center justify-center mb-3 lg:mb-4">
-                <i class="fas fa-trophy text-4xl lg:text-6xl text-primary"></i>
+                <div class="grid grid-cols-3 gap-2 rounded-xl border border-border-light/80 dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 p-2 text-center sm:min-w-[360px]">
+                    <div class="px-2 py-1.5">
+                        <div class="text-[10px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Players</div>
+                        <div class="text-lg font-black text-text-dark dark:text-white">{{ player_points|length }}</div>
+                    </div>
+                    <div class="border-x border-border-light dark:border-border-subtle px-2 py-1.5">
+                        <div class="text-[10px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Weeks</div>
+                        <div class="text-lg font-black text-text-dark dark:text-white">18</div>
+                    </div>
+                    <div class="px-2 py-1.5">
+                        <div class="text-[10px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Season</div>
+                        <div class="text-lg font-black text-text-dark dark:text-white">{{ selected_season_display }}</div>
+                    </div>
+                </div>
             </div>
-
-            <!-- Title -->
-            <h2 class="text-3xl lg:text-5xl font-black tracking-tight mb-2 lg:mb-3"
-                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
-                League Standings
-            </h2>
-
-            <!-- Subtitle -->
-            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium">
-                Current season rankings and weekly champions
-            </p>
         </div>
     </div>
 
-<div class="max-w-7xl mx-auto px-6 py-6">
-
     <!-- Season Champion Section (if exists) -->
     {% if season_winner %}
-    <div class="section-container mb-6 relative overflow-hidden">
+    <div class="standings-section rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 mb-5 relative overflow-hidden">
         <!-- Animated Background -->
         <div class="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-orange-500/10 to-red-500/10 dark:from-yellow-500/20 dark:via-orange-500/20 dark:to-red-500/20"></div>
         <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
@@ -57,11 +65,11 @@
             </h3>
 
             <!-- Champion Info -->
-            {% with season_winner.userID|safe_username as champion_name %}
-            {% with season_winner.userID|lookupavatar as champion_avatar %}
+            {% with usernames|lookup:season_winner.userID as champion_name %}
+            {% with avatars|lookup:season_winner.userID as champion_avatar %}
             <div class="flex flex-col items-center gap-2">
-                <a href="{% url 'user_profile' season_winner.userID %}" class="group">
-                    <img src="{{ champion_avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug season_winner.userID %}{% else %}{% url 'user_profile' season_winner.userID %}{% endif %}" class="group">
+                    <img src="{{ champion_avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
                          alt="Profile picture for {{ champion_name }}"
                          class="w-16 h-16 rounded-full border-4 border-yellow-500 shadow-glow-primary group-hover:scale-110 transition-transform duration-200">
                 </a>
@@ -81,9 +89,9 @@
     {% endif %}
 
     <!-- Overall Points Section -->
-    <div class="section-container mb-6">
-        <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
-            <h3 class="section-title">
+    <div class="standings-section standings-compact-leaderboard rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 mb-5">
+        <div class="flex items-center justify-between flex-wrap gap-3 px-4 py-3 border-b border-border-light dark:border-border-subtle">
+            <h3 class="text-sm font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">
                 <i class="fas fa-medal mr-2"></i>Leaderboard
             </h3>
 
@@ -91,7 +99,7 @@
             <div class="relative" x-data="{ open: false }">
                 <button @click="open = !open"
                         @click.away="open = false"
-                        class="px-4 py-2 bg-surface-light dark:bg-surface-hover border border-border-light dark:border-border-subtle rounded-xl text-text-dark dark:text-white font-medium hover:bg-surface-light/80 dark:hover:bg-surface transition-all flex items-center gap-2"
+                        class="px-3 py-1.5 bg-white/60 dark:bg-bg-dark/40 border border-border-light dark:border-border-subtle rounded-full text-sm text-text-dark dark:text-white font-semibold hover:bg-surface-light/80 dark:hover:bg-surface transition-all flex items-center gap-2"
                         type="button">
                     <span>
                         {% for season in all_seasons %}
@@ -125,38 +133,38 @@
         </div>
 
         <!-- Leaderboard -->
-        <div class="space-y-2">
+        <div class="space-y-1.5 p-3">
             {% for player in player_points %}
-            <a href="{% url 'user_profile' player.userID %}"
-               class="block bg-surface-light dark:bg-surface rounded-xl p-4 border border-border-light dark:border-border-subtle hover:border-primary/50 dark:hover:border-primary/50 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-200 animate-fade-in-up"
+            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}"
+               class="standings-row block bg-white/60 dark:bg-bg-dark/30 rounded-lg px-3 py-2 border border-border-light dark:border-border-subtle hover:border-primary/50 dark:hover:border-primary/50 hover:shadow-card-hover transition-all duration-200"
                style="animation-delay: {{ forloop.counter0|add:1|floatformat:2 }}s">
-                {% with player.userID|safe_username as username %}
-                {% with player.userID|lookupavatar as avatar %}
+                {% with usernames|lookup:player.userID as username %}
+                {% with avatars|lookup:player.userID as avatar %}
 
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
                     <!-- Rank Badge -->
-                    <div class="flex-shrink-0 w-12 h-12 rounded-full
+                    <div class="flex-shrink-0 w-9 h-9 rounded-full
                                 {% if forloop.counter == 1 %}bg-yellow-500
                                 {% elif forloop.counter == 2 %}bg-gray-400
-                                {% elif forloop.counter == 3 %}bg-orange-600
+                                {% elif forloop.counter == 3 %}bg-amber-700
                                 {% else %}bg-surface-hover{% endif %}
-                                flex items-center justify-center font-black text-white text-lg shadow-lg">
+                                flex items-center justify-center font-black text-white text-sm shadow-md">
                         {{ forloop.counter }}
                     </div>
 
                     <!-- Player Avatar & Info -->
                     <img src="{{ avatar }}"
                          alt="Profile picture for {{ username }}"
-                         class="w-14 h-14 rounded-full border-2 border-border-light dark:border-border-subtle">
+                         class="w-9 h-9 rounded-full border border-border-light dark:border-border-subtle">
 
                     <div class="flex-1 min-w-0">
-                        <h5 class="font-bold text-lg text-text-dark dark:text-white truncate uppercase">{{ username }}</h5>
+                        <h5 class="font-bold text-sm text-text-dark dark:text-white truncate uppercase">{{ username }}</h5>
                         <p class="text-sm text-text-secondary-light dark:text-text-secondary truncate">{{ player.userID|lookuptagline }}</p>
                     </div>
 
                     <!-- Points Display -->
                     <div class="text-right flex-shrink-0">
-                        <div class="text-3xl font-black text-secondary-light dark:text-secondary">{{ player.total_points|default:0 }}</div>
+                        <div class="text-xl font-black text-text-dark dark:text-white">{{ player.total_points|default:0 }}</div>
                         <div class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase tracking-wide">Points</div>
                     </div>
                 </div>
@@ -174,41 +182,41 @@
     </div>
 
     <!-- Week Winners Section -->
-    <div class="section-container mb-6">
-        <h3 class="section-title mb-6">
+    <div class="standings-section standings-compact-weekly-champions rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 mb-5 p-4">
+        <h3 class="text-sm font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-3">
             <i class="fas fa-calendar-check mr-2"></i>Weekly Champions
         </h3>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-9 gap-2">
             {% for i in 18|times %}
-            <div class="bg-surface-light dark:bg-surface-hover rounded-xl p-4 border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all">
-                <div class="text-center mb-3">
-                    <div class="text-sm font-bold text-primary mb-2">Week {{ i }}</div>
+            <div class="standings-week-tile bg-white/60 dark:bg-bg-dark/30 rounded-lg px-2 py-2 border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all">
+                <div class="text-center mb-2">
+                    <div class="text-[11px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Week {{ i }}</div>
                 </div>
                 <div class="flex flex-col items-center justify-center">
-                    {% with i|lookweekwinner:selected_season as winnername %}
+                    {% with weekly_winners|lookup:i as winnername %}
                         {% for x in winnername %}
-                            {% with x.userID|safe_username as username %}
-                            {% with x.userID|lookupavatar as avatar %}
-                            <div class="text-center">
-                                <a href="{% url 'user_profile' x.userID %}" class="block mb-2">
-                                    <img src="{{ avatar }}"
-                                         alt="Profile picture for {{ username }}"
-                                         class="w-16 h-16 rounded-full border-2 border-yellow-500 mx-auto hover:scale-110 transition-transform">
-                                </a>
-                                <div class="flex items-center justify-center gap-1 text-xs font-semibold text-text-dark dark:text-white">
-                                    <i class="fas fa-trophy text-yellow-500"></i>
-                                    <span class="truncate max-w-[80px] uppercase">{{ username }}</span>
-                                </div>
-                            </div>
+	                            {% with usernames|lookup:x.userID as username %}
+	                            {% with avatars|lookup:x.userID as avatar %}
+	                            <div class="text-center">
+	                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug x.userID %}{% else %}{% url 'user_profile' x.userID %}{% endif %}" class="block mb-1.5">
+	                                    <img src="{{ avatar }}"
+	                                         alt="Profile picture for {{ username }}"
+	                                         class="w-9 h-9 rounded-full border-2 border-yellow-500 mx-auto hover:scale-105 transition-transform">
+	                                </a>
+	                                <div class="flex items-center justify-center gap-1 text-xs font-semibold text-text-dark dark:text-white">
+	                                    <i class="fas fa-trophy text-yellow-500"></i>
+	                                    <span class="truncate max-w-[64px] uppercase">{{ username }}</span>
+	                                </div>
+	                            </div>
                             {% endwith %}
                             {% endwith %}
                         {% empty %}
                             <!-- If no winner, show a placeholder -->
-                            <img src="{% static 'images/profile.png' %}"
-                                 alt="TBD User Profile Picture"
-                                 class="w-16 h-16 rounded-full border-2 border-border-light dark:border-border-subtle opacity-50 mb-2 mx-auto">
-                            <div class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold">TBD</div>
+	                            <img src="{% static 'images/profile.png' %}"
+	                                 alt="TBD User Profile Picture"
+	                                 class="w-9 h-9 rounded-full border border-border-light dark:border-border-subtle opacity-50 mb-1.5 mx-auto">
+	                            <div class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold">TBD</div>
                         {% endfor %}
                     {% endwith %}
                 </div>
@@ -218,42 +226,42 @@
     </div>
 
     <!-- Week Details Section -->
-    <div class="section-container">
-        <h3 class="section-title mb-6">
+    <div class="standings-section standings-compact-breakdown rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 p-4">
+        <h3 class="text-sm font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-3">
             <i class="fas fa-chart-line mr-2"></i>Detailed Breakdown
         </h3>
 
         <!-- Player Detail Cards -->
-        <div class="space-y-4">
+        <div class="space-y-3">
             {% for player in player_points %}
-            <div class="bg-surface-light dark:bg-surface-hover rounded-xl p-6 border border-border-light dark:border-border-subtle">
-                {% with player.userID|safe_username as username %}
+            <div class="standings-breakdown-card bg-white/60 dark:bg-bg-dark/30 rounded-lg p-3 border border-border-light dark:border-border-subtle">
+                {% with usernames|lookup:player.userID as username %}
 
                 <!-- Player Header -->
-                <div class="flex items-center gap-4 mb-4 pb-4 border-b border-border-light dark:border-border-subtle">
-                    {% with player.userID|lookupavatar as avatar %}
-                    <a href="{% url 'user_profile' player.userID %}">
-                        <img src="{{ avatar }}"
-                             alt="Profile picture for {{ username }}"
-                             class="w-14 h-14 rounded-full border-2 border-border-light dark:border-border-subtle hover:scale-110 transition-transform">
+                <div class="flex items-center gap-3 mb-3 pb-3 border-b border-border-light dark:border-border-subtle">
+                    {% with avatars|lookup:player.userID as avatar %}
+                    <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}">
+	                        <img src="{{ avatar }}"
+	                             alt="Profile picture for {{ username }}"
+	                             class="w-9 h-9 rounded-full border border-border-light dark:border-border-subtle hover:scale-105 transition-transform">
                     </a>
-                    {% endwith %}
-                    <div class="flex-1">
-                        <h5 class="text-xl font-bold text-text-dark dark:text-white uppercase">{{ username }}</h5>
+	                    {% endwith %}
+	                    <div class="flex-1">
+	                        <h5 class="text-sm font-bold text-text-dark dark:text-white uppercase">{{ username }}</h5>
                         <p class="text-sm text-text-secondary-light dark:text-text-secondary">
-                            Total: <strong class="text-secondary-light dark:text-secondary">{{ player.total_points|default:0 }} points</strong>
+                            Total: <strong class="text-text-dark dark:text-white">{{ player.total_points|default:0 }} points</strong>
                         </p>
                     </div>
                 </div>
                 {% endwith %}
 
                 <!-- Weeks Grid -->
-                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-2">
+                <div class="grid grid-cols-6 sm:grid-cols-9 lg:grid-cols-[repeat(18,minmax(0,1fr))] gap-1.5">
                     {% for week_num in 18|times %}
-                    <div class="flex flex-col items-center justify-center p-2 bg-bg-light dark:bg-surface rounded-lg border border-border-light dark:border-border-subtle">
+                    <div class="flex flex-col items-center justify-center px-1.5 py-2 bg-bg-light dark:bg-surface rounded-md border border-border-light dark:border-border-subtle">
                         <div class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold mb-1">W{{ week_num }}</div>
                         {% with player|get_week_points:week_num as points %}
-                        <div class="text-lg font-black text-text-dark dark:text-white flex items-center gap-1">
+                        <div class="text-sm font-black text-text-dark dark:text-white flex items-center gap-1">
                             {% if points != None %}
                                 {{ points }}
                                 {% if player|get_week_winner:week_num %}
@@ -278,7 +286,66 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" integrity="sha384-HOvlOYPIs/zjoIkWUGXkVmXsjr8GuZLV+Q+rcPwmJOVZVpvTSXQChiN4t9Euv9Vc" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" integrity="sha384-P8VzCVnT9NBUkMrpcIZrJbA7EBjJvh/fJS6PmP+4nLIM284DtsImIv8D0fFjIkeh" crossorigin="anonymous"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (!window.gsap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+    }
+
+    var gsap = window.gsap;
+    if (window.ScrollTrigger) {
+        gsap.registerPlugin(window.ScrollTrigger);
+    }
+
+    gsap.set(['.standings-top-panel', '.standings-row'], {
+        autoAlpha: 0,
+        y: 18
+    });
+
+    gsap.timeline({ defaults: { ease: 'power3.out' } })
+        .to('.standings-top-panel', { autoAlpha: 1, y: 0, duration: 0.45 })
+        .to('.standings-row', { autoAlpha: 1, y: 0, duration: 0.28, stagger: 0.035 }, '-=0.18');
+
+    window.standingsRowMotion = function () {
+        document.querySelectorAll('.standings-row').forEach(function (row) {
+            row.addEventListener('mouseenter', function () {
+                gsap.to(row, { y: -3, scale: 1.01, duration: 0.18, ease: 'power2.out' });
+            });
+            row.addEventListener('mouseleave', function () {
+                gsap.to(row, { y: 0, scale: 1, duration: 0.2, ease: 'power2.out' });
+            });
+            row.addEventListener('focus', function () {
+                gsap.to(row, { y: -3, scale: 1.01, duration: 0.18, ease: 'power2.out' });
+            });
+            row.addEventListener('blur', function () {
+                gsap.to(row, { y: 0, scale: 1, duration: 0.2, ease: 'power2.out' });
+            });
+        });
+    };
+
+    window.standingsRowMotion();
+
+    if (window.ScrollTrigger) {
+        document.querySelectorAll('.standings-section, .standings-week-tile, .standings-breakdown-card').forEach(function (section) {
+            gsap.from(section, {
+                autoAlpha: 0,
+                y: 18,
+                duration: 0.4,
+                ease: 'power2.out',
+                scrollTrigger: {
+                    trigger: section,
+                    start: 'top 90%',
+                    once: true
+                }
+            });
+        });
+    }
+});
+</script>
+
 <!-- Alpine.js for dropdown (if not already included) -->
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js" integrity="sha384-pb6hrQvo4s23cEUFtj0CZkzGE3jyK3pj26RIupXXxhSrrcUA/Cn0lZgcCrGH0t6L" crossorigin="anonymous"></script>
 
 {% endblock %}

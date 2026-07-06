@@ -1,0 +1,65 @@
+{% extends 'pickem/base.html' %}
+
+{% block title %}Choose Family - Family Pick'em{% endblock %}
+
+{% block content %}
+<main class="max-w-5xl mx-auto px-6 py-10">
+    <section class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <p class="text-sm font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-3">Choose family</p>
+            <h1 class="text-3xl lg:text-4xl font-black text-text-dark dark:text-white mb-4">
+                Pick where you want to play
+            </h1>
+            <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
+                These are the active families linked to your account.
+            </p>
+        </div>
+        <a href="{% url 'create_family' %}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+            <i class="fas fa-plus"></i>
+            <span>Add a family</span>
+        </a>
+    </section>
+
+    {% if family_choices %}
+    <section class="space-y-4">
+        {% for choice in family_choices %}
+        <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                {% if choice.pool %}
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                    {{ choice.pool.name }} - {{ choice.pool.season }}
+                </p>
+                {% else %}
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                    This family needs an active pool before play can begin.
+                </p>
+                {% endif %}
+            </div>
+            {% if choice.url %}
+            <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
+                <span>Enter pool</span>
+                <i class="fas fa-arrow-right"></i>
+            </a>
+            {% else %}
+            <span class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-border-light dark:bg-surface-hover text-text-secondary-light dark:text-text-secondary font-semibold">
+                Pool setup needed
+            </span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </section>
+    {% else %}
+    <section class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-6">
+        <h2 class="text-xl font-bold text-text-dark dark:text-white mb-2">No active families</h2>
+        <p class="text-sm text-text-secondary-light dark:text-text-secondary mb-4">
+            Create a family or join one with an invite code.
+        </p>
+        <a href="{% url 'onboarding' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
+            <i class="fas fa-arrow-left"></i>
+            <span>Go to setup</span>
+        </a>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}

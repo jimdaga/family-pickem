@@ -43,6 +43,7 @@ class Family(models.Model):
 
     name = models.CharField(max_length=200, help_text="Family display name")
     slug = models.SlugField(max_length=80, unique=True, help_text="Stable family URL slug")
+    logo_url = models.CharField(max_length=500, null=True, blank=True, help_text="URL or static path to family logo (e.g. /static/images/logo.png or https://...)")
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -112,7 +113,8 @@ class Pool(models.Model):
 
 class FamilyMembership(models.Model):
     class Role(models.TextChoices):
-        OWNER = 'owner', 'Owner'
+        # DB value stays 'owner' (pre-rebrand); the family-facing name is Commissioner.
+        OWNER = 'owner', 'Commissioner'
         ADMIN = 'admin', 'Admin'
         MEMBER = 'member', 'Member'
 
@@ -161,6 +163,36 @@ class FamilyMembership(models.Model):
 
 
 class PoolSettings(models.Model):
+    class PrimaryTiebreaker(models.TextChoices):
+        TOTAL_SCORE = 'total_score', 'Closest total score'
+        TOTAL_SCORE_NO_OVER = 'total_score_no_over', 'Closest total score without going over'
+        COMBINED_YARDS = 'combined_yards', 'Closest combined yards'
+
+    class SecondaryTiebreaker(models.TextChoices):
+        COMBINED_YARDS = 'combined_yards', 'Closest combined yards'
+        TOTAL_SCORE = 'total_score', 'Closest total score'
+        SPLIT_POINTS = 'split_points', 'Split the points'
+        COIN_FLIP = 'coin_flip', 'Coin flip'
+
+    class PickType(models.TextChoices):
+        STRAIGHT_UP = 'straight_up', 'Straight up (pick the winner)'
+        AGAINST_SPREAD = 'against_spread', 'Against the spread (coming soon)'
+
+    class MissedPickPolicy(models.TextChoices):
+        ZERO_POINTS = 'zero_points', 'No points for missed picks'
+        AUTO_HOME = 'auto_home', 'Auto-pick the home team'
+        AUTO_FAVORITE = 'auto_favorite', 'Auto-pick the favorite'
+
+    class LateJoinPolicy(models.TextChoices):
+        OPEN = 'open', 'Members can join all season'
+        LOCK_AFTER_WEEK_1 = 'lock_after_week_1', 'Entries lock after Week 1'
+
+    class PayoutStructure(models.TextChoices):
+        WINNER_TAKES_ALL = 'winner_takes_all', '1st place takes the whole pool'
+        NINETY_TEN = 'ninety_ten', '1st gets 90%, 2nd gets 10%'
+        SEVENTY_TWENTY_TEN = 'seventy_twenty_ten', '1st 70%, 2nd 20%, 3rd 10%'
+        SECOND_GETS_FEE_BACK = 'second_gets_fee_back', '1st takes the pool, 2nd gets their entry fee back'
+
     pool = models.OneToOneField(Pool, on_delete=models.PROTECT, related_name='settings')
     picks_lock_at_kickoff = models.BooleanField(
         default=True,
@@ -170,6 +202,77 @@ class PoolSettings(models.Model):
         default=True,
         help_text="Allow tiebreaker predictions",
     )
+
+    # Scoring rules (display/config now; automated scoring reads these later)
+    win_points = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Points awarded per correct pick",
+    )
+    tie_points = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Points awarded when a picked game ends in a tie",
+    )
+    weekly_winner_points = models.PositiveSmallIntegerField(
+        default=2,
+        help_text="Bonus points awarded to the weekly winner",
+    )
+    primary_tiebreaker = models.CharField(
+        max_length=32,
+        choices=PrimaryTiebreaker.choices,
+        default=PrimaryTiebreaker.TOTAL_SCORE,
+        help_text="First tiebreaker used to settle weekly ties",
+    )
+    secondary_tiebreaker = models.CharField(
+        max_length=32,
+        choices=SecondaryTiebreaker.choices,
+        default=SecondaryTiebreaker.COMBINED_YARDS,
+        help_text="Second tiebreaker if the primary is also tied",
+    )
+    perfect_week_bonus_enabled = models.BooleanField(
+        default=False,
+        help_text="Award a cash bonus for picking every game correctly in a week",
+    )
+    perfect_week_bonus_amount = models.PositiveIntegerField(
+        default=10,
+        help_text="Perfect week bonus, in whole dollars",
+    )
+    entry_fee_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether this pool collects an entry fee",
+    )
+    entry_fee_amount = models.PositiveIntegerField(
+        default=0,
+        help_text="Entry fee per player, in whole dollars",
+    )
+    pick_type = models.CharField(
+        max_length=32,
+        choices=PickType.choices,
+        default=PickType.STRAIGHT_UP,
+        help_text="How picks are made (against-the-spread is not yet available)",
+    )
+    missed_pick_policy = models.CharField(
+        max_length=32,
+        choices=MissedPickPolicy.choices,
+        default=MissedPickPolicy.ZERO_POINTS,
+        help_text="What happens when a member doesn't submit a pick",
+    )
+    include_playoffs = models.BooleanField(
+        default=False,
+        help_text="Continue the pool through the playoffs (scoring logic coming later)",
+    )
+    late_join_policy = models.CharField(
+        max_length=32,
+        choices=LateJoinPolicy.choices,
+        default=LateJoinPolicy.OPEN,
+        help_text="Whether members can join after the season starts",
+    )
+    payout_structure = models.CharField(
+        max_length=32,
+        choices=PayoutStructure.choices,
+        default=PayoutStructure.WINNER_TAKES_ALL,
+        help_text="How the pot is split when an entry fee is collected",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -607,17 +710,17 @@ class userStats(models.Model):
     userEmail = models.EmailField(blank=True, db_column='useremail')
     userID = models.CharField(max_length=250, blank=True, db_column='userid')
     # Number of Weeks Won (Season / All Time)
-    weeksWonSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='weekswonseason')
-    weeksWonTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='weekswontotal')
+    weeksWonSeason = models.IntegerField(blank=True, null=True, db_column='weekswonseason')
+    weeksWonTotal = models.IntegerField(blank=True, null=True, db_column='weekswontotal')
     # Correct Pick Percentage (Season / All Time)
-    pickPercentSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='pickpercentseason')
-    pickPercentTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='pickpercenttotal')
+    pickPercentSeason = models.IntegerField(blank=True, null=True, db_column='pickpercentseason')
+    pickPercentTotal = models.IntegerField(blank=True, null=True, db_column='pickpercenttotal')
     # Total Number of Correct Picks (Season / All Time)
-    correctPickTotalSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='correctpicktotalseason')
-    correctPickTotalTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='correctpicktotaltotal')
+    correctPickTotalSeason = models.IntegerField(blank=True, null=True, db_column='correctpicktotalseason')
+    correctPickTotalTotal = models.IntegerField(blank=True, null=True, db_column='correctpicktotaltotal')
     # Total Number of Picks (Season / All Time)
-    totalPicksSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='totalpicksseason')
-    totalPicksTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='totalpickstotal')
+    totalPicksSeason = models.IntegerField(blank=True, null=True, db_column='totalpicksseason')
+    totalPicksTotal = models.IntegerField(blank=True, null=True, db_column='totalpickstotal')
     # Most Picked Team (Season / All Time)
     mostPickedSeason = models.TextField(blank=True, null=True, db_column='mostpickedseason')
     mostPickedTotal = models.TextField(blank=True, null=True, db_column='mostpickedtotal')
@@ -625,13 +728,13 @@ class userStats(models.Model):
     leastPickedSeason = models.TextField(blank=True, null=True, db_column='leastpickedseason')
     leastPickedTotal = models.TextField(blank=True, null=True, db_column='leastpickedtotal')
     # Number of seasons won (All Time)
-    seasonsWon = models.IntegerField(max_length=250, blank=True, null=True, db_column='seasonswon')
+    seasonsWon = models.IntegerField(blank=True, null=True, db_column='seasonswon')
     # Missed Picks (Season / All Time)
-    missedPicksSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='missedpicksseason')
-    missedPicksTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='missedpickstotal')
+    missedPicksSeason = models.IntegerField(blank=True, null=True, db_column='missedpicksseason')
+    missedPicksTotal = models.IntegerField(blank=True, null=True, db_column='missedpickstotal')
     # Perfect Weeks (Season / All Time)
-    perfectWeeksSeason = models.IntegerField(max_length=250, blank=True, null=True, db_column='perfectweeksseason')
-    perfectWeeksTotal = models.IntegerField(max_length=250, blank=True, null=True, db_column='perfectweekstotal')
+    perfectWeeksSeason = models.IntegerField(blank=True, null=True, db_column='perfectweeksseason')
+    perfectWeeksTotal = models.IntegerField(blank=True, null=True, db_column='perfectweekstotal')
 
     class Meta:
         indexes = [

@@ -1,0 +1,170 @@
+{% extends "pickem/base.html" %}
+
+{% block title %}Family Admin - {{ family.name }}{% endblock %}
+
+{% block content %}
+<div data-admin-page class="min-h-screen bg-gray-50 dark:bg-bg-dark">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 space-y-6">
+        <header class="admin-scoreboard-header rounded-2xl border border-border-light/80 dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/20">
+                        <i class="fas fa-shield-alt text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-black uppercase tracking-wide text-primary">Family Admin</div>
+                        <h1 class="text-2xl font-black tracking-tight text-text-dark dark:text-white">{{ family.name }}</h1>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                            {{ pool.name }} - {{ pool.season }} {{ pool.competition|upper }}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{% url 'family_pool_home' family.slug pool.slug %}" class="inline-flex items-center gap-2 rounded-full border border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 px-3 py-1.5 text-sm font-semibold text-text-dark dark:text-white hover:bg-white dark:hover:bg-surface transition-colors">
+                        <i class="fas fa-arrow-left"></i>
+                        Pool Home
+                    </a>
+                    <span class="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-white">
+                        <i class="fas fa-shield-alt"></i>
+                        {{ membership.get_role_display }}
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <section class="grid gap-3 md:grid-cols-3">
+            <div class="admin-compact-stat rounded-xl border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 px-4 py-3 shadow-sm">
+                <div class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Active Members</div>
+                <div class="mt-1 text-2xl font-black text-text-dark dark:text-white">{{ active_member_count }}</div>
+            </div>
+            <div class="admin-compact-stat rounded-xl border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 px-4 py-3 shadow-sm">
+                <div class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Active Invites</div>
+                <div class="mt-1 text-2xl font-black text-text-dark dark:text-white">{{ active_invite_count }}</div>
+            </div>
+            <div class="admin-compact-stat rounded-xl border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 px-4 py-3 shadow-sm">
+                <div class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Pick Locking</div>
+                <div class="mt-1 text-2xl font-black text-text-dark dark:text-white">
+                    {% if pool_settings and pool_settings.picks_lock_at_kickoff %}On{% else %}Off{% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-sm font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Admin Tools</h2>
+            <div class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {% for section in admin_sections %}
+                    {% if section.url %}
+                    <a href="{{ section.url }}" class="admin-tool-card rounded-lg border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 p-4 shadow-sm hover:border-primary hover:shadow-md transition-all">
+                        <div class="flex items-start gap-3">
+                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <i class="{{ section.icon }}"></i>
+                            </span>
+                            <span>
+                                <span class="block font-bold text-text-dark dark:text-white">{{ section.label }}</span>
+                                <span class="mt-1 block text-sm text-text-secondary-light dark:text-text-secondary">{{ section.description }}</span>
+                                <span class="mt-3 inline-flex text-xs font-semibold uppercase text-primary">{{ section.status }}</span>
+                            </span>
+                        </div>
+                    </a>
+                    {% else %}
+                    <div class="admin-tool-card rounded-lg border border-dashed border-border-light dark:border-border-subtle bg-white/70 dark:bg-surface/70 p-4 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-text-secondary-light dark:bg-slate-800 dark:text-text-secondary">
+                                <i class="{{ section.icon }}"></i>
+                            </span>
+                            <span>
+                                <span class="block font-bold text-text-dark dark:text-white">{{ section.label }}</span>
+                                <span class="mt-1 block text-sm text-text-secondary-light dark:text-text-secondary">{{ section.description }}</span>
+                                <span class="mt-3 inline-flex text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">{{ section.status }}</span>
+                            </span>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden">
+            <div class="flex flex-col gap-2 border-b border-border-light dark:border-border-subtle px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-text-dark dark:text-white">Recent Audit Activity</h2>
+                    <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Family-scoped owner and admin activity.</p>
+                </div>
+            </div>
+
+            {% if recent_audit_logs %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-border-light dark:divide-border-subtle">
+                    <thead class="bg-gray-100 dark:bg-slate-800">
+                        <tr>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">When</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Action</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Actor</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Target</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border-light dark:divide-border-subtle">
+                        {% for audit in recent_audit_logs %}
+                        <tr>
+                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary whitespace-nowrap">{{ audit.created_at|date:"M j, Y g:i A" }}</td>
+                            <td class="px-5 py-4 text-sm font-semibold text-text-dark dark:text-white">{{ audit.get_action_display }}</td>
+                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">
+                                {% if audit.actor %}{{ audit.actor.username }}{% else %}System{% endif %}
+                            </td>
+                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">
+                                {{ audit.target_type|default:"-" }}{% if audit.target_id %} #{{ audit.target_id }}{% endif %}
+                            </td>
+                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">
+                                {{ audit.metadata.summary|default:"Recorded admin activity" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="px-5 py-12 text-center">
+                <div class="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-text-secondary-light dark:bg-slate-800 dark:text-text-secondary">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <p class="mt-4 font-semibold text-text-dark dark:text-white">No audit activity yet</p>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Admin actions for this family will appear here.</p>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" integrity="sha384-HOvlOYPIs/zjoIkWUGXkVmXsjr8GuZLV+Q+rcPwmJOVZVpvTSXQChiN4t9Euv9Vc" crossorigin="anonymous"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (!window.gsap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+    }
+
+    var gsap = window.gsap;
+    gsap.set(['.admin-scoreboard-header', '.admin-compact-stat', '.admin-tool-card'], {
+        autoAlpha: 0,
+        y: 18
+    });
+
+    gsap.timeline({ defaults: { ease: 'power3.out' } })
+        .to('.admin-scoreboard-header', { autoAlpha: 1, y: 0, duration: 0.42 })
+        .to('.admin-compact-stat', { autoAlpha: 1, y: 0, duration: 0.26, stagger: 0.04 }, '-=0.16')
+        .to('.admin-tool-card', { autoAlpha: 1, y: 0, duration: 0.28, stagger: 0.035 }, '-=0.1');
+
+    window.adminCardMotion = function () {
+        document.querySelectorAll('.admin-tool-card').forEach(function (card) {
+            card.addEventListener('mouseenter', function () {
+                gsap.to(card, { y: -3, scale: 1.006, duration: 0.18, ease: 'power2.out' });
+            });
+            card.addEventListener('mouseleave', function () {
+                gsap.to(card, { y: 0, scale: 1, duration: 0.2, ease: 'power2.out' });
+            });
+        });
+    };
+
+    window.adminCardMotion();
+});
+</script>
+{% endblock %}

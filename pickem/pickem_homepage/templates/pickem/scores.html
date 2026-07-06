@@ -2,6 +2,8 @@
 {% load static %}
 {% load pickem_homepage_extras %}
 
+{% block title %}Live Scores{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
+
 {% block mobile_title %}
     <div class="mobile-subtitle">
         <i class="fas fa-chart-line mr-2"></i>Scores
@@ -10,77 +12,63 @@
 
 {% block content %}
 
-    <!-- Hero Header -->
-    <div class="relative text-center mb-6 px-4 py-8 lg:py-12 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 dark:from-blue-600/30 dark:via-purple-600/20 dark:to-red-600/30 border-b-2 border-blue-800 dark:border-blue-500/40 shadow-xl animate-fade-in">
-        <!-- Subtle background pattern -->
-        <div class="absolute inset-0 opacity-20 dark:opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSIjRkZGIiBzdHJva2Utd2lkdGg9IjIiLz48L2c+PC9zdmc+')] pointer-events-none"></div>
+<div data-scores-page class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
 
-        <!-- Content -->
-        <div class="relative z-10">
-            <!-- Icon -->
-            <div class="flex items-center justify-center mb-3 lg:mb-4">
-                <i class="fas fa-chart-line text-4xl lg:text-6xl text-primary"></i>
-            </div>
+    <!-- Scoreboard header + filters -->
+    <div class="scores-top-panel mb-6">
+        <div class="scores-scoreboard-header rounded-2xl border border-border-light/80 dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 px-4 py-4 shadow-sm backdrop-blur sm:px-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/20">
+                        <i class="fas fa-chart-line text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black tracking-tight text-text-dark dark:text-white">Live Scores</h2>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                            {% if competition == 'nfl-preseason' %}Preseason &bull; Week {{ week }}{% else %}Regular Season &bull; Week {{ week }}{% endif %}
+                        </p>
+                    </div>
+                </div>
 
-            <!-- Title -->
-            <h2 class="text-3xl lg:text-5xl font-black tracking-tight mb-2 lg:mb-3"
-                style="font-family: 'Urbanist', sans-serif; text-transform: uppercase; letter-spacing: -0.02em; color: white; -webkit-text-stroke: 3px #FF6B1A; paint-order: stroke fill;">
-                Live Scores
-            </h2>
-
-            <!-- Subtitle -->
-            <p class="text-base lg:text-xl text-white/90 dark:text-text-secondary font-medium">
-                {% if competition == 'nfl-preseason' %}
-                    Preseason - Week {{ week }}
-                {% else %}
-                    Regular Season - Week {{ week }}
+                {% if user.is_authenticated and user_weekly_stats %}
+                <div class="grid grid-cols-3 gap-2 rounded-xl border border-border-light/80 dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 p-2 text-center sm:min-w-[420px]">
+                    <div class="px-2 py-1.5">
+                        <div class="text-[10px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Accuracy</div>
+                        <div class="text-lg font-black text-text-dark dark:text-white">{{ user_weekly_stats.accuracy }}%</div>
+                        <div class="text-[11px] text-text-secondary-light dark:text-text-secondary">{{ user_weekly_stats.correct_picks }}/{{ user_weekly_stats.total_graded_picks }}</div>
+                    </div>
+                    <div class="border-x border-border-light dark:border-border-subtle px-2 py-1.5">
+                        <div class="text-[10px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Correct</div>
+                        <div class="text-lg font-black text-text-dark dark:text-white">{{ user_weekly_stats.correct_picks }}</div>
+                        <div class="text-[11px] text-text-secondary-light dark:text-text-secondary">graded picks</div>
+                    </div>
+                    <div class="px-2 py-1.5">
+                        <div class="text-[10px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Week {{ week }}</div>
+                        <div class="text-lg font-black text-text-dark dark:text-white">{{ user_weekly_stats.weekly_points }}</div>
+                        <div class="text-[11px] text-text-secondary-light dark:text-text-secondary">points</div>
+                    </div>
+                </div>
                 {% endif %}
-            </p>
-        </div>
-    </div>
-
-<div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
-
-
-    <!-- Your Weekly Performance Section -->
-    {% if user.is_authenticated and user_weekly_stats %}
-    <div class="section-container mb-6">
-        <div class="flex items-center gap-4">
-            <img src="{{ user.socialaccount_set.all.0.get_avatar_url }}"
-                 alt="Your profile picture"
-                 class="w-16 h-16 rounded-full border-2 border-primary">
-            <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
-                <div>
-                    <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase font-semibold">Picks Accuracy:</div>
-                    <div class="text-lg font-bold text-text-dark dark:text-white">{{ user_weekly_stats.accuracy }}% <span class="text-sm font-normal text-text-secondary-light dark:text-text-secondary">({{ user_weekly_stats.correct_picks }}/{{ user_weekly_stats.total_graded_picks }} Graded)</span></div>
-                </div>
-                <div>
-                    <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase font-semibold">Correct Picks:</div>
-                    <div class="text-lg font-bold text-text-dark dark:text-white">{{ user_weekly_stats.correct_picks }}</div>
-                </div>
-                <div>
-                    <div class="text-xs text-text-secondary-light dark:text-text-secondary uppercase font-semibold">Week {{ week }} Points:</div>
-                    <div class="text-lg font-bold text-text-dark dark:text-white">{{ user_weekly_stats.weekly_points }}</div>
-                </div>
             </div>
         </div>
-    </div>
-    {% endif %}
 
-    <!-- Filter Controls -->
-    <div class="section-container mb-6">
-        <div class="flex flex-wrap gap-2 justify-center">
-            <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn active bg-blue-600 border-blue-600 text-white hover:bg-blue-700" data-filter="all">
-                <i class="fas fa-list mr-2"></i>All Games
+        <!-- Filter Controls -->
+        <div class="scores-filter-bar mt-3 flex flex-wrap gap-2">
+            <button class="scores-filter-btn relative overflow-hidden px-3.5 py-2 rounded-full text-sm font-semibold transition-colors border filter-btn active bg-blue-600 border-blue-600 text-white hover:bg-blue-700" data-filter="all" data-scores-filter>
+                <span class="scores-filter-sheen pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-white/35 opacity-0"></span>
+                <span class="relative z-10"><i class="fas fa-list mr-2"></i>All Games</span>
             </button>
-            <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn border-green-600 text-green-600 dark:text-green-400 hover:bg-green-600/10" data-filter="live">
-                <i class="fas fa-circle mr-2 animate-pulse"></i>Live
+            <button class="scores-filter-btn relative overflow-hidden px-3.5 py-2 rounded-full text-sm font-semibold transition-colors border filter-btn border-green-600 text-green-600 dark:text-green-400 hover:bg-green-600/10" data-filter="live" data-scores-filter>
+                <span class="scores-filter-sheen pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-white/35 opacity-0"></span>
+                <span class="relative z-10"><i class="fas fa-circle mr-2 animate-pulse"></i>Live</span>
             </button>
-            <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-600/10" data-filter="final">
-                <i class="fas fa-flag-checkered mr-2"></i>Final
+            <button class="scores-filter-btn relative overflow-hidden px-3.5 py-2 rounded-full text-sm font-semibold transition-colors border filter-btn border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-600/10" data-filter="final" data-scores-filter>
+                <span class="scores-filter-sheen pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-white/35 opacity-0"></span>
+                <span class="relative z-10"><i class="fas fa-flag-checkered mr-2"></i>Final</span>
             </button>
-            <button class="px-4 py-2 rounded-xl text-sm font-medium transition-all border-2 filter-btn border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-600/10" data-filter="upcoming">
-                <i class="fas fa-clock mr-2"></i>Upcoming
+            <button class="scores-filter-btn relative overflow-hidden px-3.5 py-2 rounded-full text-sm font-semibold transition-colors border filter-btn border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-600/10" data-filter="upcoming" data-scores-filter>
+                <span class="scores-filter-sheen pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-white/35 opacity-0"></span>
+                <span class="relative z-10"><i class="fas fa-clock mr-2"></i>Upcoming</span>
             </button>
         </div>
     </div>
@@ -91,23 +79,25 @@
     {% if show_week_stats_sidebar %}
     {% for player in week_winner %}
     {% if player.id != None %}
-    <div class="section-container mb-6">
-        <h3 class="section-title">
-            <i class="fas fa-trophy mr-2"></i>Week Winner
-        </h3>
-        <div class="flex items-center justify-center gap-6 py-6">
+    <div class="scores-compact-week-winner rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 px-4 py-3 mb-4">
+        <div class="flex items-center justify-between gap-4">
+            <h3 class="text-sm font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">
+                <i class="fas fa-trophy mr-2 text-yellow-500"></i>Week Winner
+            </h3>
             {% with player.userID|lookupname as username %}
             {% with player.userID|lookupavatar as avatar %}
-            <a href="{% url 'user_profile' player.userID %}" class="group">
-                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                     alt="Profile picture for {{ username }}"
-                     class="w-24 h-24 rounded-full border-4 border-yellow-500 shadow-glow-primary group-hover:scale-110 transition-transform">
-            </a>
-            <div class="text-center">
-                <h4 class="text-2xl font-bold text-text-dark dark:text-white mb-2">{{ username|default:"Unknown Player" }}</h4>
-                <div class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 dark:bg-yellow-600/20 border-2 border-yellow-500 rounded-xl">
-                    <i class="fas fa-crown text-yellow-500"></i>
-                    <span class="font-bold text-text-dark dark:text-white">Champion</span>
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="group flex-shrink-0">
+                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
+                         alt="Profile picture for {{ username }}"
+                         class="w-10 h-10 rounded-full border-2 border-yellow-500 group-hover:scale-105 transition-transform">
+                </a>
+                <div class="min-w-0 text-right sm:text-left">
+                    <h4 class="truncate text-base font-black text-text-dark dark:text-white">{{ username|default:"Unknown Player" }}</h4>
+                    <div class="inline-flex items-center gap-1.5 rounded-full bg-yellow-500/15 px-2.5 py-0.5 text-xs font-bold text-yellow-700 dark:text-yellow-300">
+                        <i class="fas fa-crown text-yellow-500"></i>
+                        <span>Champion</span>
+                    </div>
                 </div>
             </div>
             {% endwith %}
@@ -118,11 +108,11 @@
     {% endfor %}
         
         <!-- Week Points Leaderboard - Two Columns on Large Screens -->
-        <div class="section-container mb-6" x-data="{ open: true }">
+        <div class="scores-compact-week-points rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 mb-5" x-data="{ open: true }">
             <button @click="open = !open"
-                    class="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-light/50 dark:hover:bg-surface-hover/50 rounded-t-2xl transition-colors"
+                    class="w-full flex items-center justify-between px-4 py-2.5 hover:bg-surface-light/50 dark:hover:bg-surface-hover/50 rounded-xl transition-colors"
                     type="button">
-                <h3 class="text-2xl font-bold text-text-dark dark:text-gray-100 flex items-center mb-0">
+                <h3 class="text-sm font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary flex items-center mb-0">
                     <i class="fas fa-list-ol mr-2"></i>Week Points
                 </h3>
                 <i class="fas fa-chevron-down transition-transform duration-200" :class="{ 'rotate-180': open }"></i>
@@ -131,25 +121,25 @@
                  x-transition:enter="transition ease-out duration-100"
                  x-transition:enter-start="opacity-0 -translate-y-2"
                  x-transition:enter-end="opacity-100 translate-y-0"
-                 class="points-leaderboard points-leaderboard-multi-column bg-transparent px-1 sm:px-2 lg:px-4 pb-4"
+                 class="points-leaderboard points-leaderboard-multi-column bg-transparent px-3 pb-3"
                  id="week-points-leaderboard">
                         {% for player in user_points %}
-                        <div data-player-card class="w-full flex items-center justify-between p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-2">
+                        <div data-player-card class="w-full flex items-center justify-between px-3 py-2 bg-white/60 dark:bg-bg-dark/30 rounded-lg border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-1.5">
                             {% with player.uid|lookupname as username %}
                             {% with player.uid|lookupavatar as avatar %}
                             <div class="flex items-center gap-3 min-w-0 flex-1">
-                                <a href="{% url 'user_profile' player.uid %}" class="flex-shrink-0 group">
-                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                                         alt="Profile picture for {{ username }}"
-                                         class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:scale-110 transition-transform">
-                                </a>
-                                <div class="min-w-0 flex-1">
-                                    <a href="{% url 'user_profile' player.uid %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
-                                </div>
-                            </div>
-                            <div class="flex items-baseline gap-1 flex-shrink-0">
-                                <span class="text-2xl font-black text-secondary-light dark:text-secondary">{{ player.wins }}</span>
-                                <span class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
+                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.uid %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="flex-shrink-0 group">
+	                                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
+	                                         alt="Profile picture for {{ username }}"
+	                                         class="w-8 h-8 rounded-full border border-border-light dark:border-border-subtle group-hover:scale-105 transition-transform">
+	                                </a>
+	                                <div class="min-w-0 flex-1">
+	                                    <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.uid %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="text-sm font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
+	                                </div>
+	                            </div>
+	                            <div class="flex items-baseline gap-1 flex-shrink-0">
+	                                <span class="text-lg font-black text-text-dark dark:text-white">{{ player.wins }}</span>
+	                                <span class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
                             </div>
                             {% endwith %}
                             {% endwith %}
@@ -158,21 +148,21 @@
 
                         {% for player in players_names %}
                         {% if player not in users_w_points %}
-                        <div data-player-card class="w-full flex items-center justify-between p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-2">
+                        <div data-player-card class="w-full flex items-center justify-between px-3 py-2 bg-white/60 dark:bg-bg-dark/30 rounded-lg border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-1.5">
                             {% with player|lookupname as username %}
                             {% with player|lookupavatar as avatar %}
                             <div class="flex items-center gap-3 min-w-0 flex-1">
-                                <a href="{% url 'user_profile' player %}" class="flex-shrink-0 group">
-                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
-                                         alt="Profile picture for {{ username }}"
-                                         class="w-12 h-12 rounded-full border-2 border-border-light dark:border-border-subtle group-hover:scale-110 transition-transform">
-                                </a>
-                                <div class="min-w-0 flex-1">
-                                    <a href="{% url 'user_profile' player %}" class="text-lg font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
-                                </div>
-                            </div>
-                            <div class="flex items-baseline gap-1 flex-shrink-0">
-                                <span class="text-2xl font-black text-secondary-light dark:text-secondary">0</span>
+                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player %}{% else %}{% url 'user_profile' player %}{% endif %}" class="flex-shrink-0 group">
+	                                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
+	                                         alt="Profile picture for {{ username }}"
+	                                         class="w-8 h-8 rounded-full border border-border-light dark:border-border-subtle group-hover:scale-105 transition-transform">
+	                                </a>
+	                                <div class="min-w-0 flex-1">
+	                                    <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player %}{% else %}{% url 'user_profile' player %}{% endif %}" class="text-sm font-bold text-text-dark dark:text-white truncate hover:text-primary dark:hover:text-primary transition-colors block uppercase">{{ username|default:"Unknown Player" }}</a>
+	                                </div>
+	                            </div>
+	                            <div class="flex items-baseline gap-1 flex-shrink-0">
+	                                <span class="text-lg font-black text-text-dark dark:text-white">0</span>
                                 <span class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
                             </div>
                             {% endwith %}
@@ -284,17 +274,17 @@
         {% if game_list %}
             {% regroup game_list by startTimestamp as games_by_time %}
             {% for time_group in games_by_time %}
-            <div class="section-container mb-4 relative" x-data="{ open: true }">
+            <div class="scores-time-group scores-kickoff-group mb-7 relative" x-data="{ open: true }">
                 <button @click="open = !open"
-                        class="w-full flex items-center justify-between px-4 py-2 hover:bg-surface-light/50 dark:hover:bg-surface-hover/50 rounded-t-2xl transition-colors"
+                        class="w-full flex items-center justify-between gap-3 border-b border-border-light dark:border-border-subtle px-1 pb-2 text-left transition-colors hover:border-primary/40"
                         type="button">
-                    <div class="flex items-center text-lg font-bold text-text-dark dark:text-gray-100">
-                        <i class="fas fa-calendar mr-2"></i>
+                    <div class="flex items-center text-lg font-black text-text-dark dark:text-gray-100">
+                        <i class="fas fa-calendar mr-2 text-primary"></i>
                         <span>{{ time_group.grouper|date:"l, F j" }}</span>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span class="text-sm font-semibold text-text-dark dark:text-white px-3 py-1 bg-primary/90 rounded-lg">
-                            {{ time_group.grouper|date:"g:i A" }}
+                        <span class="text-xs font-black uppercase tracking-wide text-white px-3 py-1 bg-primary/90 rounded-full">
+                            {{ time_group.grouper|game_start_label }}
                         </span>
                         <i class="fas fa-chevron-down transition-transform duration-200" :class="{ 'rotate-180': open }"></i>
                     </div>
@@ -304,22 +294,22 @@
                      x-transition:enter="transition ease-out duration-200"
                      x-transition:enter-start="opacity-0 -translate-y-2"
                      x-transition:enter-end="opacity-100 translate-y-0"
-                     class="games-grid px-1 sm:px-2 lg:px-4 pt-1 pb-4 grid grid-cols-1 md:grid-cols-2 gap-6"
+                     class="games-grid pt-4 grid grid-cols-1 md:grid-cols-2 gap-6"
                      id="games-{{ time_group.grouper|date:'Y-m-d-Hi' }}">
                             {% for game in time_group.list %}
-                            <div class="game-score-card bg-surface-light dark:bg-surface rounded-xl overflow-hidden border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 flex flex-col" data-game-status="{{ game.statusType|lower }}">
+                            <div class="scores-game-card game-score-card bg-surface-light dark:bg-slate-700 rounded-xl overflow-hidden border border-border-light dark:border-slate-600 hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 flex flex-col {% if game.statusType == 'inprogress' %}scores-live-game{% endif %}" data-game-status="{{ game.statusType|lower }}" data-scores-card>
                                 <!-- Game Status Header -->
                                 <div class="flex items-center justify-between px-3 py-1 text-sm font-semibold text-white {% if game.statusType == 'inprogress' %}bg-gradient-to-r from-green-600 to-green-700{% elif game.statusType == 'finished' %}bg-gradient-to-r from-blue-600 to-blue-700{% else %}bg-gradient-to-r from-gray-600 to-gray-700 dark:from-gray-700 dark:to-gray-800{% endif %}">
                                     <div class="flex items-center gap-2">
                                         <i class="fas {% if game.statusType == 'inprogress' %}fa-circle animate-pulse{% elif game.statusType == 'finished' %}fa-check-circle{% else %}fa-clock{% endif %}"></i>
                                         <span>{{ game.statusTitle }}</span>
                                     </div>
-                                    <span class="text-xs opacity-90">{{ game.startTimestamp|date:"g:i A" }}</span>
+                                    <span class="text-xs opacity-90">{{ game|game_start_label }}</span>
                                 </div>
 
                                 <!-- Game Info (Spread, Weather, etc.) -->
                                 {% if game.spread or game.overUnder or game.temperature or game.weatherCondition %}
-                                <div class="flex flex-wrap items-center justify-center gap-3 px-3 py-1 text-xs text-text-dark dark:text-text-secondary border-b border-border-light dark:border-border-subtle bg-border-light dark:bg-surface-hover">
+                                <div class="flex flex-wrap items-center justify-center gap-3 px-3 py-1 text-xs text-text-dark dark:text-text-secondary border-b border-border-light dark:border-slate-600 bg-border-light dark:bg-slate-800">
                                     {% if game.spread %}
                                     <div class="flex items-center gap-1">
                                         <i class="fas fa-chart-line"></i>
@@ -381,8 +371,7 @@
                                 <div class="teams-matchup">
                                     <!-- Away Team -->
                                     {% with game.awayTeamSlug|lookuplogo as away_team %}
-                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}winning-team{% endif %}"
-                                         {% if away_team.color %}style="background: linear-gradient(135deg, #{{ away_team.color }}15 0%, #{{ away_team.alternateColor|default:away_team.color }}08 100%);"{% endif %}>
+                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}winning-team{% endif %}">
                                         <div class="team-info">
                                             <img src="{{ away_team.teamLogo|default:'/static/images/nfl.svg' }}"
                                                  alt="{{ game.awayTeamName }} logo"
@@ -430,7 +419,7 @@
                                                     <span class="quarter-score">{{ game.awayTeamPeriod3|default:"—" }}</span>
                                                     <span class="quarter-score">{{ game.awayTeamPeriod4|default:"—" }}</span>
                                                 </div>
-                                                <div class="total-score text-3xl md:text-4xl font-black text-primary pl-3">{{ game.awayTeamScore|default:"0" }}</div>
+                                                <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3">{{ game.awayTeamScore|default:"0" }}</div>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -439,8 +428,7 @@
 
                                     <!-- Home Team -->
                                     {% with game.homeTeamSlug|lookuplogo as home_team %}
-                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}winning-team{% endif %}"
-                                         {% if home_team.color %}style="background: linear-gradient(135deg, #{{ home_team.color }}15 0%, #{{ home_team.alternateColor|default:home_team.color }}08 100%);"{% endif %}>
+                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}winning-team{% endif %}">
                                         <div class="team-info">
                                             <img src="{{ home_team.teamLogo|default:'/static/images/nfl.svg' }}"
                                                  alt="{{ game.homeTeamName }} logo"
@@ -488,7 +476,7 @@
                                                     <span class="quarter-score">{{ game.homeTeamPeriod3|default:"—" }}</span>
                                                     <span class="quarter-score">{{ game.homeTeamPeriod4|default:"—" }}</span>
                                                 </div>
-                                                <div class="total-score text-3xl md:text-4xl font-black text-primary pl-3">{{ game.homeTeamScore|default:"0" }}</div>
+                                                <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3">{{ game.homeTeamScore|default:"0" }}</div>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -502,7 +490,7 @@
                                     {% if game.gamecastUrl %}
                                     <a href="{{ game.gamecastUrl }}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1 bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 rounded-lg transition-colors">
                                         <i class="fas fa-external-link-alt text-primary"></i>
-                                        <span class="text-sm font-semibold text-primary">Game Preview</span>
+                                        <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Game Preview</span>
                                     </a>
                                     {% else %}
                                     <div></div>
@@ -559,8 +547,8 @@
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
                                                             <div class="flex flex-col items-center gap-1">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
-                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
                                                                          style="box-shadow: 0 0 12px rgba(40, 167, 69, 0.7), 0 0 24px rgba(40, 167, 69, 0.4);"
@@ -573,8 +561,8 @@
                                                             </div>
                                                         {% else %}
                                                             <div class="flex flex-col items-center gap-1 opacity-60">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
-                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
                                                                          style="box-shadow: 0 0 12px rgba(220, 53, 69, 0.7), 0 0 24px rgba(220, 53, 69, 0.4);"
@@ -588,8 +576,8 @@
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
                                                         <div class="flex flex-col items-center gap-1">
-                                                            <a href="{% url 'user_profile' pick.uid %}" class="group">
-                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                                <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
                                                                      alt="{{ username|default:'Unknown' }}"
                                                                      class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
                                                                      style="box-shadow: 0 0 12px rgba(255, 193, 7, 0.7), 0 0 24px rgba(255, 193, 7, 0.4);"
@@ -631,8 +619,8 @@
                                                     {% if game.statusType == 'finished' %}
                                                         {% if game.gameWinner == pick.pick %}
                                                             <div class="flex flex-col items-center gap-1">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
-                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
                                                                          style="box-shadow: 0 0 12px rgba(40, 167, 69, 0.7), 0 0 24px rgba(40, 167, 69, 0.4);"
@@ -645,8 +633,8 @@
                                                             </div>
                                                         {% else %}
                                                             <div class="flex flex-col items-center gap-1 opacity-60">
-                                                                <a href="{% url 'user_profile' pick.uid %}" class="group">
-                                                                    <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
                                                                          alt="{{ username|default:'Unknown' }}"
                                                                          class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
                                                                          style="box-shadow: 0 0 12px rgba(220, 53, 69, 0.7), 0 0 24px rgba(220, 53, 69, 0.4);"
@@ -660,8 +648,8 @@
                                                         {% endif %}
                                                     {% elif game.statusType == 'inprogress' %}
                                                         <div class="flex flex-col items-center gap-1">
-                                                            <a href="{% url 'user_profile' pick.uid %}" class="group">
-                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}"
+                                                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
+                                                                <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
                                                                      alt="{{ username|default:'Unknown' }}"
                                                                      class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
                                                                      style="box-shadow: 0 0 12px rgba(255, 193, 7, 0.7), 0 0 24px rgba(255, 193, 7, 0.4);"
@@ -775,7 +763,7 @@
                                                         {% with player|lookupname as username %}
                                                         {% with player|lookupavatar as avatar %}
                                                             <div class="missing-pick-user">
-                                                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                                                                <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}" 
                                                                      alt="{{ username|default:'Unknown' }}" 
                                                                      class="missing-pick-avatar" 
                                                                      title="{{ username|default:'Unknown' }} - No Pick">
@@ -812,7 +800,7 @@
                     {% if is_default_week %}
                     <h4 class="text-xl font-bold text-text-dark dark:text-white mb-3">Week {{ week }} Games Coming Soon</h4>
                     <p class="text-text-secondary-light dark:text-text-secondary mb-6 max-w-md">NFL Week {{ week }} games will appear here once the schedule is released. Get ready for the season by submitting your picks!</p>
-                    <a href="{% url 'game_picks' %}" class="btn-primary px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 transition-all hover:shadow-card-hover">
+                    <a href="{% if family and pool %}{% url 'family_pool_game_picks' family.slug pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}" class="btn-primary px-6 py-3 rounded-xl font-semibold inline-flex items-center gap-2 transition-all hover:shadow-card-hover">
                         <i class="fas fa-edit"></i>
                         <span>Submit Week {{ week }} Picks</span>
                     </a>
@@ -841,8 +829,8 @@
                         {% with player.userID|lookupname as username %}
                         {% with player.userID|lookupavatar as avatar %}
                         <div class="winner-profile">
-                            <a href="{% url 'user_profile' player.userID %}" class="winner-avatar-link">
-                                <img src="{{ avatar|default:'https://www.wmata.com/systemimages/icons/menu-car-icon.png' }}" 
+                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="winner-avatar-link">
+                                <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}" 
                                      alt="Profile picture for {{ username }}" 
                                      class="winner-avatar">
                             </a>
@@ -863,6 +851,152 @@
         </div>
         {% endif %}
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" integrity="sha384-HOvlOYPIs/zjoIkWUGXkVmXsjr8GuZLV+Q+rcPwmJOVZVpvTSXQChiN4t9Euv9Vc" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" integrity="sha384-P8VzCVnT9NBUkMrpcIZrJbA7EBjJvh/fJS6PmP+4nLIM284DtsImIv8D0fFjIkeh" crossorigin="anonymous"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!window.gsap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+
+        var gsap = window.gsap;
+        if (window.ScrollTrigger) {
+            gsap.registerPlugin(window.ScrollTrigger);
+        }
+
+        gsap.set(['.scores-top-panel', '.scores-filter-btn'], {
+            autoAlpha: 0,
+            y: 18
+        });
+
+        gsap.timeline({ defaults: { ease: 'power3.out' } })
+            .to('.scores-top-panel', { autoAlpha: 1, y: 0, duration: 0.45 })
+            .to('.scores-filter-btn', { autoAlpha: 1, y: 0, duration: 0.28, stagger: 0.04 }, '-=0.18');
+
+        if (window.ScrollTrigger) {
+            document.querySelectorAll('.scores-time-group').forEach(function (group) {
+                gsap.from(group, {
+                    autoAlpha: 0,
+                    y: 22,
+                    duration: 0.45,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: group,
+                        start: 'top 88%',
+                        once: true
+                    }
+                });
+            });
+        }
+
+        window.scoresFilterMotion = function (cards) {
+            var visibleCards = Array.prototype.slice.call(cards || []).filter(function (card) {
+                return card.style.display !== 'none';
+            });
+            if (!visibleCards.length) {
+                return;
+            }
+            gsap.fromTo(visibleCards, {
+                autoAlpha: 0,
+                y: 12,
+                scale: 0.985
+            }, {
+                autoAlpha: 1,
+                y: 0,
+                scale: 1,
+                duration: 0.28,
+                stagger: 0.025,
+                ease: 'power2.out',
+                clearProps: 'opacity,visibility,transform'
+            });
+        };
+
+        var scoresFilterButtonMotion = function () {
+            document.querySelectorAll('[data-scores-filter]').forEach(function (button) {
+                var sheen = button.querySelector('.scores-filter-sheen');
+
+                var resetSheen = function () {
+                    if (sheen) {
+                        gsap.set(sheen, { autoAlpha: 0, xPercent: -80 });
+                    }
+                };
+
+                var enter = function () {
+                    gsap.to(button, {
+                        y: -3,
+                        scale: 1.03,
+                        duration: 0.18,
+                        ease: 'power2.out'
+                    });
+                    if (sheen) {
+                        resetSheen();
+                        gsap.fromTo(sheen, {
+                            xPercent: -80,
+                            autoAlpha: 0
+                        }, {
+                            xPercent: 280,
+                            autoAlpha: 0.5,
+                            duration: 0.45,
+                            ease: 'power2.out',
+                            onComplete: resetSheen
+                        });
+                    }
+                };
+
+                var leave = function () {
+                    resetSheen();
+                    gsap.to(button, {
+                        y: 0,
+                        scale: 1,
+                        duration: 0.2,
+                        ease: 'power2.out'
+                    });
+                };
+
+                var press = function () {
+                    gsap.to(button, {
+                        scale: 0.96,
+                        duration: 0.07,
+                        repeat: 1,
+                        yoyo: true,
+                        ease: 'power1.inOut'
+                    });
+                };
+
+                button.addEventListener('mouseenter', enter);
+                button.addEventListener('mouseleave', leave);
+                button.addEventListener('focus', enter);
+                button.addEventListener('blur', leave);
+                button.addEventListener('pointerdown', press);
+            });
+        };
+
+        window.scoresLivePulse = function () {
+            if (window.scoresLivePulseTween) {
+                window.scoresLivePulseTween.kill();
+            }
+            gsap.set('.scores-game-card', { clearProps: 'boxShadow' });
+            // No live games -> nothing to pulse (avoids the GSAP
+            // "target not found" console warning during quiet weeks).
+            if (!document.querySelector('.scores-live-game')) {
+                window.scoresLivePulseTween = null;
+                return;
+            }
+            window.scoresLivePulseTween = gsap.to('.scores-live-game', {
+                boxShadow: '0 0 0 2px rgba(34, 197, 94, 0.32), 0 18px 42px rgba(34, 197, 94, 0.16)',
+                duration: 1.6,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut'
+            });
+        };
+
+        scoresFilterButtonMotion();
+        window.scoresLivePulse();
+        window.scoresFilterMotion(document.querySelectorAll('.game-score-card'));
+    });
+    </script>
 
     <!-- Game Filtering and Interactions Script -->
     <script>
@@ -911,6 +1045,10 @@
                 parentContainer.style.display = 'block';
             }
         });
+
+        if (window.scoresFilterMotion) {
+            window.scoresFilterMotion(gameCards);
+        }
     }
     
     // Add click event listeners to filter buttons
@@ -1272,13 +1410,8 @@
                         // Update the entire game card content
                         currentGame.innerHTML = newGames[index].innerHTML;
                         currentGame.setAttribute('data-game-status', newStatus);
+                        currentGame.classList.toggle('scores-live-game', newStatus === 'inprogress');
                         
-                        // Re-apply dark mode styles after content update
-                        setTimeout(() => {
-                            if (typeof forceDarkModeScores === 'function') {
-                                forceDarkModeScores();
-                            }
-                        }, 10);
                         
                         // Add update animation
                         currentGame.style.animation = 'none';
@@ -1288,15 +1421,19 @@
                         gamesUpdated++;
                         
                         // Check if game just completed
-                        if (currentStatus === 'inprogress' && newStatus === 'finished') {
-                            completedGames++;
-                            // Add completion effect
-                            currentGame.style.border = '2px solid #28a745';
-                            setTimeout(() => {
-                                currentGame.style.border = '';
-                            }, 3000);
-                        }
-                    } else {
+	                        if (currentStatus === 'inprogress' && newStatus === 'finished') {
+	                            completedGames++;
+	                            // Add completion effect
+	                            currentGame.style.border = '2px solid #28a745';
+	                            setTimeout(() => {
+	                                currentGame.style.border = '';
+	                            }, 3000);
+	                        }
+
+	                        if (window.scoresLivePulse) {
+	                            window.scoresLivePulse();
+	                        }
+	                    } else {
                         console.log(`  → No changes detected for game ${index}`);
                     }
                 }
@@ -1435,173 +1572,6 @@
         }
     };
     
-    // Force dark mode styling - Focus on existing elements
-    function forceDarkModeScores() {
-        if (document.documentElement.getAttribute('data-bs-theme') === 'dark') {
-            console.log('Applying dark mode fixes to scores page...');
-            
-            // Target Week Points leaderboard
-            // COMMENTED OUT - Using Tailwind CSS backgrounds now
-            // const pointsLeaderboard = document.querySelector('#week-points-leaderboard');
-            // if (pointsLeaderboard) {
-            //     pointsLeaderboard.style.setProperty('background-color', '#404040', 'important');
-            //     pointsLeaderboard.style.setProperty('background', '#404040', 'important');
-            //     pointsLeaderboard.style.setProperty('color', '#ffffff', 'important');
-            // }
-            
-            // Force Week Points player cards
-            const playerCards = document.querySelectorAll('.player-points-card');
-            playerCards.forEach(card => {
-                card.style.setProperty('background-color', '#404040', 'important');
-                card.style.setProperty('background', '#404040', 'important');
-                card.style.setProperty('color', '#ffffff', 'important');
-                card.style.setProperty('border', '1px solid #555555', 'important');
-            });
-            
-            // Force section containers
-            const sectionContainers = document.querySelectorAll('.scores-main-container .section-container');
-            sectionContainers.forEach(section => {
-                section.style.setProperty('background-color', '#333333', 'important');
-                section.style.setProperty('background', '#333333', 'important');
-                section.style.setProperty('color', '#ffffff', 'important');
-            });
-            
-            // 1. Fix ALL game score cards - the main issue
-            const gameScoreCards = document.querySelectorAll('.game-score-card');
-            console.log(`Found ${gameScoreCards.length} game score cards`);
-            gameScoreCards.forEach(card => {
-                card.style.setProperty('background', 'linear-gradient(135deg, #404040 0%, #4a4a4a 50%, #505050 100%)', 'important');
-                card.style.setProperty('background-color', '#404040', 'important');
-                card.style.setProperty('color', '#ffffff', 'important');
-                card.style.setProperty('border', '1px solid #555555', 'important');
-                card.style.removeProperty('background-image');
-            });
-            
-            // 2. Fix game status headers
-            const gameStatusHeaders = document.querySelectorAll('.game-status-header');
-            console.log(`Found ${gameStatusHeaders.length} game status headers`);
-            gameStatusHeaders.forEach(header => {
-                header.style.setProperty('background', '#2a2a2a', 'important');
-                header.style.setProperty('background-color', '#2a2a2a', 'important');
-                header.style.setProperty('color', '#ffffff', 'important');
-                header.style.setProperty('border-bottom', '1px solid #555555', 'important');
-            });
-            
-            // 3. Fix game info bars (spread, weather, etc.)
-            const gameInfoBars = document.querySelectorAll('.game-info-bar');
-            console.log(`Found ${gameInfoBars.length} game info bars`);
-            gameInfoBars.forEach(bar => {
-                bar.style.setProperty('background', '#2a2a2a', 'important');
-                bar.style.setProperty('background-color', '#2a2a2a', 'important');
-                bar.style.setProperty('color', '#ffffff', 'important');
-            });
-            
-            // 4. Fix game info items (buttons inside info bar)
-            const gameInfoItems = document.querySelectorAll('.game-info-item');
-            console.log(`Found ${gameInfoItems.length} game info items`);
-            gameInfoItems.forEach(item => {
-                item.style.setProperty('background', '#333333', 'important');
-                item.style.setProperty('background-color', '#333333', 'important');
-                item.style.setProperty('color', '#ffffff', 'important');
-                item.style.setProperty('border', '1px solid #555555', 'important');
-            });
-            
-            // 5. Fix team score rows - preserve team color gradients
-            const teamScoreRows = document.querySelectorAll('.team-score-row');
-            console.log(`Found ${teamScoreRows.length} team score rows`);
-            teamScoreRows.forEach(row => {
-                // Don't override background - let team color gradients show through
-                row.style.setProperty('color', '#ffffff', 'important');
-            });
-            
-            // 6. Fix team names
-            const teamNames = document.querySelectorAll('.team-name');
-            console.log(`Found ${teamNames.length} team names`);
-            teamNames.forEach(name => {
-                name.style.setProperty('color', '#ffffff', 'important');
-            });
-            
-            // Remove any dark mode styling from total-score elements to let them use default light mode colors
-            const totalScoreElements = document.querySelectorAll('.total-score');
-            totalScoreElements.forEach((score) => {
-                // Remove any inline styles that might be interfering
-                score.removeAttribute('style');
-                
-                // Remove any dark mode classes
-                score.classList.remove('dark-mode-override');
-            });
-            
-            // 7b. Fix LIVE button containers specifically
-            const gameStatusDisplays = document.querySelectorAll('.game-status-display');
-            console.log(`Found ${gameStatusDisplays.length} game status displays`);
-            gameStatusDisplays.forEach(display => {
-                display.style.setProperty('background', '#2a2a2a', 'important');
-                display.style.setProperty('background-color', '#2a2a2a', 'important');
-                display.style.setProperty('border', '1px solid #555555', 'important');
-                display.style.setProperty('padding', '0.5rem', 'important');
-            });
-            
-            // 8. Fix live status elements
-            const liveElements = document.querySelectorAll('.game-status.live, .status-live');
-            liveElements.forEach(el => {
-                el.style.setProperty('background', 'linear-gradient(135deg, #28a745 0%, #20c997 100%)', 'important');
-                el.style.setProperty('background-color', '#28a745', 'important');
-                el.style.setProperty('color', '#ffffff', 'important');
-            });
-            
-            // REMOVED - Let Player Picks sections use transparent background
-            
-            // REMOVED - Let Your Pick sections use transparent background
-            
-            // REMOVED - Let Missing Picks sections use transparent background
-            
-            
-            // 11. Force any remaining white elements
-            const whiteElements = document.querySelectorAll('.scores-main-container *');
-            whiteElements.forEach(el => {
-                const styles = window.getComputedStyle(el);
-                const rect = el.getBoundingClientRect();
-                
-                if (styles.backgroundColor === 'rgb(255, 255, 255)' && rect.width > 10 && rect.height > 10) {
-                    el.style.setProperty('background-color', '#404040', 'important');
-                    el.style.setProperty('background', '#404040', 'important');
-                    el.style.setProperty('color', '#ffffff', 'important');
-                    el.style.removeProperty('background-image');
-                    el.style.removeProperty('background-gradient');
-                }
-            });
-            
-            console.log('Dark mode fixes applied to scores page');
-        }
-    }
-    
-    // Run immediately and after any dynamic content loads
-    document.addEventListener('DOMContentLoaded', forceDarkModeScores);
-    setTimeout(forceDarkModeScores, 100);
-    setTimeout(forceDarkModeScores, 500);
-    setTimeout(forceDarkModeScores, 1000);
-    
-    // Override layout manager to apply dark mode after it runs
-    if (window.weekPointsLayoutManager) {
-        const originalApply = window.weekPointsLayoutManager.apply;
-        window.weekPointsLayoutManager.apply = function() {
-            originalApply.call(this);
-            setTimeout(forceDarkModeScores, 50);
-        };
-        
-        const originalRefresh = window.weekPointsLayoutManager.refresh;
-        window.weekPointsLayoutManager.refresh = function() {
-            originalRefresh.call(this);
-            setTimeout(forceDarkModeScores, 50);
-        };
-    }
-    
-    // Run when layout manager initializes
-    setTimeout(() => {
-        if (window.weekPointsLayoutManager) {
-            forceDarkModeScores();
-        }
-    }, 1500);
     
     // Handle hiding empty team pick sections with JavaScript (more reliable than CSS :has())
     function hideEmptyTeamPickSections() {
@@ -1626,7 +1596,34 @@
 
     </script>
 
+    <!-- Jump to the first live game when navigated with #live -->
+    <script>
+    (function () {
+        function jumpToLiveGame() {
+            if (window.location.hash !== '#live') {
+                return;
+            }
+            var liveCard = document.querySelector('.scores-live-game');
+            if (!liveCard) {
+                return;
+            }
+            liveCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            liveCard.classList.add('ring-2', 'ring-green-500');
+            setTimeout(function () {
+                liveCard.classList.remove('ring-2', 'ring-green-500');
+            }, 2500);
+        }
+
+        if (document.readyState !== 'loading') {
+            jumpToLiveGame();
+        } else {
+            document.addEventListener('DOMContentLoaded', jumpToLiveGame);
+        }
+        window.addEventListener('hashchange', jumpToLiveGame);
+    })();
+    </script>
+
     <!-- Alpine.js for collapsible sections -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js" integrity="sha384-pb6hrQvo4s23cEUFtj0CZkzGE3jyK3pj26RIupXXxhSrrcUA/Cn0lZgcCrGH0t6L" crossorigin="anonymous"></script>
 
 {% endblock %}

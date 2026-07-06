@@ -4,9 +4,13 @@ from .serializers import GameSerializer, GameWeeksSerializer, GamePicksSerialize
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
-from .permissions import IsAdminOrReadOnly
+from .permissions import IsAdminOrReadOnly, tenant_authz_error_response
 from django.contrib.auth.models import User
-from pickem_api.models import GamesAndScores, GameWeeks, GamePicks, Teams, userSeasonPoints, currentSeason
+from pickem_api.authz import TenantAuthorizationError, require_tenant_context
+from pickem_api.models import (
+    FamilyMembership,
+    GamesAndScores, GameWeeks, GamePicks, Teams, userSeasonPoints, currentSeason,
+)
 from django.db.models import Q
 from django.http import HttpResponse
 from django.http.response import JsonResponse
@@ -48,6 +52,41 @@ def get_current_season_api(request):
 def index(request):
     # return HttpResponse(")
     return JsonResponse({'message': 'Family Pickem API'})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def family_pool_authz_check(request, family_slug, pool_slug):
+    """
+    Minimal internal proof endpoint for Phase 2 tenant authorization wiring.
+    """
+    minimum_role = request.query_params.get(
+        'minimum_role',
+        FamilyMembership.Role.MEMBER,
+    )
+    if minimum_role not in FamilyMembership.Role.values:
+        return Response(
+            {'detail': 'Invalid role.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        context = require_tenant_context(
+            request.user,
+            family=family_slug,
+            pool=pool_slug,
+            minimum_role=minimum_role,
+        )
+    except TenantAuthorizationError as error:
+        return tenant_authz_error_response(error)
+
+    return Response(
+        {
+            'family': context.family.slug,
+            'pool': context.pool.slug,
+            'role': context.membership.role,
+        }
+    )
 
 
 @api_view(['GET', 'POST', 'DELETE'])

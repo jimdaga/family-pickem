@@ -1,0 +1,121 @@
+{% extends "pickem/base.html" %}
+
+{% block title %}Week Winners - {{ family.name }}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-gray-50 dark:bg-bg-dark">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="text-sm font-semibold uppercase tracking-wide text-primary">Family Admin</div>
+                <h1 class="mt-2 text-3xl font-bold text-text-dark dark:text-white">Week Winners</h1>
+                <p class="mt-2 text-text-secondary-light dark:text-text-secondary">
+                    {{ family.name }} - {{ pool.name }} - {{ gameseason }} {{ pool.competition|upper }}
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'family_pool_admin' family.slug pool.slug %}" class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white hover:bg-white dark:hover:bg-surface transition-colors">
+                    <i class="fas fa-arrow-left"></i>
+                    Admin Hub
+                </a>
+                <span class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">
+                    <i class="fas fa-shield-alt"></i>
+                    {{ membership.get_role_display }}
+                </span>
+            </div>
+        </header>
+
+        <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm" data-testid="family-admin-winners">
+            <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Winner Controls</h2>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                    Current-family candidates with current-pool standings only.
+                </p>
+            </div>
+
+            <form method="get" action="{% url 'family_pool_admin_winners' family.slug pool.slug %}" class="grid gap-4 border-b border-border-light dark:border-border-subtle p-5 sm:grid-cols-[minmax(0,220px)_auto] sm:items-end">
+                <div>
+                    <label for="week-filter" class="block text-sm font-semibold text-text-dark dark:text-white">Week</label>
+                    <select id="week-filter" name="week" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
+                        {% for week in week_choices %}
+                        <option value="{{ week }}" {% if selected_week == week %}selected{% endif %}>Week {{ week }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90">
+                    <i class="fas fa-filter"></i>
+                    Load Week
+                </button>
+            </form>
+
+            <form method="post" action="{% url 'family_pool_admin_winners' family.slug pool.slug %}" class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto]" data-testid="winner-form">
+                {% csrf_token %}
+                <input type="hidden" name="week_number" value="{{ selected_week }}">
+
+                <div>
+                    <label for="winner-uid" class="block text-sm font-semibold text-text-dark dark:text-white">Winner</label>
+                    <select id="winner-uid" name="winner_uid" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white" required>
+                        {% for candidate in candidates %}
+                        <option value="{{ candidate.uid }}">
+                            {{ candidate.user.username }} - {{ candidate.wins }} correct pick{{ candidate.wins|pluralize }} - uid {{ candidate.uid }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.winner_uid.errors %}
+                    <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ form.winner_uid.errors|join:", " }}</p>
+                    {% endif %}
+                    {% if form.week_number.errors %}
+                    <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ form.week_number.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="flex items-end">
+                    <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60" {% if not candidates %}disabled{% endif %}>
+                        <i class="fas fa-trophy"></i>
+                        Save Winner
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden">
+            <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Week {{ selected_week }} Candidates</h2>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                    {% if current_winner %}Current winner row #{{ current_winner.id }}{% else %}No winner selected yet{% endif %}
+                </p>
+            </div>
+            {% if candidates %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-border-light dark:divide-border-subtle">
+                    <thead class="bg-gray-100 dark:bg-slate-800">
+                        <tr>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Member</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">User ID</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Correct Picks</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border-light dark:divide-border-subtle">
+                        {% for candidate in candidates %}
+                        <tr>
+                            <td class="px-5 py-4 text-sm font-semibold text-text-dark dark:text-white">{{ candidate.user.username }}</td>
+                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ candidate.uid }}</td>
+                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ candidate.wins }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="px-5 py-12 text-center">
+                <div class="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-text-secondary-light dark:bg-slate-800 dark:text-text-secondary">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <p class="mt-4 font-semibold text-text-dark dark:text-white">No candidates for this week</p>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Candidates appear after current-pool picks are scored.</p>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+</main>
+{% endblock %}

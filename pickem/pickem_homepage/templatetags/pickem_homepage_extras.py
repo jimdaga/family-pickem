@@ -1,13 +1,54 @@
 from django import template
 from django.contrib.auth.models import User
+from django.utils.text import capfirst
 from pickem_api.models import Teams, GamePicks, userSeasonPoints, userStats, UserProfile, GamesAndScores
 from django.shortcuts import render
 from allauth.socialaccount.models import SocialAccount
 from datetime import date
+from django.utils import timezone
 import requests
 from pickem.utils import get_season
 
 register = template.Library()
+
+@register.filter
+def display_name(user):
+    """Return a consistent display name for a Django user-like object."""
+    if not user:
+        return ""
+
+    name = ""
+    try:
+        social_account = user.socialaccount_set.first()
+        if social_account:
+            name = social_account.extra_data.get("given_name") or ""
+    except Exception:
+        name = ""
+
+    if not name:
+        name = getattr(user, "first_name", "") or getattr(user, "username", "") or ""
+
+    # capfirst uppercases only the first character, leaving the rest intact so
+    # names like "McCoy" are not mangled while "smith-player" reads as "Smith-player".
+    return capfirst(str(name).strip())
+
+@register.filter
+def season_year_range(value):
+    """Format YYZZ season values like 2627 as 2026 - 2027."""
+    if value in (None, ""):
+        return ""
+
+    raw = str(value).strip()
+    if raw.endswith(".0"):
+        raw = raw[:-2]
+    if not raw.isdigit():
+        return value
+
+    raw = raw.zfill(4)
+    if len(raw) != 4:
+        return value
+
+    return f"20{raw[:2]} - 20{raw[2:]}"
 
 @register.filter
 def addstr(arg1, arg2):
@@ -33,7 +74,7 @@ def lookupavatar(user_id):
             email_hash = hashlib.md5(user.email.lower().encode('utf-8')).hexdigest()
             avatar_url = f"https://www.gravatar.com/avatar/{email_hash}?d=identicon&s=64"
         except User.DoesNotExist:
-            avatar_url = "https://www.wmata.com/systemimages/icons/menu-car-icon.png"
+            avatar_url = "https://www.gravatar.com/avatar/?d=identicon&s=64"
     
     return avatar_url
 
@@ -235,6 +276,21 @@ def is_game_locked(game):
         return game.statusType != 'notstarted'
 
 @register.filter
+def is_game_locked_for_pool(game, pool):
+    """Check if picks are locked for a game using the current pool settings."""
+    try:
+        from pickem.utils import is_pick_locked_for_pool
+        week_games = GamesAndScores.objects.filter(
+            gameseason=game.gameseason,
+            gameWeek=game.gameWeek,
+            competition=game.competition
+        )
+        is_locked, _lock_reason = is_pick_locked_for_pool(game, pool, week_games)
+        return is_locked
+    except ImportError:
+        return is_game_locked(game)
+
+@register.filter
 def game_lock_reason(game):
     """Get the reason why picks are locked for a specific game"""
     try:
@@ -250,6 +306,35 @@ def game_lock_reason(game):
     except:
         # Fallback to old logic if there's an error
         return "Game has started" if game.statusType != 'notstarted' else "Available"
+
+@register.filter
+def game_lock_reason_for_pool(game, pool):
+    """Get the lock reason for a game using the current pool settings."""
+    try:
+        from pickem.utils import is_pick_locked_for_pool
+        week_games = GamesAndScores.objects.filter(
+            gameseason=game.gameseason,
+            gameWeek=game.gameWeek,
+            competition=game.competition
+        )
+        is_locked, lock_reason = is_pick_locked_for_pool(game, pool, week_games)
+        return lock_reason if is_locked else "Available"
+    except ImportError:
+        return game_lock_reason(game)
+
+
+@register.filter
+def game_start_label(game):
+    """Render a friendly game start label for scheduled games."""
+    try:
+        start_timestamp = getattr(game, 'startTimestamp', game)
+        status_type = getattr(game, 'statusType', 'notstarted')
+        start_local = timezone.localtime(start_timestamp)
+        if status_type == 'notstarted' and start_local.hour == 0 and start_local.minute == 0:
+            return "Upcoming"
+        return start_local.strftime("%I:%M %p").lstrip("0")
+    except Exception:
+        return "Upcoming" if getattr(game, 'statusType', 'notstarted') == 'notstarted' else ""
 
 @register.simple_tag
 def week_lock_status(games):

@@ -1,0 +1,46 @@
+{% extends 'pickem/base.html' %}
+
+{% block title %}Join Family - Family Pick'em{% endblock %}
+
+{% block content %}
+<main class="max-w-3xl mx-auto px-6 py-10">
+    <section class="mb-8">
+        <p class="text-sm font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-3">Family invite</p>
+        <h1 class="text-3xl lg:text-4xl font-black text-text-dark dark:text-white mb-4">
+            Join a family pick'em league
+        </h1>
+        <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
+            Enter the invite code from your family owner.
+        </p>
+    </section>
+
+    <section class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-6">
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+            <div>
+                <label for="{{ form.code.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
+                    Invite code
+                </label>
+                {{ form.code }}
+                {% if form.code.errors %}
+                    <div class="mt-2 text-sm text-red-600 dark:text-red-400">
+                        {% for error in form.code.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>Join family</span>
+                </button>
+                <a href="{% url 'onboarding' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border-light dark:border-border-subtle text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors">
+                    Back
+                </a>
+            </div>
+        </form>
+    </section>
+</main>
+{% endblock %}

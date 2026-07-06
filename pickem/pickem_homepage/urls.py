@@ -7,11 +7,149 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('public/', views.public_home, name='public_home'),
+    path('onboarding/', views.onboarding, name='onboarding'),
+    path('families/create/', views.create_family, name='create_family'),
+    path('families/join/', views.join_family, name='join_family'),
+    path('families/', views.family_picker, name='family_picker'),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/',
+        views.family_pool_home,
+        name='family_pool_home',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/',
+        views.family_pool_admin,
+        name='family_pool_admin',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/settings/',
+        views.family_pool_admin_settings,
+        name='family_pool_admin_settings',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/members/',
+        views.family_pool_admin_members,
+        name='family_pool_admin_members',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/members/update/',
+        views.family_pool_admin_member_update,
+        name='family_pool_admin_member_update',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/invites/',
+        views.family_pool_admin_invites,
+        name='family_pool_admin_invites',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/invites/<int:invitation_id>/revoke/',
+        views.family_pool_admin_invite_revoke,
+        name='family_pool_admin_invite_revoke',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/invites/<int:invitation_id>/replace/',
+        views.family_pool_admin_invite_replace,
+        name='family_pool_admin_invite_replace',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/picks/',
+        views.family_pool_admin_picks,
+        name='family_pool_admin_picks',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/picks/user-picks/',
+        views.family_pool_admin_pick_user_picks,
+        name='family_pool_admin_pick_user_picks',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/winners/',
+        views.family_pool_admin_winners,
+        name='family_pool_admin_winners',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/job-runs/',
+        views.family_pool_admin_job_runs,
+        name='family_pool_admin_job_runs',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/invites/create/',
+        views.create_family_invite,
+        name='create_family_invite',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/picks/',
+        views.tenant_submit_game_picks,
+        name='family_pool_game_picks',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/picks/edit/',
+        views.tenant_edit_game_pick,
+        name='family_pool_edit_game_pick',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/scores/',
+        views.tenant_scores,
+        name='family_pool_scores',
+    ),
+    re_path(
+        r'^families/(?P<family_slug>[-a-zA-Z0-9_]+)/pools/(?P<pool_slug>[-a-zA-Z0-9_]+)/scores/competition/(?P<competition>[0-9]+)/season/(?P<gameseason>[0-9]+)/week/(?P<week>[0-9]+)$',
+        views.tenant_scores_long,
+        name='family_pool_scores_long',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/standings/',
+        views.tenant_standings,
+        name='family_pool_standings',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/rules/',
+        views.tenant_rules,
+        name='family_pool_rules',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/players/',
+        views.tenant_players,
+        name='family_pool_players',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/user/<int:user_id>/',
+        views.tenant_user_profile,
+        name='family_pool_user_profile',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/create-post/',
+        views.tenant_create_post,
+        name='family_pool_create_post',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/create-comment/',
+        views.tenant_create_comment,
+        name='family_pool_create_comment',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/vote-post/',
+        views.tenant_vote_post,
+        name='family_pool_vote_post',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/vote-comment/',
+        views.tenant_vote_comment,
+        name='family_pool_vote_comment',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/comments/<int:post_id>/',
+        views.tenant_get_post_comments,
+        name='family_pool_get_post_comments',
+    ),
+    path('invites/<str:invite_code>/', views.accept_invite_link, name='accept_invite_link'),
     path('scores/', views.scores, name='scores'),
     path('standings/', views.standings, name='standings'),
     path('rules/', views.rules, name='rules'),
     path('accounts/', include('allauth.urls')),
-    path('logout', LogoutView.as_view()),
+    # POST-only: logout via GET is deprecated (removed in Django 5) and would
+    # let third-party pages log users out (CSRF).
+    path('logout', LogoutView.as_view(http_method_names=['post', 'options']), name='logout'),
     re_path(
         r'^scores/competition/(?P<competition>[0-9]+)/season/(?P<gameseason>[0-9]+)/week/(?P<week>[0-9]+)$', views.scores_long, name='scores_long'),
     path('picks/', views.submit_game_picks, name='game_picks'),

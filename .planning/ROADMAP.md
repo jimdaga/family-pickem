@@ -1,7 +1,7 @@
 # Roadmap: Family Pickem Multi-Tenancy
 
 **Created:** 2026-06-28  
-**Current focus:** Phase 1: Domain Schema Foundation
+**Current focus:** Phase 5: Family Admin Experience
 
 ## Phase 0: Discovery And Repo Readiness
 
@@ -52,6 +52,14 @@ Definition of done:
 
 **Goal:** Centralize family/pool resolution, role checks, and tenant-scoped query helpers before moving pages.
 
+**Plans:** 3/3 plans complete
+
+Plans:
+
+- [x] 02-01-PLAN.md — Create core tenant authorization helpers.
+- [x] 02-02-PLAN.md — Add view/API guards and a proof integration.
+- [x] 02-03-PLAN.md — Run final Phase 2 verification and handoff. (completed 2026-06-28)
+
 Scope:
 
 - Add tenant authz helpers.
@@ -68,6 +76,16 @@ Definition of done:
 
 **Goal:** Let users create, join, and switch families/pools.
 
+**Plans:** 5/5 plans complete
+
+Plans:
+
+- [x] 03-01-PLAN.md — Add post-login routing and onboarding shell.
+- [x] 03-02-PLAN.md — Add create-family flow with default pool.
+- [x] 03-03-PLAN.md — Add minimal invite creation and acceptance.
+- [x] 03-04-PLAN.md — Add header/mobile family switcher.
+- [x] 03-05-PLAN.md — Run final Phase 3 verification and handoff. (completed 2026-06-29)
+
 Scope:
 
 - Post-login routing for zero/one/multiple family memberships.
@@ -80,9 +98,26 @@ Definition of done:
 
 - Signed-in users can get into an authorized family/pool context without seeing global league data.
 
+Completion evidence:
+
+- Final summary: `.planning/phases/03-onboarding-and-family-selection/03-05-SUMMARY.md`.
+- Django check, migration dry-run, focused `pickem_homepage pickem_api` tests, full test suite, and local public-home curl spot-check passed.
+- Remaining global gameplay page migration is explicitly handed off to Phase 4.
+
 ## Phase 4: Family-Scoped App Pages
 
 **Goal:** Move user-facing gameplay pages into explicit tenant context.
+
+**Plans:** 6/6 plans complete
+
+Plans:
+
+- [x] 04-01-PLAN.md — Migrate dashboard/home into tenant context.
+- [x] 04-02-PLAN.md — Move pick submit/edit into tenant URLs with server-derived writes.
+- [x] 04-03-PLAN.md — Scope scores, standings, weekly winners, and rules.
+- [x] 04-04-PLAN.md — Make profiles, player lists, and message-board AJAX family-private.
+- [x] 04-05-PLAN.md — Clean shared navigation, shared context processors, dashboard, picks, and scores links.
+- [x] 04-06-PLAN.md — Complete final link cleanup, negative tests, and validation handoff.
 
 Scope:
 
@@ -99,6 +134,18 @@ Definition of done:
 ## Phase 5: Family Admin Experience
 
 **Goal:** Replace global commissioner behavior with family owner/admin management.
+
+**Plans:** 7/7 plans executed
+
+Plans:
+
+- [x] 05-01-PLAN.md — Create tenant admin hub, scoped audit display, and admin navigation.
+- [x] 05-02-PLAN.md — Add family, pool, rules/settings editing, and banner non-leakage preservation.
+- [x] 05-03-PLAN.md — Add member role/status management with owner protections.
+- [x] 05-04-PLAN.md — Add simple current-model invite management.
+- [x] 05-05-PLAN.md — Add tenant-scoped manual pick and user-pick retrieval tools.
+- [x] 05-06-PLAN.md — Add week-winner tools and disable legacy commissioner routes.
+- [x] 05-07-PLAN.md — Complete final cross-feature validation and handoff.
 
 Scope:
 
@@ -149,4 +196,4 @@ Definition of done:
 
 ## Current Recommendation
 
-Start with Phase 1. Do not begin by changing routes or UI filters; schema and migration foundations must come first so every later route has a real tenant key to enforce.
+Proceed to Phase 5: replace global commissioner behavior with family owner/admin management. Phase 4 completed tenant-scoped user-facing gameplay pages and cross-family negative coverage, but family admin editing, cron/scoring hardening, and production migration hardening remain later-phase work.
