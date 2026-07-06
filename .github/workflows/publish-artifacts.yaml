@@ -113,9 +113,13 @@ jobs:
 
       - name: Commit and push
         run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#family-pickem-}
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add infra/argocd/applications/pickem-prd.yaml
           git diff --cached --quiet && echo "No changes to commit" && exit 0
-          git commit -m "chore: update prd to ${GITHUB_REF#refs/tags/family-pickem-}"
+          git commit -m "chore: update prd to ${VERSION}"
+          # NOTE: main is a protected branch; this push requires an actor
+          # allowed to bypass PR requirements (see TODO.md - release automation).
           git push
