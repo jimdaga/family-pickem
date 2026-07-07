@@ -503,13 +503,14 @@
     @apply flex-1;
   }
 
-  /* Filter Buttons */
+  /* Filter Buttons: the active pill is solid blue with white text so it
+     reads clearly in both light and dark mode. */
   .filter-btn.active {
-    @apply border-blue-600 text-blue-600 dark:text-blue-400;
+    @apply bg-blue-600 border-blue-600 text-white;
   }
 
   .filter-btn.active:hover {
-    @apply bg-blue-600/10;
+    @apply bg-blue-700 text-white;
   }
 }
 

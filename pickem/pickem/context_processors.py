@@ -56,6 +56,8 @@ def theme_context(request):
             from pickem_api.models import FamilyMembership
             context['user_is_commissioner_flag'] = (
                 user_profile.is_commissioner
+                # Superusers act as commissioner in every family (see authz).
+                or request.user.is_superuser
                 or FamilyMembership.objects.filter(
                     user=request.user,
                     role=FamilyMembership.Role.OWNER,
@@ -228,6 +230,7 @@ def footer_stats_context(request):
         'current_week': None,
         'user_current_rank': None,
         'user_correct_picks_week': None,
+        'has_live_games': False,
     }
 
     try:
@@ -245,6 +248,17 @@ def footer_stats_context(request):
             game_competition = 'nfl'
 
         context['current_week'] = current_week
+        context['has_live_games'] = GamesAndScores.objects.filter(
+            gameseason=gameseason,
+            statusType='inprogress',
+        ).exists()
+
+        # Ranks are only meaningful once at least one game has been scored;
+        # before that everyone is trivially "#1" (e.g. first login of a season).
+        season_has_scored_games = GamesAndScores.objects.filter(
+            gameseason=gameseason,
+            gameScored=True,
+        ).exists()
 
         # Get user's stored rank and stats
         if request.user.is_authenticated:
@@ -259,7 +273,8 @@ def footer_stats_context(request):
                     gameseason=gameseason,
                     pool=tenant_context.pool,
                 )
-                context['user_current_rank'] = user_season.current_rank
+                if season_has_scored_games:
+                    context['user_current_rank'] = user_season.current_rank
             except userSeasonPoints.DoesNotExist:
                 context['user_current_rank'] = None
 

@@ -168,20 +168,19 @@ def require_family_membership(
 ) -> FamilyMembership:
     _require_authenticated(user)
     resolved_family = resolve_family(family)
+    if _is_superuser(user):
+        # Superusers always act with an owner (commissioner) context in every
+        # family, even where they hold a lesser real membership. Synthetic and
+        # never saved, so their real row (and family rosters) stay untouched.
+        return _superuser_membership(user, resolved_family)
     membership = FamilyMembership.objects.filter(
         family=resolved_family,
         user=user,
         status=FamilyMembership.Status.ACTIVE,
     ).first()
     if not membership:
-        if _is_superuser(user):
-            return _superuser_membership(user, resolved_family)
         raise TenantNotFound()
     if not role_allows(membership.role, minimum_role):
-        if _is_superuser(user):
-            # Superuser holds a lesser real membership here; elevate with a
-            # synthetic owner context rather than mutating their real row.
-            return _superuser_membership(user, resolved_family)
         raise PermissionDeniedForTenant()
     return membership
 

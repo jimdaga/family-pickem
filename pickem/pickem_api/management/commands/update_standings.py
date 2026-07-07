@@ -20,7 +20,7 @@ import logging
 from django.core.management.base import BaseCommand
 
 from pickem.utils import get_season
-from pickem_api.models import GamePicks, userSeasonPoints
+from pickem_api.models import FamilyMembership, GamePicks, Pool, userSeasonPoints
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class Command(BaseCommand):
         season = options["season"] or get_season()
         self.stdout.write(f"Recomputing standings for season {season}")
 
-        combos = (
+        pick_combos = (
             GamePicks.objects.filter(gameseason=season)
             # order_by() clears Meta.ordering (gameWeek), which would leak
             # into the SELECT and break DISTINCT on (pool_id, userID).
@@ -51,8 +51,25 @@ class Command(BaseCommand):
             .distinct()
         )
 
+        # Every active member of this season's pools gets a standings row even
+        # before their first pick, so rosters render complete (with zeros) on
+        # the lobby, scores, and standings pages.
+        member_combos = set()
+        season_pools = Pool.objects.filter(status=Pool.Status.ACTIVE, season=season)
+        for pool in season_pools:
+            member_ids = FamilyMembership.objects.filter(
+                family=pool.family,
+                status=FamilyMembership.Status.ACTIVE,
+                user__is_active=True,
+            ).values_list("user_id", flat=True)
+            member_combos.update((pool.id, str(uid)) for uid in member_ids)
+
+        combos = member_combos | {
+            (pool_id, user_id) for pool_id, user_id in pick_combos if user_id
+        }
+
         updated = 0
-        for pool_id, user_id in combos:
+        for pool_id, user_id in sorted(combos):
             if not user_id:
                 continue
             row, _ = userSeasonPoints.objects.get_or_create(
