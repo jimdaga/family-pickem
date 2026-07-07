@@ -146,7 +146,7 @@
                         </div>
                         {% endfor %}
 
-                        {% for player in players_names %}
+                        {% for player in players_ids %}
                         {% if player not in users_w_points %}
                         <div data-player-card class="w-full flex items-center justify-between px-3 py-2 bg-white/60 dark:bg-bg-dark/30 rounded-lg border border-border-light dark:border-border-subtle hover:border-primary/30 dark:hover:border-primary/30 transition-all mb-1.5">
                             {% with player|lookupname as username %}

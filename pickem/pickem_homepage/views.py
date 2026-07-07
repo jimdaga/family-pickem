@@ -760,7 +760,7 @@ def family_pool_home(request, family_slug, pool_slug):
         userSeasonPoints.objects.filter(pool=pool, gameseason=gameseason)
         .order_by('-total_points', 'userID')
     )
-    top_standings = list(standings_qs[:5])
+    top_standings = list(standings_qs)
     standing_user_ids = [
         int(points.userID)
         for points in top_standings
@@ -776,8 +776,16 @@ def family_pool_home(request, family_slug, pool_slug):
         for rank, points in enumerate(top_standings, 1)
     ]
 
+    # Skip the week-points podium until something has actually been scored
+    # this week; ranking a field of zeros just crowns whoever sorts first.
+    week_has_scored_games = GamesAndScores.objects.filter(
+        gameseason=gameseason,
+        gameWeek=current_week,
+        competition=current_competition,
+        gameScored=True,
+    ).exists()
     week_points_summary = []
-    if str(current_week).isdigit() and 1 <= int(current_week) <= 18:
+    if week_has_scored_games and str(current_week).isdigit() and 1 <= int(current_week) <= 18:
         week_points_field = f"week_{current_week}_points"
         week_points_rows = list(
             userSeasonPoints.objects.filter(pool=pool, gameseason=gameseason)
@@ -829,6 +837,21 @@ def family_pool_home(request, family_slug, pool_slug):
         competition=current_competition,
     ).order_by('startTimestamp', 'id')
     current_games = current_week_games.count()
+
+    # Status-aware heading for the games section: "Live This Week" only makes
+    # sense when something is actually live (or recently played).
+    week_statuses = set(current_week_games.values_list('statusType', flat=True))
+    first_kickoff = None
+    if 'inprogress' in week_statuses:
+        games_section_heading = 'Live This Week'
+    elif week_statuses and week_statuses == {'notstarted'}:
+        games_section_heading = f'Upcoming: Week {current_week}'
+        first_game = current_week_games.first()
+        first_kickoff = first_game.startTimestamp if first_game else None
+    elif week_statuses:
+        games_section_heading = f'Week {current_week} Games'
+    else:
+        games_section_heading = 'Upcoming Games'
     dashboard_snapshot_games = list(
         select_dashboard_snapshot_games(current_week_games).order_by('startTimestamp', 'id')
     )
@@ -878,6 +901,8 @@ def family_pool_home(request, family_slug, pool_slug):
         'recent_winners': recent_winners,
         'current_week_games': dashboard_snapshot_games,
         'current_games': current_games,
+        'games_section_heading': games_section_heading,
+        'first_kickoff': first_kickoff,
         'user_picks_count': user_picks_count,
         'user_pick_status': user_pick_status,
         'message_posts': message_posts,
@@ -2403,14 +2428,19 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
     if tenant_context:
         players = players.filter(pool=tenant_context.pool)
     players_names = players.values_list('uid', flat=True).distinct()
-    players_ids_qs = User.objects.filter(is_active=True, is_superuser=False)
     if tenant_context:
-        member_user_ids = FamilyMembership.objects.filter(
-            family=tenant_context.family,
-            status=FamilyMembership.Status.ACTIVE,
-            user__is_active=True,
-        ).values_list('user_id', flat=True)
-        players_ids_qs = players_ids_qs.filter(id__in=member_user_ids)
+        # Family membership defines the roster; a member who happens to be a
+        # site superuser (e.g. the webmaster) still plays in their own pool.
+        players_ids_qs = User.objects.filter(
+            is_active=True,
+            id__in=FamilyMembership.objects.filter(
+                family=tenant_context.family,
+                status=FamilyMembership.Status.ACTIVE,
+                user__is_active=True,
+            ).values_list('user_id', flat=True),
+        )
+    else:
+        players_ids_qs = User.objects.filter(is_active=True, is_superuser=False)
     players_ids = players_ids_qs.values_list('id', flat=True).distinct()
     wins_losses = Teams.objects.filter(gameseason=gameseason)
 
@@ -2474,7 +2504,7 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
         'week_winner': week_winner,
         'current_week': game_week,
         'points_total': points_total,
-        'show_week_stats_sidebar': picks_total > 0,
+        'show_week_stats_sidebar': picks_total > 0 or bool(players_ids),
         'game_weeks': range(1,19),
         'gameseason': gameseason,
         'user_weekly_stats': user_weekly_stats,
@@ -2625,7 +2655,7 @@ def legacy_scores_long_unused(request, competition, gameseason, week):
         'players_ids': players_ids,
         'week_winner': week_winner,
         'points_total': points_total,
-        'show_week_stats_sidebar': picks_total > 0,
+        'show_week_stats_sidebar': picks_total > 0 or bool(players_ids),
         'game_weeks': range(1,19),
         'gameseason': gameseason,
         'user_weekly_stats': user_weekly_stats
@@ -3181,7 +3211,17 @@ def render_user_profile(request, user_id, *, tenant_context=None):
         stats['total_picks_made'] = user_stats_obj.totalPicksTotal or 0
         stats['correct_picks'] = user_stats_obj.correctPickTotalTotal or 0
 
-    user_picks = picks_scope.filter(userID=str(user_id), gameseason=gameseason)
+    # Only reveal picks for games that have kicked off: showing not-yet-started
+    # picks (e.g. a lone opening-night pick) leaks them to other players.
+    started_game_slugs = GamesAndScores.objects.filter(
+        gameseason=gameseason,
+        startTimestamp__lte=timezone.now(),
+    ).values('slug')
+    user_picks = picks_scope.filter(
+        userID=str(user_id),
+        gameseason=gameseason,
+        slug__in=started_game_slugs,
+    )
     team_pick_stats = user_picks.values('pick').annotate(
         count=Count('pick')
     ).order_by('-count')
@@ -3235,7 +3275,13 @@ def render_user_profile(request, user_id, *, tenant_context=None):
             stats['favorite_team'] = favorite_team.teamNameName
             stats['favorite_team_logo'] = favorite_team.teamLogo
 
-    if season_points:
+    # A rank means nothing until at least one game of the season is scored
+    # (before that, everyone ties at zero and the "rank" is just row order).
+    season_has_scored_games = GamesAndScores.objects.filter(
+        gameseason=gameseason,
+        gameScored=True,
+    ).exists()
+    if season_points and season_has_scored_games:
         stats['current_season_rank'] = points_scope.filter(
             gameseason=gameseason,
             total_points__gt=season_points.total_points,

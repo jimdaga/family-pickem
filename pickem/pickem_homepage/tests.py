@@ -559,7 +559,10 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, "Smith-member")
         self.assertContains(response, "2 pts")
         self.assertNotContains(response, "Jones-player")
-        self.assertLess(content.index("Week Points"), content.index("Live This Week"))
+        # The games section heading is status-aware; assert against whatever
+        # the view chose for this fixture's game states.
+        games_heading = response.context["games_section_heading"]
+        self.assertLess(content.index("Week Points"), content.index(games_heading))
 
     def test_pool_home_is_branded_as_lobby_with_gsap_polish(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
@@ -1870,6 +1873,8 @@ class Phase4SharedContextScopeTests(TestCase):
             awayTeamSlug="ari",
             awayTeamName="Arizona Cardinals",
             gameWinner="atl",
+            # Ranks only display once a game of the season has been scored.
+            gameScored=True,
         )
         for team_id, slug, name in [
             (1, "atl", "Atlanta Falcons"),
@@ -2291,6 +2296,11 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         )
 
     def _seed_profile_data(self):
+        # Profile pages only reveal picks for games that have kicked off, so
+        # backdate the shared fixture game for the picks seeded here.
+        GamesAndScores.objects.filter(id=self.game.id).update(
+            startTimestamp=timezone.now() - timedelta(hours=1)
+        )
         userSeasonPoints.objects.create(
             pool=self.smith_pool,
             userEmail=self.smith_player.email,
@@ -2421,6 +2431,25 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertContains(response, "players-compact-card")
         self.assertContains(response, "playersCardMotion")
         self.assertContains(response, "gsap.min.js")
+
+    def test_profile_hides_picks_for_games_that_have_not_started(self):
+        # A lone pick on a future game (e.g. opening night) must not leak on
+        # the profile page before kickoff. The class fixture game starts
+        # tomorrow, so this pick stays hidden.
+        self._create_pick(
+            user=self.smith_player,
+            pool=self.smith_pool,
+            pick_id=f"{self.smith_pool.id}-{self.smith_player.id}-{self.game.id}-future",
+        )
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=self.smith_player.id)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["recent_picks"]), 0)
+        self.assertEqual(response.context["team_chart_data"], [])
 
     def test_tenant_profile_scopes_stats_picks_posts_and_links_to_current_pool(self):
         self._seed_profile_data()

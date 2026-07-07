@@ -92,7 +92,7 @@
                         </button>
                         <div class="nav-dropdown absolute left-0 mt-2 w-48 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle hidden z-50 py-2">
                             <a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}">Current Week</a>
-                            <a class="block px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400 hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}#live"><i class="fas fa-circle animate-pulse mr-2 text-[0.5rem] align-middle"></i>Live now</a>
+                            {% if has_live_games %}<a class="block px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400 hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}#live"><i class="fas fa-circle animate-pulse mr-2 text-[0.5rem] align-middle"></i>Live now</a>{% endif %}
                             <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
                             {% for week_number in 18|times %}<a class="block px-4 py-2 text-sm text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason week_number %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/{{ week_number }}{% endif %}">Week {{ week_number }}</a>{% endfor %}
                         </div>
@@ -137,7 +137,7 @@
                                     {% if choice.url %}
                                     <a class="block px-4 py-3 hover:bg-border-light dark:hover:bg-surface-hover transition-colors" href="{{ choice.url }}">
                                         <span class="block font-bold text-text-dark dark:text-white">{{ choice.family.name }}</span>
-                                        <span class="block text-sm text-text-secondary-light dark:text-text-secondary">{{ choice.pool.name }} - {{ choice.pool.season }}</span>
+                                        <span class="block text-sm text-text-secondary-light dark:text-text-secondary">{{ choice.pool.name }} - {{ choice.pool.display_season }}</span>
                                     </a>
                                     {% endif %}
                                 {% endfor %}
@@ -243,7 +243,7 @@
                         </button>
                         <div class="mobile-dropdown-menu hidden pl-8 pr-4 py-2 space-y-1">
                             <a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}">Current Week</a>
-                            <a class="block px-4 py-2 text-sm font-semibold text-green-400 hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}#live"><i class="fas fa-circle animate-pulse mr-2 text-[0.5rem] align-middle"></i>Live now</a>
+                            {% if has_live_games %}<a class="block px-4 py-2 text-sm font-semibold text-green-400 hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores' current_family.slug current_pool.slug %}{% else %}{% url 'scores' %}{% endif %}#live"><i class="fas fa-circle animate-pulse mr-2 text-[0.5rem] align-middle"></i>Live now</a>{% endif %}
                             <div class="border-t border-border-light dark:border-border-subtle my-1"></div>
                             {% for week_number in 18|times %}<a class="block px-4 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_scores_long' current_family.slug current_pool.slug 1 gameseason week_number %}{% else %}/scores/competition/1/season/{{ gameseason }}/week/{{ week_number }}{% endif %}">Week {{ week_number }}</a>{% endfor %}
                         </div>
@@ -374,13 +374,14 @@
 
         {% block flash_messages %}
         {% if messages %}
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-4 space-y-2" role="status" aria-live="polite">
+        <!-- Floating toasts: overlaid below the navbar so they never split the page layout -->
+        <div class="fixed inset-x-0 top-20 z-[60] flex flex-col items-center gap-2 px-4 pointer-events-none" role="status" aria-live="polite">
             {% for message in messages %}
-            <div class="flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm font-semibold
-                {% if message.tags == 'success' %}border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300
-                {% elif message.tags == 'error' %}border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300
-                {% elif message.tags == 'warning' %}border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300
-                {% else %}border-primary/30 bg-primary/10 text-text-dark dark:text-white{% endif %}">
+            <div data-flash-toast class="pointer-events-auto w-full max-w-xl flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm font-semibold shadow-lg backdrop-blur-md transition-opacity duration-500
+                {% if message.tags == 'success' %}border-green-500/40 bg-green-50/95 dark:bg-green-950/90 text-green-700 dark:text-green-300
+                {% elif message.tags == 'error' %}border-red-500/40 bg-red-50/95 dark:bg-red-950/90 text-red-700 dark:text-red-300
+                {% elif message.tags == 'warning' %}border-amber-500/40 bg-amber-50/95 dark:bg-amber-950/90 text-amber-700 dark:text-amber-300
+                {% else %}border-primary/30 bg-white/95 dark:bg-surface/95 text-text-dark dark:text-white{% endif %}">
                 <span>{{ message }}</span>
                 <button type="button" class="opacity-60 hover:opacity-100 transition-opacity" aria-label="Dismiss message" onclick="this.parentElement.remove()">
                     <i class="fas fa-times" aria-hidden="true"></i>
@@ -388,6 +389,15 @@
             </div>
             {% endfor %}
         </div>
+        <script>
+        // Auto-dismiss flash toasts after 6 seconds
+        setTimeout(function () {
+            document.querySelectorAll('[data-flash-toast]').forEach(function (toast) {
+                toast.style.opacity = '0';
+                setTimeout(function () { toast.remove(); }, 500);
+            });
+        }, 6000);
+        </script>
         {% endif %}
         {% endblock %}
 

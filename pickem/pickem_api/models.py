@@ -95,6 +95,14 @@ class Pool(models.Model):
     def __str__(self):
         return f"{self.family.name} - {self.name}"
 
+    @property
+    def display_season(self):
+        """Format the YYZZ season for display, e.g. 2627 -> '2026-2027'."""
+        season_str = str(self.season)
+        if len(season_str) == 4:
+            return f"20{season_str[:2]}-20{season_str[2:]}"
+        return season_str
+
     class Meta:
         verbose_name = "Pool"
         verbose_name_plural = "Pools"
