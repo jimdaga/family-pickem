@@ -336,6 +336,27 @@ def game_start_label(game):
     except Exception:
         return "Upcoming" if getattr(game, 'statusType', 'notstarted') == 'notstarted' else ""
 
+@register.filter
+def block_is_stale_final(games, kickoff):
+    """True when every game in a kickoff block is final and roughly two hours
+    have passed since the last one ended, so the block can collapse by default.
+
+    Game end times aren't stored, so the end is estimated as kickoff plus an
+    average NFL game length (~3h20m); two hours after that is kickoff + 5h20m.
+    """
+    from datetime import timedelta
+
+    try:
+        games = list(games)
+        if not games:
+            return False
+        if any(getattr(g, 'statusType', '') != 'finished' for g in games):
+            return False
+        return timezone.now() >= kickoff + timedelta(hours=5, minutes=20)
+    except Exception:
+        return False
+
+
 @register.simple_tag
 def week_lock_status(games):
     """Get the overall locking status for a week of games"""

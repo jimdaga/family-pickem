@@ -274,7 +274,8 @@
         {% if game_list %}
             {% regroup game_list by startTimestamp as games_by_time %}
             {% for time_group in games_by_time %}
-            <div class="scores-time-group scores-kickoff-group mb-7 relative" x-data="{ open: true }">
+            {% with time_group.list|block_is_stale_final:time_group.grouper as block_collapsed %}
+            <div class="scores-time-group scores-kickoff-group mb-7 relative" x-data="{ open: {% if block_collapsed %}false{% else %}true{% endif %} }">
                 <button @click="open = !open"
                         class="w-full flex items-center justify-between gap-3 border-b border-border-light dark:border-border-subtle px-1 pb-2 text-left transition-colors hover:border-primary/40"
                         type="button">
@@ -283,6 +284,11 @@
                         <span>{{ time_group.grouper|date:"l, F j" }}</span>
                     </div>
                     <div class="flex items-center gap-3">
+                        {% if block_collapsed %}
+                        <span class="text-xs font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300 px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 rounded-full">
+                            <i class="fas fa-check-circle mr-1"></i>Final
+                        </span>
+                        {% endif %}
                         <span class="text-xs font-black uppercase tracking-wide text-white px-3 py-1 bg-primary/90 rounded-full">
                             {{ time_group.grouper|game_start_label }}
                         </span>
@@ -792,6 +798,7 @@
                             {% endfor %}
                 </div>
             </div>
+            {% endwith %}
             {% endfor %}
             {% else %}
             <div class="section-container mb-6">
