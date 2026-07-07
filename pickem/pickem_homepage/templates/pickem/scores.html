@@ -54,7 +54,7 @@
 
         <!-- Filter Controls -->
         <div class="scores-filter-bar mt-3 flex flex-wrap gap-2">
-            <button class="scores-filter-btn relative overflow-hidden px-3.5 py-2 rounded-full text-sm font-semibold transition-colors border filter-btn active bg-blue-600 border-blue-600 text-white hover:bg-blue-700" data-filter="all" data-scores-filter>
+            <button class="scores-filter-btn relative overflow-hidden px-3.5 py-2 rounded-full text-sm font-semibold transition-colors border filter-btn active border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-600/10" data-filter="all" data-scores-filter>
                 <span class="scores-filter-sheen pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-white/35 opacity-0"></span>
                 <span class="relative z-10"><i class="fas fa-list mr-2"></i>All Games</span>
             </button>
@@ -1040,17 +1040,15 @@
             }
         });
         
-        // Hide empty time groups
+        // Hide time groups with no games matching the active filter
         const timeGroups = document.querySelectorAll('.games-grid');
         timeGroups.forEach(group => {
             const visibleCards = group.querySelectorAll('.game-score-card[style*="display: block"], .game-score-card:not([style*="display: none"])');
-            const parentContainer = group.closest('.section-container');
-            
-            if (visibleCards.length === 0) {
-                parentContainer.style.display = 'none';
-            } else {
-                parentContainer.style.display = 'block';
+            const parentContainer = group.closest('.scores-time-group');
+            if (!parentContainer) {
+                return;
             }
+            parentContainer.style.display = visibleCards.length === 0 ? 'none' : 'block';
         });
 
         if (window.scoresFilterMotion) {
@@ -1264,11 +1262,6 @@
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-        .filter-btn.active {
-            background-color: var(--bs-primary);
-            border-color: var(--bs-primary);
-            color: white;
         }
         .score-updating {
             animation: pulse 1s infinite;
