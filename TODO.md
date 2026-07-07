@@ -14,7 +14,7 @@ Pickem
 #### Multi-Family / Tenant Follow-Up Backlog
 
 ##### Ideas
-- [ ] Build a season-rollover flow: a commissioner action (or scheduled task) that creates the next season's pool for each family, marks it default, and seeds `GameWeeks` from the ESPN calendar. For 2026/27 this was done manually via Django shell in prd (2026-07-06: created `pickem-pool` season 2627, demoted `2526-pickem`, inserted 126 GameWeeks rows) — that recipe should become code.
+- [ ] Build a season-rollover flow: a commissioner action (or scheduled task) that creates the next season's pool for each family, marks it default, and seeds `GameWeeks` from the ESPN calendar, and copies the prior pool's `PoolSettings` forward (fresh defaults on the 2627 pool made saved rules look lost — settings are per-pool). For 2026/27 this was done manually via Django shell in prd (2026-07-06: created `pickem-pool` season 2627, demoted `2526-pickem`, inserted 126 GameWeeks rows) — that recipe should become code.
 - [x] Make the "Live Scores" shortcut jump directly to active game cards when games are live. Consider using an anchor or query parameter on the scores page so users land on the most relevant game instead of the top of the page.
 - [x] Make more of the rules page editable by family admins. Decide which rules are true settings versus display-only copy before exposing edit controls.
 - [ ] Clarify how submitting picks should work for users in multiple families. Confirm whether one pick submission can apply to multiple pools, or whether picks must always be submitted independently per family/pool.
