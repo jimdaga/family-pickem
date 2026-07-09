@@ -2725,6 +2725,39 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertEqual(post.family, self.smith_family)
         self.assertEqual(post.user, self.smith_member)
 
+    def test_messages_page_renders_threads_scoped_to_family_with_ajax_and_links(self):
+        MessageBoardPost.objects.create(
+            family=self.smith_family, user=self.smith_member,
+            title="Smith thread", content="Smith board content",
+        )
+        MessageBoardPost.objects.create(
+            family=self.jones_family, user=self.jones_player,
+            title="Jones thread", content="Jones board content",
+        )
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_messages"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/family_messages.html")
+        self.assertContains(response, "Message Board")
+        self.assertContains(response, "Smith board content")
+        # Cross-family isolation.
+        self.assertNotContains(response, "Jones board content")
+        # Wires the tenant AJAX endpoints and links the author to their profile.
+        self.assertContains(response, self._tenant_url("family_pool_vote_post"))
+        self.assertContains(response, self._tenant_url("family_pool_create_comment"))
+        self.assertContains(
+            response,
+            self._tenant_url("family_pool_user_profile", user_id=self.smith_member.id),
+        )
+
+    def test_messages_page_denies_outsiders(self):
+        self.client.force_login(self.outsider)
+        self.assertEqual(
+            self.client.get(self._tenant_url("family_pool_messages")).status_code, 404
+        )
+
     def test_tenant_create_comment_denies_cross_family_post_and_parent_ids_generically(self):
         _smith_post, _smith_comment, jones_post, jones_comment = self._seed_message_board_data()
         self.client.force_login(self.smith_member)

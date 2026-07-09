@@ -3429,6 +3429,45 @@ def toggle_theme(request):
 # MESSAGE BOARD VIEWS
 # =============================================================================
 
+@family_member_required
+def tenant_messages(request, family_slug, pool_slug):
+    """Dedicated Reddit-style message board page for a family/pool."""
+    from django.core.paginator import Paginator
+
+    tenant_context = request.tenant_context
+    family = tenant_context.family
+    pool = tenant_context.pool
+
+    posts_qs = (
+        MessageBoardPost.objects.filter(family=family, is_active=True)
+        .select_related('user')
+        .order_by('-is_pinned', '-created_at')
+    )
+    paginator = Paginator(posts_qs, 15)
+    posts = paginator.get_page(request.GET.get('page'))
+
+    # The viewer's existing vote per visible post, so arrows render active.
+    page_post_ids = [post.id for post in posts]
+    user_votes = {
+        vote.post_id: vote.vote_type
+        for vote in MessageBoardVote.objects.filter(
+            user=request.user, family=family, post_id__in=page_post_ids
+        )
+    }
+    for post in posts:
+        post.viewer_vote = user_votes.get(post.id, 0)
+
+    context = {
+        'family': family,
+        'pool': pool,
+        'membership': tenant_context.membership,
+        'gameseason': pool.season or get_season(),
+        'posts': posts,
+        'total_posts': paginator.count,
+    }
+    return render(request, 'pickem/family_messages.html', context)
+
+
 @login_required
 # @ratelimit(key='user', rate='10/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
