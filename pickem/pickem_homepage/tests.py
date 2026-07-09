@@ -2482,6 +2482,42 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_superuser_can_open_own_profile_in_a_family_with_no_real_membership(self):
+        # Regression test: the navbar "My Profile" link builds a tenant-scoped
+        # URL from the current family/pool + the logged-in user's id. Under
+        # god mode, a superuser can browse into (and thus land on) a family
+        # they hold no real FamilyMembership row in, so their own profile
+        # link must not 404 there.
+        self._seed_profile_data()
+        sre = User.objects.create_user(
+            "site-sre", email="sre@example.com", password="pass", is_superuser=True
+        )
+        self.assertFalse(
+            FamilyMembership.objects.filter(user=sre, family=self.smith_family).exists()
+        )
+        self.client.force_login(sre)
+
+        response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=sre.id)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/user_profile.html")
+        self.assertEqual(response.context["family"], self.smith_family)
+
+        # A superuser can likewise open any real member's profile there...
+        member_response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=self.smith_player.id)
+        )
+        self.assertEqual(member_response.status_code, 200)
+
+        # ...but a non-superuser is still blocked from cross-family profiles.
+        self.client.force_login(self.smith_member)
+        outsider_response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=sre.id)
+        )
+        self.assertEqual(outsider_response.status_code, 404)
+
     def test_private_profile_message_applies_after_family_membership_is_proven(self):
         self.client.force_login(self.smith_member)
 

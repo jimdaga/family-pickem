@@ -3110,13 +3110,21 @@ def tenant_user_profile(request, family_slug, pool_slug, user_id):
 
 def render_user_profile(request, user_id, *, tenant_context=None):
     if tenant_context:
-        profile_user = get_object_or_404(
-            User,
-            id=user_id,
-            is_active=True,
-            family_memberships__family=tenant_context.family,
-            family_memberships__status=FamilyMembership.Status.ACTIVE,
-        )
+        if getattr(request.user, 'is_superuser', False):
+            # God mode: superusers can open any active user's profile while
+            # observing a family, including their own when they hold no real
+            # membership there (e.g. via the navbar "My Profile" link). Real
+            # members still require an actual active membership below, which
+            # keeps cross-tenant profile URLs blocked for everyone else.
+            profile_user = get_object_or_404(User, id=user_id, is_active=True)
+        else:
+            profile_user = get_object_or_404(
+                User,
+                id=user_id,
+                is_active=True,
+                family_memberships__family=tenant_context.family,
+                family_memberships__status=FamilyMembership.Status.ACTIVE,
+            )
         gameseason = tenant_context.pool.season
         points_scope = userSeasonPoints.objects.filter(pool=tenant_context.pool)
         picks_scope = GamePicks.objects.filter(pool=tenant_context.pool)
