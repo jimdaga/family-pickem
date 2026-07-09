@@ -896,6 +896,14 @@ def family_pool_home(request, family_slug, pool_slug):
         .order_by('user__username')[:10]
     )
 
+    # The viewer's favorite-team logo for the lobby welcome badge.
+    viewer_favorite_team = None
+    viewer_profile = UserProfile.objects.filter(user=request.user).first()
+    if viewer_profile and viewer_profile.favorite_team:
+        viewer_favorite_team = Teams.objects.filter(
+            teamNameSlug=viewer_profile.favorite_team
+        ).first()
+
     context = {
         'family': family,
         'pool': pool,
@@ -905,6 +913,7 @@ def family_pool_home(request, family_slug, pool_slug):
         'current_competition': current_competition,
         'standings': standings,
         'season_has_started': season_has_started,
+        'viewer_favorite_team': viewer_favorite_team,
         'week_points_summary': week_points_summary,
         'recent_winners': recent_winners,
         'current_week_games': dashboard_snapshot_games,

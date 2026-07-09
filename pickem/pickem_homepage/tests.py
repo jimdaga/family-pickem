@@ -681,6 +681,27 @@ class TenantDashboardIsolationTests(TestCase):
                 msg_prefix=f"Lobby must link {user.username} to their profile",
             )
 
+    def test_lobby_shows_viewer_avatar_and_favorite_team_logo(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        Teams.objects.create(
+            id=90, gameseason=2526, teamNameSlug="ne",
+            teamNameName="New England Patriots",
+            teamLogo="https://example.test/ne.png",
+            color="002244", alternateColor="c60c30",
+        )
+        UserProfile.objects.update_or_create(
+            user=self.member, defaults={"favorite_team": "ne"}
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["viewer_favorite_team"].teamNameSlug, "ne")
+        self.assertContains(response, 'data-testid="lobby-favorite-team"')
+        self.assertContains(response, "https://example.test/ne.png")
+
     def test_dashboard_shows_in_progress_current_week_games(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         self._active_membership(self.member, smith_family)

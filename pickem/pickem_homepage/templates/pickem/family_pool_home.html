@@ -60,6 +60,11 @@
                                  onerror="this.remove()">
                             {% endif %}
                             {% endwith %}
+                            {% if viewer_favorite_team and viewer_favorite_team.teamLogo %}
+                            <span data-testid="lobby-favorite-team" class="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-2 ring-slate-900 shadow" title="Your favorite team: {{ viewer_favorite_team.teamNameName }}">
+                                <img src="{{ viewer_favorite_team.teamLogo }}" alt="{{ viewer_favorite_team.teamNameName }} logo" class="h-4 w-4 object-contain">
+                            </span>
+                            {% endif %}
                         </div>
                         <div class="text-left">
                             <p class="font-bold text-white text-lg leading-tight">
