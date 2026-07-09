@@ -212,7 +212,9 @@
                         {% if game.statusType == 'inprogress' %}<span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>{% endif %}
                         {{ game.statusTitle }}
                     </span>
-                    <span class="text-xs text-text-secondary-light dark:text-text-secondary">{{ game|game_start_label }}</span>
+                    <span class="text-right text-xs font-semibold text-text-secondary-light dark:text-text-secondary">
+                        {{ game.startTimestamp|date:"D, M j" }}{% with game|game_start_label as start_label %}{% if start_label %}<span class="mx-1 opacity-50">&middot;</span>{{ start_label }}{% endif %}{% endwith %}
+                    </span>
                 </div>
                 <div class="space-y-2 text-sm">
                     <div class="flex items-center justify-between gap-3{% if game.statusType == 'finished' and game.gameWinner and game.gameWinner != game.awayTeamSlug %} opacity-60{% endif %}">

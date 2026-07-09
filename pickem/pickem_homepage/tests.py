@@ -615,6 +615,25 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertTrue(response.context["season_has_started"])
         self.assertEqual([row["rank"] for row in response.context["standings"]], [1, 2])
 
+    def test_lobby_game_cards_show_weekday_and_date(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        GamesAndScores.objects.create(
+            id=1098, slug="gb-chi-2025-week-1", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526,
+            startTimestamp=timezone.make_aware(timezone.datetime(2025, 9, 7, 13, 0)),
+            statusType="notstarted", statusTitle="Scheduled",
+            homeTeamId=5, homeTeamSlug="chi", homeTeamName="Chicago Bears",
+            awayTeamId=6, awayTeamSlug="gb", awayTeamName="Green Bay Packers",
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        # Sep 7 2025 is a Sunday; the card shows the weekday + date.
+        self.assertContains(response, "Sun, Sep 7")
+
     def test_dashboard_shows_in_progress_current_week_games(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         self._active_membership(self.member, smith_family)
