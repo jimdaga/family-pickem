@@ -1671,6 +1671,42 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertEqual(response.context["user_weekly_stats"]["total_graded_picks"], 1)
         self.assertEqual(response.context["user_weekly_stats"]["correct_picks"], 1)
 
+    def test_scores_missing_picks_excludes_members_who_already_picked(self):
+        # smith_member picks; smith_player does not. Regression: the missing
+        # list matched picks by a bare "{user}-{game}" id that never lined up
+        # with the pool-scoped pick id, so it flagged everyone (incl. pickers).
+        GamePicks.objects.create(
+            id=f"{self.smith_pool.id}-{self.smith_member.id}-{self.week_two_game.id}",
+            pool=self.smith_pool,
+            userEmail=self.smith_member.email,
+            uid=self.smith_member.id,
+            userID=str(self.smith_member.id),
+            slug=self.week_two_game.slug,
+            competition=self.week_two_game.competition,
+            gameWeek=self.week_two_game.gameWeek,
+            gameyear=self.week_two_game.gameyear,
+            gameseason=self.week_two_game.gameseason,
+            pick_game_id=self.week_two_game.id,
+            pick=self.week_two_game.awayTeamSlug,
+            pick_correct=False,
+        )
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(
+            self._tenant_url(
+                "family_pool_scores_long", competition=1, gameseason=2526, week=2,
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        picked_keys = response.context["picked_keys"]
+        # The picker is recorded, the non-picker is not.
+        self.assertIn(f"{self.smith_member.id}-{self.week_two_game.id}", picked_keys)
+        self.assertNotIn(f"{self.smith_player.id}-{self.week_two_game.id}", picked_keys)
+        # The missing-picks list contains the non-picker but not the picker.
+        self.assertContains(response, "smith-score-player - No Pick")
+        self.assertNotContains(response, "smith-score-member - No Pick")
+
     def test_tenant_scores_selected_week_uses_global_week_facts_with_pool_only_overlays(self):
         self._seed_private_pool_data()
         GamePicks.objects.create(

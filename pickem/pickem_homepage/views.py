@@ -2450,6 +2450,20 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
     else:
         players_ids_qs = User.objects.filter(is_active=True, is_superuser=False)
     players_ids = players_ids_qs.values_list('id', flat=True).distinct()
+
+    # Set of "{user_id}-{game_id}" keys that actually have a pick, so the
+    # scores template can flag missing picks with one query instead of the
+    # per-cell lookuppick filter — which searched GamePicks by a bare
+    # "{user}-{game}" id and never matched the real pool-scoped pick ids
+    # ("{pool}-{user}-{game}"), marking everyone as missing.
+    picked_keys = set()
+    for uid_val, userid_val, game_id_val in picks.values_list('uid', 'userID', 'pick_game_id'):
+        key_uid = uid_val
+        if not key_uid and str(userid_val).isdigit():
+            key_uid = int(userid_val)
+        if key_uid:
+            picked_keys.add(f"{key_uid}-{game_id_val}")
+
     wins_losses = Teams.objects.filter(gameseason=gameseason)
 
     winner_object = "week_{}_winner".format(game_week)
@@ -2509,6 +2523,7 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
         'users_w_points': users_w_points,
         'players_names': players_names,
         'players_ids': players_ids,
+        'picked_keys': picked_keys,
         'week_winner': week_winner,
         'current_week': game_week,
         'points_total': points_total,
