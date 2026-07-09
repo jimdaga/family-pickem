@@ -767,9 +767,16 @@ def family_pool_home(request, family_slug, pool_slug):
         if str(points.userID).isdigit()
     ]
     standing_users = User.objects.in_bulk(standing_user_ids)
+    # Before any game has been scored this season everyone is even, so we hide
+    # numbered positions and show a neutral marker instead of implying a rank.
+    season_has_started = GamesAndScores.objects.filter(
+        gameseason=gameseason,
+        competition=current_competition,
+        gameScored=True,
+    ).exists()
     standings = [
         {
-            'rank': rank,
+            'rank': rank if season_has_started else None,
             'points': points,
             'user': standing_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
         }
@@ -897,6 +904,7 @@ def family_pool_home(request, family_slug, pool_slug):
         'current_week': current_week,
         'current_competition': current_competition,
         'standings': standings,
+        'season_has_started': season_has_started,
         'week_points_summary': week_points_summary,
         'recent_winners': recent_winners,
         'current_week_games': dashboard_snapshot_games,

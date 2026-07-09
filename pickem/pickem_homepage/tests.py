@@ -586,6 +586,35 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, "gsap.min.js")
         self.assertContains(response, "ScrollTrigger.min.js")
 
+    def test_lobby_standings_hide_positions_until_first_game(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        self._active_membership(self.smith_player, smith_family)
+        for user, pts in ((self.member, 0), (self.smith_player, 0)):
+            userSeasonPoints.objects.create(
+                pool=smith_pool, gameseason=2526, userID=str(user.id),
+                userEmail=user.email, total_points=pts,
+            )
+        self.client.force_login(self.member)
+
+        # No game scored yet: everyone even -> neutral marker, no numbers.
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["season_has_started"])
+        self.assertTrue(all(row["rank"] is None for row in response.context["standings"]))
+
+        # After a game is scored, real numbered positions return.
+        GamesAndScores.objects.create(
+            id=1099, slug="ne-mia-2025-week-1", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameScored=True,
+            homeTeamId=3, homeTeamSlug="ne", homeTeamName="New England",
+            awayTeamId=4, awayTeamSlug="mia", awayTeamName="Miami",
+        )
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+        self.assertTrue(response.context["season_has_started"])
+        self.assertEqual([row["rank"] for row in response.context["standings"]], [1, 2])
+
     def test_dashboard_shows_in_progress_current_week_games(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         self._active_membership(self.member, smith_family)

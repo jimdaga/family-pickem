@@ -301,11 +301,12 @@
                 {% for row in standings %}
                 <div class="flex items-center gap-3 p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
                     <div class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full font-bold text-sm
-                        {% if row.rank == 1 %}bg-yellow-500 text-white
+                        {% if not row.rank %}bg-surface-light dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary
+                        {% elif row.rank == 1 %}bg-yellow-500 text-white
                         {% elif row.rank == 2 %}bg-slate-400 text-white
                         {% elif row.rank == 3 %}bg-amber-700 text-white
                         {% else %}bg-surface-light dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary{% endif %}">
-                        {{ row.rank }}
+                        {% if row.rank %}{{ row.rank }}{% else %}<span title="Standings begin after the first game">&ndash;</span>{% endif %}
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="font-semibold text-text-dark dark:text-white truncate text-sm">
