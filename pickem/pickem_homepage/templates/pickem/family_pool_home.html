@@ -171,7 +171,7 @@
                 <div class="flex items-center gap-3 min-w-0">
                     <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-black text-primary">#{{ row.rank }}</span>
                     <span class="truncate text-sm font-bold text-text-dark dark:text-white">
-                        {% if row.user %}{{ row.user|display_name }}{% else %}Player {{ row.points.userID }}{% endif %}
+                        {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors">{{ row.user|display_name }}</a>{% else %}Player {{ row.points.userID }}{% endif %}
                     </span>
                 </div>
                 <span class="flex-shrink-0 text-sm font-black text-text-dark dark:text-white">{{ row.week_points }} pts</span>
@@ -254,7 +254,7 @@
                             <span class="font-bold text-green-600 dark:text-green-400">{{ group.team_name }}</span>
                             <span class="text-green-700/80 dark:text-green-300/80">
                                 {% for picker in group.users %}
-                                    {{ picker|display_name }}{% if not forloop.last %}, {% endif %}
+                                    <a href="{% url 'family_pool_user_profile' family.slug pool.slug picker.id %}" class="hover:underline">{{ picker|display_name }}</a>{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             </span>
                         </div>
@@ -263,7 +263,7 @@
                             <span class="font-bold text-text-dark dark:text-white">{{ group.team_name }}</span>
                             <span class="text-text-secondary-light dark:text-text-secondary">
                                 {% for picker in group.users %}
-                                    {{ picker|display_name }}{% if not forloop.last %}, {% endif %}
+                                    <a href="{% url 'family_pool_user_profile' family.slug pool.slug picker.id %}" class="hover:text-primary hover:underline transition-colors">{{ picker|display_name }}</a>{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             </span>
                         </div>
@@ -312,7 +312,7 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="font-semibold text-text-dark dark:text-white truncate text-sm">
-                            {% if row.user %}{{ row.user|display_name }}{% else %}Player {{ row.points.userID }}{% endif %}
+                            {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors">{{ row.user|display_name }}</a>{% else %}Player {{ row.points.userID }}{% endif %}
                         </div>
                         <div class="text-xs text-text-secondary-light dark:text-text-secondary">{{ row.points.total_points|default:0 }} pts</div>
                     </div>
@@ -342,7 +342,7 @@
                         <div class="flex items-center gap-3">
                             <span class="px-2.5 py-1 text-xs font-bold bg-primary text-white rounded-full">W{{ row.week }}</span>
                             <span class="font-semibold text-text-dark dark:text-white text-sm">
-                                {% if row.user %}{{ row.user|display_name }}{% else %}Player {{ row.winner.userID }}{% endif %}
+                                {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors">{{ row.user|display_name }}</a>{% else %}Player {{ row.winner.userID }}{% endif %}
                             </span>
                         </div>
                         <i class="fas fa-trophy text-yellow-500 text-sm"></i>
@@ -415,10 +415,10 @@
             {% if active_members %}
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {% for m in active_members %}
-                <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface text-sm">
-                    <span class="font-semibold text-text-dark dark:text-white truncate">{{ m.user|display_name }}</span>
+                <a href="{% url 'family_pool_user_profile' family.slug pool.slug m.user.id %}" class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface text-sm hover:border-primary/50 transition-colors group">
+                    <span class="font-semibold text-text-dark dark:text-white truncate group-hover:text-primary transition-colors">{{ m.user|display_name }}</span>
                     <span class="text-xs text-text-secondary-light dark:text-text-secondary uppercase tracking-wide flex-shrink-0">{{ m.get_role_display }}</span>
-                </div>
+                </a>
                 {% endfor %}
             </div>
             {% else %}

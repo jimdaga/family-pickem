@@ -634,6 +634,53 @@ class TenantDashboardIsolationTests(TestCase):
         # Sep 7 2025 is a Sunday; the card shows the weekday + date.
         self.assertContains(response, "Sun, Sep 7")
 
+    def test_lobby_links_every_listed_player_to_their_profile(self):
+        # Regression guard: any place the lobby lists a player's name must
+        # link to that player's profile. Seeds standings, active members, a
+        # finished game with picks (pool-picks groups + winner trophy), and a
+        # weekly winner, then asserts each player's profile URL is present.
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        self._active_membership(self.smith_player, smith_family)
+        finished = GamesAndScores.objects.create(
+            id=1097, slug="ne-nyj-2025-week-1", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526,
+            startTimestamp=timezone.make_aware(timezone.datetime(2025, 9, 7, 13, 0)),
+            statusType="finished", statusTitle="Final", gameScored=True,
+            gameWinner="ne", homeTeamId=7, homeTeamSlug="ne", homeTeamName="New England",
+            awayTeamId=8, awayTeamSlug="nyj", awayTeamName="New York Jets",
+        )
+        for user, pts, winner in ((self.member, 5, True), (self.smith_player, 2, False)):
+            usp = userSeasonPoints.objects.create(
+                pool=smith_pool, gameseason=2526, userID=str(user.id),
+                userEmail=user.email, total_points=pts,
+            )
+            usp.week_1_winner = winner
+            usp.save(update_fields=["week_1_winner"])
+            GamePicks.objects.create(
+                id=f"{smith_pool.id}-{user.id}-{finished.id}", pool=smith_pool,
+                userEmail=user.email, uid=user.id, userID=str(user.id),
+                slug=finished.slug, competition="nfl", gameWeek="1", gameyear="2025",
+                gameseason=2526, pick_game_id=finished.id, pick="ne",
+            )
+        self.client.force_login(self.member)
+
+        with patch("pickem_homepage.views.timezone.localdate",
+                   return_value=date(2025, 9, 7)):
+            response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        for user in (self.member, self.smith_player):
+            profile_url = reverse("family_pool_user_profile", kwargs={
+                "family_slug": smith_family.slug,
+                "pool_slug": smith_pool.slug,
+                "user_id": user.id,
+            })
+            self.assertContains(
+                response, f'href="{profile_url}"',
+                msg_prefix=f"Lobby must link {user.username} to their profile",
+            )
+
     def test_dashboard_shows_in_progress_current_week_games(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         self._active_membership(self.member, smith_family)
