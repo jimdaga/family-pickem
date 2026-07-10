@@ -38,9 +38,16 @@
 
     <!-- Composer -->
     <div class="rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface shadow-sm mb-5 overflow-hidden">
-        <div class="border-b border-border-light dark:border-border-subtle px-4 py-3">
+        <div class="flex items-center gap-3 border-b border-border-light dark:border-border-subtle px-4 py-3">
+            {% with av=request.user.socialaccount_set.first %}
+            {% if av %}
+            <img src="{{ av.get_avatar_url }}" alt="" class="h-8 w-8 rounded-full object-cover ring-1 ring-border-light dark:ring-border-subtle" onerror="this.style.display='none'">
+            {% else %}
+            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary">{{ request.user|display_name|slice:":1"|upper }}</span>
+            {% endif %}
+            {% endwith %}
             <h2 class="text-sm font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">
-                <i class="fas fa-pen-to-square mr-2 text-primary"></i>Start a discussion
+                <i class="fas fa-pen-to-square mr-1 text-primary"></i>Start a discussion
             </h2>
         </div>
         <form id="new-post-form" class="p-4 space-y-3">
@@ -63,35 +70,46 @@
     <!-- Post list -->
     <div id="post-list" class="space-y-3">
         {% for post in posts %}
-        <article data-post-id="{{ post.id }}" class="message-post rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface shadow-sm overflow-hidden">
+        <article data-post-id="{{ post.id }}"
+                 data-post-title="{% if post.title and post.title != post.content %}{{ post.title }}{% endif %}"
+                 data-post-body="{{ post.content }}"
+                 data-post-author="{{ post.user|display_name }}"
+                 data-post-age="{{ post.created_at|timesince }} ago"
+                 class="message-post rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface shadow-sm overflow-hidden hover:border-primary/40 transition-colors">
             <div class="flex">
                 <!-- Vote rail -->
-                <div class="flex flex-col items-center gap-1 bg-gray-50 dark:bg-bg-dark/40 px-2 py-3">
-                    <button type="button" class="vote-btn vote-up p-1 rounded hover:bg-primary/10 {% if post.viewer_vote == 1 %}text-primary{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}" data-vote="1" aria-label="Upvote">
+                <div class="flex flex-col items-center gap-0.5 bg-gray-50 dark:bg-bg-dark/40 px-1.5 py-3">
+                    <button type="button" class="vote-btn vote-up flex h-7 w-7 items-center justify-center rounded-md hover:bg-primary/10 {% if post.viewer_vote == 1 %}text-primary{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}" data-vote="1" aria-label="Upvote">
                         <i class="fas fa-caret-up text-xl"></i>
                     </button>
-                    <span class="post-score text-sm font-black text-text-dark dark:text-white">{{ post.score }}</span>
-                    <button type="button" class="vote-btn vote-down p-1 rounded hover:bg-blue-500/10 {% if post.viewer_vote == -1 %}text-blue-500{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}" data-vote="-1" aria-label="Downvote">
+                    <span class="post-score text-sm font-black text-text-dark dark:text-white tabular-nums">{{ post.score }}</span>
+                    <button type="button" class="vote-btn vote-down flex h-7 w-7 items-center justify-center rounded-md hover:bg-blue-500/10 {% if post.viewer_vote == -1 %}text-blue-500{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}" data-vote="-1" aria-label="Downvote">
                         <i class="fas fa-caret-down text-xl"></i>
                     </button>
                 </div>
                 <!-- Body -->
                 <div class="flex-1 min-w-0 p-4">
-                    <div class="flex items-center gap-2 flex-wrap text-xs text-text-secondary-light dark:text-text-secondary mb-1">
-                        {% if post.is_pinned %}<span class="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-2 py-0.5 font-bold text-yellow-600 dark:text-yellow-400"><i class="fas fa-thumbtack"></i>Pinned</span>{% endif %}
+                    <div class="flex items-center gap-2 flex-wrap text-xs text-text-secondary-light dark:text-text-secondary mb-1.5">
+                        {% with av=post.user.socialaccount_set.first %}
+                        {% if av %}
+                        <img src="{{ av.get_avatar_url }}" alt="" class="h-5 w-5 rounded-full object-cover ring-1 ring-border-light dark:ring-border-subtle" onerror="this.style.display='none'">
+                        {% else %}
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">{{ post.user|display_name|slice:":1"|upper }}</span>
+                        {% endif %}
+                        {% endwith %}
                         <a href="{% url 'family_pool_user_profile' family.slug pool.slug post.user.id %}" class="font-semibold text-text-dark dark:text-white hover:text-primary transition-colors">{{ post.user|display_name }}</a>
                         <span>&bull; {{ post.created_at|timesince }} ago</span>
+                        {% if post.is_pinned %}<span class="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-2 py-0.5 font-bold text-yellow-600 dark:text-yellow-400"><i class="fas fa-thumbtack"></i>Pinned</span>{% endif %}
                     </div>
                     {% if post.title and post.title != post.content %}
                     <h3 class="text-lg font-bold text-text-dark dark:text-white leading-snug">{{ post.title }}</h3>
                     {% endif %}
                     <p class="mt-1 text-sm text-text-dark dark:text-white/90 whitespace-pre-wrap break-words">{{ post.content }}</p>
-                    <div class="mt-3 flex items-center gap-4 text-xs font-semibold text-text-secondary-light dark:text-text-secondary">
-                        <button type="button" class="toggle-comments inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                    <div class="mt-3 flex items-center gap-2">
+                        <button type="button" class="open-comments inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-bg-dark/50 px-3 py-1.5 text-xs font-bold text-text-secondary-light dark:text-text-secondary hover:bg-primary/10 hover:text-primary transition-colors">
                             <i class="fas fa-comment"></i><span class="comment-count">{{ post.comment_count }}</span> comment{{ post.comment_count|pluralize }}
                         </button>
                     </div>
-                    <div class="comments-container hidden mt-4 border-t border-border-light dark:border-border-subtle pt-4"></div>
                 </div>
             </div>
         </article>
@@ -115,12 +133,60 @@
     {% endif %}
 </div>
 
+<!-- Comments modal -->
+<div id="comments-modal" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-labelledby="comments-modal-title">
+    <div class="modal-backdrop absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="modal-panel relative flex w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-2xl">
+            <!-- Modal header -->
+            <div class="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-subtle px-4 py-3 sm:px-5">
+                <div class="min-w-0">
+                    <h2 id="comments-modal-title" class="text-base font-black text-text-dark dark:text-white truncate">Comments</h2>
+                    <p class="modal-post-meta text-xs text-text-secondary-light dark:text-text-secondary"></p>
+                </div>
+                <button type="button" class="modal-close flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-text-secondary-light dark:text-text-secondary hover:bg-gray-100 dark:hover:bg-bg-dark hover:text-text-dark dark:hover:text-white transition-colors" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <!-- Scrollable body -->
+            <div class="modal-body flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+                <!-- Original post context -->
+                <div class="modal-post rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-bg-dark/30 p-3 mb-4"></div>
+                <!-- Top-level comment composer -->
+                <form class="modal-comment-form mb-4 flex gap-2">
+                    <input type="text" required placeholder="Add a comment..." class="modal-comment-input flex-1 rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-2 text-sm text-text-dark dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <button type="submit" class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90 transition-colors">Comment</button>
+                </form>
+                <!-- Comment list -->
+                <div class="modal-loading hidden py-6 text-center text-sm text-text-secondary-light dark:text-text-secondary">
+                    <i class="fas fa-circle-notch fa-spin mr-2"></i>Loading comments…
+                </div>
+                <div class="modal-comment-list space-y-4"></div>
+                <div class="modal-empty hidden py-6 text-center text-sm text-text-secondary-light dark:text-text-secondary">
+                    No comments yet. Be the first to reply!
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
     const root = document.querySelector('[data-messages-page]');
     if (!root) return;
     const cfg = root.dataset;
     const csrftoken = document.querySelector('meta[name="csrf-token"]').content;
+
+    const modal = document.getElementById('comments-modal');
+    const modalTitle = modal.querySelector('#comments-modal-title');
+    const modalMeta = modal.querySelector('.modal-post-meta');
+    const modalPost = modal.querySelector('.modal-post');
+    const modalList = modal.querySelector('.modal-comment-list');
+    const modalLoading = modal.querySelector('.modal-loading');
+    const modalEmpty = modal.querySelector('.modal-empty');
+    const modalForm = modal.querySelector('.modal-comment-form');
+    const modalInput = modal.querySelector('.modal-comment-input');
+    let activeCard = null;
 
     function profileUrl(userId) { return cfg.profileUrlTemplate.replace(/0\/$/, userId + '/'); }
     function postJSON(url, payload) {
@@ -130,8 +196,25 @@
             body: JSON.stringify(payload),
         }).then(r => r.json());
     }
+    function avatarEl(url, name, size) {
+        size = size || 'h-6 w-6';
+        if (url) {
+            const img = document.createElement('img');
+            img.src = url; img.alt = ''; img.loading = 'lazy';
+            img.className = size + ' flex-shrink-0 rounded-full object-cover ring-1 ring-border-light dark:ring-border-subtle';
+            img.onerror = function () { img.replaceWith(initialEl(name, size)); };
+            return img;
+        }
+        return initialEl(name, size);
+    }
+    function initialEl(name, size) {
+        const span = document.createElement('span');
+        span.className = size + ' flex-shrink-0 flex items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary';
+        span.textContent = (name || '?').trim().charAt(0).toUpperCase();
+        return span;
+    }
 
-    // ---- Voting ----
+    // ---- Voting (post cards + modal comments) ----
     function bindVotes(scope) {
         scope.querySelectorAll('.vote-btn').forEach(btn => {
             if (btn.dataset.bound) return; btn.dataset.bound = '1';
@@ -145,7 +228,6 @@
                 postJSON(url, payload).then(data => {
                     if (!data.success) return;
                     container.querySelector(isComment ? '.comment-score' : '.post-score').textContent = data.score;
-                    // Reset arrow styling within this control's rail only.
                     const rail = btn.parentElement;
                     const upBtn = rail.querySelector('.vote-up'), downBtn = rail.querySelector('.vote-down');
                     upBtn.classList.remove('text-primary'); downBtn.classList.remove('text-blue-500');
@@ -159,18 +241,21 @@
     }
     bindVotes(root);
 
-    // ---- Comments ----
+    // ---- Comment rendering ----
+    function currentPostId() { return modal.dataset.activePostId; }
+
     function commentNode(c) {
         const wrap = document.createElement('div');
         wrap.className = 'comment flex gap-2';
         wrap.dataset.commentId = c.id;
 
+        // Vote rail
         const rail = document.createElement('div');
-        rail.className = 'flex flex-col items-center pt-1 text-text-secondary-light dark:text-text-secondary';
+        rail.className = 'flex flex-col items-center pt-0.5 text-text-secondary-light dark:text-text-secondary';
         const up = document.createElement('button');
         up.type = 'button'; up.className = 'vote-btn vote-up p-0.5 hover:text-primary'; up.dataset.vote = '1';
         up.innerHTML = '<i class="fas fa-caret-up"></i>';
-        const score = document.createElement('span'); score.className = 'comment-score text-xs font-bold'; score.textContent = c.score;
+        const score = document.createElement('span'); score.className = 'comment-score text-xs font-bold tabular-nums'; score.textContent = c.score;
         const down = document.createElement('button');
         down.type = 'button'; down.className = 'vote-btn vote-down p-0.5 hover:text-blue-500'; down.dataset.vote = '-1';
         down.innerHTML = '<i class="fas fa-caret-down"></i>';
@@ -179,34 +264,35 @@
         const body = document.createElement('div');
         body.className = 'flex-1 min-w-0';
         const meta = document.createElement('div');
-        meta.className = 'text-xs text-text-secondary-light dark:text-text-secondary mb-0.5';
+        meta.className = 'flex items-center gap-1.5 text-xs text-text-secondary-light dark:text-text-secondary mb-0.5';
+        const name = c.user_display || c.user;
+        meta.appendChild(avatarEl(c.avatar, name, 'h-5 w-5'));
         const author = document.createElement('a');
         author.href = profileUrl(c.user_id); author.className = 'font-semibold text-text-dark dark:text-white hover:text-primary';
-        author.textContent = c.user;
+        author.textContent = name;
         meta.append(author, document.createTextNode(' · ' + c.created_at));
         const text = document.createElement('p');
         text.className = 'text-sm text-text-dark dark:text-white/90 whitespace-pre-wrap break-words';
         text.textContent = c.content;
         const replyBtn = document.createElement('button');
-        replyBtn.type = 'button'; replyBtn.className = 'reply-btn mt-1 text-xs font-semibold text-text-secondary-light dark:text-text-secondary hover:text-primary';
-        replyBtn.textContent = 'Reply';
+        replyBtn.type = 'button'; replyBtn.className = 'reply-btn mt-1 inline-flex items-center gap-1 text-xs font-semibold text-text-secondary-light dark:text-text-secondary hover:text-primary';
+        replyBtn.innerHTML = '<i class="fas fa-reply text-[10px]"></i> Reply';
         body.append(meta, text, replyBtn);
 
         wrap.append(rail, body);
 
         if (c.replies && c.replies.length) {
             const repliesWrap = document.createElement('div');
-            repliesWrap.className = 'mt-3 space-y-3 border-l-2 border-border-light dark:border-border-subtle pl-3';
+            repliesWrap.className = 'reply-thread mt-3 space-y-3 border-l-2 border-border-light dark:border-border-subtle pl-3';
             c.replies.forEach(r => repliesWrap.appendChild(commentNode(r)));
             body.appendChild(repliesWrap);
         }
 
-        replyBtn.addEventListener('click', () => openReplyForm(body, c.id, postIdFor(wrap)));
+        replyBtn.addEventListener('click', () => openReplyForm(body, c.id));
         return wrap;
     }
-    function postIdFor(node) { return node.closest('.message-post').dataset.postId; }
 
-    function openReplyForm(container, parentId, postId) {
+    function openReplyForm(container, parentId) {
         if (container.querySelector(':scope > .reply-form')) return;
         const form = document.createElement('form');
         form.className = 'reply-form mt-2 flex gap-2';
@@ -219,7 +305,7 @@
         form.addEventListener('submit', e => {
             e.preventDefault();
             const content = input.value.trim(); if (!content) return;
-            postJSON(cfg.createCommentUrl, { post_id: postId, parent_id: parentId, content }).then(data => {
+            postJSON(cfg.createCommentUrl, { post_id: currentPostId(), parent_id: parentId, content }).then(data => {
                 if (!data.success) return;
                 let replies = container.querySelector(':scope > .reply-thread');
                 if (!replies) {
@@ -230,54 +316,92 @@
                 const node = commentNode(data.comment);
                 replies.appendChild(node); bindVotes(node);
                 form.remove();
-                bumpCommentCount(container, 1);
+                bumpActiveCount(1);
             });
         });
         container.appendChild(form);
         input.focus();
     }
 
-    function bumpCommentCount(node, delta) {
-        const post = node.closest('.message-post');
-        const el = post.querySelector('.comment-count');
+    function bumpActiveCount(delta) {
+        if (!activeCard) return;
+        const el = activeCard.querySelector('.comment-count');
         el.textContent = (parseInt(el.textContent, 10) || 0) + delta;
     }
 
-    root.querySelectorAll('.toggle-comments').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const post = btn.closest('.message-post');
-            const container = post.querySelector('.comments-container');
-            if (!container.classList.contains('hidden')) { container.classList.add('hidden'); return; }
-            container.classList.remove('hidden');
-            if (container.dataset.loaded) return;
-            container.dataset.loaded = '1';
-            const url = cfg.commentsUrlTemplate.replace(/0\/$/, post.dataset.postId + '/');
-            // Top-level comment composer
-            const composer = document.createElement('form');
-            composer.className = 'top-comment-form mb-4 flex gap-2';
-            const input = document.createElement('input');
-            input.type = 'text'; input.required = true; input.placeholder = 'Add a comment...';
-            input.className = 'flex-1 rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-2 text-sm text-text-dark dark:text-white focus:border-primary focus:outline-none';
-            const send = document.createElement('button');
-            send.type = 'submit'; send.className = 'rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white'; send.textContent = 'Comment';
-            composer.append(input, send);
-            const list = document.createElement('div'); list.className = 'comment-list space-y-3';
-            composer.addEventListener('submit', e => {
-                e.preventDefault();
-                const content = input.value.trim(); if (!content) return;
-                postJSON(cfg.createCommentUrl, { post_id: post.dataset.postId, content }).then(data => {
-                    if (!data.success) return;
-                    const node = commentNode(data.comment); list.prepend(node); bindVotes(node);
-                    input.value = ''; bumpCommentCount(container, 1);
-                });
+    // ---- Modal open/close ----
+    function openModal(card) {
+        activeCard = card;
+        modal.dataset.activePostId = card.dataset.postId;
+
+        // Build post context inside the modal from the card's data attributes
+        // (not scraped DOM text), so avatar initials and layout can't leak in.
+        const title = card.dataset.postTitle || '';
+        const bodyText = card.dataset.postBody || '';
+        const author = card.dataset.postAuthor || '';
+        const age = card.dataset.postAge || '';
+        modalTitle.textContent = title || 'Comments';
+        modalMeta.textContent = author + (age ? ' • ' + age : '');
+
+        modalPost.textContent = '';
+        if (title) {
+            const h = document.createElement('p');
+            h.className = 'font-bold text-text-dark dark:text-white text-sm mb-1';
+            h.textContent = title;
+            modalPost.appendChild(h);
+        }
+        const bodyP = document.createElement('p');
+        bodyP.className = 'text-sm text-text-dark dark:text-white/90 whitespace-pre-wrap break-words';
+        bodyP.textContent = bodyText;
+        modalPost.appendChild(bodyP);
+
+        modalList.textContent = '';
+        modalEmpty.classList.add('hidden');
+        modalLoading.classList.remove('hidden');
+        modalInput.value = '';
+
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        modalInput.focus();
+
+        const url = cfg.commentsUrlTemplate.replace(/0\/$/, card.dataset.postId + '/');
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                modalLoading.classList.add('hidden');
+                const comments = (data && data.success && data.comments) || [];
+                if (!comments.length) { modalEmpty.classList.remove('hidden'); return; }
+                comments.forEach(c => { const n = commentNode(c); modalList.appendChild(n); bindVotes(n); });
+            })
+            .catch(() => {
+                modalLoading.classList.add('hidden');
+                modalEmpty.textContent = 'Could not load comments.';
+                modalEmpty.classList.remove('hidden');
             });
-            container.append(composer, list);
-            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.success) return;
-                    (data.comments || []).forEach(c => { const n = commentNode(c); list.appendChild(n); bindVotes(n); });
-                });
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+        activeCard = null;
+        delete modal.dataset.activePostId;
+    }
+
+    root.querySelectorAll('.open-comments').forEach(btn => {
+        btn.addEventListener('click', () => openModal(btn.closest('.message-post')));
+    });
+    modal.querySelector('.modal-close').addEventListener('click', closeModal);
+    modal.querySelector('.modal-backdrop').addEventListener('click', closeModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+
+    modalForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const content = modalInput.value.trim(); if (!content) return;
+        postJSON(cfg.createCommentUrl, { post_id: currentPostId(), content }).then(data => {
+            if (!data.success) return;
+            modalEmpty.classList.add('hidden');
+            const node = commentNode(data.comment); modalList.prepend(node); bindVotes(node);
+            modalInput.value = ''; bumpActiveCount(1);
         });
     });
 
@@ -298,7 +422,6 @@
         }).then(r => r.json()).then(data => {
             if (!data.success) { status.textContent = 'Could not post. Try again.'; return; }
             status.textContent = '';
-            // Reload to render the new thread with full markup in the right order.
             window.location.reload();
         }).catch(() => { status.textContent = 'Could not post. Try again.'; });
     });

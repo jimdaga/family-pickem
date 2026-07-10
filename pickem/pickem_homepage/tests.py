@@ -508,7 +508,9 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, "Smith Family")
         self.assertContains(response, "Main Pickem")
         self.assertContains(response, "Smith-player")
-        self.assertContains(response, "Smith family update")
+        # The message board moved to its own page; the lobby no longer
+        # surfaces post content (neither this family's nor another's).
+        self.assertNotContains(response, "Smith family update")
         self.assertContains(response, "1 of 1")
         self.assertNotContains(response, "Jones Family")
         self.assertNotContains(response, "Jones-player")
@@ -1908,6 +1910,26 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertContains(response, "gsap.min.js")
         self.assertContains(response, "ScrollTrigger.min.js")
 
+    def test_standings_hide_numbered_positions_until_a_game_is_scored(self):
+        # Everyone starts even, so the full standings page must show a neutral
+        # marker for every player until the first game of the season is scored.
+        self._seed_private_pool_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["season_has_started"])
+        self.assertContains(response, "Standings begin after the first game")
+
+        # Score a game and the numbered leaderboard returns.
+        self.week_one_game.gameScored = True
+        self.week_one_game.save(update_fields=["gameScored"])
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["season_has_started"])
+        self.assertNotContains(response, "Standings begin after the first game")
+
     def test_tenant_rules_display_current_context_settings_and_no_editing_form(self):
         self.client.force_login(self.smith_member)
 
@@ -2784,6 +2806,52 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
             response,
             self._tenant_url("family_pool_user_profile", user_id=self.smith_member.id),
         )
+
+    def test_messages_page_renders_comments_modal_and_open_trigger(self):
+        # Comments open in an overlay modal on top of the board, so the page
+        # must ship the modal container and the per-post trigger.
+        MessageBoardPost.objects.create(
+            family=self.smith_family, user=self.smith_member,
+            title="Smith thread", content="Smith board content",
+        )
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_messages"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="comments-modal"')
+        self.assertContains(response, "open-comments")
+        self.assertContains(response, "modal-comment-list")
+
+    def test_comment_payloads_include_display_name_and_avatar(self):
+        # The Reddit-style comment list renders avatars and display names, so
+        # both the create and fetch JSON payloads must carry those fields.
+        post = MessageBoardPost.objects.create(
+            family=self.smith_family, user=self.smith_member,
+            title="Smith thread", content="Smith board content",
+        )
+        self.client.force_login(self.smith_member)
+
+        created = self._json_post(
+            self._tenant_url("family_pool_create_comment"),
+            {"post_id": post.id, "content": "hello there"},
+        )
+        self.assertEqual(created.status_code, 200)
+        comment = created.json()["comment"]
+        self.assertIn("user_display", comment)
+        # No social account -> empty avatar so the client renders an initials
+        # badge (matching the server-rendered post cards) instead of a
+        # placeholder image.
+        self.assertEqual(comment["avatar"], "")
+
+        fetched = self.client.get(
+            self._tenant_url("family_pool_get_post_comments", post_id=post.id),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(fetched.status_code, 200)
+        first = fetched.json()["comments"][0]
+        self.assertIn("user_display", first)
+        self.assertIn("avatar", first)
 
     def test_messages_page_denies_outsiders(self):
         self.client.force_login(self.outsider)

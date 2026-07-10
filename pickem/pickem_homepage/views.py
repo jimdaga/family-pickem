@@ -926,11 +926,8 @@ def family_pool_home(request, family_slug, pool_slug):
     else:
         user_pick_status = 'complete'
 
-    message_posts = (
-        MessageBoardPost.objects.filter(family=family, is_active=True)
-        .select_related('user')
-        .order_by('-is_pinned', '-created_at')[:5]
-    )
+    # active_members feeds the lobby's member-count badge (its list section and
+    # the message-board teaser were removed; the board now has its own page).
     active_members = (
         FamilyMembership.objects.filter(
             family=family,
@@ -968,7 +965,6 @@ def family_pool_home(request, family_slug, pool_slug):
         'first_kickoff': first_kickoff,
         'user_picks_count': user_picks_count,
         'user_pick_status': user_pick_status,
-        'message_posts': message_posts,
         'active_members': active_members,
     }
     return render(request, 'pickem/family_pool_home.html', context)
@@ -2319,7 +2315,20 @@ def render_standings_page(request, *, tenant_context=None):
     if tenant_context:
         player_points = player_points.filter(pool=tenant_context.pool)
     player_points = player_points.order_by('-total_points', 'userID')
-    
+
+    # Before any game has been scored this season everyone is even, so we hide
+    # numbered positions and show a neutral marker instead of implying a rank.
+    # Scope to the pool's competition so this matches the lobby's flag exactly.
+    season_started_qs = GamesAndScores.objects.filter(
+        gameseason=selected_season,
+        gameScored=True,
+    )
+    if tenant_context:
+        season_started_qs = season_started_qs.filter(
+            competition=tenant_context.pool.competition
+        )
+    season_has_started = season_started_qs.exists()
+
     # Get season winner for the selected season
     season_winner_qs = userSeasonPoints.objects.filter(
         year_winner=True,
@@ -2383,6 +2392,7 @@ def render_standings_page(request, *, tenant_context=None):
         'usernames': usernames,
         'avatars': avatars,
         'player_points': player_points,
+        'season_has_started': season_has_started,
         'season_winner': season_winner,
         'weekly_winners': weekly_winners,
         'all_seasons': formatted_seasons,
@@ -3487,6 +3497,7 @@ def tenant_messages(request, family_slug, pool_slug):
     posts_qs = (
         MessageBoardPost.objects.filter(family=family, is_active=True)
         .select_related('user')
+        .prefetch_related('user__socialaccount_set')
         .order_by('-is_pinned', '-created_at')
     )
     paginator = Paginator(posts_qs, 15)
@@ -3529,6 +3540,33 @@ def tenant_create_post(request, family_slug, pool_slug):
 
 def message_board_not_found():
     return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
+
+
+def board_display_name(user):
+    """Display name for JSON message-board payloads.
+
+    Reuses the display_name template filter so the JS-rendered comment authors
+    and the server-rendered post authors can never drift apart.
+    """
+    from pickem_homepage.templatetags.pickem_homepage_extras import display_name
+
+    return display_name(user)
+
+
+def board_avatar_url(user):
+    """Return the user's social avatar URL, or '' when they have none.
+
+    Returning an empty string (rather than a placeholder image) lets the
+    client render the same initials badge the server-rendered post cards use
+    for avatar-less users, keeping posts and comments visually consistent.
+    """
+    try:
+        social_account = user.socialaccount_set.first()
+        if social_account:
+            return social_account.get_avatar_url()
+    except Exception:
+        pass
+    return ''
 
 
 def create_post_for_family(request, family):
@@ -3621,17 +3659,14 @@ def create_comment_for_family(request, family):
             content=content
         )
 
-        avatar_url = 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'
-        if hasattr(request.user, 'socialaccount_set') and request.user.socialaccount_set.exists():
-            avatar_url = request.user.socialaccount_set.first().get_avatar_url()
-
         return JsonResponse({
             'success': True,
             'comment': {
                 'id': comment.id,
                 'content': comment.content,
                 'user': request.user.username,
-                'avatar': avatar_url,
+                'user_display': board_display_name(request.user),
+                'avatar': board_avatar_url(request.user),
                 'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M'),
                 'score': comment.score,
                 'depth': comment.depth,
@@ -3835,24 +3870,25 @@ def get_post_comments_for_family(request, family, post_id):
             family=family,
             parent=None,
             is_active=True,
+        ).select_related('user').prefetch_related(
+            'user__socialaccount_set'
         ).order_by('-created_at')
 
         def serialize_comment(comment):
-            avatar_url = 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'
-            if hasattr(comment.user, 'socialaccount_set') and comment.user.socialaccount_set.exists():
-                avatar_url = comment.user.socialaccount_set.first().get_avatar_url()
-
             replies = MessageBoardComment.objects.filter(
                 parent=comment,
                 family=family,
                 is_active=True,
+            ).select_related('user').prefetch_related(
+                'user__socialaccount_set'
             ).order_by('created_at')
             data = {
                 'id': comment.id,
                 'content': comment.content,
                 'user': comment.user.username,
+                'user_display': board_display_name(comment.user),
                 'user_id': comment.user_id,
-                'avatar': avatar_url,
+                'avatar': board_avatar_url(comment.user),
                 'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M'),
                 'score': comment.score,
                 'depth': comment.depth,
