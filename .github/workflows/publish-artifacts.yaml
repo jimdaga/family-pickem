@@ -57,6 +57,12 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
+    # Serialize with the main-branch "-latest" workflow: both run chart-releaser
+    # which pushes index.yaml to gh-pages, and concurrent pushes lose the race
+    # (non-fast-forward). Queue instead of cancel so neither publish is dropped.
+    concurrency:
+      group: helm-chart-release
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -87,6 +93,10 @@ jobs:
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.5.0
+        with:
+          # Idempotent re-runs: don't fail if the chart release already exists
+          # (e.g. after a gh-pages race), just rebuild and push the index.
+          skip_existing: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
