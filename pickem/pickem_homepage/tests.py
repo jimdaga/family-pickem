@@ -737,6 +737,14 @@ class TenantDashboardIsolationTests(TestCase):
             self.assertEqual(get_espn_nfl_news(3), [])
         cache.clear()
 
+    def test_get_espn_nfl_news_survives_cache_backend_outage(self):
+        # A cache backend failure must degrade to a miss, not 500 the lobby.
+        from pickem_homepage.views import get_espn_nfl_news
+        with patch("django.core.cache.cache.get", side_effect=Exception("cache down")), \
+             patch("django.core.cache.cache.set", side_effect=Exception("cache down")), \
+             patch("requests.get", side_effect=Exception("network down")):
+            self.assertEqual(get_espn_nfl_news(3), [])
+
     def test_dashboard_shows_in_progress_current_week_games(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         self._active_membership(self.member, smith_family)

@@ -69,7 +69,12 @@ def get_espn_nfl_news(limit=6):
     from django.core.cache import cache
 
     cache_key = f'espn_nfl_news_{limit}'
-    cached = cache.get(cache_key)
+    # A cache backend outage must never take down the lobby, so treat cache
+    # read/write failures as a miss rather than letting them propagate.
+    try:
+        cached = cache.get(cache_key)
+    except Exception:
+        cached = None
     if cached is not None:
         return cached
 
@@ -97,7 +102,10 @@ def get_espn_nfl_news(limit=6):
         logging.getLogger(__name__).warning('ESPN news fetch failed', exc_info=True)
         articles = []
 
-    cache.set(cache_key, articles, 900)  # 15 minutes
+    try:
+        cache.set(cache_key, articles, 900)  # 15 minutes
+    except Exception:
+        logging.getLogger(__name__).warning('ESPN news cache write failed', exc_info=True)
     return articles
 
 

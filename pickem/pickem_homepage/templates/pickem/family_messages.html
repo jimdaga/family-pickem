@@ -187,6 +187,7 @@
     const modalForm = modal.querySelector('.modal-comment-form');
     const modalInput = modal.querySelector('.modal-comment-input');
     let activeCard = null;
+    let modalOpener = null;
 
     function profileUrl(userId) { return cfg.profileUrlTemplate.replace(/0\/$/, userId + '/'); }
     function postJSON(url, payload) {
@@ -331,6 +332,7 @@
 
     // ---- Modal open/close ----
     function openModal(card) {
+        modalOpener = document.activeElement;
         activeCard = card;
         modal.dataset.activePostId = card.dataset.postId;
 
@@ -385,6 +387,8 @@
         document.body.classList.remove('overflow-hidden');
         activeCard = null;
         delete modal.dataset.activePostId;
+        if (modalOpener && typeof modalOpener.focus === 'function') modalOpener.focus();
+        modalOpener = null;
     }
 
     root.querySelectorAll('.open-comments').forEach(btn => {
@@ -392,7 +396,22 @@
     });
     modal.querySelector('.modal-close').addEventListener('click', closeModal);
     modal.querySelector('.modal-backdrop').addEventListener('click', closeModal);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+    // Keyboard handling: Escape closes; Tab/Shift+Tab stay trapped inside the
+    // open dialog so focus can't escape into the hidden page behind it.
+    document.addEventListener('keydown', e => {
+        if (modal.classList.contains('hidden')) return;
+        if (e.key === 'Escape') { closeModal(); return; }
+        if (e.key !== 'Tab') return;
+        const items = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled]), a[href]')]
+            .filter(el => el.offsetParent !== null);
+        if (!items.length) return;
+        const first = items[0], last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault(); first.focus();
+        }
+    });
 
     modalForm.addEventListener('submit', e => {
         e.preventDefault();
