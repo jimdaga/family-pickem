@@ -56,6 +56,51 @@ from pickem_api.authz import (
 from pickem_api.models import Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, Pool, PoolSettings
 from pickem_homepage.authz import family_member_required
 
+ESPN_NEWS_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news'
+
+
+def get_espn_nfl_news(limit=6):
+    """Fetch recent NFL headlines from ESPN for the lobby news tiles.
+
+    Cached for 15 minutes and fully fail-safe: any error (timeout, non-200,
+    parse) returns an empty list so the lobby always renders.
+    """
+    import logging
+    from django.core.cache import cache
+
+    cache_key = f'espn_nfl_news_{limit}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    articles = []
+    try:
+        import requests
+        response = requests.get(
+            ESPN_NEWS_URL,
+            params={'limit': limit},
+            headers={'Content-Type': 'application/json'},
+            timeout=4,
+        )
+        response.raise_for_status()
+        for item in (response.json().get('articles') or [])[:limit]:
+            images = item.get('images') or []
+            web = (item.get('links') or {}).get('web') or {}
+            articles.append({
+                'headline': item.get('headline', ''),
+                'description': item.get('description', ''),
+                'url': web.get('href', ''),
+                'image': images[0].get('url') if images else '',
+                'published': item.get('published', ''),
+            })
+    except Exception:
+        logging.getLogger(__name__).warning('ESPN news fetch failed', exc_info=True)
+        articles = []
+
+    cache.set(cache_key, articles, 900)  # 15 minutes
+    return articles
+
+
 def get_season(display_name=False):
     return get_season_from_api(display_name=display_name)
 
@@ -914,6 +959,7 @@ def family_pool_home(request, family_slug, pool_slug):
         'standings': standings,
         'season_has_started': season_has_started,
         'viewer_favorite_team': viewer_favorite_team,
+        'espn_news': get_espn_nfl_news(6),
         'week_points_summary': week_points_summary,
         'recent_winners': recent_winners,
         'current_week_games': dashboard_snapshot_games,

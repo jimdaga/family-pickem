@@ -702,6 +702,39 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, 'data-testid="lobby-favorite-team"')
         self.assertContains(response, "https://example.test/ne.png")
 
+    def test_lobby_renders_espn_news_tiles_and_hides_when_unavailable(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        self.client.force_login(self.member)
+        fake_news = [{
+            "headline": "Blockbuster trade shakes up the NFC",
+            "description": "Details inside.",
+            "url": "https://www.espn.com/nfl/story/x",
+            "image": "https://a.espncdn.com/photo.jpg",
+            "published": "2026-07-09T12:00:00Z",
+        }]
+
+        with patch("pickem_homepage.views.get_espn_nfl_news", return_value=fake_news):
+            response = self.client.get(self._tenant_url(smith_family, smith_pool))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-testid="espn-news"')
+        self.assertContains(response, "Blockbuster trade shakes up the NFC")
+        self.assertContains(response, "https://www.espn.com/nfl/story/x")
+
+        # When ESPN is unavailable, the section is hidden (never breaks the lobby).
+        with patch("pickem_homepage.views.get_espn_nfl_news", return_value=[]):
+            response = self.client.get(self._tenant_url(smith_family, smith_pool))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'data-testid="espn-news"')
+
+    def test_get_espn_nfl_news_fails_safe_on_error(self):
+        from django.core.cache import cache
+        from pickem_homepage.views import get_espn_nfl_news
+        cache.clear()
+        with patch("requests.get", side_effect=Exception("network down")):
+            self.assertEqual(get_espn_nfl_news(3), [])
+        cache.clear()
+
     def test_dashboard_shows_in_progress_current_week_games(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         self._active_membership(self.member, smith_family)

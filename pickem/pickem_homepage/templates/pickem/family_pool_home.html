@@ -288,6 +288,41 @@
         {% endif %}
     </div>
 
+    <!-- ═════════════════════════════ AROUND THE NFL (ESPN) ═════════════════════════════ -->
+    {% if espn_news %}
+    <div class="lobby-section section-container mb-6" data-testid="espn-news">
+        <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-newspaper text-xl text-primary"></i>
+            <h2 class="text-lg font-bold text-text-dark dark:text-white">Around the NFL</h2>
+            <span class="text-xs text-text-secondary-light dark:text-text-secondary">via ESPN</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for article in espn_news %}
+            <a href="{{ article.url }}" target="_blank" rel="noopener noreferrer"
+               class="group flex flex-col overflow-hidden rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface hover:border-primary/50 hover:shadow-card-hover transition-all">
+                {% if article.image %}
+                <div class="aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-bg-dark/40">
+                    <img src="{{ article.image }}" alt="" loading="lazy"
+                         class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                         onerror="this.closest('a').querySelector('.espn-fallback')?.classList.remove('hidden'); this.remove()">
+                </div>
+                {% endif %}
+                <div class="espn-fallback {% if article.image %}hidden{% endif %} flex aspect-[16/9] items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+                    <i class="fas fa-football-ball text-3xl text-primary/40"></i>
+                </div>
+                <div class="p-3 flex-1 flex flex-col">
+                    <p class="text-sm font-bold text-text-dark dark:text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors">{{ article.headline }}</p>
+                    {% if article.description %}
+                    <p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary line-clamp-2">{{ article.description }}</p>
+                    {% endif %}
+                    <span class="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">Read on ESPN <i class="fas fa-arrow-up-right-from-square text-[9px]"></i></span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- ═════════════════════════════ STANDINGS + RECENT WINNERS ════════════════════════ -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 
