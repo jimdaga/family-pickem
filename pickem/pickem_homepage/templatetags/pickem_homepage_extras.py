@@ -148,7 +148,17 @@ def lookuppick(id):
     pick = GamePicks.objects.filter(id=id).distinct()
     return pick.count
 
-@register.filter(name='times') 
+
+@register.filter
+def contains(collection, value):
+    """True if value is in collection (set/list/dict). Used to flag missing
+    picks on the scores page from a precomputed set of picked keys."""
+    if collection is None:
+        return False
+    return value in collection
+
+
+@register.filter(name='times')
 def times(number):
     return range(1, number+1)
 

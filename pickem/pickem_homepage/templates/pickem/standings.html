@@ -75,7 +75,7 @@
                 </a>
                 <div>
                     <h4 class="text-xl font-bold text-text-dark dark:text-white mb-1 uppercase">
-                        {{ champion_name|default:"Unknown Champion" }}
+                        <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug season_winner.userID %}{% else %}{% url 'user_profile' season_winner.userID %}{% endif %}" class="hover:text-primary transition-colors">{{ champion_name|default:"Unknown Champion" }}</a>
                     </h4>
                     <p class="text-sm text-text-secondary-light dark:text-text-secondary">
                         Congratulations on your victory!
@@ -144,12 +144,13 @@
                 <div class="flex items-center gap-3">
                     <!-- Rank Badge -->
                     <div class="flex-shrink-0 w-9 h-9 rounded-full
-                                {% if forloop.counter == 1 %}bg-yellow-500
+                                {% if not season_has_started %}bg-surface-hover
+                                {% elif forloop.counter == 1 %}bg-yellow-500
                                 {% elif forloop.counter == 2 %}bg-gray-400
                                 {% elif forloop.counter == 3 %}bg-amber-700
                                 {% else %}bg-surface-hover{% endif %}
                                 flex items-center justify-center font-black text-white text-sm shadow-md">
-                        {{ forloop.counter }}
+                        {% if season_has_started %}{{ forloop.counter }}{% else %}<span title="Standings begin after the first game">&ndash;</span>{% endif %}
                     </div>
 
                     <!-- Player Avatar & Info -->
@@ -204,10 +205,10 @@
 	                                         alt="Profile picture for {{ username }}"
 	                                         class="w-9 h-9 rounded-full border-2 border-yellow-500 mx-auto hover:scale-105 transition-transform">
 	                                </a>
-	                                <div class="flex items-center justify-center gap-1 text-xs font-semibold text-text-dark dark:text-white">
+	                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug x.userID %}{% else %}{% url 'user_profile' x.userID %}{% endif %}" class="flex items-center justify-center gap-1 text-xs font-semibold text-text-dark dark:text-white hover:text-primary transition-colors">
 	                                    <i class="fas fa-trophy text-yellow-500"></i>
 	                                    <span class="truncate max-w-[64px] uppercase">{{ username }}</span>
-	                                </div>
+	                                </a>
 	                            </div>
                             {% endwith %}
                             {% endwith %}
@@ -247,7 +248,7 @@
                     </a>
 	                    {% endwith %}
 	                    <div class="flex-1">
-	                        <h5 class="text-sm font-bold text-text-dark dark:text-white uppercase">{{ username }}</h5>
+	                        <h5 class="text-sm font-bold text-text-dark dark:text-white uppercase"><a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="hover:text-primary transition-colors">{{ username }}</a></h5>
                         <p class="text-sm text-text-secondary-light dark:text-text-secondary">
                             Total: <strong class="text-text-dark dark:text-white">{{ player.total_points|default:0 }} points</strong>
                         </p>

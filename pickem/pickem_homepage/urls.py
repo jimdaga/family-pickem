@@ -118,6 +118,11 @@ urlpatterns = [
         name='family_pool_user_profile',
     ),
     path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/messages/',
+        views.tenant_messages,
+        name='family_pool_messages',
+    ),
+    path(
         'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/create-post/',
         views.tenant_create_post,
         name='family_pool_create_post',

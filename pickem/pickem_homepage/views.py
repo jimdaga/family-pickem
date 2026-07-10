@@ -56,6 +56,59 @@ from pickem_api.authz import (
 from pickem_api.models import Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, Pool, PoolSettings
 from pickem_homepage.authz import family_member_required
 
+ESPN_NEWS_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news'
+
+
+def get_espn_nfl_news(limit=6):
+    """Fetch recent NFL headlines from ESPN for the lobby news tiles.
+
+    Cached for 15 minutes and fully fail-safe: any error (timeout, non-200,
+    parse) returns an empty list so the lobby always renders.
+    """
+    import logging
+    from django.core.cache import cache
+
+    cache_key = f'espn_nfl_news_{limit}'
+    # A cache backend outage must never take down the lobby, so treat cache
+    # read/write failures as a miss rather than letting them propagate.
+    try:
+        cached = cache.get(cache_key)
+    except Exception:
+        cached = None
+    if cached is not None:
+        return cached
+
+    articles = []
+    try:
+        import requests
+        response = requests.get(
+            ESPN_NEWS_URL,
+            params={'limit': limit},
+            headers={'Content-Type': 'application/json'},
+            timeout=4,
+        )
+        response.raise_for_status()
+        for item in (response.json().get('articles') or [])[:limit]:
+            images = item.get('images') or []
+            web = (item.get('links') or {}).get('web') or {}
+            articles.append({
+                'headline': item.get('headline', ''),
+                'description': item.get('description', ''),
+                'url': web.get('href', ''),
+                'image': images[0].get('url') if images else '',
+                'published': item.get('published', ''),
+            })
+    except Exception:
+        logging.getLogger(__name__).warning('ESPN news fetch failed', exc_info=True)
+        articles = []
+
+    try:
+        cache.set(cache_key, articles, 900)  # 15 minutes
+    except Exception:
+        logging.getLogger(__name__).warning('ESPN news cache write failed', exc_info=True)
+    return articles
+
+
 def get_season(display_name=False):
     return get_season_from_api(display_name=display_name)
 
@@ -767,9 +820,16 @@ def family_pool_home(request, family_slug, pool_slug):
         if str(points.userID).isdigit()
     ]
     standing_users = User.objects.in_bulk(standing_user_ids)
+    # Before any game has been scored this season everyone is even, so we hide
+    # numbered positions and show a neutral marker instead of implying a rank.
+    season_has_started = GamesAndScores.objects.filter(
+        gameseason=gameseason,
+        competition=current_competition,
+        gameScored=True,
+    ).exists()
     standings = [
         {
-            'rank': rank,
+            'rank': rank if season_has_started else None,
             'points': points,
             'user': standing_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
         }
@@ -874,11 +934,8 @@ def family_pool_home(request, family_slug, pool_slug):
     else:
         user_pick_status = 'complete'
 
-    message_posts = (
-        MessageBoardPost.objects.filter(family=family, is_active=True)
-        .select_related('user')
-        .order_by('-is_pinned', '-created_at')[:5]
-    )
+    # active_members feeds the lobby's member-count badge (its list section and
+    # the message-board teaser were removed; the board now has its own page).
     active_members = (
         FamilyMembership.objects.filter(
             family=family,
@@ -889,6 +946,14 @@ def family_pool_home(request, family_slug, pool_slug):
         .order_by('user__username')[:10]
     )
 
+    # The viewer's favorite-team logo for the lobby welcome badge.
+    viewer_favorite_team = None
+    viewer_profile = UserProfile.objects.filter(user=request.user).first()
+    if viewer_profile and viewer_profile.favorite_team:
+        viewer_favorite_team = Teams.objects.filter(
+            teamNameSlug=viewer_profile.favorite_team
+        ).first()
+
     context = {
         'family': family,
         'pool': pool,
@@ -897,6 +962,9 @@ def family_pool_home(request, family_slug, pool_slug):
         'current_week': current_week,
         'current_competition': current_competition,
         'standings': standings,
+        'season_has_started': season_has_started,
+        'viewer_favorite_team': viewer_favorite_team,
+        'espn_news': get_espn_nfl_news(6),
         'week_points_summary': week_points_summary,
         'recent_winners': recent_winners,
         'current_week_games': dashboard_snapshot_games,
@@ -905,7 +973,6 @@ def family_pool_home(request, family_slug, pool_slug):
         'first_kickoff': first_kickoff,
         'user_picks_count': user_picks_count,
         'user_pick_status': user_pick_status,
-        'message_posts': message_posts,
         'active_members': active_members,
     }
     return render(request, 'pickem/family_pool_home.html', context)
@@ -2256,7 +2323,20 @@ def render_standings_page(request, *, tenant_context=None):
     if tenant_context:
         player_points = player_points.filter(pool=tenant_context.pool)
     player_points = player_points.order_by('-total_points', 'userID')
-    
+
+    # Before any game has been scored this season everyone is even, so we hide
+    # numbered positions and show a neutral marker instead of implying a rank.
+    # Scope to the pool's competition so this matches the lobby's flag exactly.
+    season_started_qs = GamesAndScores.objects.filter(
+        gameseason=selected_season,
+        gameScored=True,
+    )
+    if tenant_context:
+        season_started_qs = season_started_qs.filter(
+            competition=tenant_context.pool.competition
+        )
+    season_has_started = season_started_qs.exists()
+
     # Get season winner for the selected season
     season_winner_qs = userSeasonPoints.objects.filter(
         year_winner=True,
@@ -2320,6 +2400,7 @@ def render_standings_page(request, *, tenant_context=None):
         'usernames': usernames,
         'avatars': avatars,
         'player_points': player_points,
+        'season_has_started': season_has_started,
         'season_winner': season_winner,
         'weekly_winners': weekly_winners,
         'all_seasons': formatted_seasons,
@@ -2442,6 +2523,20 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
     else:
         players_ids_qs = User.objects.filter(is_active=True, is_superuser=False)
     players_ids = players_ids_qs.values_list('id', flat=True).distinct()
+
+    # Set of "{user_id}-{game_id}" keys that actually have a pick, so the
+    # scores template can flag missing picks with one query instead of the
+    # per-cell lookuppick filter — which searched GamePicks by a bare
+    # "{user}-{game}" id and never matched the real pool-scoped pick ids
+    # ("{pool}-{user}-{game}"), marking everyone as missing.
+    picked_keys = set()
+    for uid_val, userid_val, game_id_val in picks.values_list('uid', 'userID', 'pick_game_id'):
+        key_uid = uid_val
+        if not key_uid and str(userid_val).isdigit():
+            key_uid = int(userid_val)
+        if key_uid:
+            picked_keys.add(f"{key_uid}-{game_id_val}")
+
     wins_losses = Teams.objects.filter(gameseason=gameseason)
 
     winner_object = "week_{}_winner".format(game_week)
@@ -2501,6 +2596,7 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
         'users_w_points': users_w_points,
         'players_names': players_names,
         'players_ids': players_ids,
+        'picked_keys': picked_keys,
         'week_winner': week_winner,
         'current_week': game_week,
         'points_total': points_total,
@@ -3110,13 +3206,21 @@ def tenant_user_profile(request, family_slug, pool_slug, user_id):
 
 def render_user_profile(request, user_id, *, tenant_context=None):
     if tenant_context:
-        profile_user = get_object_or_404(
-            User,
-            id=user_id,
-            is_active=True,
-            family_memberships__family=tenant_context.family,
-            family_memberships__status=FamilyMembership.Status.ACTIVE,
-        )
+        if getattr(request.user, 'is_superuser', False):
+            # God mode: superusers can open any active user's profile while
+            # observing a family, including their own when they hold no real
+            # membership there (e.g. via the navbar "My Profile" link). Real
+            # members still require an actual active membership below, which
+            # keeps cross-tenant profile URLs blocked for everyone else.
+            profile_user = get_object_or_404(User, id=user_id, is_active=True)
+        else:
+            profile_user = get_object_or_404(
+                User,
+                id=user_id,
+                is_active=True,
+                family_memberships__family=tenant_context.family,
+                family_memberships__status=FamilyMembership.Status.ACTIVE,
+            )
         gameseason = tenant_context.pool.season
         points_scope = userSeasonPoints.objects.filter(pool=tenant_context.pool)
         picks_scope = GamePicks.objects.filter(pool=tenant_context.pool)
@@ -3389,6 +3493,46 @@ def toggle_theme(request):
 # MESSAGE BOARD VIEWS
 # =============================================================================
 
+@family_member_required
+def tenant_messages(request, family_slug, pool_slug):
+    """Dedicated Reddit-style message board page for a family/pool."""
+    from django.core.paginator import Paginator
+
+    tenant_context = request.tenant_context
+    family = tenant_context.family
+    pool = tenant_context.pool
+
+    posts_qs = (
+        MessageBoardPost.objects.filter(family=family, is_active=True)
+        .select_related('user')
+        .prefetch_related('user__socialaccount_set')
+        .order_by('-is_pinned', '-created_at')
+    )
+    paginator = Paginator(posts_qs, 15)
+    posts = paginator.get_page(request.GET.get('page'))
+
+    # The viewer's existing vote per visible post, so arrows render active.
+    page_post_ids = [post.id for post in posts]
+    user_votes = {
+        vote.post_id: vote.vote_type
+        for vote in MessageBoardVote.objects.filter(
+            user=request.user, family=family, post_id__in=page_post_ids
+        )
+    }
+    for post in posts:
+        post.viewer_vote = user_votes.get(post.id, 0)
+
+    context = {
+        'family': family,
+        'pool': pool,
+        'membership': tenant_context.membership,
+        'gameseason': pool.season or get_season(),
+        'posts': posts,
+        'total_posts': paginator.count,
+    }
+    return render(request, 'pickem/family_messages.html', context)
+
+
 @login_required
 # @ratelimit(key='user', rate='10/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
@@ -3404,6 +3548,33 @@ def tenant_create_post(request, family_slug, pool_slug):
 
 def message_board_not_found():
     return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
+
+
+def board_display_name(user):
+    """Display name for JSON message-board payloads.
+
+    Reuses the display_name template filter so the JS-rendered comment authors
+    and the server-rendered post authors can never drift apart.
+    """
+    from pickem_homepage.templatetags.pickem_homepage_extras import display_name
+
+    return display_name(user)
+
+
+def board_avatar_url(user):
+    """Return the user's social avatar URL, or '' when they have none.
+
+    Returning an empty string (rather than a placeholder image) lets the
+    client render the same initials badge the server-rendered post cards use
+    for avatar-less users, keeping posts and comments visually consistent.
+    """
+    try:
+        social_account = user.socialaccount_set.first()
+        if social_account:
+            return social_account.get_avatar_url()
+    except Exception:
+        pass
+    return ''
 
 
 def create_post_for_family(request, family):
@@ -3496,17 +3667,14 @@ def create_comment_for_family(request, family):
             content=content
         )
 
-        avatar_url = 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'
-        if hasattr(request.user, 'socialaccount_set') and request.user.socialaccount_set.exists():
-            avatar_url = request.user.socialaccount_set.first().get_avatar_url()
-
         return JsonResponse({
             'success': True,
             'comment': {
                 'id': comment.id,
                 'content': comment.content,
                 'user': request.user.username,
-                'avatar': avatar_url,
+                'user_display': board_display_name(request.user),
+                'avatar': board_avatar_url(request.user),
                 'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M'),
                 'score': comment.score,
                 'depth': comment.depth,
@@ -3710,24 +3878,25 @@ def get_post_comments_for_family(request, family, post_id):
             family=family,
             parent=None,
             is_active=True,
+        ).select_related('user').prefetch_related(
+            'user__socialaccount_set'
         ).order_by('-created_at')
 
         def serialize_comment(comment):
-            avatar_url = 'https://www.wmata.com/systemimages/icons/menu-car-icon.png'
-            if hasattr(comment.user, 'socialaccount_set') and comment.user.socialaccount_set.exists():
-                avatar_url = comment.user.socialaccount_set.first().get_avatar_url()
-
             replies = MessageBoardComment.objects.filter(
                 parent=comment,
                 family=family,
                 is_active=True,
+            ).select_related('user').prefetch_related(
+                'user__socialaccount_set'
             ).order_by('created_at')
             data = {
                 'id': comment.id,
                 'content': comment.content,
                 'user': comment.user.username,
+                'user_display': board_display_name(comment.user),
                 'user_id': comment.user_id,
-                'avatar': avatar_url,
+                'avatar': board_avatar_url(comment.user),
                 'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M'),
                 'score': comment.score,
                 'depth': comment.depth,

@@ -508,7 +508,9 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, "Smith Family")
         self.assertContains(response, "Main Pickem")
         self.assertContains(response, "Smith-player")
-        self.assertContains(response, "Smith family update")
+        # The message board moved to its own page; the lobby no longer
+        # surfaces post content (neither this family's nor another's).
+        self.assertNotContains(response, "Smith family update")
         self.assertContains(response, "1 of 1")
         self.assertNotContains(response, "Jones Family")
         self.assertNotContains(response, "Jones-player")
@@ -585,6 +587,163 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, "resetSheen")
         self.assertContains(response, "gsap.min.js")
         self.assertContains(response, "ScrollTrigger.min.js")
+
+    def test_lobby_standings_hide_positions_until_first_game(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        self._active_membership(self.smith_player, smith_family)
+        for user, pts in ((self.member, 0), (self.smith_player, 0)):
+            userSeasonPoints.objects.create(
+                pool=smith_pool, gameseason=2526, userID=str(user.id),
+                userEmail=user.email, total_points=pts,
+            )
+        self.client.force_login(self.member)
+
+        # No game scored yet: everyone even -> neutral marker, no numbers.
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["season_has_started"])
+        self.assertTrue(all(row["rank"] is None for row in response.context["standings"]))
+
+        # After a game is scored, real numbered positions return.
+        GamesAndScores.objects.create(
+            id=1099, slug="ne-mia-2025-week-1", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameScored=True,
+            homeTeamId=3, homeTeamSlug="ne", homeTeamName="New England",
+            awayTeamId=4, awayTeamSlug="mia", awayTeamName="Miami",
+        )
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+        self.assertTrue(response.context["season_has_started"])
+        self.assertEqual([row["rank"] for row in response.context["standings"]], [1, 2])
+
+    def test_lobby_game_cards_show_weekday_and_date(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        GamesAndScores.objects.create(
+            id=1098, slug="gb-chi-2025-week-1", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526,
+            startTimestamp=timezone.make_aware(timezone.datetime(2025, 9, 7, 13, 0)),
+            statusType="notstarted", statusTitle="Scheduled",
+            homeTeamId=5, homeTeamSlug="chi", homeTeamName="Chicago Bears",
+            awayTeamId=6, awayTeamSlug="gb", awayTeamName="Green Bay Packers",
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        # Sep 7 2025 is a Sunday; the card shows the weekday + date.
+        self.assertContains(response, "Sun, Sep 7")
+
+    def test_lobby_links_every_listed_player_to_their_profile(self):
+        # Regression guard: any place the lobby lists a player's name must
+        # link to that player's profile. Seeds standings, active members, a
+        # finished game with picks (pool-picks groups + winner trophy), and a
+        # weekly winner, then asserts each player's profile URL is present.
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        self._active_membership(self.smith_player, smith_family)
+        finished = GamesAndScores.objects.create(
+            id=1097, slug="ne-nyj-2025-week-1", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526,
+            startTimestamp=timezone.make_aware(timezone.datetime(2025, 9, 7, 13, 0)),
+            statusType="finished", statusTitle="Final", gameScored=True,
+            gameWinner="ne", homeTeamId=7, homeTeamSlug="ne", homeTeamName="New England",
+            awayTeamId=8, awayTeamSlug="nyj", awayTeamName="New York Jets",
+        )
+        for user, pts, winner in ((self.member, 5, True), (self.smith_player, 2, False)):
+            usp = userSeasonPoints.objects.create(
+                pool=smith_pool, gameseason=2526, userID=str(user.id),
+                userEmail=user.email, total_points=pts,
+            )
+            usp.week_1_winner = winner
+            usp.save(update_fields=["week_1_winner"])
+            GamePicks.objects.create(
+                id=f"{smith_pool.id}-{user.id}-{finished.id}", pool=smith_pool,
+                userEmail=user.email, uid=user.id, userID=str(user.id),
+                slug=finished.slug, competition="nfl", gameWeek="1", gameyear="2025",
+                gameseason=2526, pick_game_id=finished.id, pick="ne",
+            )
+        self.client.force_login(self.member)
+
+        with patch("pickem_homepage.views.timezone.localdate",
+                   return_value=date(2025, 9, 7)):
+            response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        for user in (self.member, self.smith_player):
+            profile_url = reverse("family_pool_user_profile", kwargs={
+                "family_slug": smith_family.slug,
+                "pool_slug": smith_pool.slug,
+                "user_id": user.id,
+            })
+            self.assertContains(
+                response, f'href="{profile_url}"',
+                msg_prefix=f"Lobby must link {user.username} to their profile",
+            )
+
+    def test_lobby_shows_viewer_avatar_and_favorite_team_logo(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        Teams.objects.create(
+            id=90, gameseason=2526, teamNameSlug="ne",
+            teamNameName="New England Patriots",
+            teamLogo="https://example.test/ne.png",
+            color="002244", alternateColor="c60c30",
+        )
+        UserProfile.objects.update_or_create(
+            user=self.member, defaults={"favorite_team": "ne"}
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_url(smith_family, smith_pool))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["viewer_favorite_team"].teamNameSlug, "ne")
+        self.assertContains(response, 'data-testid="lobby-favorite-team"')
+        self.assertContains(response, "https://example.test/ne.png")
+
+    def test_lobby_renders_espn_news_tiles_and_hides_when_unavailable(self):
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        self.client.force_login(self.member)
+        fake_news = [{
+            "headline": "Blockbuster trade shakes up the NFC",
+            "description": "Details inside.",
+            "url": "https://www.espn.com/nfl/story/x",
+            "image": "https://a.espncdn.com/photo.jpg",
+            "published": "2026-07-09T12:00:00Z",
+        }]
+
+        with patch("pickem_homepage.views.get_espn_nfl_news", return_value=fake_news):
+            response = self.client.get(self._tenant_url(smith_family, smith_pool))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-testid="espn-news"')
+        self.assertContains(response, "Blockbuster trade shakes up the NFC")
+        self.assertContains(response, "https://www.espn.com/nfl/story/x")
+
+        # When ESPN is unavailable, the section is hidden (never breaks the lobby).
+        with patch("pickem_homepage.views.get_espn_nfl_news", return_value=[]):
+            response = self.client.get(self._tenant_url(smith_family, smith_pool))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'data-testid="espn-news"')
+
+    def test_get_espn_nfl_news_fails_safe_on_error(self):
+        from django.core.cache import cache
+        from pickem_homepage.views import get_espn_nfl_news
+        cache.clear()
+        with patch("requests.get", side_effect=Exception("network down")):
+            self.assertEqual(get_espn_nfl_news(3), [])
+        cache.clear()
+
+    def test_get_espn_nfl_news_survives_cache_backend_outage(self):
+        # A cache backend failure must degrade to a miss, not 500 the lobby.
+        from pickem_homepage.views import get_espn_nfl_news
+        with patch("django.core.cache.cache.get", side_effect=Exception("cache down")), \
+             patch("django.core.cache.cache.set", side_effect=Exception("cache down")), \
+             patch("requests.get", side_effect=Exception("network down")):
+            self.assertEqual(get_espn_nfl_news(3), [])
 
     def test_dashboard_shows_in_progress_current_week_games(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
@@ -1642,6 +1801,42 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertEqual(response.context["user_weekly_stats"]["total_graded_picks"], 1)
         self.assertEqual(response.context["user_weekly_stats"]["correct_picks"], 1)
 
+    def test_scores_missing_picks_excludes_members_who_already_picked(self):
+        # smith_member picks; smith_player does not. Regression: the missing
+        # list matched picks by a bare "{user}-{game}" id that never lined up
+        # with the pool-scoped pick id, so it flagged everyone (incl. pickers).
+        GamePicks.objects.create(
+            id=f"{self.smith_pool.id}-{self.smith_member.id}-{self.week_two_game.id}",
+            pool=self.smith_pool,
+            userEmail=self.smith_member.email,
+            uid=self.smith_member.id,
+            userID=str(self.smith_member.id),
+            slug=self.week_two_game.slug,
+            competition=self.week_two_game.competition,
+            gameWeek=self.week_two_game.gameWeek,
+            gameyear=self.week_two_game.gameyear,
+            gameseason=self.week_two_game.gameseason,
+            pick_game_id=self.week_two_game.id,
+            pick=self.week_two_game.awayTeamSlug,
+            pick_correct=False,
+        )
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(
+            self._tenant_url(
+                "family_pool_scores_long", competition=1, gameseason=2526, week=2,
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        picked_keys = response.context["picked_keys"]
+        # The picker is recorded, the non-picker is not.
+        self.assertIn(f"{self.smith_member.id}-{self.week_two_game.id}", picked_keys)
+        self.assertNotIn(f"{self.smith_player.id}-{self.week_two_game.id}", picked_keys)
+        # The missing-picks list contains the non-picker but not the picker.
+        self.assertContains(response, "smith-score-player - No Pick")
+        self.assertNotContains(response, "smith-score-member - No Pick")
+
     def test_tenant_scores_selected_week_uses_global_week_facts_with_pool_only_overlays(self):
         self._seed_private_pool_data()
         GamePicks.objects.create(
@@ -1722,6 +1917,26 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertContains(response, "standingsRowMotion")
         self.assertContains(response, "gsap.min.js")
         self.assertContains(response, "ScrollTrigger.min.js")
+
+    def test_standings_hide_numbered_positions_until_a_game_is_scored(self):
+        # Everyone starts even, so the full standings page must show a neutral
+        # marker for every player until the first game of the season is scored.
+        self._seed_private_pool_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["season_has_started"])
+        self.assertContains(response, "Standings begin after the first game")
+
+        # Score a game and the numbered leaderboard returns.
+        self.week_one_game.gameScored = True
+        self.week_one_game.save(update_fields=["gameScored"])
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["season_has_started"])
+        self.assertNotContains(response, "Standings begin after the first game")
 
     def test_tenant_rules_display_current_context_settings_and_no_editing_form(self):
         self.client.force_login(self.smith_member)
@@ -2482,6 +2697,42 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_superuser_can_open_own_profile_in_a_family_with_no_real_membership(self):
+        # Regression test: the navbar "My Profile" link builds a tenant-scoped
+        # URL from the current family/pool + the logged-in user's id. Under
+        # god mode, a superuser can browse into (and thus land on) a family
+        # they hold no real FamilyMembership row in, so their own profile
+        # link must not 404 there.
+        self._seed_profile_data()
+        sre = User.objects.create_user(
+            "site-sre", email="sre@example.com", password="pass", is_superuser=True
+        )
+        self.assertFalse(
+            FamilyMembership.objects.filter(user=sre, family=self.smith_family).exists()
+        )
+        self.client.force_login(sre)
+
+        response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=sre.id)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/user_profile.html")
+        self.assertEqual(response.context["family"], self.smith_family)
+
+        # A superuser can likewise open any real member's profile there...
+        member_response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=self.smith_player.id)
+        )
+        self.assertEqual(member_response.status_code, 200)
+
+        # ...but a non-superuser is still blocked from cross-family profiles.
+        self.client.force_login(self.smith_member)
+        outsider_response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=sre.id)
+        )
+        self.assertEqual(outsider_response.status_code, 404)
+
     def test_private_profile_message_applies_after_family_membership_is_proven(self):
         self.client.force_login(self.smith_member)
 
@@ -2536,6 +2787,85 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         post = MessageBoardPost.objects.get(content="Smith server scoped")
         self.assertEqual(post.family, self.smith_family)
         self.assertEqual(post.user, self.smith_member)
+
+    def test_messages_page_renders_threads_scoped_to_family_with_ajax_and_links(self):
+        MessageBoardPost.objects.create(
+            family=self.smith_family, user=self.smith_member,
+            title="Smith thread", content="Smith board content",
+        )
+        MessageBoardPost.objects.create(
+            family=self.jones_family, user=self.jones_player,
+            title="Jones thread", content="Jones board content",
+        )
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_messages"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/family_messages.html")
+        self.assertContains(response, "Message Board")
+        self.assertContains(response, "Smith board content")
+        # Cross-family isolation.
+        self.assertNotContains(response, "Jones board content")
+        # Wires the tenant AJAX endpoints and links the author to their profile.
+        self.assertContains(response, self._tenant_url("family_pool_vote_post"))
+        self.assertContains(response, self._tenant_url("family_pool_create_comment"))
+        self.assertContains(
+            response,
+            self._tenant_url("family_pool_user_profile", user_id=self.smith_member.id),
+        )
+
+    def test_messages_page_renders_comments_modal_and_open_trigger(self):
+        # Comments open in an overlay modal on top of the board, so the page
+        # must ship the modal container and the per-post trigger.
+        MessageBoardPost.objects.create(
+            family=self.smith_family, user=self.smith_member,
+            title="Smith thread", content="Smith board content",
+        )
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_messages"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="comments-modal"')
+        self.assertContains(response, "open-comments")
+        self.assertContains(response, "modal-comment-list")
+
+    def test_comment_payloads_include_display_name_and_avatar(self):
+        # The Reddit-style comment list renders avatars and display names, so
+        # both the create and fetch JSON payloads must carry those fields.
+        post = MessageBoardPost.objects.create(
+            family=self.smith_family, user=self.smith_member,
+            title="Smith thread", content="Smith board content",
+        )
+        self.client.force_login(self.smith_member)
+
+        created = self._json_post(
+            self._tenant_url("family_pool_create_comment"),
+            {"post_id": post.id, "content": "hello there"},
+        )
+        self.assertEqual(created.status_code, 200)
+        comment = created.json()["comment"]
+        self.assertIn("user_display", comment)
+        # No social account -> empty avatar so the client renders an initials
+        # badge (matching the server-rendered post cards) instead of a
+        # placeholder image.
+        self.assertEqual(comment["avatar"], "")
+
+        fetched = self.client.get(
+            self._tenant_url("family_pool_get_post_comments", post_id=post.id),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(fetched.status_code, 200)
+        first = fetched.json()["comments"][0]
+        self.assertIn("user_display", first)
+        self.assertIn("avatar", first)
+
+    def test_messages_page_denies_outsiders(self):
+        self.client.force_login(self.outsider)
+        self.assertEqual(
+            self.client.get(self._tenant_url("family_pool_messages")).status_code, 404
+        )
 
     def test_tenant_create_comment_denies_cross_family_post_and_parent_ids_generically(self):
         _smith_post, _smith_comment, jones_post, jones_comment = self._seed_message_board_data()
@@ -2601,20 +2931,17 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertFalse(tamper_payload["success"])
         self.assertNotIn("Jones", json.dumps(tamper_payload))
 
-    def test_tenant_homepage_message_board_uses_tenant_ajax_urls_only(self):
+    def test_lobby_links_to_messages_page_instead_of_inline_board(self):
         self.client.force_login(self.smith_member)
 
         response = self.client.get(self._tenant_url("family_pool_home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self._tenant_url("family_pool_create_post"))
-        self.assertContains(response, self._tenant_url("family_pool_create_comment"))
-        self.assertContains(response, self._tenant_url("family_pool_vote_post"))
-        self.assertContains(response, self._tenant_url("family_pool_vote_comment"))
+        # The lobby now links to the dedicated tenant messages page...
+        self.assertContains(response, self._tenant_url("family_pool_messages"))
+        # ...and no longer embeds the inline create form or legacy fetch URLs.
+        self.assertNotContains(response, 'id="family-message-form"')
         self.assertNotContains(response, "fetch('/message-board/create-post/'")
-        self.assertNotContains(response, "fetch('/message-board/create-comment/'")
-        self.assertNotContains(response, "fetch('/message-board/vote-post/'")
-        self.assertNotContains(response, "fetch('/message-board/vote-comment/'")
 
     def test_final_object_id_body_and_slug_tampering_do_not_cross_family_profiles_players_or_message_board(self):
         self._seed_profile_data()

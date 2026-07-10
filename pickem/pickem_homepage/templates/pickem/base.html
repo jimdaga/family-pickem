@@ -106,6 +106,12 @@
                         <i class="fas fa-gavel"></i>
                     </a>
 
+                    {% if current_family and current_pool %}
+                    <a class="nav-link-base" href="{% url 'family_pool_messages' current_family.slug current_pool.slug %}" aria-label="Messages">
+                        <i class="fas fa-comments"></i>
+                    </a>
+                    {% endif %}
+
                     {% if current_family and current_pool and current_membership.role == "owner" or current_family and current_pool and current_membership.role == "admin" %}
                     <a data-testid="tenant-admin-nav" class="nav-link-base" href="{% url 'family_pool_admin' current_family.slug current_pool.slug %}" aria-label="Family Admin">
                         <i class="fas fa-crown"></i>
@@ -255,6 +261,12 @@
                     <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_rules' current_family.slug current_pool.slug %}{% else %}{% url 'rules' %}{% endif %}">
                         <i class="fas fa-gavel mr-3"></i>Rules
                     </a>
+
+                    {% if current_family and current_pool %}
+                    <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% url 'family_pool_messages' current_family.slug current_pool.slug %}">
+                        <i class="fas fa-comments mr-3"></i>Messages
+                    </a>
+                    {% endif %}
 
                     {% if current_family and current_pool and current_membership.role == "owner" or current_family and current_pool and current_membership.role == "admin" %}
                     <a data-testid="tenant-admin-nav" class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% url 'family_pool_admin' current_family.slug current_pool.slug %}">
