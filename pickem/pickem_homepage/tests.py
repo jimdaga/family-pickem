@@ -2822,20 +2822,17 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertFalse(tamper_payload["success"])
         self.assertNotIn("Jones", json.dumps(tamper_payload))
 
-    def test_tenant_homepage_message_board_uses_tenant_ajax_urls_only(self):
+    def test_lobby_links_to_messages_page_instead_of_inline_board(self):
         self.client.force_login(self.smith_member)
 
         response = self.client.get(self._tenant_url("family_pool_home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self._tenant_url("family_pool_create_post"))
-        self.assertContains(response, self._tenant_url("family_pool_create_comment"))
-        self.assertContains(response, self._tenant_url("family_pool_vote_post"))
-        self.assertContains(response, self._tenant_url("family_pool_vote_comment"))
+        # The lobby now links to the dedicated tenant messages page...
+        self.assertContains(response, self._tenant_url("family_pool_messages"))
+        # ...and no longer embeds the inline create form or legacy fetch URLs.
+        self.assertNotContains(response, 'id="family-message-form"')
         self.assertNotContains(response, "fetch('/message-board/create-post/'")
-        self.assertNotContains(response, "fetch('/message-board/create-comment/'")
-        self.assertNotContains(response, "fetch('/message-board/vote-post/'")
-        self.assertNotContains(response, "fetch('/message-board/vote-comment/'")
 
     def test_final_object_id_body_and_slug_tampering_do_not_cross_family_profiles_players_or_message_board(self):
         self._seed_profile_data()
