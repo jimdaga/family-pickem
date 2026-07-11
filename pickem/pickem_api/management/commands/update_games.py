@@ -31,6 +31,7 @@ STATUS_MAP = {
     "STATUS_END_PERIOD": "inprogress",
     "STATUS_HALFTIME": "inprogress",
     "STATUS_FINAL": "finished",
+    "STATUS_FINAL_OVERTIME": "finished",
 }
 
 WEATHER_CONDITION_MAP = {
@@ -218,6 +219,18 @@ def parse_scoreboard(payload, season, game_year, slug_lookup=team_slug):
                 )
                 continue
 
+            # A flapping ESPN poll can report a game "finished" while briefly
+            # dropping the scores. Writing that would null out a good final, so
+            # skip it and let a later, complete poll persist the result.
+            if status_type == "finished" and (
+                home["score"] is None or away["score"] is None
+            ):
+                logger.warning(
+                    "Skipping finished game %s with missing score (home=%s away=%s)",
+                    game_id, home["score"], away["score"],
+                )
+                continue
+
             yield game_id, defaults
 
 
@@ -228,7 +241,18 @@ def current_week_for_today():
         .values_list("weekNumber", flat=True)
         .first()
     )
-    return str(week) if week is not None else "1"
+    if week is not None:
+        return str(week)
+    # No row for today (off-day/schedule gap): fall back to the most recent
+    # week that has already started rather than hardcoding "1", which would
+    # churn week-1 rows with stale ESPN data on every off-season run.
+    recent = (
+        GameWeeks.objects.filter(date__lte=today)
+        .order_by("-date")
+        .values_list("weekNumber", flat=True)
+        .first()
+    )
+    return str(recent) if recent is not None else "1"
 
 
 def fetch_scoreboard(week, game_year):

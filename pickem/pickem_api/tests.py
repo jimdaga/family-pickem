@@ -945,12 +945,13 @@ class UpdatePicksCommandTest(TestCase):
             competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
         )
 
-    def _game(self, gid, slug, winner, status="finished"):
+    def _game(self, gid, slug, winner, status="finished", home_score=None, away_score=None):
         return GamesAndScores.objects.create(
             id=gid, slug=slug, competition="nfl", gameWeek="1", gameyear="2025",
             gameseason=2526, startTimestamp=timezone.now(), statusType=status,
             statusTitle="Final", gameWinner=winner, gameScored=False,
             homeTeamId=1, homeTeamSlug="eagles", homeTeamName="Eagles",
+            homeTeamScore=home_score, awayTeamScore=away_score,
             awayTeamId=2, awayTeamSlug="chiefs", awayTeamName="Chiefs",
         )
 
@@ -986,6 +987,25 @@ class UpdatePicksCommandTest(TestCase):
         # Winnerless game untouched.
         self.assertFalse(no_winner.gameScored)
         self.assertFalse(pending.pick_correct)
+
+    def test_finished_tie_is_marked_scored_so_the_week_can_complete(self):
+        from django.core.management import call_command
+
+        pool = self._pool("fa")
+        # Real NFL tie: finished, no winner, equal populated scores.
+        tie = self._game(300, "eagles-chiefs-tie", winner=None, home_score=20, away_score=20)
+        picker = self._pick("1-1-300", pool, tie, "eagles")
+        # Winner still pending (no scores yet) stays unscored, unchanged.
+        pending_game = self._game(301, "jets-bills", winner=None)
+
+        call_command("update_picks", season=2526)
+
+        tie.refresh_from_db()
+        picker.refresh_from_db()
+        pending_game.refresh_from_db()
+        self.assertTrue(tie.gameScored)
+        self.assertFalse(picker.pick_correct)  # nobody picked a tie
+        self.assertFalse(pending_game.gameScored)
 
 
 class UpdateStandingsCommandTest(TestCase):
@@ -1119,6 +1139,31 @@ class UpdateGamesCommandTest(TestCase):
 
         self.assertEqual(len(parsed), 1)
         self.assertEqual(parsed[0][0], 401)
+
+    def test_parse_scoreboard_skips_finished_game_with_missing_score(self):
+        # A flapping ESPN poll reports FINAL but drops a score; writing it would
+        # null out a good final, so it must be skipped, not yielded.
+        from pickem_api.management.commands.update_games import parse_scoreboard
+        import copy
+
+        payload = copy.deepcopy(self.PAYLOAD)
+        payload["events"][0]["competitions"][0]["competitors"][0]["score"] = None
+
+        parsed = list(parse_scoreboard(payload, season=2526, game_year=2025))
+
+        self.assertEqual(parsed, [])
+
+    def test_parse_scoreboard_maps_overtime_final_to_finished(self):
+        from pickem_api.management.commands.update_games import parse_scoreboard
+        import copy
+
+        payload = copy.deepcopy(self.PAYLOAD)
+        payload["events"][0]["competitions"][0]["status"]["type"]["name"] = "STATUS_FINAL_OVERTIME"
+
+        parsed = list(parse_scoreboard(payload, season=2526, game_year=2025))
+
+        self.assertEqual(len(parsed), 1)
+        self.assertEqual(parsed[0][1]["statusType"], "finished")
 
 
 class UpdateAllCommandTest(TestCase):
@@ -1484,3 +1529,61 @@ class UpdateStatsCommandTest(TestCase):
         # eagles picked 3x, chiefs 1x.
         self.assertEqual(stats.mostPickedSeason, "eagles")
         self.assertEqual(stats.leastPickedSeason, "chiefs")
+
+
+class ApiEndpointAuthorizationTests(TestCase):
+    """The vestigial DRF API must not leak picks/points/PII to anonymous or
+    non-staff callers (the legacy cron scripts that used it are retired)."""
+
+    def setUp(self):
+        self.client = Client()
+        self.member = User.objects.create_user("api-member", email="m@x.com", password="p")
+        self.staff = User.objects.create_user(
+            "api-staff", email="s@x.com", password="p", is_staff=True
+        )
+        family = Family.objects.create(name="Fam", slug="fam", status=Family.Status.ACTIVE)
+        pool = Pool.objects.create(
+            family=family, name="Pool", slug="main", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        GamePicks.objects.create(
+            id="1-1-100", pool=pool, pick_game_id=100, slug="g", userID="1",
+            userEmail="victim@example.com", gameWeek="1", gameyear="2025",
+            gameseason=2526, competition="nfl", pick="eagles", pick_correct=True,
+        )
+        userSeasonPoints.objects.create(
+            pool=pool, userID="1", userEmail="victim@example.com",
+            gameseason=2526, gameyear="2025", total_points=10,
+        )
+
+    LEAKY_ENDPOINTS = [
+        "/api/userpickids/2526/1",
+        "/api/userpicks/2526/1/1",
+        "/api/userpicks/1-1",
+        "/api/picks/100",
+        "/api/userpoints/",
+        "/api/userpoints/2526/1",
+        "/api/userinfo/1",
+    ]
+
+    def test_anonymous_cannot_read_picks_points_or_user_info(self):
+        for path in self.LEAKY_ENDPOINTS:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertIn(response.status_code, (401, 403))
+
+    def test_ordinary_member_cannot_read_them_either(self):
+        self.client.force_login(self.member)
+        for path in self.LEAKY_ENDPOINTS:
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 403)
+
+    def test_no_response_body_leaks_the_victim_email(self):
+        self.client.force_login(self.member)
+        for path in self.LEAKY_ENDPOINTS:
+            with self.subTest(path=path):
+                self.assertNotContains(
+                    self.client.get(path), "victim@example.com",
+                    status_code=403,
+                )

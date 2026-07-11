@@ -12,6 +12,22 @@ Pickem
 - [x] Migrate pickemctl into Django. Done 2026-07-10: new `update_stats` management command (`pickem_api/management/commands/update_stats.py`) reimplements pickemctl's userStats aggregation in the ORM (accuracy, weeks/seasons won, missed picks, perfect weeks, most/least picked — season + all-time, one global pool-null row per user). Added to the `update_all` pipeline. Removed the pickemctl deployment/secret/external-secret chart templates and the `pickemctl:` + `pickemctlKey` values. ArgoCD prunes the deployment on sync. The AWS Secrets Manager `family-pickem/{prd,dev}/pickemctl` entries are now unused and can be deleted at leisure.
 - [x] ~~pickemctl repo branch `refactor/cleanup-phase-1`~~ — moot; pickemctl retired (see above). The ~/git/pickemctl repo/image can be archived.
 
+#### Security & Bug Audit Follow-Ups (2026-07-11)
+
+Deferred lower-severity findings from the full audit. The critical/major ones (anonymous cross-tenant pick/points/PII leaks in the DRF API, cookie hardening, ESPN tie/OT/null-overwrite data-integrity bugs) were fixed in the audit PR; these remain:
+- [ ] **Admin manual-pick tool has no lock/kickoff check** (`family_pool_admin_picks`, `views.py` ~1671): a family admin can create/overwrite a member's pick for a game that already started/finished, retroactively changing standings. Add an `is_pick_locked_for_pool` guard (or an explicit, audited "override lock" affordance) like the member-facing paths have.
+- [ ] **`toggle_theme` and `check_username` are `@csrf_exempt`** state-changing/oracle POST endpoints; `check_username` also returns `str(e)` and is a username-existence oracle. Drop `@csrf_exempt`, return generic errors.
+- [ ] **Profile AJAX settings store raw JSON values** (`private_profile`/`dark_mode`/`email_notifications`) with no boolean coercion — `{"value":"false"}` stores truthy string, silently leaving a profile public. Coerce to real bools; stop echoing `str(e)`.
+- [ ] **Profile username uniqueness check is case-sensitive + active-only** while the DB constraint is global — a case-variant or an inactive user's name passes the app check then 500s on save. Use `username__iexact` and handle `IntegrityError`.
+- [ ] **`render_user_profile` anonymous path uses global unscoped querysets** (`userSeasonPoints.objects.all()`, `GamePicks.objects.all()`) — leaks a public-profile user's cross-family aggregate stats/picks to anonymous visitors. Scope to a sensible single pool or require auth.
+- [ ] **Destructive API writes still global + staff-only** (`game_list`/`week_list` DELETE run `objects.all().delete()`). The whole DRF API is now vestigial (nothing in-app calls it) — consider removing the write endpoints entirely or gating behind an explicit management command.
+- [ ] **`GamePicksForm` (forms.py) exposes `userID`/`uid`/`userEmail`/`pick_correct`** as bindable fields — inert today (never bound to request data) but a mass-assignment footgun one line from being live. Trim the field list.
+- [ ] **`chart.js`/`chartjs-plugin-datalabels` on user_profile.html lack SRI and chart.js is version-unpinned** — pin the version and add an `integrity` hash like every other CDN asset in the tree.
+- [ ] **weekly_winners tiebreaker latching**: a one-minute ESPN blip on `combined_yards` (or a transient status) can permanently award co-winners because `award` is idempotent once the winner field is set. Consider not latching when the tiebreaker actual couldn't be fetched. Also `SplitPoints` uses integer floor division (drops a point) and `--force` nulls non-winners' bonuses.
+- [ ] **`scheduler` runs `update_records` (33 sequential 30s-timeout ESPN calls) inline in the 1-minute pipeline** — a slow ESPN records endpoint can misfire/drop score+pick updates. Split records onto a slower cadence.
+- [ ] **base.html interpolates `user_theme_preference` raw into an inline `<script>` string** — safe only because it's a server-constrained enum; switch to `json_script`/`escapejs` to remove the XSS-sink pattern.
+- [ ] **scores.html `startLiveUpdates()` has no re-entrancy guard** — a filter click before the 2s on-load timer can start two polling intervals, one of which leaks and polls forever. Guard on `updateInterval`/clear before re-arming.
+
 #### Multi-Family / Tenant Follow-Up Backlog
 
 ##### Ideas
