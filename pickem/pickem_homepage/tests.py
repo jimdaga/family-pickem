@@ -1902,6 +1902,56 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertEqual(list(response.context["player_points"]), list(userSeasonPoints.objects.filter(pool=self.smith_pool)))
         self.assertEqual(response.context["weekly_winners"][1][0].pool, self.smith_pool)
 
+    def test_standings_season_switch_reads_the_family_pool_for_that_season(self):
+        # Each season is a separate pool; selecting a past season in the
+        # dropdown must surface that season's sibling-pool data (the bug was an
+        # empty leaderboard because the current pool was filtered by a season it
+        # never held).
+        self._seed_private_pool_data()  # current pool (season 2526)
+        prior_pool = Pool.objects.create(
+            family=self.smith_family,
+            name="2024 Pickem",
+            slug="2425-pickem",
+            season=2425,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=False,
+        )
+        userSeasonPoints.objects.create(
+            pool=prior_pool,
+            userEmail=self.smith_player.email,
+            userID=str(self.smith_player.id),
+            gameseason=2425,
+            gameyear="2024",
+            week_1_points=7,
+            week_1_winner=True,
+            total_points=42,
+            year_winner=True,
+        )
+        self.client.force_login(self.smith_member)
+
+        # Default view still shows the current season only.
+        current = self.client.get(self._tenant_url("family_pool_standings"))
+        self.assertEqual(
+            list(current.context["player_points"]),
+            list(userSeasonPoints.objects.filter(pool=self.smith_pool)),
+        )
+        # The dropdown offers the prior season the family actually played.
+        self.assertIn("2024-2025", [s["display"] for s in current.context["all_seasons"]])
+
+        # Switching to the prior season reads the sibling pool's data.
+        prior = self.client.get(
+            self._tenant_url("family_pool_standings"), {"season": "2425"}
+        )
+        self.assertEqual(prior.status_code, 200)
+        self.assertEqual(
+            list(prior.context["player_points"]),
+            list(userSeasonPoints.objects.filter(pool=prior_pool)),
+        )
+        self.assertEqual(prior.context["season_winner"].pool, prior_pool)
+        self.assertEqual(prior.context["weekly_winners"][1][0].pool, prior_pool)
+        self.assertContains(prior, "42")
+
     def test_tenant_standings_page_includes_compact_gsap_polish_hooks(self):
         self._seed_private_pool_data()
         self.client.force_login(self.smith_member)

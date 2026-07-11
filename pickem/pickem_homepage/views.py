@@ -2311,17 +2311,49 @@ def tenant_standings(request, family_slug, pool_slug):
 
 
 def render_standings_page(request, *, tenant_context=None):
-    # Get all unique seasons from the database
-    all_seasons = GamesAndScores.objects.values_list('gameseason', flat=True).distinct().order_by('-gameseason')
-    
-    # Determine the selected season
-    default_season = tenant_context.pool.season if tenant_context else get_season()
-    selected_season = str(request.GET.get('season', default_season))
-    
-    # Filter player points based on the selected season
+    # Each season is its own Pool within a family, and userSeasonPoints rows are
+    # pool-scoped. So a single pool's standings page only ever holds one season
+    # of data — to view a past season we must read that season's sibling pool in
+    # the same family, and the dropdown must only offer seasons the family
+    # actually played. (Filtering the current pool by a past season is the bug
+    # that made the season switcher show an empty leaderboard.)
+    target_pool = None
+    if tenant_context:
+        family = tenant_context.family
+        family_pools = list(Pool.objects.filter(family=family).order_by('-season'))
+
+        available_seasons = []
+        seen = set()
+        for p in family_pools:
+            if p.season not in seen:
+                seen.add(p.season)
+                available_seasons.append(p.season)
+        all_seasons = available_seasons
+
+        default_season = tenant_context.pool.season
+        selected_season = str(request.GET.get('season', default_season))
+
+        # Resolve which pool holds the selected season for this family.
+        target_pool = tenant_context.pool
+        if str(target_pool.season) != selected_season:
+            sibling = next(
+                (p for p in family_pools if str(p.season) == selected_season),
+                None,
+            )
+            if sibling is not None:
+                target_pool = sibling
+    else:
+        all_seasons = list(
+            GamesAndScores.objects.values_list('gameseason', flat=True)
+            .distinct().order_by('-gameseason')
+        )
+        default_season = get_season()
+        selected_season = str(request.GET.get('season', default_season))
+
+    # Filter player points based on the selected season / resolved pool
     player_points = userSeasonPoints.objects.filter(gameseason=selected_season)
     if tenant_context:
-        player_points = player_points.filter(pool=tenant_context.pool)
+        player_points = player_points.filter(pool=target_pool)
     player_points = player_points.order_by('-total_points', 'userID')
 
     # Before any game has been scored this season everyone is even, so we hide
@@ -2333,7 +2365,7 @@ def render_standings_page(request, *, tenant_context=None):
     )
     if tenant_context:
         season_started_qs = season_started_qs.filter(
-            competition=tenant_context.pool.competition
+            competition=target_pool.competition
         )
     season_has_started = season_started_qs.exists()
 
@@ -2343,7 +2375,7 @@ def render_standings_page(request, *, tenant_context=None):
         gameseason=selected_season,
     )
     if tenant_context:
-        season_winner_qs = season_winner_qs.filter(pool=tenant_context.pool)
+        season_winner_qs = season_winner_qs.filter(pool=target_pool)
     season_winner = season_winner_qs.order_by('-total_points', 'userID').first()
 
     weekly_winners = {}
@@ -2354,7 +2386,7 @@ def render_standings_page(request, *, tenant_context=None):
             **{winner_field: True},
         )
         if tenant_context:
-            winner_qs = winner_qs.filter(pool=tenant_context.pool)
+            winner_qs = winner_qs.filter(pool=target_pool)
         weekly_winners[week_num] = list(winner_qs.order_by('-total_points', 'userID'))
     
     # Format seasons for the dropdown

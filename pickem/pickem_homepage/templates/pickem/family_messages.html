@@ -137,7 +137,7 @@
 <div id="comments-modal" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-labelledby="comments-modal-title">
     <div class="modal-backdrop absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
     <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="modal-panel relative flex w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-2xl">
+        <div class="modal-panel relative flex w-full min-w-0 max-w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-2xl">
             <!-- Modal header -->
             <div class="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-subtle px-4 py-3 sm:px-5">
                 <div class="min-w-0">
@@ -149,7 +149,7 @@
                 </button>
             </div>
             <!-- Scrollable body -->
-            <div class="modal-body flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+            <div class="modal-body flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-5">
                 <!-- Original post context -->
                 <div class="modal-post rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-bg-dark/30 p-3 mb-4"></div>
                 <!-- Top-level comment composer -->
