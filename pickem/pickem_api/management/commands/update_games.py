@@ -234,20 +234,20 @@ def parse_scoreboard(payload, season, game_year, slug_lookup=team_slug):
             yield game_id, defaults
 
 
-def current_week_for_today():
+def current_week_for_today(season=None):
     today = date.today().strftime("%Y-%m-%d")
-    week = (
-        GameWeeks.objects.filter(date=today)
-        .values_list("weekNumber", flat=True)
-        .first()
-    )
+    weeks = GameWeeks.objects.all()
+    if season is not None:
+        weeks = weeks.filter(season=season)
+    week = weeks.filter(date=today).values_list("weekNumber", flat=True).first()
     if week is not None:
         return str(week)
     # No row for today (off-day/schedule gap): fall back to the most recent
     # week that has already started rather than hardcoding "1", which would
-    # churn week-1 rows with stale ESPN data on every off-season run.
+    # churn week-1 rows with stale ESPN data on every off-season run. Scoped to
+    # the season so a prior season's rows can't bleed in.
     recent = (
-        GameWeeks.objects.filter(date__lte=today)
+        weeks.filter(date__lte=today)
         .order_by("-date")
         .values_list("weekNumber", flat=True)
         .first()
@@ -278,7 +278,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         season = options["season"] or get_season()
         year = season_start_year(season)
-        week = options["week"] or current_week_for_today()
+        week = options["week"] or current_week_for_today(season)
         self.stdout.write(f"Updating games for season {season} week {week}")
 
         payload = fetch_scoreboard(week, year)
