@@ -11,6 +11,7 @@ Order matters:
   4. update_standings      - recompute per-pool weekly/total points
   5. update_weekly_winners - award winner bonuses once the week completes
   6. update_rankings       - rank pool members by total points (incl. bonus)
+  7. update_stats          - recompute per-user userStats (replaces pickemctl)
 """
 
 import logging
@@ -27,6 +28,7 @@ PIPELINE = [
     "update_standings",
     "update_weekly_winners",
     "update_rankings",
+    "update_stats",
 ]
 
 

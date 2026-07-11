@@ -1394,3 +1394,93 @@ class WeeklyWinnerEngineTest(TestCase):
         self.assertTrue(
             userSeasonPoints.objects.get(pool=self.pool, userID="u1").week_1_winner
         )
+
+
+class UpdateStatsCommandTest(TestCase):
+    """`update_stats` command — Django replacement for the pickemctl service."""
+
+    def _pool(self, slug):
+        family = Family.objects.create(name=slug, slug=slug, status=Family.Status.ACTIVE)
+        return Pool.objects.create(
+            family=family, name="Pool", slug=slug, season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+
+    def _game(self, gid, slug, winner="eagles", week="1", scored=True):
+        return GamesAndScores.objects.create(
+            id=gid, slug=slug, competition="nfl", gameWeek=week, gameyear="2025",
+            gameseason=2526, startTimestamp=timezone.now(), statusType="finished",
+            statusTitle="Final", gameWinner=winner, gameScored=scored,
+            homeTeamId=1, homeTeamSlug="eagles", homeTeamName="Eagles",
+            awayTeamId=2, awayTeamSlug="chiefs", awayTeamName="Chiefs",
+        )
+
+    def _pick(self, user, game, pick, correct, week="1"):
+        return GamePicks.objects.create(
+            id=f"1-{user.id}-{game.id}", pool=self.pool, pick_game_id=game.id,
+            slug=game.slug, uid=user.id, userID=str(user.id), gameWeek=week,
+            gameyear="2025", gameseason=2526, competition="nfl", pick=pick,
+            pick_correct=correct,
+        )
+
+    def setUp(self):
+        self.pool = self._pool("stats-fam")
+        self.alice = User.objects.create_user("alice-us", email="alice-us@x.com", password="x")
+
+    def test_accuracy_weeks_won_seasons_won_and_missed_picks(self):
+        from django.core.management import call_command
+
+        g1 = self._game(1, "g1")
+        g2 = self._game(2, "g2")
+        self._game(3, "g3")  # scored but never picked -> a missed pick
+        self._pick(self.alice, g1, "eagles", correct=True)
+        self._pick(self.alice, g2, "chiefs", correct=False)
+        usp = userSeasonPoints.objects.create(
+            pool=self.pool, gameseason=2526, userEmail=self.alice.email,
+            userID=str(self.alice.id), total_points=5, year_winner=True,
+        )
+        usp.week_1_winner = True
+        usp.week_2_winner = True
+        usp.save()
+
+        call_command("update_stats", season=2526)
+
+        stats = userStats.objects.get(userID=str(self.alice.id), pool__isnull=True)
+        self.assertEqual(stats.correctPickTotalSeason, 1)
+        self.assertEqual(stats.totalPicksSeason, 2)
+        self.assertEqual(stats.pickPercentSeason, 50)
+        self.assertEqual(stats.missedPicksSeason, 1)
+        self.assertEqual(stats.weeksWonSeason, 2)
+        self.assertEqual(stats.seasonsWon, 1)
+
+        # Idempotent: a second run keeps a single row.
+        call_command("update_stats", season=2526)
+        self.assertEqual(
+            userStats.objects.filter(userID=str(self.alice.id), pool__isnull=True).count(),
+            1,
+        )
+
+    def test_perfect_weeks_and_most_least_picked(self):
+        from django.core.management import call_command
+
+        # Week 1: both scored games picked correctly -> a perfect week.
+        g10 = self._game(10, "g10", week="1")
+        g11 = self._game(11, "g11", week="1")
+        self._pick(self.alice, g10, "eagles", correct=True, week="1")
+        self._pick(self.alice, g11, "eagles", correct=True, week="1")
+        # Week 2: one wrong -> not perfect.
+        g12 = self._game(12, "g12", week="2")
+        g13 = self._game(13, "g13", week="2")
+        self._pick(self.alice, g12, "eagles", correct=True, week="2")
+        self._pick(self.alice, g13, "chiefs", correct=False, week="2")
+
+        call_command("update_stats", season=2526)
+
+        # Exactly one row for the user even though they picked across two weeks
+        # (guards the distinct()+default-ordering duplicate-processing gotcha).
+        self.assertEqual(userStats.objects.filter(userID=str(self.alice.id)).count(), 1)
+        stats = userStats.objects.get(userID=str(self.alice.id), pool__isnull=True)
+        self.assertEqual(stats.perfectWeeksSeason, 1)
+        # eagles picked 3x, chiefs 1x.
+        self.assertEqual(stats.mostPickedSeason, "eagles")
+        self.assertEqual(stats.leastPickedSeason, "chiefs")

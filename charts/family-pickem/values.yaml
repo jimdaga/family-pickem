@@ -108,20 +108,13 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
-pickemctl:
-  enabled: false
-  image:
-    repository: familypickem/pickemctl
-    tag: "0.0.9"
-    pullPolicy: IfNotPresent
-  config: ""
-  resources: {}
+# pickemctl retired — userStats is computed in-process by the `update_stats`
+# management command (part of the update_all pipeline).
 
 externalSecrets:
   enabled: false
   clusterSecretStore: aws-secrets-manager
   envvarsKey: ""
-  pickemctlKey: ""
 
 backup:
   enabled: false
