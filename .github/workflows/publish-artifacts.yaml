@@ -37,11 +37,20 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
-        with:
-          images: familypickem/pickem-django
+      - name: Set Docker tags
+        id: docker_vars
+        run: |
+          RELEASE_TAG=${GITHUB_REF#refs/tags/}
+          RELEASE_VERSION=${RELEASE_TAG#family-pickem-}
+          {
+            echo "release_tag=${RELEASE_TAG}"
+            echo "release_version=${RELEASE_VERSION}"
+            echo 'tags<<EOF'
+            echo "familypickem/pickem-django:${RELEASE_VERSION}"
+            echo "familypickem/pickem-django:${RELEASE_TAG}"
+            echo "familypickem/pickem-django:latest"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
@@ -49,8 +58,7 @@ jobs:
           context: .
           file: ./docker/app/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.docker_vars.outputs.tags }}
 
   publish_helm:
     needs: [run_tests]
