@@ -76,14 +76,18 @@ jobs:
 
       - name: Set output
         id: vars
-        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+        run: |
+          RELEASE_TAG=${GITHUB_REF#refs/*/}
+          echo "tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "helm_version=${RELEASE_TAG#family-pickem-}" >> "$GITHUB_OUTPUT"
 
       - name: Update Helm Tags
         env:
-          RELEASE_VERSION: ${{ steps.vars.outputs.tag }}
+          RELEASE_TAG: ${{ steps.vars.outputs.tag }}
+          HELM_VERSION: ${{ steps.vars.outputs.helm_version }}
         run: |
-          echo "${RELEASE_VERSION}"
-          sed -i "s/0.0.0/${RELEASE_VERSION}/g" ./charts/family-pickem/Chart.yaml
+          echo "${RELEASE_TAG}"
+          sed -i "s/0.0.0/${HELM_VERSION}/g" ./charts/family-pickem/Chart.yaml
           cat ./charts/family-pickem/Chart.yaml
 
       - name: Install Helm
@@ -93,10 +97,6 @@ jobs:
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.5.0
-        with:
-          # Idempotent re-runs: don't fail if the chart release already exists
-          # (e.g. after a gh-pages race), just rebuild and push the index.
-          skip_existing: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
