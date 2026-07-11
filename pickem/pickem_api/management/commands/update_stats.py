@@ -20,6 +20,7 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.db.models import Count, Q
 
 from pickem.utils import get_season
@@ -243,7 +244,7 @@ class Command(BaseCommand):
         Ties are joined by ", ". Counts every pick by the user (optionally in a
         single season), matching pickemctl.
         """
-        qs = GamePicks.objects.filter(uid=uid)
+        qs = GamePicks.objects.filter(uid=uid, gameseason__isnull=False)
         if season is not None:
             qs = qs.filter(gameseason=season)
         counts = list(
@@ -261,19 +262,24 @@ class Command(BaseCommand):
 
     @staticmethod
     def _upsert(user_id, fields):
-        """Write the single global (pool-null) userStats row for a user."""
-        existing = list(
-            userStats.objects.filter(userID=user_id, pool__isnull=True).order_by("id")
-        )
-        if existing:
-            obj = existing[0]
-            # Collapse any accidental duplicates into one row.
-            for extra in existing[1:]:
-                extra.delete()
-        else:
-            obj = userStats(userID=user_id, pool=None)
+        """Write the single global (pool-null) userStats row for a user.
 
-        obj.userEmail = fields.pop("userEmail", obj.userEmail)
-        for key, value in fields.items():
-            setattr(obj, key, value)
-        obj.save()
+        The duplicate-collapse delete and the save run in one transaction so a
+        save failure can't leave the user with no stats row.
+        """
+        with transaction.atomic():
+            existing = list(
+                userStats.objects.filter(userID=user_id, pool__isnull=True).order_by("id")
+            )
+            if existing:
+                obj = existing[0]
+                # Collapse any accidental duplicates into one row.
+                for extra in existing[1:]:
+                    extra.delete()
+            else:
+                obj = userStats(userID=user_id, pool=None)
+
+            obj.userEmail = fields.pop("userEmail", obj.userEmail)
+            for key, value in fields.items():
+                setattr(obj, key, value)
+            obj.save()
