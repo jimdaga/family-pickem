@@ -5,9 +5,6 @@ import json
 from datetime import date
 import argparse
 import os
-import requests
-from datetime import date
-from espn_api.football import League
 
 
 parser = argparse.ArgumentParser(description='Populate/Update NFL Games.')
