@@ -83,13 +83,8 @@ postgresql:
 scheduler:
   enabled: false
 
-cron:
-  schedule: "* * * * *"
-  command: "/code/pickem_api/cron.sh"
-  suspend: false
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 3
-  concurrencyPolicy: Forbid
+# The legacy update-data CronJob (cron.sh) was replaced by the in-process
+# APScheduler `update_all` pipeline (scheduler.enabled). Template removed.
 
 healthchecks:
   enabled: true 
