@@ -6407,3 +6407,32 @@ class GlobalLeaderboardTests(TestCase):
         self.assertNotIn(str(self.admin.id), ids)
         alice = next(e for e in response.context["entries"] if e["userID"] == str(self.alice.id))
         self.assertEqual(alice["accuracy"], 80)  # 8/10
+
+    def test_players_tied_at_zero_share_rank_one_and_podium_is_hidden(self):
+        # Season just started: everyone has a standings row but no points, so
+        # all players must be tied at rank 1 (not 1,2,3) and the podium hidden.
+        self._points(self.smith_pool, self.alice, 0)
+        self._points(self.smith_pool, self.bob, 0)
+
+        response = self.client.get(reverse("global_leaderboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["has_scores"])
+        ranks = {e["userID"]: e["rank"] for e in response.context["entries"]}
+        self.assertEqual(ranks[str(self.alice.id)], 1)
+        self.assertEqual(ranks[str(self.bob.id)], 1)
+
+    def test_competition_ranking_skips_after_a_tie(self):
+        # Two tied leaders, then a third player: ranks are 1, 1, 3.
+        self._points(self.smith_pool, self.alice, 10)
+        self._points(self.smith_pool, self.bob, 10)
+        carol = User.objects.create_user("carol-gl", email="carol-gl@example.com", password="x")
+        self._points(self.smith_pool, carol, 5)
+
+        response = self.client.get(reverse("global_leaderboard"))
+
+        self.assertTrue(response.context["has_scores"])
+        ranks = {e["userID"]: e["rank"] for e in response.context["entries"]}
+        self.assertEqual(ranks[str(self.alice.id)], 1)
+        self.assertEqual(ranks[str(self.bob.id)], 1)
+        self.assertEqual(ranks[str(carol.id)], 3)

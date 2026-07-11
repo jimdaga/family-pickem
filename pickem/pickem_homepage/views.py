@@ -2397,13 +2397,29 @@ def global_leaderboard(request):
         })
 
     # Rank by blended points, then accuracy, then correct picks as tiebreakers.
+    # userID only stabilizes the display order — it is NOT a ranking signal, so
+    # players tied on (points, accuracy, correct) share a rank (standard
+    # competition ranking: 1,2,2,4). At season start everyone is 0/0/0 → all #1.
     entries.sort(
         key=lambda e: (-e['points'], -(e['accuracy'] or 0), -e['correct'], e['userID'])
     )
+
+    def rank_key(e):
+        return (e['points'], e['accuracy'] or 0, e['correct'])
+
+    previous_key = None
     for i, e in enumerate(entries, 1):
-        e['rank'] = i
+        current_key = rank_key(e)
+        if current_key != previous_key:
+            current_rank = i
+            previous_key = current_key
+        e['rank'] = current_rank
 
     usernames, avatars = build_user_display_maps([e['userID'] for e in entries])
+
+    # Before any games are scored every player is tied at 0 — a gold/silver/
+    # bronze podium would be meaningless, so only show it once real results exist.
+    has_scores = any(e['points'] or e['correct'] for e in entries)
 
     context = {
         'gameseason': season,
@@ -2411,6 +2427,7 @@ def global_leaderboard(request):
         'entries': entries,
         'usernames': usernames,
         'avatars': avatars,
+        'has_scores': has_scores,
         'total_players': len(entries),
         'total_leagues': Pool.objects.filter(season=season).count(),
     }

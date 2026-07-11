@@ -3,140 +3,213 @@
 {% load pickem_homepage_extras %}
 
 {% block title %}Global Leaderboard — Family Pick'em{% endblock %}
-
-{% block mobile_title %}
-    <div class="mobile-subtitle"><i class="fas fa-globe mr-2"></i>Global Leaderboard</div>
-{% endblock %}
+{% block main_navigation %}{% endblock %}
+{% block main_class %}min-h-screen bg-slate-950 text-white overflow-hidden{% endblock %}
+{% block banner %}{% endblock %}
 
 {% block content %}
-<div data-global-leaderboard class="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
-
-    <!-- Header -->
-    <div class="rounded-2xl border border-border-light/80 dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 px-4 py-5 shadow-sm backdrop-blur sm:px-6 mb-6 relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/20">
-                    <i class="fas fa-globe text-2xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-2xl font-black tracking-tight text-text-dark dark:text-white">Global Leaderboard</h1>
-                    <p class="text-sm text-text-secondary-light dark:text-text-secondary">
-                        Every pool, blended — the best pickers across the whole site &bull; {{ season_display }}
-                    </p>
-                </div>
-            </div>
-            <div class="flex items-center gap-4 text-center">
-                <div>
-                    <div class="text-2xl font-black text-text-dark dark:text-white tabular-nums">{{ total_players }}</div>
-                    <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Players</div>
-                </div>
-                <div class="w-px h-8 bg-border-light dark:bg-border-subtle"></div>
-                <div>
-                    <div class="text-2xl font-black text-text-dark dark:text-white tabular-nums">{{ total_leagues }}</div>
-                    <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Leagues</div>
-                </div>
-            </div>
-        </div>
+<div data-global-leaderboard class="relative isolate bg-slate-950 text-white min-h-screen">
+    <!-- Broadcast backdrop (matches the public landing page) -->
+    <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_70%_18%,rgba(14,165,233,0.22),transparent_32%),linear-gradient(135deg,#020617_0%,#07111f_44%,#0f172a_100%)]"></div>
+        <div class="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-sky-400/10 to-transparent"></div>
+        <div class="absolute left-1/2 top-0 h-[720px] w-px bg-white/10"></div>
+        <div class="absolute left-1/4 top-0 h-[720px] w-px bg-white/5"></div>
+        <div class="absolute right-1/4 top-0 h-[720px] w-px bg-white/5"></div>
     </div>
 
-    {% if entries %}
-    <!-- Podium (top 3) -->
-    <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
-        {% for e in entries|slice:":3" %}
-        {% with usernames|lookup:e.userID as uname %}
-        {% with avatars|lookup:e.userID as uavatar %}
-        <div class="flex flex-col items-center rounded-2xl border p-3 sm:p-4 text-center
-            {% if e.rank == 1 %}order-2 border-yellow-500/50 bg-gradient-to-b from-yellow-500/10 to-transparent sm:-mt-2
-            {% elif e.rank == 2 %}order-1 border-slate-400/50 bg-gradient-to-b from-slate-400/10 to-transparent
-            {% else %}order-3 border-amber-700/40 bg-gradient-to-b from-amber-700/10 to-transparent{% endif %}">
-            <div class="relative">
-                <img src="{{ uavatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=96' }}"
-                     alt="{{ uname }}"
-                     class="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4
-                        {% if e.rank == 1 %}border-yellow-500{% elif e.rank == 2 %}border-slate-400{% else %}border-amber-700{% endif %}">
-                <span class="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-black text-white
-                    {% if e.rank == 1 %}bg-yellow-500{% elif e.rank == 2 %}bg-slate-400{% else %}bg-amber-700{% endif %}">
-                    {{ e.rank }}
-                </span>
-            </div>
-            {% if e.rank == 1 %}<i class="fas fa-crown text-yellow-500 mt-2"></i>{% endif %}
-            <h3 class="mt-2 text-sm font-bold text-text-dark dark:text-white truncate max-w-full uppercase">{{ uname|default:"Player" }}</h3>
-            <div class="text-xl font-black text-text-dark dark:text-white tabular-nums">{{ e.points }}</div>
-            <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">points</div>
-        </div>
-        {% endwith %}
-        {% endwith %}
-        {% endfor %}
-    </div>
+    <!-- Public header -->
+    <header class="relative z-20 mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-5 sm:px-8">
+        <a href="{% url 'public_home' %}" class="gl-brand inline-flex items-center gap-3" aria-label="Family Pick'em home">
+            <img src="{% static 'images/logo.png' %}" alt="Family Pick'em" class="h-10 w-10 rounded-xl object-contain shadow-lg shadow-sky-950/40">
+            <span class="hidden text-sm font-black uppercase tracking-[0.28em] text-slate-200 sm:inline">Family Pick'em</span>
+        </a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'index' %}" class="gl-cta inline-flex items-center gap-2 rounded-full border border-white/15 bg-white px-4 py-2 text-sm font-bold text-slate-950 shadow-xl shadow-sky-950/30 transition hover:-translate-y-0.5 hover:bg-slate-100">
+            <i class="fas fa-users text-sm" aria-hidden="true"></i><span>Lobby</span>
+        </a>
+        {% else %}
+        <a href="{% url 'account_login' %}" class="gl-cta inline-flex items-center gap-2 rounded-full border border-white/15 bg-white px-4 py-2 text-sm font-bold text-slate-950 shadow-xl shadow-sky-950/30 transition hover:-translate-y-0.5 hover:bg-slate-100">
+            <i class="fas fa-sign-in-alt text-sm" aria-hidden="true"></i><span>Sign in</span>
+        </a>
+        {% endif %}
+    </header>
 
-    <!-- Full ranking table -->
-    <div class="rounded-2xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 overflow-hidden">
-        <div class="hidden sm:grid grid-cols-[3rem_1fr_5rem_5rem_5rem] items-center gap-2 px-4 py-2.5 border-b border-border-light dark:border-border-subtle text-[11px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">
-            <span class="text-center">Rank</span>
-            <span>Player</span>
-            <span class="text-right">Points</span>
-            <span class="text-right">Acc</span>
-            <span class="text-right">Leagues</span>
+    <div class="relative z-10 mx-auto w-full max-w-5xl px-5 pb-16 pt-2 sm:px-8">
+
+        <!-- Title block -->
+        <div class="gl-hero mb-8">
+            <div class="text-sm font-black uppercase tracking-[0.28em] text-sky-300/80">Season {{ season_display }}</div>
+            <h1 class="mt-3 text-4xl font-black leading-none tracking-tight text-white sm:text-6xl">Global Leaderboard</h1>
+            <p class="mt-4 max-w-2xl text-lg leading-8 text-slate-300">
+                Every pool, blended — the best pickers across the whole site.
+            </p>
+            <div class="mt-6 flex items-center gap-8">
+                <div>
+                    <div class="text-3xl font-black tabular-nums text-white">{{ total_players }}</div>
+                    <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Players</div>
+                </div>
+                <div class="h-10 w-px bg-white/10"></div>
+                <div>
+                    <div class="text-3xl font-black tabular-nums text-white">{{ total_leagues }}</div>
+                    <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Leagues</div>
+                </div>
+            </div>
         </div>
-        <div class="divide-y divide-border-light dark:divide-border-subtle">
-            {% for e in entries %}
+
+        {% if entries %}
+
+        {% if not has_scores %}
+        <!-- Season not started: everyone tied at zero -->
+        <div class="gl-notice mb-6 flex items-center gap-3 rounded-2xl border border-sky-300/20 bg-sky-950/60 px-5 py-4 text-sky-100 backdrop-blur">
+            <i class="fas fa-flag-checkered text-lg text-sky-300" aria-hidden="true"></i>
+            <p class="text-sm font-semibold">The season hasn't kicked off yet — everyone starts tied at zero. Rankings appear once games are scored.</p>
+        </div>
+        {% endif %}
+
+        {% if has_scores %}
+        <!-- Podium (top 3) -->
+        <div class="gl-podium grid grid-cols-3 gap-2 sm:gap-4 mb-8">
+            {% for e in entries|slice:":3" %}
             {% with usernames|lookup:e.userID as uname %}
             {% with avatars|lookup:e.userID as uavatar %}
-            <div class="grid grid-cols-[2.5rem_1fr_auto] sm:grid-cols-[3rem_1fr_5rem_5rem_5rem] items-center gap-2 px-3 sm:px-4 py-2.5 hover:bg-white/50 dark:hover:bg-bg-dark/30 transition-colors">
-                <!-- Rank -->
-                <div class="flex justify-center">
-                    <span class="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-xs font-black
-                        {% if e.rank == 1 %}bg-yellow-500 text-white
-                        {% elif e.rank == 2 %}bg-slate-400 text-white
-                        {% elif e.rank == 3 %}bg-amber-700 text-white
-                        {% else %}bg-surface-hover text-text-secondary-light dark:text-text-secondary{% endif %}">
+            <div class="gl-podium-card flex flex-col items-center rounded-3xl border p-3 sm:p-5 text-center backdrop-blur-xl
+                {% if e.rank == 1 %}order-2 border-yellow-400/40 bg-gradient-to-b from-yellow-400/15 to-transparent sm:-mt-3
+                {% elif e.rank == 2 %}order-1 border-slate-300/30 bg-gradient-to-b from-slate-300/10 to-transparent
+                {% else %}order-3 border-amber-500/30 bg-gradient-to-b from-amber-500/10 to-transparent{% endif %}">
+                <div class="relative">
+                    <img src="{{ uavatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=96' }}"
+                         alt="{{ uname }}"
+                         class="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4
+                            {% if e.rank == 1 %}border-yellow-400{% elif e.rank == 2 %}border-slate-300{% else %}border-amber-500{% endif %}">
+                    <span class="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-black text-slate-950
+                        {% if e.rank == 1 %}bg-yellow-400{% elif e.rank == 2 %}bg-slate-300{% else %}bg-amber-500{% endif %}">
                         {{ e.rank }}
                     </span>
                 </div>
-                <!-- Player -->
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <img src="{{ uavatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=48' }}"
-                         alt="{{ uname }}"
-                         class="w-8 h-8 rounded-full object-cover border border-border-light dark:border-border-subtle flex-shrink-0">
-                    <div class="min-w-0">
-                        <div class="text-sm font-bold text-text-dark dark:text-white truncate uppercase">{{ uname|default:"Player" }}</div>
-                        <div class="sm:hidden text-[11px] text-text-secondary-light dark:text-text-secondary">
-                            {% if e.accuracy != None %}{{ e.accuracy }}% acc &bull; {% endif %}{{ e.leagues }} league{{ e.leagues|pluralize }}
-                        </div>
-                    </div>
-                </div>
-                <!-- Points (mobile shows just points; desktop splits columns) -->
-                <div class="text-right sm:hidden">
-                    <div class="text-base font-black text-text-dark dark:text-white tabular-nums">{{ e.points }}</div>
-                    <div class="text-[10px] font-semibold uppercase text-text-secondary-light dark:text-text-secondary">pts</div>
-                </div>
-                <div class="hidden sm:block text-right text-base font-black text-text-dark dark:text-white tabular-nums">{{ e.points }}</div>
-                <div class="hidden sm:block text-right text-sm font-semibold text-text-secondary-light dark:text-text-secondary tabular-nums">
-                    {% if e.accuracy != None %}{{ e.accuracy }}%{% else %}&ndash;{% endif %}
-                </div>
-                <div class="hidden sm:block text-right text-sm font-semibold text-text-secondary-light dark:text-text-secondary tabular-nums">{{ e.leagues }}</div>
+                {% if e.rank == 1 %}<i class="fas fa-crown text-yellow-400 mt-2"></i>{% endif %}
+                <h3 class="mt-2 text-sm font-black text-white truncate max-w-full uppercase tracking-wide">{{ uname|default:"Player" }}</h3>
+                <div class="text-2xl font-black text-white tabular-nums">{{ e.points }}</div>
+                <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">points</div>
             </div>
             {% endwith %}
             {% endwith %}
             {% endfor %}
         </div>
-    </div>
+        {% endif %}
 
-    <p class="mt-4 text-center text-xs text-text-secondary-light dark:text-text-secondary">
-        Points are summed across every pool a player competes in. Accuracy is their blended correct-pick rate this season.
-    </p>
-    {% else %}
-    <div class="rounded-2xl border border-dashed border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-12 text-center">
-        <i class="fas fa-trophy text-5xl text-text-secondary-light dark:text-text-secondary mb-3 block"></i>
-        <p class="text-text-secondary-light dark:text-text-secondary">No scores yet this season. Check back once games start!</p>
-    </div>
-    {% endif %}
+        <!-- Full ranking table -->
+        <div class="gl-table overflow-hidden rounded-3xl border border-white/10 bg-slate-950/60 shadow-2xl shadow-black/40 backdrop-blur-xl">
+            <div class="hidden sm:grid grid-cols-[3rem_1fr_5rem_5rem_5rem] items-center gap-2 border-b border-white/10 px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                <span class="text-center">Rank</span>
+                <span>Player</span>
+                <span class="text-right">Points</span>
+                <span class="text-right">Acc</span>
+                <span class="text-right">Leagues</span>
+            </div>
+            <div class="divide-y divide-white/5">
+                {% for e in entries %}
+                {% with usernames|lookup:e.userID as uname %}
+                {% with avatars|lookup:e.userID as uavatar %}
+                <div class="gl-row grid grid-cols-[2.5rem_1fr_auto] sm:grid-cols-[3rem_1fr_5rem_5rem_5rem] items-center gap-2 px-4 sm:px-5 py-3 transition-colors hover:bg-white/5">
+                    <!-- Rank -->
+                    <div class="flex justify-center">
+                        <span class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-black
+                            {% if e.rank == 1 and has_scores %}bg-yellow-400 text-slate-950
+                            {% elif e.rank == 2 and has_scores %}bg-slate-300 text-slate-950
+                            {% elif e.rank == 3 and has_scores %}bg-amber-500 text-slate-950
+                            {% else %}bg-white/10 text-slate-300{% endif %}">
+                            {{ e.rank }}
+                        </span>
+                    </div>
+                    <!-- Player -->
+                    <div class="flex items-center gap-3 min-w-0">
+                        <img src="{{ uavatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=48' }}"
+                             alt="{{ uname }}"
+                             class="w-8 h-8 rounded-full object-cover border border-white/15 flex-shrink-0">
+                        <div class="min-w-0">
+                            <div class="text-sm font-black text-white truncate uppercase tracking-wide">{{ uname|default:"Player" }}</div>
+                            <div class="sm:hidden text-[11px] text-slate-400">
+                                {% if e.accuracy != None %}{{ e.accuracy }}% acc &bull; {% endif %}{{ e.leagues }} league{{ e.leagues|pluralize }}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Points (mobile) -->
+                    <div class="text-right sm:hidden">
+                        <div class="text-base font-black text-white tabular-nums">{{ e.points }}</div>
+                        <div class="text-[10px] font-black uppercase text-slate-400">pts</div>
+                    </div>
+                    <div class="hidden sm:block text-right text-base font-black text-white tabular-nums">{{ e.points }}</div>
+                    <div class="hidden sm:block text-right text-sm font-semibold text-slate-300 tabular-nums">
+                        {% if e.accuracy != None %}{{ e.accuracy }}%{% else %}&ndash;{% endif %}
+                    </div>
+                    <div class="hidden sm:block text-right text-sm font-semibold text-slate-300 tabular-nums">{{ e.leagues }}</div>
+                </div>
+                {% endwith %}
+                {% endwith %}
+                {% endfor %}
+            </div>
+        </div>
 
-    <div class="mt-8 text-center">
-        <a href="{% url 'index' %}" class="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary/90 transition-colors">
-            <i class="fas fa-arrow-right-to-bracket"></i> Sign in to join a league
-        </a>
+        <p class="mt-5 text-center text-xs text-slate-400">
+            Points are summed across every pool a player competes in. Accuracy is their blended correct-pick rate this season.
+        </p>
+        {% else %}
+        <div class="gl-empty rounded-3xl border border-dashed border-white/15 bg-slate-950/60 p-14 text-center backdrop-blur-xl">
+            <i class="fas fa-trophy text-5xl text-slate-500 mb-4 block"></i>
+            <p class="text-slate-300">No players yet this season. Check back once families join and games start!</p>
+        </div>
+        {% endif %}
+
+        <div class="mt-10 text-center">
+            {% if user.is_authenticated %}
+            <a href="{% url 'index' %}" class="gl-cta inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-black text-slate-950 shadow-2xl shadow-sky-950/40 transition hover:-translate-y-0.5 hover:bg-slate-100">
+                <i class="fas fa-users"></i> Go to your lobby
+            </a>
+            {% else %}
+            <a href="{% url 'account_login' %}" class="gl-cta inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-black text-slate-950 shadow-2xl shadow-sky-950/40 transition hover:-translate-y-0.5 hover:bg-slate-100">
+                <i class="fas fa-arrow-right-to-bracket"></i> Sign in to join a league
+            </a>
+            {% endif %}
+        </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" integrity="sha384-HOvlOYPIs/zjoIkWUGXkVmXsjr8GuZLV+Q+rcPwmJOVZVpvTSXQChiN4t9Euv9Vc" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" integrity="sha384-P8VzCVnT9NBUkMrpcIZrJbA7EBjJvh/fJS6PmP+4nLIM284DtsImIv8D0fFjIkeh" crossorigin="anonymous"></script>
+<script>
+(function () {
+    if (!window.gsap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+    }
+    var gsap = window.gsap;
+    if (window.ScrollTrigger) {
+        gsap.registerPlugin(window.ScrollTrigger);
+    }
+
+    gsap.set(['.gl-brand', '.gl-cta', '.gl-hero', '.gl-notice', '.gl-podium-card', '.gl-table', '.gl-empty'], {
+        autoAlpha: 0,
+        y: 24
+    });
+
+    gsap.timeline({ defaults: { ease: 'power3.out' } })
+        .to('.gl-brand, .gl-cta', { autoAlpha: 1, y: 0, duration: 0.45, stagger: 0.06 })
+        .to('.gl-hero', { autoAlpha: 1, y: 0, duration: 0.6 }, '-=0.15')
+        .to('.gl-notice', { autoAlpha: 1, y: 0, duration: 0.45 }, '-=0.25')
+        .to('.gl-podium-card', { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.1 }, '-=0.2')
+        .to('.gl-table, .gl-empty', { autoAlpha: 1, y: 0, duration: 0.55 }, '-=0.15');
+
+    if (window.ScrollTrigger) {
+        gsap.utils.toArray('.gl-row').forEach(function (row) {
+            gsap.from(row, {
+                autoAlpha: 0,
+                y: 14,
+                duration: 0.4,
+                ease: 'power2.out',
+                scrollTrigger: { trigger: row, start: 'top 96%', once: true }
+            });
+        });
+    }
+})();
+</script>
 {% endblock %}
