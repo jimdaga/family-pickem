@@ -3023,6 +3023,21 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
                 self.assertEqual(response.status_code, 400)
                 smith_post.refresh_from_db()
                 self.assertEqual(smith_post.content, "Smith family only")
+                self.assertEqual(smith_post.title, "Smith thread")
+
+    def test_tenant_create_post_rejects_overlong_title(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.post(
+            self._tenant_url("family_pool_create_post"),
+            {"title": "x" * 201, "content": "fine"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(
+            MessageBoardPost.objects.filter(family=self.smith_family, content="fine").exists()
+        )
 
     def test_tenant_delete_post_allows_author_or_moderator_denies_others(self):
         smith_post, _smith_comment, _jones_post, _jones_comment = self._seed_message_board_data()

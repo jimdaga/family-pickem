@@ -3768,10 +3768,10 @@ def create_post_for_family(request, family):
             'post_id': post.id,
             'message': 'Message sent successfully!'
         })
-    except Exception as e:
+    except Exception:
         return JsonResponse({
             'success': False,
-            'errors': {'general': [str(e)]}
+            'errors': {'general': ['Something went wrong. Please try again.']}
         }, status=500)
 
 
