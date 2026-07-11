@@ -37,18 +37,13 @@ postgresql:
 scheduler:
   enabled: true
 
-pickemctl:
-  enabled: true
-  image:
-    repository: familypickem/pickemctl
-    tag: "0.0.9"
-    pullPolicy: IfNotPresent
+# pickemctl retired — userStats is now computed by the in-process `update_stats`
+# management command (part of the update_all pipeline).
 
 externalSecrets:
   enabled: true
   clusterSecretStore: aws-secrets-manager
   envvarsKey: family-pickem/prd/envvars
-  pickemctlKey: family-pickem/prd/pickemctl
 
 backup:
   enabled: true
