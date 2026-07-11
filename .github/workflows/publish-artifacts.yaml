@@ -112,6 +112,12 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          # PAT owned by a repo admin. main is protected, and the default
+          # GITHUB_TOKEN (github-actions[bot]) can't bypass the PR requirement.
+          # This repo is user-owned with enforce_admins=false, so a PAT owned
+          # by the admin can push to main directly. actions/checkout persists
+          # this credential for the later `git push`.
+          token: ${{ secrets.ARGOCD_PUSH_TOKEN }}
 
       - name: Update ArgoCD app version
         run: |
@@ -130,6 +136,7 @@ jobs:
           git add infra/argocd/applications/pickem-prd.yaml
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "chore: update prd to ${VERSION}"
-          # NOTE: main is a protected branch; this push requires an actor
-          # allowed to bypass PR requirements (see TODO.md - release automation).
+          # Pushes as the ARGOCD_PUSH_TOKEN owner (repo admin), bypassing the
+          # protected-branch PR requirement. Once this lands on main the
+          # app-of-apps root Application auto-reconciles prd to the new chart.
           git push
