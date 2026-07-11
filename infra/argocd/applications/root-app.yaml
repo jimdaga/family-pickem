@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  # App-of-apps root: watches this directory and reconciles every Application
+  # manifest in it (including itself). This is what makes a git change to a
+  # child app — e.g. the release workflow bumping pickem-prd's targetRevision —
+  # propagate to the live cluster automatically, so no manual `kubectl apply`
+  # of the Application object is needed after a release.
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:jimdaga/family-pickem.git
+    targetRevision: main
+    path: infra/argocd/applications
+    directory:
+      recurse: false
+      include: '*.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
