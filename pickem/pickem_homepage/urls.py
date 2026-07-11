@@ -8,6 +8,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('', views.index, name='index'),
     path('public/', views.public_home, name='public_home'),
+    path('leaderboard/', views.global_leaderboard, name='global_leaderboard'),
     path('onboarding/', views.onboarding, name='onboarding'),
     path('families/create/', views.create_family, name='create_family'),
     path('families/join/', views.join_family, name='join_family'),

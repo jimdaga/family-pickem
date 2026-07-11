@@ -5969,3 +5969,70 @@ class PoolLockTemplateTagTests(TestCase):
                 is_game_locked_for_pool(self.game, self.pool)
             with self.assertRaisesMessage(RuntimeError, "db broke"):
                 game_lock_reason_for_pool(self.game, self.pool)
+
+
+class GlobalLeaderboardTests(TestCase):
+    """The public site-wide leaderboard blends every pool for the season."""
+
+    def setUp(self):
+        self.client = Client()
+        self.season = 2526
+        currentSeason.objects.create(season=self.season, display_name="2025-2026")
+        self.smith_family = Family.objects.create(name="Smith", slug="smith-gl")
+        self.jones_family = Family.objects.create(name="Jones", slug="jones-gl")
+        self.smith_pool = Pool.objects.create(
+            family=self.smith_family, name="Smith Pool", slug="smith-pool-gl",
+            season=self.season, competition="nfl", status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        self.jones_pool = Pool.objects.create(
+            family=self.jones_family, name="Jones Pool", slug="jones-pool-gl",
+            season=self.season, competition="nfl", status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        self.alice = User.objects.create_user("alice-gl", email="alice-gl@example.com", password="x")
+        self.bob = User.objects.create_user("bob-gl", email="bob-gl@example.com", password="x")
+        self.admin = User.objects.create_user(
+            "admin-gl", email="admin-gl@example.com", password="x", is_superuser=True
+        )
+
+    def _points(self, pool, user, total):
+        return userSeasonPoints.objects.create(
+            pool=pool, userEmail=user.email, userID=str(user.id),
+            gameseason=self.season, gameyear="2025", total_points=total,
+        )
+
+    def test_leaderboard_is_public_and_blends_points_across_pools(self):
+        # Alice plays in BOTH pools; her site-wide total is the sum.
+        self._points(self.smith_pool, self.alice, 10)
+        self._points(self.jones_pool, self.alice, 7)
+        # Bob only plays one pool.
+        self._points(self.smith_pool, self.bob, 12)
+
+        response = self.client.get(reverse("global_leaderboard"))  # no login
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/global_leaderboard.html")
+
+        entries = {e["userID"]: e for e in response.context["entries"]}
+        self.assertEqual(entries[str(self.alice.id)]["points"], 17)  # 10 + 7 blended
+        self.assertEqual(entries[str(self.alice.id)]["leagues"], 2)
+        self.assertEqual(entries[str(self.bob.id)]["points"], 12)
+        # Alice (17) outranks Bob (12) even though Bob's single-pool score is higher.
+        self.assertEqual(entries[str(self.alice.id)]["rank"], 1)
+        self.assertEqual(entries[str(self.bob.id)]["rank"], 2)
+
+    def test_leaderboard_excludes_superusers_and_blends_accuracy(self):
+        self._points(self.smith_pool, self.alice, 10)
+        self._points(self.smith_pool, self.admin, 999)  # admin must not appear
+        userStats.objects.create(
+            pool=self.smith_pool, userEmail=self.alice.email, userID=str(self.alice.id),
+            correctPickTotalSeason=8, totalPicksSeason=10, weeksWonSeason=1,
+        )
+
+        response = self.client.get(reverse("global_leaderboard"))
+        self.assertEqual(response.status_code, 200)
+        ids = [e["userID"] for e in response.context["entries"]]
+        self.assertIn(str(self.alice.id), ids)
+        self.assertNotIn(str(self.admin.id), ids)
+        alice = next(e for e in response.context["entries"] if e["userID"] == str(self.alice.id))
+        self.assertEqual(alice["accuracy"], 80)  # 8/10
