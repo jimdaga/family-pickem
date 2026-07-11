@@ -3005,6 +3005,40 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertEqual(smith_post.content, "Updated content")
         self.assertEqual(smith_post.title, "Updated title")
 
+    def test_tenant_edit_post_rejects_overlong_title_and_content(self):
+        # The form inputs carry maxlength client-side, but a crafted request
+        # bypasses them; the server must reject rather than 500 on DB overflow.
+        smith_post, _smith_comment, _jones_post, _jones_comment = self._seed_message_board_data()
+        self.client.force_login(self.smith_player)
+
+        for payload in (
+            {"title": "x" * 201, "content": "fine"},
+            {"title": "fine", "content": "x" * 2001},
+        ):
+            with self.subTest(payload_keys={k: len(v) for k, v in payload.items()}):
+                response = self._json_post(
+                    self._tenant_url("family_pool_edit_post", post_id=smith_post.id),
+                    payload,
+                )
+                self.assertEqual(response.status_code, 400)
+                smith_post.refresh_from_db()
+                self.assertEqual(smith_post.content, "Smith family only")
+                self.assertEqual(smith_post.title, "Smith thread")
+
+    def test_tenant_create_post_rejects_overlong_title(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.post(
+            self._tenant_url("family_pool_create_post"),
+            {"title": "x" * 201, "content": "fine"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(
+            MessageBoardPost.objects.filter(family=self.smith_family, content="fine").exists()
+        )
+
     def test_tenant_delete_post_allows_author_or_moderator_denies_others(self):
         smith_post, _smith_comment, _jones_post, _jones_comment = self._seed_message_board_data()
         moderator = User.objects.create_user(
@@ -3711,9 +3745,14 @@ class FamilyAdminExperienceTests(TestCase):
         self.family.save(update_fields=["logo_url"])
         self.client.force_login(self.admin_user)
 
-        # "//host/..." is protocol-relative (an arbitrary external host), so it
-        # must not slip through the site-relative-path fast path.
-        for bad_value in ("not a url", "//evil.example/logo.png"):
+        # "//host/..." is protocol-relative (an arbitrary external host) and
+        # browsers normalize "\" to "/", so "/\host/..." resolves the same way
+        # — neither may slip through the site-relative-path fast path.
+        for bad_value in (
+            "not a url",
+            "//evil.example/logo.png",
+            "/\\evil.example/logo.png",
+        ):
             with self.subTest(logo_url=bad_value):
                 response = self.client.post(
                     self._settings_url(),

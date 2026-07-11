@@ -3747,6 +3747,14 @@ def create_post_for_family(request, family):
             'errors': {'content': ['Message too long. Please keep it under 2000 characters.']}
         }, status=400)
 
+    # The form input has maxlength=200, but a crafted request bypasses it and
+    # would overflow the CharField into a raw DB error.
+    if len(title) > 200:
+        return JsonResponse({
+            'success': False,
+            'errors': {'title': ['Title too long. Please keep it under 200 characters.']}
+        }, status=400)
+
     try:
         post = MessageBoardPost.objects.create(
             family=family,
@@ -3760,10 +3768,10 @@ def create_post_for_family(request, family):
             'post_id': post.id,
             'message': 'Message sent successfully!'
         })
-    except Exception as e:
+    except Exception:
         return JsonResponse({
             'success': False,
-            'errors': {'general': [str(e)]}
+            'errors': {'general': ['Something went wrong. Please try again.']}
         }, status=500)
 
 
@@ -4092,6 +4100,7 @@ def is_board_moderator(request):
 
 
 @login_required
+# @ratelimit(key='user', rate='10/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def edit_post(request, post_id):
     return message_board_not_found()
@@ -4133,6 +4142,14 @@ def edit_post_for_family(request, family, post_id):
                 'error': 'Message too long. Please keep it under 2000 characters.'
             }, status=400)
 
+        # The form input has maxlength=200, but a crafted request bypasses it
+        # and would overflow the CharField into a raw DB error.
+        if len(title) > 200:
+            return JsonResponse({
+                'success': False,
+                'error': 'Title too long. Please keep it under 200 characters.'
+            }, status=400)
+
         if not title:
             title = content[:50] + ('...' if len(content) > 50 else '')
 
@@ -4156,14 +4173,15 @@ def edit_post_for_family(request, family, post_id):
             'success': False,
             'error': 'Invalid JSON data'
         }, status=400)
-    except Exception as e:
+    except Exception:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Something went wrong. Please try again.'
         }, status=500)
 
 
 @login_required
+# @ratelimit(key='user', rate='10/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def delete_post(request, post_id):
     return message_board_not_found()
@@ -4196,14 +4214,15 @@ def delete_post_for_family(request, family, post_id):
 
     except Http404:
         return message_board_not_found()
-    except Exception as e:
+    except Exception:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Something went wrong. Please try again.'
         }, status=500)
 
 
 @login_required
+# @ratelimit(key='user', rate='15/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def edit_comment(request, comment_id):
     return message_board_not_found()
@@ -4256,14 +4275,15 @@ def edit_comment_for_family(request, family, comment_id):
             'success': False,
             'error': 'Invalid JSON data'
         }, status=400)
-    except Exception as e:
+    except Exception:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Something went wrong. Please try again.'
         }, status=500)
 
 
 @login_required
+# @ratelimit(key='user', rate='15/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def delete_comment(request, comment_id):
     return message_board_not_found()
@@ -4311,10 +4331,10 @@ def delete_comment_for_family(request, family, comment_id):
 
     except Http404:
         return message_board_not_found()
-    except Exception as e:
+    except Exception:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Something went wrong. Please try again.'
         }, status=500)
 
 
