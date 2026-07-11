@@ -29,6 +29,11 @@ urlpatterns = [
         name='family_pool_admin_settings',
     ),
     path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/banners/',
+        views.family_pool_admin_banners,
+        name='family_pool_admin_banners',
+    ),
+    path(
         'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/members/',
         views.family_pool_admin_members,
         name='family_pool_admin_members',
@@ -148,6 +153,26 @@ urlpatterns = [
         views.tenant_get_post_comments,
         name='family_pool_get_post_comments',
     ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/posts/<int:post_id>/edit/',
+        views.tenant_edit_post,
+        name='family_pool_edit_post',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/posts/<int:post_id>/delete/',
+        views.tenant_delete_post,
+        name='family_pool_delete_post',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/comments/<int:comment_id>/edit/',
+        views.tenant_edit_comment,
+        name='family_pool_edit_comment',
+    ),
+    path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/message-board/comments/<int:comment_id>/delete/',
+        views.tenant_delete_comment,
+        name='family_pool_delete_comment',
+    ),
     path('invites/<str:invite_code>/', views.accept_invite_link, name='accept_invite_link'),
     path('scores/', views.scores, name='scores'),
     path('standings/', views.standings, name='standings'),
@@ -171,6 +196,10 @@ urlpatterns = [
     path('message-board/vote-post/', views.vote_post, name='vote_post'),
     path('message-board/vote-comment/', views.vote_comment, name='vote_comment'),
     path('message-board/comments/<int:post_id>/', views.get_post_comments, name='get_post_comments'),
+    path('message-board/posts/<int:post_id>/edit/', views.edit_post, name='edit_post'),
+    path('message-board/posts/<int:post_id>/delete/', views.delete_post, name='delete_post'),
+    path('message-board/comments/<int:comment_id>/edit/', views.edit_comment, name='edit_comment'),
+    path('message-board/comments/<int:comment_id>/delete/', views.delete_comment, name='delete_comment'),
     
     # Commissioner URLs
     path('commissioners/', views.commissioners, name='commissioners'),

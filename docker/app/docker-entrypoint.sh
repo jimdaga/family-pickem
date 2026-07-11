@@ -39,13 +39,17 @@ check_postgres () {
 # Check that postgres is working before starting the app
 check_postgres
 
-# Prepare static files
-python manage.py collectstatic --noinput 
-# cp -R /code/pickem_homepage/static/* /var/www/api/
-
-# Perform Database Migrations
-python manage.py makemigrations 
-python manage.py migrate 
+if [ "$1" = "migrate" ]; then
+  # initContainer mode: prepare static files and run migrations, then exit.
+  # Kept out of the main container so the liveness probe never SIGKILLs a
+  # long-running migration mid-flight (seen on the 0.0.135 prd rollout).
+  # Only committed migrations are applied — generating migrations at deploy
+  # time (the old makemigrations step) invites schema drift the repo can't
+  # reproduce.
+  python manage.py collectstatic --noinput
+  python manage.py migrate
+  exit 0
+fi
 
 # Start Server
 export RUN_WEB_SERVER=true
