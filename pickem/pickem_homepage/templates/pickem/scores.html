@@ -1541,6 +1541,9 @@
     }
     
     function startLiveUpdates() {
+        if (updateInterval) {
+            return;
+        }
         if (!hasLiveGames()) {
             return;
         }
@@ -1555,6 +1558,11 @@
             if (!stillHasLiveGames) {
                 // No more live games, stop updates
                 clearInterval(updateInterval);
+                updateInterval = null;
+                if (window.visibilityHandler) {
+                    document.removeEventListener('visibilitychange', window.visibilityHandler);
+                    window.visibilityHandler = null;
+                }
                 const indicator = document.querySelector('.live-update-indicator');
                 if (indicator) {
                     showUpdateIndicator(indicator, 'All games completed');
@@ -1566,14 +1574,18 @@
         }, 30000); // Update every 30 seconds
         
         // Also update when user returns to tab (visibility change)
-        document.addEventListener('visibilitychange', () => {
+        if (window.visibilityHandler) {
+            document.removeEventListener('visibilitychange', window.visibilityHandler);
+        }
+        window.visibilityHandler = () => {
             if (!document.hidden && hasLiveGames()) {
                 // User returned to tab, update immediately if it's been more than 10 seconds
                 if (Date.now() - lastUpdateTime > 10000) {
                     updateLiveScores();
                 }
             }
-        });
+        };
+        document.addEventListener('visibilitychange', window.visibilityHandler);
     }
     
     // Debug function for manual testing

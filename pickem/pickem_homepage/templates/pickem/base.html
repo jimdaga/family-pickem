@@ -608,6 +608,7 @@
     </script>
 
     <!-- Tailwind Dark Mode Management -->
+    {{ user_theme_preference|default_if_none:""|json_script:"backend-theme-preference" }}
     <script>
     // Theme Manager for Tailwind CSS
     const ThemeManager = {
@@ -620,7 +621,7 @@
 
             // Priority: Backend preference > localStorage > system preference
             {% if user.is_authenticated %}
-            const backendTheme = '{{ user_theme_preference }}';  // From context processor
+            const backendTheme = JSON.parse(document.getElementById('backend-theme-preference').textContent);
             const currentTheme = backendTheme || systemTheme;
             {% else %}
             const currentTheme = localStorage.getItem('theme') || systemTheme;

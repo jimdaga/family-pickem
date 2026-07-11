@@ -87,6 +87,7 @@ class WeekContext:
         self._tiebreaker_game_loaded = False
         self._actual_yards = None
         self._actual_yards_loaded = False
+        self.missing_tiebreaker_actual = False
 
     @property
     def tiebreaker_game(self):
@@ -182,6 +183,11 @@ class _ClosestPrediction(Tiebreaker):
     def resolve(self, candidates, ctx):
         actual = self.actual(ctx)
         if actual is None:
+            if any(
+                ctx.prediction(entry.userID, self.prediction_field) is not None
+                for entry in candidates
+            ):
+                ctx.missing_tiebreaker_actual = True
             return candidates
         scored = []
         for entry in candidates:
@@ -332,15 +338,26 @@ def award_weekly_winners(pool, season, week, *, stats_provider=None, force=False
         # Chain exhausted without a unique winner: co-winners, full bonus each.
         method = f'{method}+co_winners' if method != 'top_score' else 'co_winners'
 
+    if len(candidates) > 1 and ctx.missing_tiebreaker_actual:
+        return None
+
     per_winner_bonus = bonus // len(candidates) if split else bonus
     winner_ids = {row.pk for row in candidates}
+    winner_bonus_map = {}
+    if split:
+        ordered_winners = sorted(candidates, key=lambda row: str(row.userID))
+        remainder = bonus % len(ordered_winners)
+        for index, row in enumerate(ordered_winners):
+            winner_bonus_map[row.pk] = per_winner_bonus + (1 if index < remainder else 0)
 
     for row in rows:
         is_winner = row.pk in winner_ids
         setattr(row, winner_field, is_winner)
-        setattr(row, bonus_field, per_winner_bonus if is_winner else (
-            getattr(row, bonus_field) if not force else None
-        ))
+        if is_winner:
+            applied_bonus = winner_bonus_map.get(row.pk, per_winner_bonus)
+        else:
+            applied_bonus = getattr(row, bonus_field) if not force else 0
+        setattr(row, bonus_field, applied_bonus)
         _recompute_total(row)
         row.save(update_fields=[winner_field, bonus_field, 'total_points'])
 

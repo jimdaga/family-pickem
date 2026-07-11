@@ -48,22 +48,7 @@ class GamePicksForm(forms.ModelForm):
 
     class Meta:
         model = GamePicks
-        fields = (
-            'id',
-            'userEmail',
-            'userID',
-            'uid',
-            'slug',
-            'competition',
-            'gameseason',
-            'gameWeek',
-            'gameyear',
-            'pick_game_id',
-            'pick',
-            'pick_correct',
-            'tieBreakerScore',
-            'tieBreakerYards'
-        )
+        fields = ('pick', 'tieBreakerScore', 'tieBreakerYards')
 
 
 class PickSubmissionForm(forms.Form):
