@@ -2299,6 +2299,90 @@ def public_home(request):
     return render(request, 'pickem/home.html', {'gameseason': get_season()})
 
 
+def global_leaderboard(request):
+    """Public site-wide leaderboard blending every pool for the current season.
+
+    Ranks players across the whole site: a player's points are summed across
+    all pools they play in, so this answers "who's the best picker anywhere",
+    not just within one family. Accuracy and weeks-won are blended the same way
+    from their per-pool userStats rows.
+    """
+    season = get_season()
+    season_str = str(season).zfill(4)
+    season_display = (
+        f"20{season_str[:2]}-20{season_str[2:]}" if len(season_str) == 4 else season_str
+    )
+
+    User = get_user_model()
+    # Only real competitors — no admins, no deactivated accounts.
+    valid_ids = {
+        str(uid)
+        for uid in User.objects.filter(
+            is_active=True, is_superuser=False
+        ).values_list('id', flat=True)
+    }
+
+    # Blend every pool: total points + number of leagues per player this season.
+    points_rows = (
+        userSeasonPoints.objects.filter(gameseason=season)
+        .values('userID')
+        .annotate(
+            points=Coalesce(Sum('total_points'), 0),
+            leagues=Count('pool', distinct=True),
+        )
+    )
+
+    # Accuracy + weeks won, blended across the player's pools.
+    stats_by_user = {}
+    for row in (
+        userStats.objects.values('userID').annotate(
+            correct=Coalesce(Sum('correctPickTotalSeason'), 0),
+            total=Coalesce(Sum('totalPicksSeason'), 0),
+            weeks_won=Coalesce(Sum('weeksWonSeason'), 0),
+        )
+    ):
+        if row['userID']:
+            stats_by_user[str(row['userID'])] = row
+
+    entries = []
+    for row in points_rows:
+        uid = str(row['userID'] or '')
+        if uid not in valid_ids:
+            continue
+        s = stats_by_user.get(uid, {})
+        correct = s.get('correct') or 0
+        total = s.get('total') or 0
+        accuracy = round((correct / total) * 100) if total else None
+        entries.append({
+            'userID': uid,
+            'points': row['points'] or 0,
+            'leagues': row['leagues'] or 0,
+            'weeks_won': s.get('weeks_won') or 0,
+            'correct': correct,
+            'accuracy': accuracy,
+        })
+
+    # Rank by blended points, then accuracy, then correct picks as tiebreakers.
+    entries.sort(
+        key=lambda e: (-e['points'], -(e['accuracy'] or 0), -e['correct'], e['userID'])
+    )
+    for i, e in enumerate(entries, 1):
+        e['rank'] = i
+
+    usernames, avatars = build_user_display_maps([e['userID'] for e in entries])
+
+    context = {
+        'gameseason': season,
+        'season_display': season_display,
+        'entries': entries,
+        'usernames': usernames,
+        'avatars': avatars,
+        'total_players': len(entries),
+        'total_leagues': Pool.objects.filter(season=season).count(),
+    }
+    return render(request, 'pickem/global_leaderboard.html', context)
+
+
 def standings(request):
     if request.user.is_authenticated:
         return redirect_to_default_pool_route(request, 'family_pool_standings')

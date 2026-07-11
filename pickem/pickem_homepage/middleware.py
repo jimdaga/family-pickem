@@ -15,6 +15,7 @@ class RequireLoginForInternalPagesMiddleware:
     PUBLIC_EXACT_PATHS = {
         "/",
         "/public/",
+        "/leaderboard/",
         "/favicon.ico",
         "/robots.txt",
     }
