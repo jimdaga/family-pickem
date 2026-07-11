@@ -2981,6 +2981,175 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertFalse(tamper_payload["success"])
         self.assertNotIn("Jones", json.dumps(tamper_payload))
 
+    def test_tenant_edit_post_updates_content_for_author_only(self):
+        smith_post, _smith_comment, _jones_post, _jones_comment = self._seed_message_board_data()
+
+        self.client.force_login(self.smith_member)
+        denied = self._json_post(
+            self._tenant_url("family_pool_edit_post", post_id=smith_post.id),
+            {"title": "hijacked", "content": "hijacked"},
+        )
+        self.assertEqual(denied.status_code, 403)
+        self.assertFalse(denied.json()["success"])
+
+        self.client.force_login(self.smith_player)
+        allowed = self._json_post(
+            self._tenant_url("family_pool_edit_post", post_id=smith_post.id),
+            {"title": "Updated title", "content": "Updated content"},
+        )
+        self.assertEqual(allowed.status_code, 200)
+        payload = allowed.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["post"]["content"], "Updated content")
+        smith_post.refresh_from_db()
+        self.assertEqual(smith_post.content, "Updated content")
+        self.assertEqual(smith_post.title, "Updated title")
+
+    def test_tenant_delete_post_allows_author_or_moderator_denies_others(self):
+        smith_post, _smith_comment, _jones_post, _jones_comment = self._seed_message_board_data()
+        moderator = User.objects.create_user(
+            "smith-moderator", email="smith-moderator@example.com", password="pass"
+        )
+        self._active_membership(moderator, self.smith_family, role=FamilyMembership.Role.OWNER)
+
+        self.client.force_login(self.smith_private)
+        denied = self._json_post(
+            self._tenant_url("family_pool_delete_post", post_id=smith_post.id), {}
+        )
+        self.assertEqual(denied.status_code, 403)
+        smith_post.refresh_from_db()
+        self.assertTrue(smith_post.is_active)
+
+        self.client.force_login(moderator)
+        allowed = self._json_post(
+            self._tenant_url("family_pool_delete_post", post_id=smith_post.id), {}
+        )
+        self.assertEqual(allowed.status_code, 200)
+        self.assertTrue(allowed.json()["success"])
+        smith_post.refresh_from_db()
+        self.assertFalse(smith_post.is_active)
+
+    def test_tenant_edit_comment_updates_content_for_author_only(self):
+        _smith_post, smith_comment, _jones_post, _jones_comment = self._seed_message_board_data()
+
+        self.client.force_login(self.smith_player)
+        denied = self._json_post(
+            self._tenant_url("family_pool_edit_comment", comment_id=smith_comment.id),
+            {"content": "hijacked"},
+        )
+        self.assertEqual(denied.status_code, 403)
+
+        self.client.force_login(self.smith_member)
+        allowed = self._json_post(
+            self._tenant_url("family_pool_edit_comment", comment_id=smith_comment.id),
+            {"content": "Updated comment"},
+        )
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(allowed.json()["comment"]["content"], "Updated comment")
+        smith_comment.refresh_from_db()
+        self.assertEqual(smith_comment.content, "Updated comment")
+
+    def test_tenant_delete_comment_allows_author_or_moderator_denies_others(self):
+        _smith_post, smith_comment, _jones_post, _jones_comment = self._seed_message_board_data()
+        moderator = User.objects.create_user(
+            "smith-comment-moderator", email="smith-comment-moderator@example.com", password="pass"
+        )
+        self._active_membership(moderator, self.smith_family, role=FamilyMembership.Role.OWNER)
+
+        self.client.force_login(self.smith_player)
+        denied = self._json_post(
+            self._tenant_url("family_pool_delete_comment", comment_id=smith_comment.id), {}
+        )
+        self.assertEqual(denied.status_code, 403)
+        smith_comment.refresh_from_db()
+        self.assertTrue(smith_comment.is_active)
+
+        self.client.force_login(moderator)
+        allowed = self._json_post(
+            self._tenant_url("family_pool_delete_comment", comment_id=smith_comment.id), {}
+        )
+        self.assertEqual(allowed.status_code, 200)
+        smith_comment.refresh_from_db()
+        self.assertFalse(smith_comment.is_active)
+
+    def test_superuser_without_membership_can_moderate_posts(self):
+        # Superusers get a synthetic owner membership from the tenant context;
+        # moderation must honor it rather than requiring a saved membership row.
+        smith_post, _smith_comment, _jones_post, _jones_comment = self._seed_message_board_data()
+        sre = User.objects.create_user(
+            "board-sre", email="board-sre@example.com", password="pass", is_superuser=True
+        )
+        self.client.force_login(sre)
+
+        response = self._json_post(
+            self._tenant_url("family_pool_delete_post", post_id=smith_post.id), {}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        smith_post.refresh_from_db()
+        self.assertFalse(smith_post.is_active)
+
+    def test_tenant_delete_comment_deactivates_reply_subtree(self):
+        smith_post, smith_comment, _jones_post, _jones_comment = self._seed_message_board_data()
+        reply = MessageBoardComment.objects.create(
+            family=self.smith_family,
+            post=smith_post,
+            user=self.smith_player,
+            parent=smith_comment,
+            content="reply level 1",
+        )
+        nested_reply = MessageBoardComment.objects.create(
+            family=self.smith_family,
+            post=smith_post,
+            user=self.smith_member,
+            parent=reply,
+            content="reply level 2",
+        )
+        self.client.force_login(self.smith_member)
+
+        response = self._json_post(
+            self._tenant_url("family_pool_delete_comment", comment_id=smith_comment.id), {}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["deactivated_count"], 3)
+        for obj in (smith_comment, reply, nested_reply):
+            obj.refresh_from_db()
+            self.assertFalse(obj.is_active)
+        self.assertEqual(smith_post.comment_count, 0)
+
+    def test_tenant_edit_delete_post_and_comment_deny_cross_family_ids_generically(self):
+        _smith_post, _smith_comment, jones_post, jones_comment = self._seed_message_board_data()
+        self.client.force_login(self.smith_member)
+
+        responses = [
+            self._json_post(
+                self._tenant_url("family_pool_edit_post", post_id=jones_post.id),
+                {"content": "tampered"},
+            ),
+            self._json_post(
+                self._tenant_url("family_pool_delete_post", post_id=jones_post.id), {}
+            ),
+            self._json_post(
+                self._tenant_url("family_pool_edit_comment", comment_id=jones_comment.id),
+                {"content": "tampered"},
+            ),
+            self._json_post(
+                self._tenant_url("family_pool_delete_comment", comment_id=jones_comment.id), {}
+            ),
+        ]
+
+        for response in responses:
+            self.assertEqual(response.status_code, 404)
+            payload = response.json()
+            self.assertFalse(payload["success"])
+            self.assertNotIn("Jones", json.dumps(payload))
+        jones_post.refresh_from_db()
+        jones_comment.refresh_from_db()
+        self.assertTrue(jones_post.is_active)
+        self.assertTrue(jones_comment.is_active)
+        self.assertNotEqual(jones_post.content, "tampered")
+
     def test_lobby_links_to_messages_page_instead_of_inline_board(self):
         self.client.force_login(self.smith_member)
 
@@ -3409,6 +3578,14 @@ class FamilyAdminExperienceTests(TestCase):
             kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
         )
 
+    def _banners_url(self, *, family=None, pool=None):
+        family = family or self.family
+        pool = pool or self.pool
+        return reverse(
+            "family_pool_admin_banners",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        )
+
     @staticmethod
     def _default_scoring_fields(**overrides):
         """POST payload for the scoring/rules fields at their model defaults."""
@@ -3509,6 +3686,94 @@ class FamilyAdminExperienceTests(TestCase):
         settings = self.pool.settings
         settings.refresh_from_db()
         self.assertEqual(settings.pick_type, "straight_up")
+
+    def test_settings_post_accepts_absolute_and_static_relative_logo_urls(self):
+        self.client.force_login(self.admin_user)
+
+        for logo_url in ("https://example.com/logo.png", "/static/images/custom-logo.png"):
+            with self.subTest(logo_url=logo_url):
+                response = self.client.post(
+                    self._settings_url(),
+                    {
+                        "family_name": self.family.name,
+                        "pool_name": self.pool.name,
+                        "logo_url": logo_url,
+                        "allow_tiebreaker": "on",
+                        **self._default_scoring_fields(),
+                    },
+                )
+                self.assertRedirects(response, self._settings_url())
+                self.family.refresh_from_db()
+                self.assertEqual(self.family.logo_url, logo_url)
+
+    def test_settings_post_rejects_invalid_logo_url_without_mutation(self):
+        self.family.logo_url = "https://example.com/original.png"
+        self.family.save(update_fields=["logo_url"])
+        self.client.force_login(self.admin_user)
+
+        # "//host/..." is protocol-relative (an arbitrary external host), so it
+        # must not slip through the site-relative-path fast path.
+        for bad_value in ("not a url", "//evil.example/logo.png"):
+            with self.subTest(logo_url=bad_value):
+                response = self.client.post(
+                    self._settings_url(),
+                    {
+                        "family_name": self.family.name,
+                        "pool_name": self.pool.name,
+                        "logo_url": bad_value,
+                        "allow_tiebreaker": "on",
+                        **self._default_scoring_fields(),
+                    },
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "Enter a full URL")
+                self.family.refresh_from_db()
+                self.assertEqual(self.family.logo_url, "https://example.com/original.png")
+
+    def test_settings_post_clears_logo_url_and_audits_change(self):
+        self.family.logo_url = "https://example.com/original.png"
+        self.family.save(update_fields=["logo_url"])
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            self._settings_url(),
+            {
+                "family_name": self.family.name,
+                "pool_name": self.pool.name,
+                "logo_url": "",
+                "allow_tiebreaker": "on",
+                **self._default_scoring_fields(),
+            },
+        )
+
+        self.assertRedirects(response, self._settings_url())
+        self.family.refresh_from_db()
+        self.assertIsNone(self.family.logo_url)
+        audit = FamilyAuditLog.objects.get(
+            family=self.family,
+            actor=self.admin_user,
+            action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+            target_type="AdminSettings",
+        )
+        self.assertIn("family.logo_url", audit.metadata["changed_fields"])
+
+    def test_lobby_falls_back_to_default_logo_when_family_logo_url_errors(self):
+        self.family.logo_url = "https://example.com/broken.png"
+        self.family.save(update_fields=["logo_url"])
+        self.client.force_login(self.member)
+
+        response = self.client.get(
+            reverse(
+                "family_pool_home",
+                kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "https://example.com/broken.png")
+        self.assertContains(response, "onerror=")
+        self.assertContains(response, "images/logo.png")
 
     def test_scoring_rules_validation_requires_value_when_bonus_enabled(self):
         self.client.force_login(self.admin_user)
@@ -3786,12 +4051,11 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertNotContains(member_response, self._admin_url())
 
     def test_admin_and_owner_settings_page_renders_current_context_without_banner_leakage(self):
-        SiteBanner.objects.create(
-            family=self.family,
-            title="Smith-only draft note",
-            description="Smith private banner metadata",
-            is_active=True,
-        )
+        # Banner management (the publish form + "Recent banners" list) moved
+        # to its own page (family_pool_admin_banners); the settings page keeps
+        # only a link to it. Note: the active banner *content* still shows
+        # via the site-wide banner context processor on every page, so this
+        # only checks that the management UI itself is gone.
         SiteBanner.objects.create(
             family=self.other_family,
             title="Jones-only draft note",
@@ -3811,10 +4075,78 @@ class FamilyAdminExperienceTests(TestCase):
                 self.assertContains(response, "Main Pickem")
                 self.assertContains(response, "Pick Locking")
                 self.assertContains(response, "Tiebreakers")
-                self.assertContains(response, "Smith-only draft note")
+                self.assertContains(response, self._banners_url())
+                self.assertNotContains(response, "Recent banners")
+                self.assertNotContains(response, "Publish Banner")
                 self.assertNotContains(response, "Jones Family")
                 self.assertNotContains(response, "Jones-only draft note")
                 self.assertNotContains(response, "Jones private banner metadata")
+
+    def test_admin_and_owner_banners_page_renders_and_scopes_to_current_family(self):
+        SiteBanner.objects.create(
+            family=self.family,
+            title="Smith-only draft note",
+            description="Smith private banner metadata",
+            is_active=True,
+        )
+        SiteBanner.objects.create(
+            family=self.other_family,
+            title="Jones-only draft note",
+            description="Jones private banner metadata",
+            is_active=True,
+        )
+
+        for user in (self.owner, self.admin_user):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+
+                response = self.client.get(self._banners_url())
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "pickem/family_admin_banners.html")
+                self.assertContains(response, "Smith-only draft note")
+                self.assertNotContains(response, "Jones-only draft note")
+                self.assertNotContains(response, "Jones private banner metadata")
+
+        self.client.force_login(self.member)
+        self.assertEqual(self.client.get(self._banners_url()).status_code, 403)
+
+    def test_banners_page_publish_and_deactivate_scoped_to_current_family(self):
+        jones_banner = SiteBanner.objects.create(
+            family=self.other_family, title="Jones active banner", is_active=True,
+        )
+        self.client.force_login(self.admin_user)
+
+        publish = self.client.post(
+            self._banners_url(),
+            {
+                "action": "create_banner",
+                "title": "Playoffs are here",
+                "description": "Good luck everyone",
+                "banner_type": "info",
+                "icon": "fas fa-star",
+            },
+        )
+        self.assertRedirects(publish, self._banners_url())
+        new_banner = SiteBanner.objects.get(family=self.family, title="Playoffs are here")
+        self.assertTrue(new_banner.is_active)
+
+        deactivate = self.client.post(
+            self._banners_url(),
+            {"action": "deactivate_banner", "banner_id": new_banner.id},
+        )
+        self.assertRedirects(deactivate, self._banners_url())
+        new_banner.refresh_from_db()
+        self.assertFalse(new_banner.is_active)
+
+        # Cannot deactivate another family's banner via this endpoint.
+        cross_family_attempt = self.client.post(
+            self._banners_url(),
+            {"action": "deactivate_banner", "banner_id": jones_banner.id},
+        )
+        self.assertRedirects(cross_family_attempt, self._banners_url())
+        jones_banner.refresh_from_db()
+        self.assertTrue(jones_banner.is_active)
 
     def test_settings_post_updates_only_current_tenant_and_audits_safe_metadata(self):
         other_settings = self.other_pool.settings

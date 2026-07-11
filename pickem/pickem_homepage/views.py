@@ -334,6 +334,13 @@ def build_family_admin_sections(family, pool, user=None):
             'status': 'Manage settings',
         },
         {
+            'label': 'Banners',
+            'description': 'Publish or deactivate the announcement banner shown across the family.',
+            'icon': 'fas fa-bullhorn',
+            'url': reverse('family_pool_admin_banners', kwargs=route_kwargs),
+            'status': 'Manage banners',
+        },
+        {
             'label': 'Members',
             'description': 'Review members, roles, and active status.',
             'icon': 'fas fa-user-shield',
@@ -1078,10 +1085,12 @@ ADMIN_POOL_SETTINGS_FIELDS = [
 def build_admin_settings_metadata(*, family, pool, settings, cleaned_data):
     before = {
         'family.name': family.name,
+        'family.logo_url': family.logo_url or '',
         'pool.name': pool.name,
     }
     after = {
         'family.name': cleaned_data['family_name'],
+        'family.logo_url': cleaned_data['logo_url'],
         'pool.name': cleaned_data['pool_name'],
     }
     for field in ADMIN_POOL_SETTINGS_FIELDS:
@@ -1107,89 +1116,21 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
     family = tenant_context.family
     pool = tenant_context.pool
     pool_settings, _created = PoolSettings.objects.get_or_create(pool=pool)
-    current_family_banners = (
-        SiteBanner.objects.filter(family=family)
-        .order_by('-is_active', '-priority', '-created_at')[:5]
-    )
 
     initial = {
         'family_name': family.name,
         'pool_name': pool.name,
+        'logo_url': family.logo_url or '',
     }
     for field in ADMIN_POOL_SETTINGS_FIELDS:
         initial[field] = getattr(pool_settings, field)
-    banner_form = FamilyBannerForm()
 
-    action = request.POST.get('action') if request.method == 'POST' else None
-    is_settings_submit = (
-        request.method == 'POST'
-        and action not in ('create_banner', 'deactivate_banner')
-    )
     form = FamilyAdminSettingsForm(
-        request.POST if is_settings_submit else None,
+        request.POST if request.method == 'POST' else None,
         initial=initial,
     )
 
-    if action == 'create_banner':
-        banner_form = FamilyBannerForm(request.POST)
-        if banner_form.is_valid():
-            with transaction.atomic():
-                SiteBanner.objects.filter(
-                    family=family, is_active=True
-                ).update(is_active=False)
-                banner = banner_form.save(commit=False)
-                banner.family = family
-                banner.is_active = True
-                banner.start_date = timezone.now()
-                banner.save()
-                FamilyAuditLog.objects.create(
-                    family=family,
-                    pool=pool,
-                    actor=request.user,
-                    action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
-                    target_type='SiteBanner',
-                    target_id=str(banner.id),
-                    metadata={'summary': f'Banner published: {banner.title}'},
-                    **get_invite_audit_context(request),
-                )
-            messages.success(request, "Banner published.")
-            return redirect(
-                'family_pool_admin_settings',
-                family_slug=family.slug,
-                pool_slug=pool.slug,
-            )
-
-    elif action == 'deactivate_banner':
-        banner_id = request.POST.get('banner_id')
-        banner = None
-        if banner_id and str(banner_id).isdigit():
-            banner = SiteBanner.objects.filter(
-                id=banner_id,
-                family=family,
-            ).first()
-        if banner:
-            banner.is_active = False
-            banner.save(update_fields=['is_active', 'updated_at'])
-            FamilyAuditLog.objects.create(
-                family=family,
-                pool=pool,
-                actor=request.user,
-                action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
-                target_type='SiteBanner',
-                target_id=str(banner.id),
-                metadata={'summary': f'Banner deactivated: {banner.title}'},
-                **get_invite_audit_context(request),
-            )
-            messages.success(request, "Banner deactivated.")
-        else:
-            messages.info(request, "That banner could not be found.")
-        return redirect(
-            'family_pool_admin_settings',
-            family_slug=family.slug,
-            pool_slug=pool.slug,
-        )
-
-    elif request.method == 'POST' and form.is_valid():
+    if request.method == 'POST' and form.is_valid():
         with transaction.atomic():
             locked_family = Family.objects.select_for_update().get(id=family.id)
             locked_pool = Pool.objects.select_for_update().get(
@@ -1207,9 +1148,15 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
             )
 
             if changed_fields:
+                family_fields = []
                 if 'family.name' in changed_fields:
                     locked_family.name = form.cleaned_data['family_name']
-                    locked_family.save(update_fields=['name', 'updated_at'])
+                    family_fields.append('name')
+                if 'family.logo_url' in changed_fields:
+                    locked_family.logo_url = form.cleaned_data['logo_url'] or None
+                    family_fields.append('logo_url')
+                if family_fields:
+                    locked_family.save(update_fields=family_fields + ['updated_at'])
                 if 'pool.name' in changed_fields:
                     locked_pool.name = form.cleaned_data['pool_name']
                     locked_pool.save(update_fields=['name', 'updated_at'])
@@ -1247,9 +1194,7 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
         'membership': tenant_context.membership,
         'gameseason': pool.season or get_season(),
         'form': form,
-        'banner_form': banner_form,
         'pool_settings': pool_settings,
-        'current_family_banners': current_family_banners,
         'scoring_point_fields': [
             form['win_points'], form['tie_points'], form['weekly_winner_points'],
         ],
@@ -1262,6 +1207,95 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
         ],
     }
     return render(request, 'pickem/family_admin_settings.html', context)
+
+
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_banners(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    family = tenant_context.family
+    pool = tenant_context.pool
+    current_family_banners = (
+        SiteBanner.objects.filter(family=family)
+        .order_by('-is_active', '-priority', '-created_at')[:5]
+    )
+    banner_form = FamilyBannerForm()
+
+    action = request.POST.get('action') if request.method == 'POST' else None
+
+    if action == 'create_banner':
+        banner_form = FamilyBannerForm(request.POST)
+        if banner_form.is_valid():
+            with transaction.atomic():
+                SiteBanner.objects.filter(
+                    family=family, is_active=True
+                ).update(is_active=False)
+                banner = banner_form.save(commit=False)
+                banner.family = family
+                banner.is_active = True
+                banner.start_date = timezone.now()
+                banner.save()
+                FamilyAuditLog.objects.create(
+                    family=family,
+                    pool=pool,
+                    actor=request.user,
+                    action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                    target_type='SiteBanner',
+                    target_id=str(banner.id),
+                    metadata={'summary': f'Banner published: {banner.title}'},
+                    **get_invite_audit_context(request),
+                )
+            messages.success(request, "Banner published.")
+            return redirect(
+                'family_pool_admin_banners',
+                family_slug=family.slug,
+                pool_slug=pool.slug,
+            )
+
+    elif action == 'deactivate_banner':
+        banner_id = request.POST.get('banner_id')
+        banner = None
+        try:
+            banner_pk = int(banner_id)
+        except (TypeError, ValueError):
+            banner_pk = None
+        # Bounds-check before the query: a huge numeric string would pass
+        # isdigit()-style checks but overflow the integer PK column (DataError).
+        if banner_pk is not None and 0 < banner_pk <= 2**31 - 1:
+            banner = SiteBanner.objects.filter(
+                id=banner_pk,
+                family=family,
+            ).first()
+        if banner:
+            banner.is_active = False
+            banner.save(update_fields=['is_active', 'updated_at'])
+            FamilyAuditLog.objects.create(
+                family=family,
+                pool=pool,
+                actor=request.user,
+                action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                target_type='SiteBanner',
+                target_id=str(banner.id),
+                metadata={'summary': f'Banner deactivated: {banner.title}'},
+                **get_invite_audit_context(request),
+            )
+            messages.success(request, "Banner deactivated.")
+        else:
+            messages.info(request, "That banner could not be found.")
+        return redirect(
+            'family_pool_admin_banners',
+            family_slug=family.slug,
+            pool_slug=pool.slug,
+        )
+
+    context = {
+        'family': family,
+        'pool': pool,
+        'membership': tenant_context.membership,
+        'gameseason': pool.season or get_season(),
+        'banner_form': banner_form,
+        'current_family_banners': current_family_banners,
+    }
+    return render(request, 'pickem/family_admin_banners.html', context)
 
 
 @family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
@@ -3645,6 +3679,7 @@ def tenant_messages(request, family_slug, pool_slug):
         'gameseason': pool.season or get_season(),
         'posts': posts,
         'total_posts': paginator.count,
+        'is_moderator': is_board_moderator(request),
     }
     return render(request, 'pickem/family_messages.html', context)
 
@@ -4031,6 +4066,248 @@ def get_post_comments_for_family(request, family, post_id):
                 is_active=True,
             ).count()
         })
+
+    except Http404:
+        return message_board_not_found()
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def is_board_moderator(request):
+    """Owners/admins can moderate (delete) other members' posts and comments.
+
+    Reads the role off request.tenant_context.membership rather than querying
+    FamilyMembership: superusers get a synthetic, never-saved owner membership
+    from require_tenant_context, so a DB lookup would wrongly deny them.
+    """
+    tenant_context = getattr(request, 'tenant_context', None)
+    if tenant_context is None:
+        return False
+    return tenant_context.membership.role in (
+        FamilyMembership.Role.OWNER, FamilyMembership.Role.ADMIN,
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def edit_post(request, post_id):
+    return message_board_not_found()
+
+
+@family_member_required
+@require_http_methods(["POST"])
+def tenant_edit_post(request, family_slug, pool_slug, post_id):
+    return edit_post_for_family(request, request.tenant_context.family, post_id)
+
+
+def edit_post_for_family(request, family, post_id):
+    try:
+        post = get_object_or_404(
+            MessageBoardPost,
+            id=post_id,
+            family=family,
+            is_active=True,
+        )
+        if post.user_id != request.user.id:
+            return JsonResponse({
+                'success': False,
+                'error': 'You can only edit your own post'
+            }, status=403)
+
+        data = json.loads(request.body)
+        content = data.get('content', '').strip()
+        title = data.get('title', '').strip()
+
+        if not content:
+            return JsonResponse({
+                'success': False,
+                'error': 'Content is required'
+            }, status=400)
+
+        if len(content) > 2000:
+            return JsonResponse({
+                'success': False,
+                'error': 'Message too long. Please keep it under 2000 characters.'
+            }, status=400)
+
+        if not title:
+            title = content[:50] + ('...' if len(content) > 50 else '')
+
+        post.title = title
+        post.content = content
+        post.save(update_fields=['title', 'content', 'updated_at'])
+
+        return JsonResponse({
+            'success': True,
+            'post': {
+                'id': post.id,
+                'title': post.title if post.title != post.content else '',
+                'content': post.content,
+            }
+        })
+
+    except Http404:
+        return message_board_not_found()
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_post(request, post_id):
+    return message_board_not_found()
+
+
+@family_member_required
+@require_http_methods(["POST"])
+def tenant_delete_post(request, family_slug, pool_slug, post_id):
+    return delete_post_for_family(request, request.tenant_context.family, post_id)
+
+
+def delete_post_for_family(request, family, post_id):
+    try:
+        post = get_object_or_404(
+            MessageBoardPost,
+            id=post_id,
+            family=family,
+            is_active=True,
+        )
+        if post.user_id != request.user.id and not is_board_moderator(request):
+            return JsonResponse({
+                'success': False,
+                'error': 'You do not have permission to delete this post'
+            }, status=403)
+
+        post.is_active = False
+        post.save(update_fields=['is_active'])
+
+        return JsonResponse({'success': True})
+
+    except Http404:
+        return message_board_not_found()
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def edit_comment(request, comment_id):
+    return message_board_not_found()
+
+
+@family_member_required
+@require_http_methods(["POST"])
+def tenant_edit_comment(request, family_slug, pool_slug, comment_id):
+    return edit_comment_for_family(request, request.tenant_context.family, comment_id)
+
+
+def edit_comment_for_family(request, family, comment_id):
+    try:
+        comment = get_object_or_404(
+            MessageBoardComment,
+            id=comment_id,
+            family=family,
+            is_active=True,
+        )
+        if comment.user_id != request.user.id:
+            return JsonResponse({
+                'success': False,
+                'error': 'You can only edit your own comment'
+            }, status=403)
+
+        data = json.loads(request.body)
+        content = data.get('content', '').strip()
+
+        if not content:
+            return JsonResponse({
+                'success': False,
+                'error': 'Comment content is required'
+            }, status=400)
+
+        comment.content = content
+        comment.save(update_fields=['content', 'updated_at'])
+
+        return JsonResponse({
+            'success': True,
+            'comment': {
+                'id': comment.id,
+                'content': comment.content,
+            }
+        })
+
+    except Http404:
+        return message_board_not_found()
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_comment(request, comment_id):
+    return message_board_not_found()
+
+
+@family_member_required
+@require_http_methods(["POST"])
+def tenant_delete_comment(request, family_slug, pool_slug, comment_id):
+    return delete_comment_for_family(request, request.tenant_context.family, comment_id)
+
+
+def delete_comment_for_family(request, family, comment_id):
+    try:
+        comment = get_object_or_404(
+            MessageBoardComment,
+            id=comment_id,
+            family=family,
+            is_active=True,
+        )
+        if comment.user_id != request.user.id and not is_board_moderator(request):
+            return JsonResponse({
+                'success': False,
+                'error': 'You do not have permission to delete this comment'
+            }, status=403)
+
+        # Deactivate the whole reply subtree, not just this comment: replies
+        # under an inactive parent are unreachable in every fetch path, so
+        # leaving them active would inflate comment_count forever. The post
+        # filter keeps the walk inside this thread, and excluding already
+        # collected ids guarantees termination even on a corrupt parent cycle.
+        subtree_ids = [comment.id]
+        frontier = [comment.id]
+        while frontier:
+            frontier = list(
+                MessageBoardComment.objects.filter(
+                    parent_id__in=frontier,
+                    post=comment.post,
+                    is_active=True,
+                ).exclude(id__in=subtree_ids).values_list('id', flat=True)
+            )
+            subtree_ids.extend(frontier)
+        MessageBoardComment.objects.filter(id__in=subtree_ids).update(is_active=False)
+
+        return JsonResponse({'success': True, 'deactivated_count': len(subtree_ids)})
 
     except Http404:
         return message_board_not_found()

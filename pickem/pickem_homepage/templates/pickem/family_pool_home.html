@@ -26,7 +26,8 @@
                 <div class="mb-5 flex items-center gap-4">
                     {% if family.logo_url %}
                     <img src="{{ family.logo_url }}" alt="{{ family.name }} logo"
-                         class="h-16 w-16 object-contain drop-shadow-xl">
+                         class="h-16 w-16 object-contain drop-shadow-xl"
+                         onerror="this.onerror=null; this.src='{% static 'images/logo.png' %}';">
                     {% else %}
                     <img src="{% static 'images/logo.png' %}" alt="Family Pick'em logo"
                          class="h-16 w-16 object-contain drop-shadow-xl">
