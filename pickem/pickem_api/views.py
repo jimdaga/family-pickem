@@ -160,7 +160,7 @@ def game_detail(request, pk):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdminUser])
 def user_info(request, pk):
     """
     GET user details from id
@@ -265,7 +265,7 @@ def games_unscored(request):
 
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAdminOrReadOnly])
+@permission_classes([IsAdminUser])
 def game_picks_week_all(request, game_season, game_week):
     """
     GET user picks
@@ -283,7 +283,7 @@ def game_picks_week_all(request, game_season, game_week):
 
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAdminOrReadOnly])
+@permission_classes([IsAdminUser])
 def game_picks(request, pick_game_id):
     """
     GET user picks
@@ -309,7 +309,7 @@ def game_picks(request, pick_game_id):
 
 
 @api_view(['GET', 'PATCH'])
-@permission_classes([IsAdminOrReadOnly])
+@permission_classes([IsAdminUser])
 def user_picks(request, pick_id):
     """
     GET user picks
@@ -418,7 +418,7 @@ def get_active_games(request):
 
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAdminOrReadOnly])
+@permission_classes([IsAdminUser])
 def user_points_all(request):
     """
     GET user season points
@@ -456,7 +456,7 @@ def delete_user_record(request, game_season, id):
     
 
 @api_view(['GET', 'POST', 'PATCH'])
-@permission_classes([IsAdminOrReadOnly])
+@permission_classes([IsAdminUser])
 def user_points(request, game_season, id):
     """
     GET user season points
@@ -497,7 +497,7 @@ def user_points(request, game_season, id):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAdminUser])
 def correct_user_picks(request, game_season, game_week, uid):
     """
     GET user season points

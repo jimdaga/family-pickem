@@ -40,6 +40,22 @@ class Command(BaseCommand):
         correct_total = 0
         for game in games:
             if not game.gameWinner:
+                # A real NFL tie ends with no winner but equal, populated
+                # scores. Mark it scored (no pick is "correct") so the week can
+                # complete. An empty winner with missing/unequal scores means
+                # ESPN just hasn't posted the result yet — leave it unscored.
+                is_tie = (
+                    game.homeTeamScore is not None
+                    and game.awayTeamScore is not None
+                    and game.homeTeamScore == game.awayTeamScore
+                )
+                if is_tie:
+                    game.gameScored = True
+                    game.save(update_fields=["gameScored"])
+                    scored_games += 1
+                    self.stdout.write(f" - {game.slug}: tie, 0 correct picks")
+                    continue
+
                 logger.warning(
                     "Game %s finished without a winner; leaving unscored.", game.slug
                 )

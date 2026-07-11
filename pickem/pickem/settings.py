@@ -270,6 +270,21 @@ CORS_ORIGIN_WHITELIST = (
     'http://localhost:8081',
 )
 
+# Transport / cookie hardening. Gated on DEBUG so local dev over plain HTTP
+# still works; in prod (DEBUG=False) TLS is terminated at the Cloudflare edge,
+# so the browser always speaks HTTPS and Secure cookies are delivered.
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    # SECURE_SSL_REDIRECT is intentionally left off: the app runs on plain HTTP
+    # behind the Cloudflare TLS edge, so an in-app redirect would loop.
+
 AWS_S3_ADDRESSING_STYLE = "virtual"
 
 if 'AWS_STORAGE_BUCKET_NAME' in os.environ:
