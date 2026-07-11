@@ -2,6 +2,21 @@ apiVersion: v1
 entries:
   family-pickem:
   - apiVersion: v2
+    appVersion: 0.0.152-latest
+    created: "2026-07-11T15:35:32.583423121Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 12.5.6
+    description: A Helm chart to install the family pickem django app
+    digest: 06c37efe82537eddd0877be4495ec89111a79ae5848b62b25eec4fadd3a00e40
+    name: family-pickem
+    type: application
+    urls:
+    - https://github.com/jimdaga/family-pickem/releases/download/0.0.152-latest/family-pickem-0.0.152-latest.tgz
+    version: 0.0.152-latest
+  - apiVersion: v2
     appVersion: 0.0.151-latest
     created: "2026-07-11T15:11:51.957568305Z"
     dependencies:
@@ -2336,4 +2351,4 @@ entries:
     urls:
     - https://github.com/jimdaga/family-pickem/releases/download/family-pickem-0.0.3/family-pickem-0.0.3.tgz
     version: 0.0.3
-generated: "2026-07-11T15:11:51.958212584Z"
+generated: "2026-07-11T15:35:32.583999233Z"
