@@ -1,0 +1,3 @@
+release-name-template: "{{ .Version }}"
+skip-existing: true
+make-release-latest: false
