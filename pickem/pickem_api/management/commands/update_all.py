@@ -42,13 +42,20 @@ class Command(BaseCommand):
             default=None,
             help="Season in YYZZ format (defaults to the current season).",
         )
+        parser.add_argument(
+            "--skip-records",
+            action="store_true",
+            help="Skip the slower update_records step.",
+        )
 
     def handle(self, *args, **options):
         season = options.get("season")
+        skip_records = options.get("skip_records", False)
         step_kwargs = {"season": season} if season else {}
+        pipeline = [cmd for cmd in PIPELINE if not (skip_records and cmd == "update_records")]
 
         failures = 0
-        for command in PIPELINE:
+        for command in pipeline:
             self.stdout.write(self.style.MIGRATE_HEADING(f"== {command} =="))
             try:
                 call_command(command, **step_kwargs)

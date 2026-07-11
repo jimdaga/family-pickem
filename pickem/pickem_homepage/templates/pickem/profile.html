@@ -320,7 +320,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             const data = await response.json();
-            return data;
+            if (response.ok && data.success) {
+                return { available: true, message: data.message || '' };
+            }
+            return { available: false, message: data.message || 'Username is not available' };
         } catch (error) {
             console.error('Error checking username:', error);
             return { available: false, message: 'Error checking username availability' };
@@ -588,4 +591,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-{% endblock %} 
+{% endblock %}

@@ -2805,6 +2805,12 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
             fetch_redirect_response=False,
         )
 
+    def test_legacy_anonymous_profile_detail_is_not_available(self):
+        response = self.client.get(reverse("user_profile", kwargs={"user_id": self.smith_player.id}))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response["Location"])
+
     def test_outsider_direct_tenant_profiles_and_players_are_denied(self):
         self.client.force_login(self.outsider)
 
@@ -2818,6 +2824,128 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
             self.client.get(self._tenant_url("family_pool_players")).status_code,
             404,
         )
+
+    def test_profile_ajax_settings_coerce_false_boolean_values(self):
+        self.client.force_login(self.smith_member)
+
+        response = self._json_post(
+            reverse("profile"),
+            {"setting": "private_profile", "value": "false"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.smith_member.profile.refresh_from_db()
+        self.assertFalse(self.smith_member.profile.private_profile)
+
+    def test_profile_ajax_settings_reject_invalid_boolean_values_without_raw_errors(self):
+        self.client.force_login(self.smith_member)
+
+        response = self._json_post(
+            reverse("profile"),
+            {"setting": "email_notifications", "value": "definitely"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertJSONEqual(
+            response.content,
+            {"success": False, "error": "invalid_setting_value"},
+        )
+
+    def test_profile_ajax_settings_reject_malformed_json(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.post(
+            reverse("profile"),
+            data="{not-json",
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertJSONEqual(
+            response.content,
+            {"success": False, "error": "invalid_json"},
+        )
+
+    def test_profile_username_update_is_case_insensitive_and_catches_integrity_errors(self):
+        User.objects.create_user(
+            "TakenName", email="taken@example.com", password="pass", is_active=False
+        )
+        self.client.force_login(self.smith_member)
+
+        response = self.client.post(
+            reverse("profile"),
+            {
+                "username": "takenname",
+                "tagline": "",
+                "favorite_team": "",
+                "phone_number": "",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.smith_member.refresh_from_db()
+        self.assertEqual(self.smith_member.username, "smith-profile-member")
+        self.assertContains(response, "This username is already taken.")
+
+    def test_check_username_requires_csrf_and_returns_generic_result(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.smith_member)
+
+        csrf_response = csrf_client.post(
+            reverse("check_username"),
+            data=json.dumps({"username": "smith-profile-player"}),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(csrf_response.status_code, 403)
+
+        self.client.force_login(self.smith_member)
+        ok_response = self._json_post(
+            reverse("check_username"),
+            {"username": "smith-profile-player"},
+        )
+        self.assertEqual(ok_response.status_code, 200)
+        self.assertJSONEqual(
+            ok_response.content,
+            {"success": True, "message": "Username can be checked on save."},
+        )
+
+    def test_toggle_theme_requires_csrf(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.smith_member)
+
+        response = csrf_client.post(
+            reverse("toggle_theme"),
+            data=json.dumps({"theme": "dark"}),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_user_profile_template_pins_chart_assets_with_sri(self):
+        self._seed_profile_data()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(
+            self._tenant_url("family_pool_user_profile", user_id=self.smith_player.id)
+        )
+
+        self.assertContains(response, "chart.js@")
+        self.assertContains(response, "chartjs-plugin-datalabels@")
+        self.assertContains(response, 'integrity="')
+        self.assertContains(response, 'crossorigin="anonymous"')
+
+    def test_scores_template_guards_live_update_reentrancy(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertContains(response, "if (updateInterval)")
+        self.assertContains(response, "updateInterval = null;")
+        self.assertContains(response, "document.removeEventListener('visibilitychange', window.visibilityHandler);")
 
     def test_tenant_create_post_assigns_current_family_server_side(self):
         self.client.force_login(self.smith_member)
@@ -4986,6 +5114,26 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(audit.metadata["previous_pick"], game.homeTeamSlug)
         self.assertEqual(audit.metadata["new_pick"], game.awayTeamSlug)
 
+    def test_manual_pick_submission_rejects_locked_games(self):
+        game = self._admin_game(game_id=9635, week="4")
+        GamesAndScores.objects.filter(id=game.id).update(
+            startTimestamp=timezone.now() - timedelta(minutes=5),
+            statusType="inprogress",
+            statusTitle="In Progress",
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(self._picks_url(), self._manual_pick_payload(game))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(GamePicks.objects.filter(pool=self.pool, pick_game_id=game.id).exists())
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
+            ).exists()
+        )
+
     def test_manual_pick_submission_rejects_invalid_team_cross_family_user_and_wrong_game_scope(self):
         game = self._admin_game(game_id=9640, week="5")
         wrong_week_game = self._admin_game(game_id=9641, week="6", home="mia", away="buf")
@@ -6340,6 +6488,16 @@ class PoolLockTemplateTagTests(TestCase):
                 is_game_locked_for_pool(self.game, self.pool)
             with self.assertRaisesMessage(RuntimeError, "db broke"):
                 game_lock_reason_for_pool(self.game, self.pool)
+
+
+class HomepageFormSecurityTests(TestCase):
+    def test_game_picks_form_exposes_only_bindable_pick_fields(self):
+        from pickem_homepage.forms import GamePicksForm
+
+        self.assertEqual(
+            tuple(GamePicksForm.Meta.fields),
+            ("pick", "tieBreakerScore", "tieBreakerYards"),
+        )
 
 
 class GlobalLeaderboardTests(TestCase):

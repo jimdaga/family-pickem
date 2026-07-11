@@ -89,7 +89,7 @@ def family_pool_authz_check(request, family_slug, pool_slug):
     )
 
 
-@api_view(['GET', 'POST', 'DELETE'])
+@api_view(['GET'])
 @permission_classes([IsAdminOrReadOnly])
 def game_list(request):
     """
@@ -107,21 +107,7 @@ def game_list(request):
 
         games_serializer = GameSerializer(games, many=True)
         return Response(games_serializer.data)
-
-    elif request.method == 'POST':
-        games_data = JSONParser().parse(request)
-        games_serializer = GameSerializer(data=games_data)
-        if games_serializer.is_valid():
-            games_serializer.save()
-            return JsonResponse(games_serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(games_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'DELETE':
-        count = GamesAndScores.objects.all().delete()
-        return JsonResponse({'message': '{} All games were deleted successfully!'.format(count[0])}, status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@api_view(['GET'])
 @permission_classes([IsAdminOrReadOnly])
 def game_detail(request, pk):
     """
@@ -136,28 +122,6 @@ def game_detail(request, pk):
     if request.method == 'GET':
         games_serializer = GameSerializer(game)
         return Response(games_serializer.data)
-
-    elif request.method == 'PUT':
-        games_data = JSONParser().parse(request)
-        games_serializer = GameSerializer(game, data=games_data)
-        if games_serializer.is_valid():
-            games_serializer.save()
-            return JsonResponse(games_serializer.data)
-        return JsonResponse(games_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'PATCH':
-        games_data = JSONParser().parse(request)
-        game = GamesAndScores.objects.get(pk=pk)
-        games_serializer = GameSerializer(game, data=games_data, partial=True)
-        if games_serializer.is_valid():
-            games_serializer.save()
-            return JsonResponse(games_serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(games_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'DELETE':
-        game.delete()
-        return JsonResponse({'message': 'Game was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
-
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
@@ -176,7 +140,7 @@ def user_info(request, pk):
         return Response(user_serializer.data)
     
 
-@api_view(['GET', 'POST', 'DELETE'])
+@api_view(['GET'])
 @permission_classes([IsAdminOrReadOnly])
 def week_list(request):
     """
@@ -194,22 +158,7 @@ def week_list(request):
 
         game_week_serializer = GameWeeksSerializer(game_weeks, many=True)
         return Response(game_week_serializer.data)
-
-    elif request.method == 'POST':
-        game_week = JSONParser().parse(request)
-        game_week_serializer = GameWeeksSerializer(data=game_week)
-        print(request)
-        if game_week_serializer.is_valid():
-            game_week_serializer.save()
-            return JsonResponse(game_week_serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(game_week_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'DELETE':
-        count = GameWeeks.objects.all().delete()
-        return JsonResponse({'message': '{} All game week data was deleted successfully!'.format(count[0])}, status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(['GET', 'PUT', 'DELETE'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
 def week_detail(request, date):
     """

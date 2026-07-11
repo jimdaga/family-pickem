@@ -23,13 +23,19 @@ logger = logging.getLogger(__name__)
 
 # How often to run the pipeline, in minutes (matches the old */1 K8s CronJob).
 UPDATE_INTERVAL_MINUTES = 1
+RECORDS_INTERVAL_MINUTES = 30
 
 _scheduler = None
 
 
 def run_update_all():
     """Job target: run the full data-update pipeline."""
-    call_command("update_all")
+    call_command("update_all", skip_records=True)
+
+
+def run_update_records():
+    """Job target: refresh team records on a slower cadence."""
+    call_command("update_records")
 
 
 def start():
@@ -47,6 +53,15 @@ def start():
         trigger=IntervalTrigger(minutes=UPDATE_INTERVAL_MINUTES),
         id="update_all",
         name="Run full data-update pipeline",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        run_update_records,
+        trigger=IntervalTrigger(minutes=RECORDS_INTERVAL_MINUTES),
+        id="update_records",
+        name="Run team records refresh",
         max_instances=1,
         coalesce=True,
         replace_existing=True,

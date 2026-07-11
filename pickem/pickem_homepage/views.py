@@ -23,7 +23,7 @@ from .forms import (
 from .models import MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Sum, Count, Q, Avg
 from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import login_required
@@ -126,6 +126,18 @@ def is_commissioner(user):
 
 def current_user_picks(picks, user):
     return picks.filter(Q(userID=str(user.id)) | Q(uid=user.id)).distinct()
+
+
+def _coerce_json_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized == 'true':
+            return True
+        if normalized == 'false':
+            return False
+    raise ValueError("invalid_setting_value")
 
 
 def build_user_display_maps(user_ids):
@@ -1688,8 +1700,13 @@ def family_pool_admin_picks(request, family_slug, pool_slug):
         game_id=form.cleaned_data['game_id'],
         week=form.cleaned_data['week'],
     )
+    from pickem.utils import is_pick_locked_for_pool
     selected_pick = form.cleaned_data['pick']
     if selected_pick not in (game.homeTeamSlug, game.awayTeamSlug):
+        return render_family_admin_picks(request, tenant_context, form, status=400)
+    is_locked, lock_reason = is_pick_locked_for_pool(game, pool)
+    if is_locked:
+        form.add_error(None, lock_reason)
         return render_family_admin_picks(request, tenant_context, form, status=400)
 
     with transaction.atomic():
@@ -3277,7 +3294,7 @@ def profile(request):
             try:
                 data = json.loads(request.body)
                 setting_name = data.get('setting')
-                setting_value = data.get('value')
+                setting_value = _coerce_json_bool(data.get('value'))
                 
                 # Update the specific setting
                 if setting_name == 'email_notifications':
@@ -3286,11 +3303,17 @@ def profile(request):
                     user_profile.dark_mode = setting_value
                 elif setting_name == 'private_profile':
                     user_profile.private_profile = setting_value
+                else:
+                    return JsonResponse({'success': False, 'error': 'invalid_setting'}, status=400)
                 
                 user_profile.save()
                 return JsonResponse({'success': True})
-            except Exception as e:
-                return JsonResponse({'success': False, 'error': str(e)})
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'error': 'invalid_json'}, status=400)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'invalid_setting_value'}, status=400)
+            except Exception:
+                return JsonResponse({'success': False, 'error': 'unable_to_update_profile'}, status=400)
         
         # Handle form submissions for profile updates
         else:
@@ -3313,7 +3336,7 @@ def profile(request):
                     errors.append('Username must be less than 30 characters.')
                 elif not re.match(r'^[a-zA-Z0-9._-]+$', username):
                     errors.append('Username can only contain letters, numbers, periods, underscores, and hyphens.')
-                elif User.objects.filter(username=username, is_active=True).exclude(id=request.user.id).exists():
+                elif User.objects.filter(username__iexact=username).exclude(id=request.user.id).exists():
                     errors.append('This username is already taken.')
             
             # Tagline validation
@@ -3333,16 +3356,21 @@ def profile(request):
                 # Update user fields
                 if username:
                     request.user.username = username
-                    request.user.save()
                 
                 # Update profile fields
                 user_profile.tagline = tagline
                 user_profile.favorite_team = favorite_team if favorite_team else None
                 user_profile.phone_number = phone_number if phone_number else None
-                user_profile.save()
-                
-                messages.success(request, 'Profile updated successfully!')
-                return redirect('profile')
+                try:
+                    with transaction.atomic():
+                        if username:
+                            request.user.save()
+                        user_profile.save()
+                except IntegrityError:
+                    messages.error(request, 'This username is already taken.')
+                else:
+                    messages.success(request, 'Profile updated successfully!')
+                    return redirect('profile')
     
     context = {
         'user_profile': user_profile,
@@ -3363,7 +3391,7 @@ def user_profile(request, user_id):
             'family_pool_user_profile',
             user_id=user_id,
         )
-    return render_user_profile(request, user_id)
+    raise Http404
 
 
 @family_member_required
@@ -3372,6 +3400,8 @@ def tenant_user_profile(request, family_slug, pool_slug, user_id):
 
 
 def render_user_profile(request, user_id, *, tenant_context=None):
+    if tenant_context is None and not request.user.is_authenticated:
+        raise Http404
     if tenant_context:
         if getattr(request.user, 'is_superuser', False):
             # God mode: superusers can open any active user's profile while
@@ -3588,7 +3618,6 @@ def render_user_profile(request, user_id, *, tenant_context=None):
 
 
 @login_required
-@csrf_exempt
 @require_http_methods(["POST"])
 def check_username(request):
     """
@@ -3601,31 +3630,23 @@ def check_username(request):
         
         if not username:
             return JsonResponse({
-                'available': False,
+                'success': False,
                 'message': 'Username is required'
             })
-        
-        # Check if username is taken by another user
-        if User.objects.filter(username__iexact=username, is_active=True).exclude(id=request.user.id).exists():
-            return JsonResponse({
-                'available': False,
-                'message': 'This username is already taken'
-            })
-        
+
         return JsonResponse({
-            'available': True,
-            'message': 'Username is available'
+            'success': True,
+            'message': 'Username can be checked on save.'
         })
         
-    except Exception as e:
+    except Exception:
         return JsonResponse({
-            'available': False,
-            'error': str(e)
+            'success': False,
+            'error': 'invalid_request'
         }, status=400)
 
 
 @login_required
-@csrf_exempt
 @require_http_methods(["POST"])
 def toggle_theme(request):
     """
@@ -3649,10 +3670,10 @@ def toggle_theme(request):
             'dark_mode': user_profile.dark_mode
         })
         
-    except Exception as e:
+    except Exception:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'invalid_request'
         }, status=400)
 
 

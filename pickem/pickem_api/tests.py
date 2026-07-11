@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 import importlib
 from importlib import import_module
 from unittest.mock import patch
@@ -1187,6 +1187,76 @@ class UpdateAllCommandTest(TestCase):
         self.assertEqual(mock_call_command.call_count, len(PIPELINE))
 
 
+class VestigialApiWriteRemovalTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        self.staff = User.objects.create_user(
+            username="api-staff", email="api-staff@example.com", password="pass", is_staff=True
+        )
+        self.client.force_login(self.staff)
+        self.game = GamesAndScores.objects.create(
+            id=1234,
+            slug="away-home-week-1",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now(),
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=1,
+            homeTeamSlug="home",
+            homeTeamName="Home",
+            awayTeamId=2,
+            awayTeamSlug="away",
+            awayTeamName="Away",
+        )
+        self.week = GameWeeks.objects.create(
+            weekNumber=1,
+            date=date(2025, 9, 7),
+            season=2526,
+        )
+
+    def test_games_api_is_read_only(self):
+        post = self.client.post(
+            "/api/games",
+            data="{}",
+            content_type="application/json",
+        )
+        delete = self.client.delete("/api/games")
+        put = self.client.put(
+            f"/api/games/{self.game.id}",
+            data="{}",
+            content_type="application/json",
+        )
+        patch_response = self.client.patch(
+            f"/api/games/{self.game.id}",
+            data="{}",
+            content_type="application/json",
+        )
+        detail_delete = self.client.delete(f"/api/games/{self.game.id}")
+
+        self.assertEqual(post.status_code, 405)
+        self.assertEqual(delete.status_code, 405)
+        self.assertEqual(put.status_code, 405)
+        self.assertEqual(patch_response.status_code, 405)
+        self.assertEqual(detail_delete.status_code, 405)
+
+    def test_weeks_api_is_read_only(self):
+        post = self.client.post(
+            "/api/weeks",
+            data="{}",
+            content_type="application/json",
+        )
+        delete = self.client.delete("/api/weeks")
+        detail_delete = self.client.delete(f"/api/weeks/{self.week.date.isoformat()}")
+
+        self.assertEqual(post.status_code, 405)
+        self.assertEqual(delete.status_code, 405)
+        self.assertEqual(detail_delete.status_code, 405)
+
+
 class PickemApiConfigReadyTest(TestCase):
     @patch("pickem_api.scheduler.start")
     def test_ready_starts_scheduler_only_for_runserver_child(self, mock_start):
@@ -1228,6 +1298,20 @@ class PickemApiConfigReadyTest(TestCase):
                 config.ready()
 
         mock_start.assert_not_called()
+
+    @patch("pickem_api.scheduler.BackgroundScheduler")
+    def test_scheduler_splits_update_records_onto_slower_cadence(self, mock_scheduler_cls):
+        import pickem_api.scheduler as scheduler_module
+
+        scheduler_module._scheduler = None
+        scheduler = mock_scheduler_cls.return_value
+
+        started = scheduler_module.start()
+
+        self.assertEqual(started, scheduler)
+        job_names = [call.kwargs["name"] for call in scheduler.add_job.call_args_list]
+        self.assertIn("Run full data-update pipeline", job_names)
+        self.assertIn("Run team records refresh", job_names)
 
 
 class WeeklyWinnerEngineTest(TestCase):
@@ -1350,9 +1434,45 @@ class WeeklyWinnerEngineTest(TestCase):
         result = self._award()
 
         self.assertEqual(result["winners"], ["u1", "u2"])
-        self.assertEqual(result["bonus_each"], 2)  # 5 // 2
+        self.assertEqual(result["bonus_each"], 2)
         a.refresh_from_db(); b.refresh_from_db()
-        self.assertEqual((a.week_1_bonus, b.week_1_bonus), (2, 2))
+        self.assertEqual(a.week_1_bonus + b.week_1_bonus, 5)
+        self.assertEqual((a.week_1_bonus, b.week_1_bonus), (3, 2))
+
+    def test_force_rerun_zeroes_non_winner_bonus_instead_of_nulling_it(self):
+        winner = self._player("u1", 10)
+        loser = self._player("u2", 7)
+        loser.week_1_bonus = 4
+        loser.total_points = 11
+        loser.save(update_fields=["week_1_bonus", "total_points"])
+
+        self._award(force=True)
+
+        winner.refresh_from_db(); loser.refresh_from_db()
+        self.assertEqual(winner.week_1_bonus, 2)
+        self.assertEqual(loser.week_1_bonus, 0)
+        self.assertEqual(loser.total_points, 7)
+
+    def test_missing_combined_yards_actual_does_not_latch_co_winners(self):
+        self.settings.primary_tiebreaker = "combined_yards"
+        self.settings.secondary_tiebreaker = "split_points"
+        self.settings.save()
+        a = self._player("u1", 9); b = self._player("u2", 9)
+        self._tb_pick("u1", yards=700)
+        self._tb_pick("u2", yards=710)
+
+        class MissingYards:
+            def combined_yards(self, game_id):
+                raise RuntimeError("espn blip")
+
+        result = self._award(stats=MissingYards())
+
+        self.assertIsNone(result)
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertFalse(a.week_1_winner)
+        self.assertFalse(b.week_1_winner)
+        self.assertIsNone(a.week_1_bonus)
+        self.assertIsNone(b.week_1_bonus)
 
     def test_coin_flip_is_deterministic_across_forced_reruns(self):
         self.settings.secondary_tiebreaker = "coin_flip"
