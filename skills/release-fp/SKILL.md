@@ -72,8 +72,8 @@ Use this skill to execute the standard Family Pickem ship flow end to end. It is
 - Release tag safety flow: `git tag family-pickem-<version> <main-commit> && git show --stat family-pickem-<version> && git push origin family-pickem-<version>`
 - Release creation from verified tag: `gh release create family-pickem-<version> --verify-tag --title <title> --generate-notes`
 - Do not use the shortcut that skips local tag verification: `gh release create family-pickem-<version> --target main --title <title> --generate-notes`
-- Push-to-main workflow lookup: `gh run list --event push --commit <main-sha> --json databaseId,workflowName,status,conclusion,event,headSha,url`
-- Release workflow lookup: `gh run list --event release --json databaseId,workflowName,status,conclusion,event,headSha,url`
+- Push-to-main workflow lookup: `gh run list --workflow publish-artifacts-latest.yaml --event push --commit <main-sha> --json databaseId,workflowName,status,conclusion,event,headSha,url`
+- Release workflow lookup: `gh run list --workflow publish-artifacts.yaml --event release --json databaseId,workflowName,status,conclusion,event,headSha,url`
 - Workflow run inspection: `gh run view <run-id> --json databaseId,status,conclusion,event,workflowName,headBranch,headSha,url`
 
 ## Stop Conditions
