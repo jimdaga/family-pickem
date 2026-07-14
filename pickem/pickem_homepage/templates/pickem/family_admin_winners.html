@@ -116,6 +116,37 @@
             </div>
             {% endif %}
         </section>
+
+        <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm" data-testid="perfect-week-section">
+            <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Perfect Weeks</h2>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                    Members who picked every scored game of Week {{ selected_week }} correctly (auto picks don't count).
+                    {% if pool_settings.perfect_week_bonus_enabled %}
+                    This pool pays a <strong class="text-text-dark dark:text-white">${{ pool_settings.perfect_week_bonus_amount }}</strong> cash bonus per perfect week — settle it outside the app.
+                    {% endif %}
+                </p>
+            </div>
+            {% if perfect_week_members %}
+            <ul class="divide-y divide-border-light dark:divide-border-subtle">
+                {% for member in perfect_week_members %}
+                <li class="flex items-center gap-3 px-5 py-4">
+                    <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary-light/30 dark:bg-secondary/20 text-secondary-dark dark:text-secondary">
+                        <i class="fas fa-star"></i>
+                    </span>
+                    <span class="text-sm font-semibold text-text-dark dark:text-white">{{ member.username }}</span>
+                    {% if pool_settings.perfect_week_bonus_enabled %}
+                    <span class="ml-auto rounded-lg bg-secondary-light/30 dark:bg-secondary/20 px-3 py-1 text-sm font-bold text-secondary-dark dark:text-secondary">${{ pool_settings.perfect_week_bonus_amount }}</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="px-5 py-8 text-center text-sm text-text-secondary-light dark:text-text-secondary">
+                No perfect weeks for Week {{ selected_week }} yet.
+            </div>
+            {% endif %}
+        </section>
     </div>
 </main>
 {% endblock %}

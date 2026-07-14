@@ -427,6 +427,12 @@ def build_pick_id(pool, user, game):
     return f"{pool.id}-{user.id}-{game.id}"
 
 
+def pool_allows_tiebreaker(pool):
+    """Whether the pool collects tiebreaker predictions (defaults to True)."""
+    settings = getattr(pool, 'settings', None) or PoolSettings.objects.filter(pool=pool).first()
+    return settings.allow_tiebreaker if settings else True
+
+
 def save_server_derived_pick(*, user, pool, game, selected_pick, tiebreaker_score=None, tiebreaker_yards=None):
     existing_pick = GamePicks.objects.filter(
         pool=pool,
@@ -556,15 +562,47 @@ def get_valid_invitation_for_code(raw_code):
     return invitation
 
 
+ENTRIES_LOCKED_MESSAGE = (
+    "This pool locked its entries after Week 1, so new members can no longer join."
+)
+
+
+def pool_entries_locked(pool):
+    """True when the pool no longer accepts new entries (late-join policy)."""
+    from pickem_api.weekly_winners import week_is_complete
+
+    settings = getattr(pool, 'settings', None) or PoolSettings.objects.filter(pool=pool).first()
+    if (
+        not settings
+        or settings.late_join_policy != PoolSettings.LateJoinPolicy.LOCK_AFTER_WEEK_1
+    ):
+        return False
+    return week_is_complete(pool.season, 1, pool.competition)
+
+
 def accept_invitation_for_user(request, raw_code):
+    """Redeem an invite code. Returns (invitation, pool, membership, error) —
+    the first three are None on failure, and error carries a user-facing
+    message only when the failure deserves a specific explanation."""
     with transaction.atomic():
         invitation = get_valid_invitation_for_code(raw_code)
         if not invitation:
-            return None, None, None
+            return None, None, None, None
 
         pool = invitation.pool or get_default_active_pool_for_family(invitation.family)
         if not pool or pool.family_id != invitation.family_id:
-            return None, None, None
+            return None, None, None, None
+
+        # Late-join policy: once Week 1 is complete, a lock_after_week_1 pool
+        # only admits people who are already active members (re-activation of
+        # an existing membership stays allowed).
+        already_active_member = FamilyMembership.objects.filter(
+            family=invitation.family,
+            user=request.user,
+            status=FamilyMembership.Status.ACTIVE,
+        ).exists()
+        if not already_active_member and pool_entries_locked(pool):
+            return None, None, None, ENTRIES_LOCKED_MESSAGE
 
         membership, created = FamilyMembership.objects.select_for_update().get_or_create(
             family=invitation.family,
@@ -605,13 +643,13 @@ def accept_invitation_for_user(request, raw_code):
             **get_invite_audit_context(request),
         )
 
-    return invitation, pool, membership
+    return invitation, pool, membership, None
 
 
-def render_invalid_invite(request, form=None, *, invite_code=''):
+def render_invalid_invite(request, form=None, *, invite_code='', message=None):
     if form is None:
         form = JoinFamilyForm(initial={'code': invite_code} if invite_code else None)
-    form.add_error('code', "Invite code is invalid or unavailable.")
+    form.add_error('code', message or "Invite code is invalid or unavailable.")
     return render(request, 'pickem/join_family.html', {
         'form': form,
         'invite_code': invite_code,
@@ -713,7 +751,7 @@ def join_family(request):
     )
 
     if request.method == 'POST' and form.is_valid():
-        invitation, pool, _membership = accept_invitation_for_user(
+        invitation, pool, _membership, error = accept_invitation_for_user(
             request,
             form.cleaned_data['code'],
         )
@@ -724,7 +762,7 @@ def join_family(request):
                 family_slug=invitation.family.slug,
                 pool_slug=pool.slug,
             )
-        return render_invalid_invite(request, form)
+        return render_invalid_invite(request, form, message=error)
 
     context = {
         'form': form,
@@ -741,7 +779,7 @@ def accept_invite_link(request, invite_code):
     )
 
     if request.method == 'POST' and form.is_valid():
-        invitation, pool, _membership = accept_invitation_for_user(
+        invitation, pool, _membership, error = accept_invitation_for_user(
             request,
             form.cleaned_data['code'],
         )
@@ -752,7 +790,7 @@ def accept_invite_link(request, invite_code):
                 family_slug=invitation.family.slug,
                 pool_slug=pool.slug,
             )
-        return render_invalid_invite(request, form, invite_code=invite_code)
+        return render_invalid_invite(request, form, invite_code=invite_code, message=error)
 
     context = {
         'form': form,
@@ -1491,6 +1529,55 @@ def get_week_winner_candidates(family, pool, week):
     return candidates
 
 
+def get_perfect_week_members(family, pool, week):
+    """Members who personally picked every scored game of the week correctly.
+
+    Auto picks don't count — a perfect week (and its cash bonus, when the pool
+    enables one) has to be earned by the member's own picks.
+    """
+    scored_games = GamesAndScores.objects.filter(
+        gameseason=pool.season,
+        competition=pool.competition,
+        gameWeek=str(week),
+        gameScored=True,
+    ).count()
+    if not scored_games:
+        return []
+
+    rows = (
+        GamePicks.objects.filter(
+            pool=pool,
+            gameseason=pool.season,
+            gameWeek=str(week),
+            auto_pick=False,
+        )
+        .order_by()
+        .values('uid')
+        .annotate(
+            total=Count('id'),
+            correct=Count('id', filter=Q(pick_correct=True)),
+        )
+    )
+    perfect_uids = [
+        row['uid'] for row in rows
+        if row['uid'] is not None
+        and row['total'] == scored_games
+        and row['correct'] == scored_games
+    ]
+    if not perfect_uids:
+        return []
+
+    return [
+        membership.user
+        for membership in FamilyMembership.objects.filter(
+            family=family,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+            user_id__in=perfect_uids,
+        ).select_related('user')
+    ]
+
+
 def resolve_week_winner_row(family, pool, winner_uid):
     membership = (
         FamilyMembership.objects.filter(
@@ -1519,14 +1606,14 @@ def resolve_week_winner_row(family, pool, winner_uid):
     return membership.user, points_row
 
 
-def week_winner_audit_metadata(*, week, previous_row, new_row, actor):
+def week_winner_audit_metadata(*, week, previous_row, new_row, actor, bonus_points):
     return {
         'week': week,
         'previous_winner_user_id': int(previous_row.userID) if previous_row else None,
         'previous_winner_row_id': previous_row.id if previous_row else None,
         'new_winner_user_id': int(new_row.userID),
         'new_winner_row_id': new_row.id,
-        'bonus_points': 2,
+        'bonus_points': bonus_points,
         'actor_id': actor.id,
     }
 
@@ -1597,6 +1684,7 @@ def render_family_admin_winners(request, tenant_context, form=None, *, status=20
         .order_by('id')
         .first()
     )
+    pool_settings = PoolSettings.objects.filter(pool=pool).first()
     context = {
         'family': family,
         'pool': pool,
@@ -1607,6 +1695,8 @@ def render_family_admin_winners(request, tenant_context, form=None, *, status=20
         'candidates': candidates,
         'current_winner': current_winner,
         'form': form,
+        'pool_settings': pool_settings,
+        'perfect_week_members': get_perfect_week_members(family, pool, selected_week),
     }
     return render(request, 'pickem/family_admin_winners.html', context, status=status)
 
@@ -1628,6 +1718,11 @@ def family_pool_admin_winners(request, family_slug, pool_slug):
     pool = tenant_context.pool
 
     with transaction.atomic():
+        pool_settings = PoolSettings.objects.filter(pool=pool).first()
+        bonus_points = (
+            pool_settings.weekly_winner_points if pool_settings
+            else PoolSettings._meta.get_field('weekly_winner_points').default
+        )
         previous_winner = (
             userSeasonPoints.objects.select_for_update()
             .filter(
@@ -1652,7 +1747,7 @@ def family_pool_admin_winners(request, family_slug, pool_slug):
         for points_row in affected_rows:
             if getattr(points_row, winner_field, False) or (points_row.id == winner_row.id):
                 setattr(points_row, winner_field, points_row.id == winner_row.id)
-                setattr(points_row, bonus_field, 2 if points_row.id == winner_row.id else 0)
+                setattr(points_row, bonus_field, bonus_points if points_row.id == winner_row.id else 0)
                 recalculate_season_total(points_row)
                 points_row.save(update_fields=[winner_field, bonus_field, 'total_points', 'playerUpdated'])
 
@@ -1669,6 +1764,7 @@ def family_pool_admin_winners(request, family_slug, pool_slug):
                 previous_row=previous_winner,
                 new_row=winner_row,
                 actor=request.user,
+                bonus_points=bonus_points,
             ),
             **get_invite_audit_context(request),
         )
@@ -1865,6 +1961,7 @@ def render_family_admin_invites(request, tenant_context, form, *, invite_code=No
         'can_create_admin_invites': (
             tenant_context.membership.role == FamilyMembership.Role.OWNER
         ),
+        'entries_locked': pool_entries_locked(pool),
     }
     return render(request, 'pickem/family_admin_invites.html', context, status=status)
 
@@ -3019,7 +3116,9 @@ def render_pick_page(request, *, tenant_context=None):
         'is_tenant_pick_page': tenant_context is not None,
         'multi_family_pick_targets': multi_family_pick_targets,
         'can_submit_to_multiple_families': len(multi_family_pick_targets) > 1,
-        
+        'pool_allow_tiebreaker': (
+            pool_allows_tiebreaker(tenant_context.pool) if tenant_context else True
+        ),
     }
 
     if request.method == 'POST':
@@ -3054,7 +3153,8 @@ def render_pick_page(request, *, tenant_context=None):
 
         tiebreaker_score = form.cleaned_data.get('tieBreakerScore')
         tiebreaker_yards = form.cleaned_data.get('tieBreakerYards')
-        if game.tieBreakerGame and (tiebreaker_score is None or tiebreaker_yards is None):
+        collect_tiebreaker = game.tieBreakerGame and pool_allows_tiebreaker(tenant_context.pool)
+        if collect_tiebreaker and (tiebreaker_score is None or tiebreaker_yards is None):
             return JsonResponse({
                 'error': True,
                 'message': 'Tiebreaker fields are required for this game',
@@ -3178,8 +3278,8 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
         if new_pick not in [game.awayTeamSlug, game.homeTeamSlug]:
             return JsonResponse({'error': True, 'message': 'Invalid team selection'}, status=400)
         
-        # Validate tiebreaker if this is a tiebreaker game
-        if game.tieBreakerGame:
+        # Validate tiebreaker if this is a tiebreaker game and the pool uses them
+        if game.tieBreakerGame and pool_allows_tiebreaker(tenant_context.pool):
             if not tiebreaker_score or not tiebreaker_yards:
                 return JsonResponse({
                     'error': True, 

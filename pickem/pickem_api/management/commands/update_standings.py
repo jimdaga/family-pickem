@@ -6,6 +6,13 @@ would have their standings collapsed/overwritten across pools. This command
 recomputes ``week_N_points`` and ``total_points`` for every (pool, user)
 independently, directly from the scored ``GamePicks`` rows.
 
+Scoring honors each pool's ``PoolSettings``: every correct pick is worth
+``win_points`` and every pick on a game that ended in a tie is worth
+``tie_points`` (ties have no winner, so ``update_picks`` marks them scored
+with no correct picks — the tie award happens here, where pool-specific
+valuation lives). Pools without a settings row fall back to the model
+defaults (1 point per win, 0 per tie).
+
 It is idempotent and self-healing: each run recomputes all 18 weeks from the
 current pick state, so re-running (or backfilling) always converges to the
 correct totals. Existing ``week_N_bonus`` values are preserved and folded into
@@ -16,11 +23,20 @@ Run after ``update_picks`` (which flags correct picks) and before
 """
 
 import logging
+from collections import Counter
 
 from django.core.management.base import BaseCommand
+from django.db.models import F
 
 from pickem.utils import get_season
-from pickem_api.models import FamilyMembership, GamePicks, Pool, userSeasonPoints
+from pickem_api.models import (
+    FamilyMembership,
+    GamePicks,
+    GamesAndScores,
+    Pool,
+    PoolSettings,
+    userSeasonPoints,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,10 +84,30 @@ class Command(BaseCommand):
             (pool_id, user_id) for pool_id, user_id in pick_combos if user_id
         }
 
+        # Games that ended in a tie: scored with equal, populated scores.
+        # Picks on these games earn the pool's tie_points.
+        tied_game_ids = set(
+            GamesAndScores.objects.filter(
+                gameseason=season,
+                gameScored=True,
+                statusType="finished",
+                homeTeamScore__isnull=False,
+                awayTeamScore=F("homeTeamScore"),
+            ).values_list("id", flat=True)
+        )
+
+        # Per-pool scoring weights, fetched once.
+        pool_weights = {}
+        for settings in PoolSettings.objects.filter(
+            pool_id__in={pool_id for pool_id, _ in combos}
+        ):
+            pool_weights[settings.pool_id] = (settings.win_points, settings.tie_points)
+
         updated = 0
         for pool_id, user_id in sorted(combos):
             if not user_id:
                 continue
+            win_points, tie_points = pool_weights.get(pool_id, (1, 0))
             row, _ = userSeasonPoints.objects.get_or_create(
                 pool_id=pool_id,
                 userID=user_id,
@@ -81,18 +117,28 @@ class Command(BaseCommand):
                 },
             )
 
+            correct_by_week = Counter()
+            tied_by_week = Counter()
+            picks = GamePicks.objects.filter(
+                pool_id=pool_id,
+                userID=user_id,
+                gameseason=season,
+            ).values_list("gameWeek", "pick_correct", "pick_game_id")
+            for game_week, pick_correct, pick_game_id in picks:
+                if pick_correct:
+                    correct_by_week[game_week] += 1
+                elif pick_game_id in tied_game_ids:
+                    tied_by_week[game_week] += 1
+
             total = 0
             for week in WEEKS:
-                correct = GamePicks.objects.filter(
-                    pool_id=pool_id,
-                    userID=user_id,
-                    gameseason=season,
-                    gameWeek=str(week),
-                    pick_correct=True,
-                ).count()
-                setattr(row, f"week_{week}_points", correct)
+                points = (
+                    correct_by_week[str(week)] * win_points
+                    + tied_by_week[str(week)] * tie_points
+                )
+                setattr(row, f"week_{week}_points", points)
                 bonus = getattr(row, f"week_{week}_bonus") or 0
-                total += correct + bonus
+                total += points + bonus
 
             row.total_points = total
             row.save()

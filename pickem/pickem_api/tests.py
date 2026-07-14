@@ -211,6 +211,13 @@ class TenantDomainAdminTest(TestCase):
         self.assertNotIn('code', invitation_admin.list_display)
         self.assertNotIn('raw_code', invitation_admin.list_display)
 
+    def test_teams_admin_displays_logo_contrast_preset(self):
+        teams_admin = admin.site._registry[Teams]
+        teams_form = teams_admin.get_form(None)
+
+        self.assertIn('logo_contrast_preset', teams_admin.list_display)
+        self.assertIn('logo_contrast_preset', teams_form.base_fields)
+
 
 class TenantAuthorizationHelperTest(TestCase):
     def setUp(self):
@@ -712,6 +719,18 @@ class TeamsModelTest(TestCase):
         self.assertEqual(team.teamLosses, 0)
         self.assertEqual(team.teamTies, 0)
 
+    def test_logo_contrast_preset_defaults_to_model_default(self):
+        team = Teams.objects.create(
+            id=2,
+            teamNameSlug='chiefs',
+            teamNameName='Kansas City Chiefs',
+        )
+
+        self.assertEqual(
+            team.logo_contrast_preset,
+            Teams.LogoContrastPreset.DEFAULT,
+        )
+
 
 class GamesAndScoresModelTest(TestCase):
     def test_create_game(self):
@@ -1050,6 +1069,230 @@ class UpdateStandingsCommandTest(TestCase):
         b_row = userSeasonPoints.objects.get(pool=pool_b, userID="u1")
         self.assertEqual(b_row.week_1_points, 1)
         self.assertEqual(b_row.total_points, 1)
+
+    def test_honors_pool_win_points_and_tie_points(self):
+        from django.core.management import call_command
+
+        pool = self._pool("fw")
+        PoolSettings.objects.create(pool=pool, win_points=3, tie_points=1)
+        # Two correct picks at 3 points each.
+        self._pick("w-1-101", pool, "u1", 1, True)
+        self._pick("w-1-102", pool, "u1", 1, True)
+        # A pick on a game that ended in a tie earns tie_points.
+        GamesAndScores.objects.create(
+            id=555, slug="tie-game", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameWinner=None,
+            gameScored=True, homeTeamId=1, homeTeamSlug="eagles",
+            homeTeamName="Eagles", homeTeamScore=17, awayTeamScore=17,
+            awayTeamId=2, awayTeamSlug="chiefs", awayTeamName="Chiefs",
+        )
+        GamePicks.objects.create(
+            id="w-1-555", pool=pool, pick_game_id=555, slug="tie-game",
+            userID="u1", userEmail="u1@x.com", gameWeek="1", gameyear="2025",
+            gameseason=2526, competition="nfl", pick="eagles", pick_correct=False,
+        )
+        # A plain wrong pick (game not tied) earns nothing.
+        self._pick("w-1-103", pool, "u1", 1, False)
+
+        call_command("update_standings", season=2526)
+
+        row = userSeasonPoints.objects.get(pool=pool, userID="u1")
+        self.assertEqual(row.week_1_points, 3 + 3 + 1)
+        self.assertEqual(row.total_points, 7)
+
+
+class UpdateMissedPicksCommandTest(TestCase):
+    """`update_missed_picks` — applies each pool's missed-pick policy."""
+
+    def setUp(self):
+        self.family = Family.objects.create(
+            name="mp-fam", slug="mp-fam", status=Family.Status.ACTIVE
+        )
+        self.pool = Pool.objects.create(
+            family=self.family, name="Pool", slug="mp-pool", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        self.picker = User.objects.create_user("mp-picker", email="picker@x.com", password="x")
+        self.slacker = User.objects.create_user("mp-slacker", email="slacker@x.com", password="x")
+        for user in (self.picker, self.slacker):
+            FamilyMembership.objects.create(
+                family=self.family, user=user,
+                role=FamilyMembership.Role.MEMBER,
+                status=FamilyMembership.Status.ACTIVE,
+            )
+
+    def _game(self, gid, *, started=True, scored=False, home_prob=None, away_prob=None):
+        start = timezone.now() + timedelta(hours=-1 if started else 6)
+        return GamesAndScores.objects.create(
+            id=gid, slug=f"g{gid}", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=start,
+            statusType="inprogress" if started else "notstarted",
+            statusTitle="", gameScored=scored,
+            homeTeamId=1, homeTeamSlug="eagles", homeTeamName="Eagles",
+            awayTeamId=2, awayTeamSlug="chiefs", awayTeamName="Chiefs",
+            homeTeamWinProbability=home_prob, awayTeamWinProbability=away_prob,
+        )
+
+    def test_auto_home_fills_only_missing_picks_on_started_games(self):
+        from django.core.management import call_command
+
+        PoolSettings.objects.create(
+            pool=self.pool,
+            missed_pick_policy=PoolSettings.MissedPickPolicy.AUTO_HOME,
+        )
+        started = self._game(100, started=True)
+        upcoming = self._game(101, started=False)
+        already_scored = self._game(102, started=True, scored=True)
+        real_pick = GamePicks.objects.create(
+            id=f"{self.pool.id}-{self.picker.id}-100", pool=self.pool,
+            pick_game_id=100, slug="g100", uid=self.picker.id,
+            userID=str(self.picker.id), gameWeek="1", gameyear="2025",
+            gameseason=2526, competition="nfl", pick="chiefs",
+        )
+
+        call_command("update_missed_picks", season=2526)
+
+        auto = GamePicks.objects.get(userID=str(self.slacker.id), pick_game_id=100)
+        self.assertEqual(auto.pick, "eagles")  # home team
+        self.assertTrue(auto.auto_pick)
+        self.assertEqual(auto.pool, self.pool)
+        # The member's own pick is untouched.
+        real_pick.refresh_from_db()
+        self.assertEqual(real_pick.pick, "chiefs")
+        self.assertFalse(real_pick.auto_pick)
+        # Not-started and already-scored games get no auto picks.
+        self.assertFalse(
+            GamePicks.objects.filter(pick_game_id__in=[upcoming.id, already_scored.id]).exists()
+        )
+        # Idempotent: a second run creates nothing new.
+        call_command("update_missed_picks", season=2526)
+        self.assertEqual(
+            GamePicks.objects.filter(userID=str(self.slacker.id)).count(), 1
+        )
+
+    def test_auto_favorite_picks_the_probable_winner_with_home_fallback(self):
+        from django.core.management import call_command
+
+        PoolSettings.objects.create(
+            pool=self.pool,
+            missed_pick_policy=PoolSettings.MissedPickPolicy.AUTO_FAVORITE,
+        )
+        away_favored = self._game(200, home_prob=35.0, away_prob=65.0)
+        no_odds = self._game(201)
+
+        call_command("update_missed_picks", season=2526)
+
+        self.assertEqual(
+            GamePicks.objects.get(userID=str(self.slacker.id), pick_game_id=200).pick,
+            "chiefs",
+        )
+        self.assertEqual(
+            GamePicks.objects.get(userID=str(self.slacker.id), pick_game_id=201).pick,
+            "eagles",
+        )
+
+    def test_zero_points_policy_creates_nothing(self):
+        from django.core.management import call_command
+
+        PoolSettings.objects.create(pool=self.pool)  # default zero_points
+        self._game(300, started=True)
+
+        call_command("update_missed_picks", season=2526)
+
+        self.assertFalse(GamePicks.objects.exists())
+
+
+class UpdateSeasonWinnersCommandTest(TestCase):
+    """`update_season_winners` — crowns year_winner once the season completes."""
+
+    def setUp(self):
+        self.family = Family.objects.create(
+            name="sw-fam", slug="sw-fam", status=Family.Status.ACTIVE
+        )
+        self.pool = Pool.objects.create(
+            family=self.family, name="Pool", slug="sw-pool", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+
+    def _final_week_game(self, *, scored=True):
+        return GamesAndScores.objects.create(
+            id=1800, slug="final-game", competition="nfl", gameWeek="18",
+            gameyear="2026", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameWinner="eagles",
+            gameScored=scored,
+            homeTeamId=1, homeTeamSlug="eagles", homeTeamName="Eagles",
+            awayTeamId=2, awayTeamSlug="chiefs", awayTeamName="Chiefs",
+        )
+
+    def _row(self, user_id, total, *, week18_points=0, week18_winner=False):
+        return userSeasonPoints.objects.create(
+            pool=self.pool, userID=user_id, userEmail=f"{user_id}@x.com",
+            gameseason=2526, total_points=total,
+            week_18_points=week18_points, week_18_winner=week18_winner,
+        )
+
+    def test_crowns_top_total_once_final_week_complete(self):
+        from django.core.management import call_command
+
+        self._final_week_game(scored=True)
+        leader = self._row("u1", 30, week18_points=3, week18_winner=True)
+        runner_up = self._row("u2", 20)
+
+        call_command("update_season_winners", season=2526)
+
+        leader.refresh_from_db()
+        runner_up.refresh_from_db()
+        self.assertTrue(leader.year_winner)
+        self.assertFalse(runner_up.year_winner)
+        audits = FamilyAuditLog.objects.filter(target_id="season_2526")
+        self.assertEqual(audits.count(), 1)
+
+        # Idempotent: no second audit entry once crowned.
+        call_command("update_season_winners", season=2526)
+        self.assertEqual(
+            FamilyAuditLog.objects.filter(target_id="season_2526").count(), 1
+        )
+
+    def test_ties_produce_co_champions(self):
+        from django.core.management import call_command
+
+        self._final_week_game(scored=True)
+        first = self._row("u1", 30, week18_points=3, week18_winner=True)
+        second = self._row("u2", 30)
+
+        call_command("update_season_winners", season=2526)
+
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertTrue(first.year_winner)
+        self.assertTrue(second.year_winner)
+
+    def test_skips_when_final_week_incomplete_or_bonus_not_awarded(self):
+        from django.core.management import call_command
+
+        # Final week game exists but isn't scored yet.
+        game = self._final_week_game(scored=False)
+        row = self._row("u1", 30, week18_points=3, week18_winner=False)
+
+        call_command("update_season_winners", season=2526)
+        row.refresh_from_db()
+        self.assertFalse(row.year_winner)
+
+        # Week complete, but the week-18 winner bonus hasn't landed yet:
+        # totals aren't final, so hold off.
+        game.gameScored = True
+        game.save(update_fields=["gameScored"])
+        call_command("update_season_winners", season=2526)
+        row.refresh_from_db()
+        self.assertFalse(row.year_winner)
+
+        # Once the weekly award exists, the crown lands.
+        row.week_18_winner = True
+        row.save(update_fields=["week_18_winner"])
+        call_command("update_season_winners", season=2526)
+        row.refresh_from_db()
+        self.assertTrue(row.year_winner)
 
 
 class UpdateGamesCommandTest(TestCase):
@@ -1649,6 +1892,29 @@ class UpdateStatsCommandTest(TestCase):
         # eagles picked 3x, chiefs 1x.
         self.assertEqual(stats.mostPickedSeason, "eagles")
         self.assertEqual(stats.leastPickedSeason, "chiefs")
+
+    def test_auto_picks_count_as_missed_and_not_toward_accuracy_or_perfection(self):
+        from django.core.management import call_command
+
+        g1 = self._game(21, "g21", week="1")
+        g2 = self._game(22, "g22", week="1")
+        # One real correct pick; the other game was auto-filled by the pool's
+        # missed-pick policy (and even scored correct).
+        self._pick(self.alice, g1, "eagles", correct=True, week="1")
+        auto = self._pick(self.alice, g2, "eagles", correct=True, week="1")
+        auto.auto_pick = True
+        auto.save(update_fields=["auto_pick"])
+
+        call_command("update_stats", season=2526)
+
+        stats = userStats.objects.get(userID=str(self.alice.id), pool__isnull=True)
+        # Accuracy counts only the real pick.
+        self.assertEqual(stats.totalPicksSeason, 1)
+        self.assertEqual(stats.correctPickTotalSeason, 1)
+        # The auto-filled game still reads as missed for the user.
+        self.assertEqual(stats.missedPicksSeason, 1)
+        # And an auto-assisted week is never perfect.
+        self.assertEqual(stats.perfectWeeksSeason, 0)
 
 
 class ApiEndpointAuthorizationTests(TestCase):

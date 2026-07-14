@@ -14,6 +14,11 @@ Computed per user:
   - perfect weeks: weeks where the user picked every scored game and got them all
     correct (season + all-time)
   - most / least picked team(s) (season + all-time; ties joined by ", ")
+
+Auto picks (rows created by a pool's missed-pick policy, ``auto_pick=True``)
+count toward standings but not toward these stats: the game still counts as
+missed, and auto picks are excluded from accuracy, perfect weeks and the
+most/least-picked teams — they reflect the pool's policy, not the user.
 """
 
 import logging
@@ -129,9 +134,10 @@ class Command(BaseCommand):
     ):
         user_id = str(uid)
 
-        # --- Pick accuracy (picks whose game is finished) ---
+        # --- Pick accuracy (real picks whose game is finished) ---
         finished_picks = GamePicks.objects.filter(
-            uid=uid, gameseason__isnull=False, slug__in=finished_slugs
+            uid=uid, gameseason__isnull=False, slug__in=finished_slugs,
+            auto_pick=False,
         )
         totals = finished_picks.aggregate(
             total=Count("id"), correct=Count("id", filter=Q(pick_correct=True))
@@ -152,10 +158,10 @@ class Command(BaseCommand):
             year_winner=True, gameseason__isnull=False
         ).count()
 
-        # --- Missed picks: scored games the user never picked ---
+        # --- Missed picks: scored games the user never picked themselves ---
         picked_game_ids = set(
             GamePicks.objects.filter(
-                uid=uid, gameseason__isnull=False
+                uid=uid, gameseason__isnull=False, auto_pick=False
             ).values_list("pick_game_id", flat=True)
         )
         missed_total = len(scored_ids_all - picked_game_ids)
@@ -206,9 +212,9 @@ class Command(BaseCommand):
         that week (so missing a game, getting one wrong, or extra cross-pool
         picks all disqualify it).
         """
-        pick_filter = {"uid": uid, "gameseason__isnull": False}
+        pick_filter = {"uid": uid, "gameseason__isnull": False, "auto_pick": False}
         if season is not None:
-            pick_filter = {"uid": uid, "gameseason": season}
+            pick_filter = {"uid": uid, "gameseason": season, "auto_pick": False}
 
         # User's total and correct picks grouped by (season, week).
         per_week = {}
@@ -244,7 +250,9 @@ class Command(BaseCommand):
         Ties are joined by ", ". Counts every pick by the user (optionally in a
         single season), matching pickemctl.
         """
-        qs = GamePicks.objects.filter(uid=uid, gameseason__isnull=False)
+        qs = GamePicks.objects.filter(
+            uid=uid, gameseason__isnull=False, auto_pick=False
+        )
         if season is not None:
             qs = qs.filter(gameseason=season)
         counts = list(

@@ -1204,6 +1204,117 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertContains(response, "picksCardMotion")
         self.assertContains(response, "gsap.min.js")
 
+    def test_tenant_picks_page_uses_brand_presentation_hooks_for_cards_and_edit_modal(self):
+        from pickem_homepage.templatetags.pickem_homepage_extras import (
+            team_brand_presentation,
+        )
+
+        GamesAndScores.objects.create(
+            id=2003,
+            slug="ari-atl-2025-week-1-extra",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=timezone.now() + timedelta(days=2),
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=5,
+            homeTeamSlug="atl",
+            homeTeamName="Atlanta Falcons",
+            awayTeamId=6,
+            awayTeamSlug="ari",
+            awayTeamName="Arizona Cardinals",
+        )
+        Teams.objects.filter(teamNameSlug="ari", gameseason=2526).update(
+            teamLogo="https://example.test/ari.png",
+            color="224466",
+            alternateColor="88AACC",
+            logo_contrast_preset=Teams.LogoContrastPreset.WHITE_BURST,
+        )
+        Teams.objects.filter(teamNameSlug="atl", gameseason=2526).update(
+            teamLogo="https://example.test/atl.png",
+            color="003594",
+            alternateColor="869397",
+            logo_contrast_preset=Teams.LogoContrastPreset.REVERSE_GRADIENT,
+        )
+        self._create_pick(
+            user=self.member,
+            pool=self.smith_pool,
+            game=self.game,
+            pick=self.game.awayTeamSlug,
+        )
+        self.client.force_login(self.member)
+
+        ari_brand = team_brand_presentation(
+            Teams.objects.get(teamNameSlug="ari", gameseason=2526)
+        )
+        atl_brand = team_brand_presentation(
+            Teams.objects.get(teamNameSlug="atl", gameseason=2526)
+        )
+
+        response = self.client.get(self._tenant_picks_url())
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertGreaterEqual(content.count(ari_brand["background_style"]), 3)
+        self.assertGreaterEqual(content.count(atl_brand["background_style"]), 3)
+        self.assertGreaterEqual(content.count(ari_brand["logo_style"]), 3)
+        self.assertIn(
+            f'data-away-background-style="{ari_brand["background_style"]}"',
+            content,
+        )
+        self.assertIn('data-away-show-white-burst="true"', content)
+        self.assertIn(
+            f'data-away-logo-style="{ari_brand["logo_style"]}"',
+            content,
+        )
+        self.assertIn(
+            f'data-home-background-style="{atl_brand["background_style"]}"',
+            content,
+        )
+        self.assertIn('data-home-show-white-burst="false"', content)
+        self.assertIn('data-home-logo-style=""', content)
+        self.assertIn('const awayBackgroundStyle = this.dataset.awayBackgroundStyle || \'\';', content)
+        self.assertIn('const awayShowWhiteBurst = this.dataset.awayShowWhiteBurst === \'true\';', content)
+        self.assertIn('const awayLogoStyle = this.dataset.awayLogoStyle || \'\';', content)
+        self.assertIn('awayColorBg.style.cssText = awayBackgroundStyle;', content)
+        self.assertIn('awayLogoEl.style.cssText = awayLogoStyle;', content)
+        self.assertIn("awayBurstEl.classList.toggle('flex', awayShowWhiteBurst);", content)
+        self.assertNotIn("includes('jets')", content)
+        self.assertNotIn("Apply Jets logo fix", content)
+
+    def test_tenant_picks_page_uses_season_scoped_team_data_for_modal_brand_payload(self):
+        Teams.objects.filter(teamNameSlug="ari", gameseason=2526).update(
+            teamLogo="https://example.test/ari-season.png",
+            color="ABCDEF",
+            alternateColor="123456",
+            logo_contrast_preset=Teams.LogoContrastPreset.WHITE_BURST,
+        )
+        Teams.objects.filter(teamNameSlug="atl", gameseason=2526).update(
+            teamLogo="https://example.test/atl-season.png",
+            color="654321",
+            alternateColor="FEDCBA",
+            logo_contrast_preset=Teams.LogoContrastPreset.REVERSE_GRADIENT,
+        )
+        self._create_pick(
+            user=self.member,
+            pool=self.smith_pool,
+            game=self.game,
+            pick=self.game.homeTeamSlug,
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_picks_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-away-logo="https://example.test/ari-season.png"')
+        self.assertContains(response, 'data-home-logo="https://example.test/atl-season.png"')
+        self.assertContains(response, 'alt="Arizona Cardinals logo"')
+        self.assertContains(response, 'alt="Atlanta Falcons logo"')
+        self.assertContains(response, 'data-away-background-style="background: linear-gradient(135deg, #12345640 0%, #ABCDEF 50%, #ABCDEF 100%);"')
+        self.assertContains(response, 'data-home-background-style="background: linear-gradient(135deg, #65432140 0%, #FEDCBA 50%, #FEDCBA 100%);"')
+
     def test_multi_family_picks_page_shows_submit_to_all_option(self):
         self._active_membership(self.member, self.jones_family)
         self.client.force_login(self.member)
@@ -1552,6 +1663,48 @@ class TenantPickFlowIsolationTests(TestCase):
             fetch_redirect_response=False,
         )
         self.assertFalse(GamePicks.objects.exists())
+
+    def test_tiebreaker_required_when_pool_allows_tiebreakers(self):
+        self.game.tieBreakerGame = True
+        self.game.save(update_fields=["tieBreakerGame"])
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            self._tenant_picks_url(),
+            self._pick_payload(),  # no tiebreaker values
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Tiebreaker", response.json()["message"])
+        self.assertFalse(GamePicks.objects.exists())
+
+    def test_tiebreaker_not_required_when_pool_disables_tiebreakers(self):
+        self.game.tieBreakerGame = True
+        self.game.save(update_fields=["tieBreakerGame"])
+        PoolSettings.objects.create(pool=self.smith_pool, allow_tiebreaker=False)
+        self.client.force_login(self.member)
+
+        # The picks page stops rendering (and demanding) the tiebreaker inputs.
+        get_response = self.client.get(self._tenant_picks_url())
+        self.assertFalse(get_response.context["pool_allow_tiebreaker"])
+        self.assertNotContains(get_response, "Tiebreakers Required")
+        self.assertNotContains(get_response, f'id="tiebreaker1-{self.game.id}"')
+        self.assertNotContains(get_response, f'id="tiebreaker2-{self.game.id}"')
+
+        response = self.client.post(
+            self._tenant_picks_url(),
+            self._pick_payload(),  # no tiebreaker values
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertTrue(
+            GamePicks.objects.filter(
+                pool=self.smith_pool, userID=str(self.member.id), pick_game_id=self.game.id
+            ).exists()
+        )
 
 
 class TenantScoresStandingsRulesIsolationTests(TestCase):
@@ -3809,7 +3962,9 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(settings.entry_fee_amount, 40)
         self.assertEqual(settings.pick_type, "straight_up")
         self.assertEqual(settings.missed_pick_policy, "auto_home")
-        self.assertTrue(settings.include_playoffs)
+        # include_playoffs is disabled ("coming soon"): even a POST claiming
+        # "on" must not flip the stored value.
+        self.assertFalse(settings.include_playoffs)
         self.assertEqual(settings.late_join_policy, "lock_after_week_1")
         self.assertEqual(settings.payout_structure, "ninety_ten")
 
@@ -3826,7 +3981,7 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertContains(rules, "$40")  # entry fee
         self.assertContains(rules, "coin flip")
         self.assertContains(rules, "auto-assigned the home team")
-        self.assertContains(rules, "continues through the playoffs")
+        self.assertContains(rules, "regular season only")
         self.assertContains(rules, "lock after Week 1")
         self.assertContains(rules, "1st gets 90%, 2nd gets 10%")
 
@@ -5937,6 +6092,159 @@ class InviteFlowTests(TestCase):
                     FamilyMembership.objects.filter(user=self.joiner).exists()
                 )
 
+    def _lock_entries_after_week_1(self):
+        PoolSettings.objects.create(
+            pool=self.pool,
+            late_join_policy=PoolSettings.LateJoinPolicy.LOCK_AFTER_WEEK_1,
+        )
+        # Week 1 complete: every game finished and scored.
+        GamesAndScores.objects.create(
+            id=9101, slug="wk1-final", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameWinner="eagles",
+            gameScored=True,
+            homeTeamId=1, homeTeamSlug="eagles", homeTeamName="Eagles",
+            awayTeamId=2, awayTeamSlug="chiefs", awayTeamName="Chiefs",
+        )
+
+    def test_late_join_policy_blocks_new_members_after_week_1(self):
+        from pickem_homepage.views import ENTRIES_LOCKED_MESSAGE
+
+        self._lock_entries_after_week_1()
+        invite = self._invitation(raw_code="late-code")
+        self.client.force_login(self.joiner)
+
+        response = self.client.post(self._join_url(), {"code": "late-code"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/join_family.html")
+        self.assertContains(response, ENTRIES_LOCKED_MESSAGE)
+        self.assertFalse(
+            FamilyMembership.objects.filter(family=self.family, user=self.joiner).exists()
+        )
+        invite.refresh_from_db()
+        self.assertEqual(invite.use_count, 0)
+
+    def test_late_join_policy_still_admits_existing_active_members(self):
+        self._lock_entries_after_week_1()
+        self._invitation(raw_code="existing-code")
+        self.client.force_login(self.member)  # already an active member
+
+        response = self.client.post(self._join_url(), {"code": "existing-code"})
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "family_pool_home",
+                kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
+            ),
+            fetch_redirect_response=False,
+        )
+
+    def test_open_policy_admits_new_members_after_week_1(self):
+        PoolSettings.objects.create(
+            pool=self.pool,
+            late_join_policy=PoolSettings.LateJoinPolicy.OPEN,
+        )
+        GamesAndScores.objects.create(
+            id=9102, slug="wk1-final-open", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameWinner="eagles",
+            gameScored=True,
+            homeTeamId=1, homeTeamSlug="eagles", homeTeamName="Eagles",
+            awayTeamId=2, awayTeamSlug="chiefs", awayTeamName="Chiefs",
+        )
+        self._invitation(raw_code="open-code")
+        self.client.force_login(self.joiner)
+
+        response = self.client.post(self._join_url(), {"code": "open-code"})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            FamilyMembership.objects.filter(
+                family=self.family, user=self.joiner,
+                status=FamilyMembership.Status.ACTIVE,
+            ).exists()
+        )
+
+
+class FamilyAdminSettingsFormTests(TestCase):
+    """Server-side protections on the pool-admin settings form."""
+
+    def _payload(self, **overrides):
+        payload = {
+            'family_name': 'Smith Family',
+            'pool_name': 'Main Pickem',
+            'logo_url': '',
+            'win_points': '1',
+            'tie_points': '0',
+            'weekly_winner_points': '2',
+            'primary_tiebreaker': PoolSettings.PrimaryTiebreaker.TOTAL_SCORE,
+            'secondary_tiebreaker': PoolSettings.SecondaryTiebreaker.COMBINED_YARDS,
+            'perfect_week_bonus_amount': '10',
+            'entry_fee_amount': '0',
+            'pick_type': PoolSettings.PickType.STRAIGHT_UP,
+            'missed_pick_policy': PoolSettings.MissedPickPolicy.ZERO_POINTS,
+            'late_join_policy': PoolSettings.LateJoinPolicy.OPEN,
+            'payout_structure': PoolSettings.PayoutStructure.WINNER_TAKES_ALL,
+        }
+        payload.update(overrides)
+        return payload
+
+    def _form(self, **overrides):
+        from pickem_homepage.forms import FamilyAdminSettingsForm
+
+        return FamilyAdminSettingsForm(
+            self._payload(**overrides),
+            initial={'include_playoffs': False},
+        )
+
+    def test_baseline_payload_is_valid(self):
+        form = self._form()
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_zero_win_points_rejected(self):
+        form = self._form(win_points='0')
+        self.assertFalse(form.is_valid())
+        self.assertIn('win_points', form.errors)
+
+    def test_secondary_tiebreaker_may_not_repeat_primary_metric(self):
+        cases = [
+            (PoolSettings.PrimaryTiebreaker.COMBINED_YARDS,
+             PoolSettings.SecondaryTiebreaker.COMBINED_YARDS),
+            (PoolSettings.PrimaryTiebreaker.TOTAL_SCORE,
+             PoolSettings.SecondaryTiebreaker.TOTAL_SCORE),
+            (PoolSettings.PrimaryTiebreaker.TOTAL_SCORE_NO_OVER,
+             PoolSettings.SecondaryTiebreaker.TOTAL_SCORE),
+        ]
+        for primary, secondary in cases:
+            with self.subTest(primary=primary, secondary=secondary):
+                form = self._form(
+                    primary_tiebreaker=primary, secondary_tiebreaker=secondary
+                )
+                self.assertFalse(form.is_valid())
+                self.assertIn('secondary_tiebreaker', form.errors)
+
+    def test_terminal_secondary_choices_always_allowed(self):
+        for secondary in (
+            PoolSettings.SecondaryTiebreaker.SPLIT_POINTS,
+            PoolSettings.SecondaryTiebreaker.COIN_FLIP,
+        ):
+            form = self._form(secondary_tiebreaker=secondary)
+            self.assertTrue(form.is_valid(), form.errors)
+
+    def test_include_playoffs_is_disabled_and_ignores_tampering(self):
+        # Even a hand-crafted POST claiming include_playoffs=on keeps the
+        # stored (initial) value, because the field is disabled.
+        form = self._form(include_playoffs='on')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertFalse(form.cleaned_data['include_playoffs'])
+
+    def test_against_spread_pick_type_rejected(self):
+        form = self._form(pick_type=PoolSettings.PickType.AGAINST_SPREAD)
+        self.assertFalse(form.is_valid())
+        self.assertIn('pick_type', form.errors)
+
 
 class IsCommissionerTests(TestCase):
     """Unit tests for the is_commissioner() helper."""
@@ -6594,3 +6902,115 @@ class GlobalLeaderboardTests(TestCase):
         self.assertEqual(ranks[str(self.alice.id)], 1)
         self.assertEqual(ranks[str(self.bob.id)], 1)
         self.assertEqual(ranks[str(carol.id)], 3)
+
+
+class TeamBrandPresentationFilterTests(TestCase):
+    def test_dict_input_normalizes_hash_prefixed_and_shorthand_colors(self):
+        from pickem_homepage.templatetags.pickem_homepage_extras import (
+            team_brand_presentation,
+        )
+
+        presentation = team_brand_presentation(
+            {
+                "color": "#123",
+                "alternateColor": "#003594",
+                "logo_contrast_preset": Teams.LogoContrastPreset.REVERSE_GRADIENT,
+            }
+        )
+
+        self.assertEqual(
+            presentation["background_style"],
+            "background: linear-gradient(135deg, #11223340 0%, #003594 50%, #003594 100%);",
+        )
+        self.assertEqual(
+            presentation["preset"],
+            Teams.LogoContrastPreset.REVERSE_GRADIENT,
+        )
+
+    def test_blank_and_invalid_colors_fall_back_to_safe_defaults(self):
+        from pickem_homepage.templatetags.pickem_homepage_extras import (
+            team_brand_presentation,
+        )
+
+        team = Teams(
+            color="",
+            alternateColor="not-a-color",
+            logo_contrast_preset=Teams.LogoContrastPreset.WHITE_BURST,
+        )
+
+        presentation = team_brand_presentation(team)
+
+        self.assertEqual(
+            presentation["background_style"],
+            "background: linear-gradient(135deg, #66666640 0%, #333333 50%, #333333 100%);",
+        )
+        self.assertTrue(presentation["show_white_burst"])
+
+    def test_default_preset_uses_existing_gradient_and_no_glow(self):
+        from pickem_homepage.templatetags.pickem_homepage_extras import (
+            team_brand_presentation,
+        )
+
+        team = Teams(color="003594", alternateColor="869397", logo_contrast_preset="")
+
+        presentation = team_brand_presentation(team)
+
+        self.assertEqual(
+            presentation["preset"],
+            Teams.LogoContrastPreset.DEFAULT,
+        )
+        self.assertEqual(
+            presentation["background_style"],
+            "background: linear-gradient(135deg, #86939740 0%, #003594 50%, #003594 100%);",
+        )
+        self.assertFalse(presentation["show_white_burst"])
+        self.assertEqual(presentation["logo_style"], "")
+
+    def test_reverse_gradient_swaps_primary_and_alternate_colors(self):
+        from pickem_homepage.templatetags.pickem_homepage_extras import (
+            team_brand_presentation,
+        )
+
+        team = Teams(
+            color="112233",
+            alternateColor="AABBCC",
+            logo_contrast_preset=Teams.LogoContrastPreset.REVERSE_GRADIENT,
+        )
+
+        presentation = team_brand_presentation(team)
+
+        self.assertEqual(
+            presentation["preset"],
+            Teams.LogoContrastPreset.REVERSE_GRADIENT,
+        )
+        self.assertEqual(
+            presentation["background_style"],
+            "background: linear-gradient(135deg, #11223340 0%, #AABBCC 50%, #AABBCC 100%);",
+        )
+        self.assertFalse(presentation["show_white_burst"])
+        self.assertEqual(presentation["logo_style"], "")
+
+    def test_white_burst_keeps_default_gradient_and_adds_logo_glow(self):
+        from pickem_homepage.templatetags.pickem_homepage_extras import (
+            team_brand_presentation,
+        )
+
+        team = Teams(
+            color="224466",
+            alternateColor="88AACC",
+            logo_contrast_preset=Teams.LogoContrastPreset.WHITE_BURST,
+        )
+
+        presentation = team_brand_presentation(team)
+
+        self.assertEqual(
+            presentation["preset"],
+            Teams.LogoContrastPreset.WHITE_BURST,
+        )
+        self.assertEqual(
+            presentation["background_style"],
+            "background: linear-gradient(135deg, #88AACC40 0%, #224466 50%, #224466 100%);",
+        )
+        self.assertTrue(presentation["show_white_burst"])
+        self.assertIn("drop-shadow", presentation["logo_style"])
+        self.assertIn("rgba(255, 255, 255", presentation["logo_style"])

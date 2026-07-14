@@ -7,6 +7,7 @@ from allauth.socialaccount.models import SocialAccount
 from datetime import date
 from django.utils import timezone
 import requests
+import re
 from pickem.utils import get_season
 
 register = template.Library()
@@ -102,6 +103,62 @@ def lookuplogo(slug):
             'teamLogo': None
         }
     return logo
+
+
+def _team_brand_value(team, key, default=None):
+    if isinstance(team, dict):
+        return team.get(key, default)
+    return getattr(team, key, default)
+
+
+def _normalize_team_hex_color(value, fallback):
+    color = str(value or "").strip().lstrip("#")
+    if len(color) == 3 and re.fullmatch(r"[0-9a-fA-F]{3}", color):
+        color = "".join(character * 2 for character in color)
+
+    if re.fullmatch(r"[0-9a-fA-F]{6}", color):
+        return color.upper()
+    return fallback
+
+
+@register.filter
+def team_brand_presentation(team):
+    primary_color = _normalize_team_hex_color(
+        _team_brand_value(team, "color"),
+        "333333",
+    )
+    alternate_color = _normalize_team_hex_color(
+        _team_brand_value(team, "alternateColor"),
+        "666666",
+    )
+    preset = (
+        _team_brand_value(team, "logo_contrast_preset")
+        or Teams.LogoContrastPreset.DEFAULT
+    )
+
+    gradient_primary = primary_color
+    gradient_alternate = alternate_color
+    if preset == Teams.LogoContrastPreset.REVERSE_GRADIENT:
+        gradient_primary, gradient_alternate = alternate_color, primary_color
+
+    background_style = (
+        "background: linear-gradient("
+        f"135deg, #{gradient_alternate}40 0%, #{gradient_primary} 50%, #{gradient_primary} 100%);"
+    )
+    show_white_burst = preset == Teams.LogoContrastPreset.WHITE_BURST
+    logo_style = ""
+    if show_white_burst:
+        logo_style = (
+            "filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.55)) "
+            "drop-shadow(0 0 8px rgba(255, 255, 255, 0.35));"
+        )
+
+    return {
+        "preset": preset,
+        "background_style": background_style,
+        "show_white_burst": show_white_burst,
+        "logo_style": logo_style,
+    }
 
 @register.filter
 def has_multiple_teams(team_string):

@@ -205,16 +205,22 @@
                                         <!-- Away Team -->
                                         {% for team in wins_losses %}
                                             {% if team.teamNameSlug == game.awayTeamSlug %}
+                                        {% with team|team_brand_presentation as brand %}
                                         <div class="team-option relative group rounded-xl border-2 border-border-light dark:border-slate-600 hover:border-primary dark:hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game.statusType != 'notstarted' or auth_required %}opacity-50 pointer-events-none{% endif %}"
                                              data-team="{{ game.awayTeamSlug }}"
                                              data-team-name="{{ game.awayTeamName }}">
                                             <div class="relative h-[100px] flex items-center justify-center py-2"
-                                                 style="background: linear-gradient(135deg, #{{ team.alternateColor|default:'666666' }}40 0%, #{{ team.color|default:'333333' }} 50%, #{{ team.color|default:'333333' }} 100%);">
+                                                 style="{{ brand.background_style }}">
+                                                {% if brand.show_white_burst %}
+                                                <div class="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                                                    <div class="h-16 w-16 rounded-full bg-white/35 blur-2xl"></div>
+                                                </div>
+                                                {% endif %}
                                                 {% with game.awayTeamSlug|lookuplogo as logo_url %}
                                                 <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
                                                      alt="{{ game.awayTeamName }} logo"
                                                      class="w-16 h-16 object-contain drop-shadow-lg relative z-10"
-                                                     {% if 'jets' in game.awayTeamSlug %}style="filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));"{% endif %}>
+                                                     {% if brand.logo_style %}style="{{ brand.logo_style }}"{% endif %}>
                                                 {% endwith %}
                                                 <div class="team-selection-indicator absolute top-2 right-2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <i class="fas fa-check"></i>
@@ -233,22 +239,29 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        {% endwith %}
                                             {% endif %}
                                         {% endfor %}
 
                                         <!-- Home Team -->
                                         {% for team in wins_losses %}
                                             {% if team.teamNameSlug == game.homeTeamSlug %}
+                                        {% with team|team_brand_presentation as brand %}
                                         <div class="team-option relative group rounded-xl border-2 border-border-light dark:border-slate-600 hover:border-primary dark:hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game.statusType != 'notstarted' or auth_required %}opacity-50 pointer-events-none{% endif %}"
                                              data-team="{{ game.homeTeamSlug }}"
                                              data-team-name="{{ game.homeTeamName }}">
                                             <div class="relative h-[100px] flex items-center justify-center py-2"
-                                                 style="background: linear-gradient(135deg, #{{ team.alternateColor|default:'666666' }}40 0%, #{{ team.color|default:'333333' }} 50%, #{{ team.color|default:'333333' }} 100%);">
+                                                 style="{{ brand.background_style }}">
+                                                {% if brand.show_white_burst %}
+                                                <div class="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                                                    <div class="h-16 w-16 rounded-full bg-white/35 blur-2xl"></div>
+                                                </div>
+                                                {% endif %}
                                                 {% with game.homeTeamSlug|lookuplogo as logo_url %}
                                                 <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
                                                      alt="{{ game.homeTeamName }} logo"
                                                      class="w-16 h-16 object-contain drop-shadow-lg relative z-10"
-                                                     {% if 'jets' in game.homeTeamSlug %}style="filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));"{% endif %}>
+                                                     {% if brand.logo_style %}style="{{ brand.logo_style }}"{% endif %}>
                                                 {% endwith %}
                                                 <div class="team-selection-indicator absolute top-2 right-2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <i class="fas fa-check"></i>
@@ -267,12 +280,13 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        {% endwith %}
                                             {% endif %}
                                         {% endfor %}
                                     </div>{# /team grid #}
 
-                                    <!-- Tiebreaker Section -->
-                                    {% if game.tieBreakerGame %}
+                                    <!-- Tiebreaker Section (hidden when the pool disables tiebreakers) -->
+                                    {% if game.tieBreakerGame and pool_allow_tiebreaker %}
                                     <div class="tiebreaker-section bg-purple-500/10 dark:bg-purple-600/20 rounded-xl p-4 border border-purple-500/30 dark:border-purple-500/40">
                                         <div class="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-semibold mb-3">
                                             <i class="fas fa-balance-scale"></i>
@@ -405,14 +419,20 @@
                                                 <!-- Away Team -->
                                                 {% for team in wins_losses %}
                                                     {% if team.teamNameSlug == game.awayTeamSlug %}
+                                                {% with team|team_brand_presentation as brand %}
                                                 <div class="rounded-xl overflow-hidden {% if p.pick != game.awayTeamSlug %}opacity-40{% endif %}">
-                                                    <div class="h-[70px] flex items-center justify-center py-2"
-                                                         style="background: linear-gradient(135deg, #{{ team.alternateColor|default:'666666' }}40 0%, #{{ team.color|default:'333333' }} 50%, #{{ team.color|default:'333333' }} 100%);">
+                                                    <div class="relative h-[70px] flex items-center justify-center py-2"
+                                                         style="{{ brand.background_style }}">
+                                                        {% if brand.show_white_burst %}
+                                                        <div class="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                                                            <div class="h-14 w-14 rounded-full bg-white/35 blur-2xl"></div>
+                                                        </div>
+                                                        {% endif %}
                                                         {% with game.awayTeamSlug|lookuplogo as logo_url %}
                                                         <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
                                                              alt="{{ game.awayTeamName }} logo"
                                                              class="w-12 h-12 object-contain drop-shadow-lg"
-                                                             {% if 'jets' in game.awayTeamSlug %}style="filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));"{% endif %}>
+                                                             {% if brand.logo_style %}style="{{ brand.logo_style }}"{% endif %}>
                                                         {% endwith %}
                                                     </div>
                                                     <div class="bg-surface-light dark:bg-surface-hover p-2 text-center">
@@ -425,6 +445,7 @@
                                                         {% endif %}
                                                     </div>
                                                 </div>
+                                                {% endwith %}
                                                     {% endif %}
                                                 {% endfor %}
 
@@ -434,14 +455,20 @@
                                                 <!-- Home Team -->
                                                 {% for team in wins_losses %}
                                                     {% if team.teamNameSlug == game.homeTeamSlug %}
+                                                {% with team|team_brand_presentation as brand %}
                                                 <div class="rounded-xl overflow-hidden {% if p.pick != game.homeTeamSlug %}opacity-40{% endif %}">
-                                                    <div class="h-[70px] flex items-center justify-center py-2"
-                                                         style="background: linear-gradient(135deg, #{{ team.alternateColor|default:'666666' }}40 0%, #{{ team.color|default:'333333' }} 50%, #{{ team.color|default:'333333' }} 100%);">
+                                                    <div class="relative h-[70px] flex items-center justify-center py-2"
+                                                         style="{{ brand.background_style }}">
+                                                        {% if brand.show_white_burst %}
+                                                        <div class="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                                                            <div class="h-14 w-14 rounded-full bg-white/35 blur-2xl"></div>
+                                                        </div>
+                                                        {% endif %}
                                                         {% with game.homeTeamSlug|lookuplogo as logo_url %}
                                                         <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
                                                              alt="{{ game.homeTeamName }} logo"
                                                              class="w-12 h-12 object-contain drop-shadow-lg"
-                                                             {% if 'jets' in game.homeTeamSlug %}style="filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));"{% endif %}>
+                                                             {% if brand.logo_style %}style="{{ brand.logo_style }}"{% endif %}>
                                                         {% endwith %}
                                                     </div>
                                                     <div class="bg-surface-light dark:bg-surface-hover p-2 text-center">
@@ -454,11 +481,12 @@
                                                         {% endif %}
                                                     </div>
                                                 </div>
+                                                {% endwith %}
                                                     {% endif %}
                                                 {% endfor %}
 
                                                 <!-- Tiebreaker Info -->
-                                                {% if game.tieBreakerGame and p.tieBreakerScore and p.tieBreakerYards %}
+                                                {% if game.tieBreakerGame and pool_allow_tiebreaker and p.tieBreakerScore and p.tieBreakerYards %}
                                                 <div class="col-span-3 grid grid-cols-2 gap-3 pt-3 border-t border-border-light dark:border-border-subtle">
                                                     <div class="flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/10 dark:bg-purple-600/20 text-purple-600 dark:text-purple-400 rounded-lg text-sm">
                                                         <span class="font-medium">Points:</span>
@@ -481,6 +509,12 @@
                                         {% if not game|is_game_locked_for_pool:pool %}
                                         {% for p in picks %}
                                             {% if p.slug == game.slug %}
+                                        {% for away_team in wins_losses %}
+                                            {% if away_team.teamNameSlug == game.awayTeamSlug %}
+                                        {% with away_team|team_brand_presentation as away_brand %}
+                                        {% for home_team in wins_losses %}
+                                            {% if home_team.teamNameSlug == game.homeTeamSlug %}
+                                        {% with home_team|team_brand_presentation as home_brand %}
                                         <button class="edit-pick-btn w-full px-4 py-2 bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl font-semibold hover:bg-blue-600/20 dark:hover:bg-blue-600/30 transition-all flex items-center justify-center gap-2"
                                                 data-game-id="{{ game.id }}"
                                                 data-pick-id="{{ p.id }}"
@@ -490,13 +524,15 @@
                                                 data-away-name="{{ game.awayTeamName }}"
                                                 data-home-team="{{ game.homeTeamSlug }}"
                                                 data-home-name="{{ game.homeTeamName }}"
-                                                data-away-logo="{% with game.awayTeamSlug|lookuplogo as team_data %}{{ team_data.teamLogo|default:'/static/images/nfl.svg' }}{% endwith %}"
-                                                data-home-logo="{% with game.homeTeamSlug|lookuplogo as team_data %}{{ team_data.teamLogo|default:'/static/images/nfl.svg' }}{% endwith %}"
-                                                data-away-color="{% with game.awayTeamSlug|lookuplogo as team_data %}{{ team_data.color|default:'333333' }}{% endwith %}"
-                                                data-away-alt-color="{% with game.awayTeamSlug|lookuplogo as team_data %}{{ team_data.alternateColor|default:'666666' }}{% endwith %}"
-                                                data-home-color="{% with game.homeTeamSlug|lookuplogo as team_data %}{{ team_data.color|default:'333333' }}{% endwith %}"
-                                                data-home-alt-color="{% with game.homeTeamSlug|lookuplogo as team_data %}{{ team_data.alternateColor|default:'666666' }}{% endwith %}"
-                                                data-is-tiebreaker="{{ game.tieBreakerGame|yesno:'true,false' }}"
+                                                data-away-logo="{{ away_team.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                data-home-logo="{{ home_team.teamLogo|default:'/static/images/nfl.svg' }}"
+                                                data-away-background-style="{{ away_brand.background_style }}"
+                                                data-away-show-white-burst="{{ away_brand.show_white_burst|yesno:'true,false' }}"
+                                                data-away-logo-style="{{ away_brand.logo_style }}"
+                                                data-home-background-style="{{ home_brand.background_style }}"
+                                                data-home-show-white-burst="{{ home_brand.show_white_burst|yesno:'true,false' }}"
+                                                data-home-logo-style="{{ home_brand.logo_style }}"
+                                                data-is-tiebreaker="{% if game.tieBreakerGame and pool_allow_tiebreaker %}true{% else %}false{% endif %}"
                                                 data-tiebreaker-score="{{ p.tieBreakerScore|default:'' }}"
                                                 data-tiebreaker-yards="{{ p.tieBreakerYards|default:'' }}"
                                                 data-spread="{{ game.spread|default:'' }}"
@@ -512,6 +548,12 @@
                                             <i class="fas fa-edit"></i>
                                             <span>Edit Pick</span>
                                         </button>
+                                        {% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
                                             {% endif %}
                                         {% endfor %}
                                         {% else %}
@@ -656,6 +698,9 @@
                                 <div class="team-option-edit relative group rounded-xl border-2 border-transparent hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col" id="editAwayTeam">
                                     <!-- Top Half - Team Color Background with Logo -->
                                     <div class="relative h-[100px] flex items-center justify-center py-2" id="editAwayColorBg">
+                                        <div id="editAwayBurst" class="pointer-events-none absolute inset-0 hidden items-center justify-center" aria-hidden="true">
+                                            <div class="h-16 w-16 rounded-full bg-white/35 blur-2xl"></div>
+                                        </div>
                                         <img id="editAwayLogo" src="" alt="" class="w-16 h-16 object-contain drop-shadow-lg relative z-10">
                                         <!-- Selection Indicator -->
                                         <div class="selection-indicator absolute top-2 right-2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
@@ -679,6 +724,9 @@
                                 <div class="team-option-edit relative group rounded-xl border-2 border-transparent hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col" id="editHomeTeam">
                                     <!-- Top Half - Team Color Background with Logo -->
                                     <div class="relative h-[100px] flex items-center justify-center py-2" id="editHomeColorBg">
+                                        <div id="editHomeBurst" class="pointer-events-none absolute inset-0 hidden items-center justify-center" aria-hidden="true">
+                                            <div class="h-16 w-16 rounded-full bg-white/35 blur-2xl"></div>
+                                        </div>
                                         <img id="editHomeLogo" src="" alt="" class="w-16 h-16 object-contain drop-shadow-lg relative z-10">
                                         <!-- Selection Indicator -->
                                         <div class="selection-indicator absolute top-2 right-2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1112,10 +1160,12 @@
                 const homeName = this.dataset.homeName;
                 const awayLogo = this.dataset.awayLogo;
                 const homeLogo = this.dataset.homeLogo;
-                const awayColor = this.dataset.awayColor || '333333';
-                const awayAltColor = this.dataset.awayAltColor || '666666';
-                const homeColor = this.dataset.homeColor || '333333';
-                const homeAltColor = this.dataset.homeAltColor || '666666';
+                const awayBackgroundStyle = this.dataset.awayBackgroundStyle || '';
+                const awayShowWhiteBurst = this.dataset.awayShowWhiteBurst === 'true';
+                const awayLogoStyle = this.dataset.awayLogoStyle || '';
+                const homeBackgroundStyle = this.dataset.homeBackgroundStyle || '';
+                const homeShowWhiteBurst = this.dataset.homeShowWhiteBurst === 'true';
+                const homeLogoStyle = this.dataset.homeLogoStyle || '';
                 const isTiebreaker = this.dataset.isTiebreaker === 'true';
                 const tiebreakerScore = this.dataset.tiebreakerScore;
                 const tiebreakerYards = this.dataset.tiebreakerYards;
@@ -1146,25 +1196,21 @@
                 document.getElementById('editHomeLogo').src = homeLogo;
                 document.getElementById('editHomeLogo').alt = `${homeName} logo`;
 
-                // Apply team color backgrounds
+                // Apply brand presentation contract
                 const awayColorBg = document.getElementById('editAwayColorBg');
                 const homeColorBg = document.getElementById('editHomeColorBg');
-                awayColorBg.style.background = `linear-gradient(135deg, #${awayAltColor}40 0%, #${awayColor} 50%, #${awayColor} 100%)`;
-                homeColorBg.style.background = `linear-gradient(135deg, #${homeAltColor}40 0%, #${homeColor} 50%, #${homeColor} 100%)`;
-
-                // Apply Jets logo fix (white drop shadow for visibility)
                 const awayLogoEl = document.getElementById('editAwayLogo');
                 const homeLogoEl = document.getElementById('editHomeLogo');
-                if (awayTeam.includes('jets')) {
-                    awayLogoEl.style.filter = 'drop-shadow(0 0 6px rgba(255,255,255,0.9))';
-                } else {
-                    awayLogoEl.style.filter = '';
-                }
-                if (homeTeam.includes('jets')) {
-                    homeLogoEl.style.filter = 'drop-shadow(0 0 6px rgba(255,255,255,0.9))';
-                } else {
-                    homeLogoEl.style.filter = '';
-                }
+                const awayBurstEl = document.getElementById('editAwayBurst');
+                const homeBurstEl = document.getElementById('editHomeBurst');
+                awayColorBg.style.cssText = awayBackgroundStyle;
+                homeColorBg.style.cssText = homeBackgroundStyle;
+                awayLogoEl.style.cssText = awayLogoStyle;
+                homeLogoEl.style.cssText = homeLogoStyle;
+                awayBurstEl.classList.toggle('hidden', !awayShowWhiteBurst);
+                awayBurstEl.classList.toggle('flex', awayShowWhiteBurst);
+                homeBurstEl.classList.toggle('hidden', !homeShowWhiteBurst);
+                homeBurstEl.classList.toggle('flex', homeShowWhiteBurst);
 
                 // Set win probabilities
                 const awayWinProbElement = document.getElementById('editAwayWinProb');

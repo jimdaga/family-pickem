@@ -149,7 +149,33 @@ class GameWeekssAdmin(admin.ModelAdmin):
 
 @admin.register(Teams)
 class TeamsAdmin(admin.ModelAdmin):
-    list_display = ('teamNameSlug', 'teamNameName', 'teamWins', 'teamLosses', 'teamTies', 'color', 'alternateColor')
+    list_display = (
+        'teamNameSlug',
+        'teamNameName',
+        'gameseason',
+        'teamWins',
+        'teamLosses',
+        'teamTies',
+        'color',
+        'alternateColor',
+        'logo_contrast_preset',
+    )
+    list_filter = ('gameseason', 'logo_contrast_preset')
+    search_fields = ('teamNameSlug', 'teamNameName', 'teamLogo')
+    ordering = ('teamNameName',)
+    fields = (
+        'id',
+        'gameseason',
+        'teamNameSlug',
+        'teamNameName',
+        'teamLogo',
+        'teamWins',
+        'teamLosses',
+        'teamTies',
+        'color',
+        'alternateColor',
+        'logo_contrast_preset',
+    )
 
 @admin.register(userStats)
 class userStatsAdmin(admin.ModelAdmin):

@@ -155,9 +155,10 @@ class FamilyAdminSettingsForm(forms.Form):
     # Scoring rules
     win_points = forms.IntegerField(
         label="Points per win",
-        min_value=0,
+        min_value=1,
         max_value=99,
         widget=forms.NumberInput(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+        help_text="Every correct pick is worth at least 1 point.",
     )
     tie_points = forms.IntegerField(
         label="Points per tie",
@@ -221,11 +222,16 @@ class FamilyAdminSettingsForm(forms.Form):
         widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
     )
     include_playoffs = forms.BooleanField(
-        label="Include playoffs",
+        label="Include playoffs (coming soon)",
         required=False,
+        # Playoff scoring isn't implemented yet; the field is disabled so the
+        # stored value can't be changed (Django ignores submitted data for
+        # disabled fields, which also defeats hand-crafted POSTs).
+        disabled=True,
         widget=forms.CheckboxInput(attrs={
             'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
         }),
+        help_text="Playoff scoring is coming soon and can't be enabled yet.",
     )
     late_join_policy = forms.ChoiceField(
         label="Late join policy",
@@ -246,8 +252,30 @@ class FamilyAdminSettingsForm(forms.Form):
             )
         return pick_type
 
+    # Tiebreaker choices grouped by the prediction they compare against; a
+    # secondary tiebreaker that re-checks the primary's metric can never
+    # narrow the field further.
+    TIEBREAKER_METRIC = {
+        PoolSettings.PrimaryTiebreaker.TOTAL_SCORE: 'total_score',
+        PoolSettings.PrimaryTiebreaker.TOTAL_SCORE_NO_OVER: 'total_score',
+        PoolSettings.PrimaryTiebreaker.COMBINED_YARDS: 'combined_yards',
+        PoolSettings.SecondaryTiebreaker.SPLIT_POINTS: 'terminal',
+        PoolSettings.SecondaryTiebreaker.COIN_FLIP: 'terminal',
+    }
+
     def clean(self):
         cleaned = super().clean()
+        primary = cleaned.get('primary_tiebreaker')
+        secondary = cleaned.get('secondary_tiebreaker')
+        if primary and secondary and self.TIEBREAKER_METRIC.get(primary) == (
+            self.TIEBREAKER_METRIC.get(secondary)
+        ):
+            self.add_error(
+                'secondary_tiebreaker',
+                "The secondary tiebreaker compares the same prediction as the "
+                "primary, so it could never break a remaining tie. Pick a "
+                "different one.",
+            )
         if cleaned.get('perfect_week_bonus_enabled') and not cleaned.get('perfect_week_bonus_amount'):
             self.add_error(
                 'perfect_week_bonus_amount',

@@ -7,11 +7,13 @@ error (e.g. ESPN hiccup) doesn't block the rest.
 Order matters:
   1. update_records        - team win/loss records (independent)
   2. update_games          - fetch scores + winners from ESPN
-  3. update_picks          - score picks against game winners
-  4. update_standings      - recompute per-pool weekly/total points
-  5. update_weekly_winners - award winner bonuses once the week completes
-  6. update_rankings       - rank pool members by total points (incl. bonus)
-  7. update_stats          - recompute per-user userStats (replaces pickemctl)
+  3. update_missed_picks   - apply missed-pick policies before grading
+  4. update_picks          - score picks against game winners
+  5. update_standings      - recompute per-pool weekly/total points
+  6. update_weekly_winners - award winner bonuses once the week completes
+  7. update_rankings       - rank pool members by total points (incl. bonus)
+  8. update_season_winners - flag the season champion once the season ends
+  9. update_stats          - recompute per-user userStats (replaces pickemctl)
 """
 
 import logging
@@ -24,10 +26,12 @@ logger = logging.getLogger(__name__)
 PIPELINE = [
     "update_records",
     "update_games",
+    "update_missed_picks",
     "update_picks",
     "update_standings",
     "update_weekly_winners",
     "update_rankings",
+    "update_season_winners",
     "update_stats",
 ]
 
