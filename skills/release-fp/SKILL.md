@@ -11,6 +11,8 @@ Use this skill to execute the standard Family Pickem ship flow end to end. It is
 
 ## Workflow
 
+### Preflight
+
 1. Run preflight checks before opening or merging anything.
    - Confirm the current branch is the intended feature branch and the worktree is clean enough to ship.
    - Check `git status --short --branch` and `git worktree list` so you do not release from the wrong branch or a detached worktree.
