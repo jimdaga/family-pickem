@@ -59,6 +59,7 @@ if 'CSRF_TRUSTED_ORIGINS' in os.environ:
 INSTALLED_APPS = [
     'pickem_homepage.apps.PickemHomepageConfig',
     'pickem_api.apps.PickemApiConfig',
+    'pickem_superadmin.apps.PickemSuperadminConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

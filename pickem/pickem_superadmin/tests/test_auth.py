@@ -1,0 +1,76 @@
+"""The gate. If this file goes green while a view is undecorated, the console is a hole."""
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.urls import reverse
+
+from pickem_api.models import Family, FamilyMembership, Pool
+
+
+# Every superadmin URL. Add a row here when you add a view — test_all_urls_are_covered
+# asserts this list matches the registered URLconf, so you cannot forget.
+SUPERADMIN_URLS = [
+    'superadmin:overview',
+]
+
+
+class SuperadminAccessTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.superuser = User.objects.create_superuser(
+            username='root', email='root@example.com', password='pw',
+        )
+        cls.member = User.objects.create_user(
+            username='member', email='member@example.com', password='pw',
+        )
+        cls.commissioner = User.objects.create_user(
+            username='commish', email='commish@example.com', password='pw',
+        )
+        family = Family.objects.create(name='Dagostino', slug='dagostino')
+        Pool.objects.create(
+            family=family, name='Pickem Pool', slug='pickem-pool', season=2627,
+        )
+        FamilyMembership.objects.create(
+            family=family, user=cls.member, role=FamilyMembership.Role.MEMBER,
+        )
+        FamilyMembership.objects.create(
+            family=family, user=cls.commissioner, role=FamilyMembership.Role.OWNER,
+        )
+
+    def test_anonymous_is_redirected_to_login(self):
+        # RequireLoginForInternalPagesMiddleware intercepts before the view runs.
+        for name in SUPERADMIN_URLS:
+            with self.subTest(url=name):
+                response = self.client.get(reverse(name))
+                self.assertEqual(response.status_code, 302)
+                self.assertIn('/accounts/', response['Location'])
+
+    def test_ordinary_member_gets_404(self):
+        self.client.force_login(self.member)
+        for name in SUPERADMIN_URLS:
+            with self.subTest(url=name):
+                self.assertEqual(self.client.get(reverse(name)).status_code, 404)
+
+    def test_family_commissioner_gets_404(self):
+        # A commissioner governs one family. This console is global.
+        self.client.force_login(self.commissioner)
+        for name in SUPERADMIN_URLS:
+            with self.subTest(url=name):
+                self.assertEqual(self.client.get(reverse(name)).status_code, 404)
+
+    def test_superuser_gets_200(self):
+        self.client.force_login(self.superuser)
+        for name in SUPERADMIN_URLS:
+            with self.subTest(url=name):
+                self.assertEqual(self.client.get(reverse(name)).status_code, 200)
+
+    def test_all_urls_are_covered(self):
+        """A new view with no entry in SUPERADMIN_URLS fails here — so it can never
+        silently skip the gate tests above."""
+        from pickem_superadmin import urls as superadmin_urls
+
+        registered = {
+            f'superadmin:{p.name}'
+            for p in superadmin_urls.urlpatterns
+            if p.name is not None
+        }
+        self.assertEqual(registered, set(SUPERADMIN_URLS))

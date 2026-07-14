@@ -1,0 +1,40 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}superadmin{% endblock %} · pickem superadmin</title>
+  <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+</head>
+<body class="bg-gray-100 text-gray-900 text-[13px] font-sans antialiased">
+  <header class="bg-gray-800 text-gray-100">
+    <div class="flex items-center justify-between px-4 py-2">
+      <span class="font-semibold tracking-tight">pickem superadmin</span>
+      <span class="text-gray-400">
+        <span class="font-mono">{{ request.user.username }}</span>
+        <a href="/" class="ml-3 text-gray-300 hover:text-white underline">&larr; back to site</a>
+      </span>
+    </div>
+    <nav class="flex gap-1 px-4 pb-1">
+      {% url 'superadmin:overview' as u %}
+      <a href="{{ u }}" class="px-2 py-1 hover:bg-gray-700 {% if request.path == u %}bg-gray-700{% endif %}">overview</a>
+      {# Later tasks add: families, pools, users, teams, jobs, audit #}
+    </nav>
+  </header>
+
+  <main class="p-4">
+    <h1 class="mb-3 text-base font-semibold">{% block heading %}{% endblock %}</h1>
+    {% if messages %}
+      {% for message in messages %}
+        <div class="mb-2 border-l-4 px-3 py-2
+          {% if message.tags == 'error' %}border-red-600 bg-red-50 text-red-900
+          {% else %}border-green-600 bg-green-50 text-green-900{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
