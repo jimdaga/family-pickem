@@ -68,7 +68,7 @@ Use this skill to execute the standard Family Pickem ship flow end to end. It is
 - PR details and checks summary: `gh pr view <number> --json number,state,isDraft,reviewDecision,statusCheckRollup,comments,reviews`
 - PR checks polling inside the required 6-poll loop: `gh pr checks <number> --required --json name,state,workflow`
 - Do not use the unbounded shortcut: `gh pr checks --watch`
-- CodeRabbit review threads: `gh api graphql -f owner='jim' -f name='family-pickem' -F number=<number> -f query='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100){nodes{id,isResolved,comments(first:20){nodes{author{login},body,url,createdAt}}}}}}}'`
+- CodeRabbit review threads: `gh api graphql -f owner='jimdaga' -f name='family-pickem' -F number=<number> -f query='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100){nodes{id,isResolved,comments(first:20){nodes{author{login},body,url,createdAt}}}}}}}'`
 - Release tag safety flow: `git tag family-pickem-<version> <main-commit> && git show --stat family-pickem-<version> && git push origin family-pickem-<version>`
 - Release creation from verified tag: `gh release create family-pickem-<version> --verify-tag --title <title> --generate-notes`
 - Do not use the shortcut that skips local tag verification: `gh release create family-pickem-<version> --target main --title <title> --generate-notes`
