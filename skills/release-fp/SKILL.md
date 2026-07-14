@@ -58,3 +58,13 @@ Use this skill to execute the standard Family Pickem ship flow end to end. It is
 - Release tag format: `family-pickem-<version>`
 - Deploy verification targets: `.github/workflows/publish-artifacts-latest.yaml` for push to `main`, `.github/workflows/publish-artifacts.yaml` for release publish
 - CodeRabbit verification source: PR comments and review threads
+
+## Stop Conditions
+
+Stop immediately if:
+
+- the worktree contains unrelated dirty worktree changes
+- the next release tag cannot be determined because of an ambiguous release version
+- required GitHub checks fail or remain non-terminal
+- CodeRabbit produces actionable findings that cannot be resolved confidently
+- CodeRabbit remains stuck in a non-terminal state beyond a timeout window
