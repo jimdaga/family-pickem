@@ -1,6 +1,23 @@
 from django.db import migrations, models
 
 
+def seed_logo_contrast_presets(apps, schema_editor):
+    Teams = apps.get_model('pickem_api', 'Teams')
+    Teams.objects.filter(teamNameSlug='rams').update(
+        logo_contrast_preset='reverse-gradient',
+    )
+    Teams.objects.filter(teamNameSlug='jets').update(
+        logo_contrast_preset='white-burst',
+    )
+
+
+def unseed_logo_contrast_presets(apps, schema_editor):
+    Teams = apps.get_model('pickem_api', 'Teams')
+    Teams.objects.filter(teamNameSlug__in=['rams', 'jets']).update(
+        logo_contrast_preset='default',
+    )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -21,5 +38,9 @@ class Migration(migrations.Migration):
                 help_text='Controls the admin-selected logo contrast treatment for scorecards and other branded surfaces.',
                 max_length=32,
             ),
+        ),
+        migrations.RunPython(
+            seed_logo_contrast_presets,
+            unseed_logo_contrast_presets,
         ),
     ]
