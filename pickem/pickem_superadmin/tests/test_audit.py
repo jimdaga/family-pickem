@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.test import RequestFactory, TestCase
 
 from pickem_api.models import Family, FamilyAuditLog, Pool
-from pickem_superadmin.audit import diff_fields, log_action
+from pickem_superadmin.audit import _client_ip, diff_fields, log_action
 from pickem_superadmin.models import SuperAdminAuditLog
 
 
@@ -14,6 +14,44 @@ class DiffFieldsTests(TestCase):
 
     def test_returns_empty_dict_when_nothing_changed(self):
         self.assertEqual(diff_fields({'a': 1}, {'a': 1}), {})
+
+    def test_key_present_in_before_but_absent_from_after_is_recorded(self):
+        """A delete-style diff (e.g. diff_fields(snapshot, {})) must not lose
+        the pre-deletion snapshot just because `after` has no key for it."""
+        before = {'win_points': 1}
+        after = {}
+        self.assertEqual(diff_fields(before, after), {'win_points': [1, None]})
+
+    def test_key_present_in_after_but_absent_from_before_is_recorded(self):
+        before = {}
+        after = {'win_points': 1}
+        self.assertEqual(diff_fields(before, after), {'win_points': [None, 1]})
+
+
+class ClientIpTests(TestCase):
+    def _request(self, **meta):
+        request = RequestFactory().post('/superadmin/')
+        request.META.update(meta)
+        return request
+
+    def test_returns_none_for_malformed_x_forwarded_for(self):
+        request = self._request(
+            HTTP_X_FORWARDED_FOR='unknown', REMOTE_ADDR='unknown',
+        )
+        self.assertIsNone(_client_ip(request))
+
+    def test_falls_back_to_valid_remote_addr_when_forwarded_is_malformed(self):
+        request = self._request(
+            HTTP_X_FORWARDED_FOR='unknown', REMOTE_ADDR='10.0.0.5',
+        )
+        self.assertEqual(_client_ip(request), '10.0.0.5')
+
+    def test_returns_leftmost_hop_when_forwarded_is_a_valid_chain(self):
+        request = self._request(
+            HTTP_X_FORWARDED_FOR='203.0.113.5, 10.0.0.1',
+            REMOTE_ADDR='10.0.0.1',
+        )
+        self.assertEqual(_client_ip(request), '203.0.113.5')
 
 
 class LogActionTests(TestCase):
@@ -80,3 +118,33 @@ class LogActionTests(TestCase):
             summary='Updated team colors',
         )
         self.assertEqual(FamilyAuditLog.objects.count(), 0)
+
+    def test_family_without_family_action_raises(self):
+        """The pairing guard: passing `family` without `family_action` must
+        raise rather than silently skip the family's own audit row."""
+        with self.assertRaises(ValueError):
+            log_action(
+                self._request(),
+                action=SuperAdminAuditLog.Action.POOL_SETTINGS_UPDATED,
+                target=self.pool,
+                summary='Updated settings for dagostino/pickem-pool',
+                family=self.family,
+                pool=self.pool,
+            )
+
+    def test_survives_unparseable_forwarded_for_header(self):
+        """The write path must not 500 just because a proxy sent a
+        placeholder like 'unknown' in X-Forwarded-For. This is the
+        regression test for the production DataError: on SQLite (used in
+        CI) an invalid value would previously have been stored verbatim
+        instead of raising, masking the bug that crashes on Postgres inet."""
+        request = self._request()
+        request.META['HTTP_X_FORWARDED_FOR'] = 'unknown'
+        request.META['REMOTE_ADDR'] = 'also-not-an-ip'
+        entry = log_action(
+            request,
+            action=SuperAdminAuditLog.Action.TEAM_UPDATED,
+            target=None,
+            summary='Updated team colors',
+        )
+        self.assertIsNone(entry.ip_address)

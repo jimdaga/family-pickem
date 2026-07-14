@@ -4,24 +4,61 @@ Views never touch SuperAdminAuditLog.objects.create() directly. Routing every
 write through log_action() is what makes "no unaudited write" enforceable rather
 than aspirational.
 """
+import ipaddress
+
 from pickem_api.models import FamilyAuditLog
 from pickem_superadmin.models import SuperAdminAuditLog
 
 
 def diff_fields(before, after):
-    """{field: [before, after]} for changed fields only."""
-    return {
-        key: [before[key], after[key]]
-        for key in after
-        if before.get(key) != after[key]
-    }
+    """{field: [before, after]} for changed fields only.
+
+    Iterates the union of both dicts' keys so a key missing from either side
+    (e.g. a delete-style call like diff_fields(snapshot, {})) is still
+    recorded as [value, None] / [None, value] instead of silently dropped.
+    """
+    changed = {}
+    for key in before.keys() | after.keys():
+        before_value = before.get(key)
+        after_value = after.get(key)
+        if before_value != after_value:
+            changed[key] = [before_value, after_value]
+    return changed
+
+
+def _valid_ip(value):
+    if not value:
+        return None
+    try:
+        ipaddress.ip_address(value.strip())
+    except ValueError:
+        return None
+    return value.strip()
 
 
 def _client_ip(request):
+    """Best-effort client IP for the audit row.
+
+    NOTE: this value is ADVISORY, not evidence. X-Forwarded-For is entirely
+    client-controlled and this app has no trusted-proxy configuration, so a
+    caller can put anything in that header. The authoritative record of "who
+    did this" is the `actor` FK (an authenticated superuser), not the IP.
+    This is a deliberate, accepted limitation — do not build trusted-proxy
+    handling to "fix" it.
+
+    Both candidates are validated with `ipaddress.ip_address` before use
+    because `GenericIPAddressField` is backed by Postgres `inet` in
+    production, and `.objects.create()` does not run field validators —
+    a malformed value (e.g. a proxy sending "unknown") would otherwise raise
+    django.db.utils.DataError and 500 the only audit write path.
+    """
     forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
     if forwarded:
-        return forwarded.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR') or None
+        leftmost = forwarded.split(',')[0].strip()
+        valid = _valid_ip(leftmost)
+        if valid is not None:
+            return valid
+    return _valid_ip(request.META.get('REMOTE_ADDR'))
 
 
 def log_action(
