@@ -30,9 +30,11 @@ Use this skill to execute the standard Family Pickem ship flow end to end. It is
 4. Wait for GitHub checks to finish on the PR.
    - Do not rely on a stale status from a previous commit.
    - Re-check the live PR status after the latest push and wait until the required checks complete.
+   - Use a bounded wait of 6 polls spaced about 30 seconds apart for required checks; stop only if a required check ends in a terminal failing state or is still non-terminal after poll 6.
 
 5. Inspect CodeRabbit feedback in the PR discussion itself.
    - Verify CodeRabbit by reading PR comments and review threads, not just the overall status text.
+   - Use the same bounded wait of 6 polls spaced about 30 seconds apart for CodeRabbit before treating it as stuck.
    - If actionable CodeRabbit feedback exists, fix it, push the follow-up commit, then repeat PR checks and CodeRabbit review until clear.
    - Resolve or explicitly account for outstanding CodeRabbit comments before merge.
    - Confirm no unresolved review threads remain on the PR.
@@ -65,6 +67,6 @@ Stop immediately if:
 
 - the worktree contains unrelated dirty worktree changes
 - the next release tag cannot be determined because of an ambiguous release version
-- required GitHub checks fail or remain non-terminal
+- required GitHub checks end in a terminal failing state, or remain non-terminal after 6 polls spaced about 30 seconds apart
 - CodeRabbit produces actionable findings that cannot be resolved confidently
-- CodeRabbit remains stuck in a non-terminal state beyond a timeout window
+- CodeRabbit remains stuck in a non-terminal state after 6 polls spaced about 30 seconds apart
