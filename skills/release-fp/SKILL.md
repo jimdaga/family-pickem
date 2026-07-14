@@ -33,6 +33,7 @@ Use this skill to execute the standard Family Pickem ship flow end to end. It is
 
 5. Inspect CodeRabbit feedback in the PR discussion itself.
    - Verify CodeRabbit by reading PR comments and review threads, not just the overall status text.
+   - If actionable CodeRabbit feedback exists, fix it, push the follow-up commit, then repeat PR checks and CodeRabbit review until clear.
    - Resolve or explicitly account for outstanding CodeRabbit comments before merge.
    - Confirm no unresolved review threads remain on the PR.
 
@@ -42,17 +43,18 @@ Use this skill to execute the standard Family Pickem ship flow end to end. It is
 
 7. Create the next release tag from updated `main`.
    - Pull or otherwise verify the local `main` matches the merged remote state before tagging.
+   - Derive the next version from existing `family-pickem-*` tags only, and stop if the next version is not unambiguous.
    - Create the next Family Pickem release using the tag format `family-pickem-<version>`.
    - Push the release tag only after confirming it points at the intended `main` commit.
 
 8. Verify deployment workflows for both release triggers.
-   - Confirm the `Publish Artifacts` workflow runs successfully for the push to `main`.
-   - Confirm the `Publish Artifacts` workflow also runs successfully for the `family-pickem-<version>` release tag.
+   - Confirm `.github/workflows/publish-artifacts-latest.yaml` runs successfully for the push to `main` even though its display name is `Publish Artifacts`.
+   - Confirm `.github/workflows/publish-artifacts.yaml` runs successfully for the `family-pickem-<version>` release event even though its display name is also `Publish Artifacts`.
    - Treat release verification as incomplete until both workflow runs finish successfully.
 
 ## Project Conventions
 
 - PR base branch: `main`
 - Release tag format: `family-pickem-<version>`
-- Deploy verification target: `Publish Artifacts`
+- Deploy verification targets: `.github/workflows/publish-artifacts-latest.yaml` for push to `main`, `.github/workflows/publish-artifacts.yaml` for release publish
 - CodeRabbit verification source: PR comments and review threads
