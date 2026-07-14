@@ -1,0 +1,102 @@
+---
+name: release-fp
+description: Use when shipping Family Pickem changes through the project's standard PR, CodeRabbit, release-tag, and deploy-verification workflow.
+---
+
+# release-fp
+
+## Overview
+
+Use this skill to execute the standard Family Pickem ship flow end to end. It is project-specific and should not be used as a generic GitHub release skill.
+
+## Workflow
+
+### Preflight
+
+1. Run preflight checks before opening or merging anything.
+   - Confirm the current branch is the intended feature branch and the worktree is clean enough to ship.
+   - Check `git status --short --branch` and `git worktree list` so you do not release from the wrong branch or a detached worktree.
+   - If the branch already has an open PR, reuse it instead of creating a duplicate.
+   - If the releaseable commits are sitting on local `main` instead of a feature branch, create a dedicated head branch at the current commit and open the PR from that branch rather than shipping directly from `main`.
+
+2. Run local verification before touching GitHub.
+   - Execute the project's required local validation for the change set.
+   - For Family Pickem PRs, mirror `.github/workflows/pull-request-tests.yaml`: `python manage.py check --settings=pickem.test_settings`, `python manage.py makemigrations --check --dry-run --settings=pickem.test_settings`, `python manage.py test --settings=pickem.test_settings --verbosity=2`, and `npm run build:prod`.
+   - Do not open, update, or merge a PR until the local verification step passes or the failure is understood and explicitly accepted.
+
+3. Create or reuse a pull request targeting `main`.
+   - The PR base branch for Family Pickem releases is always `main`.
+   - If a PR already exists for the branch, continue with that PR.
+   - If no PR exists, create one against `main` with a release-ready title and summary.
+   - When you need to push the current commit to a new release branch, do not use `git push -u` from local `main`; push with `git push origin HEAD:refs/heads/<release-branch>` so local `main` keeps tracking `origin/main`.
+
+4. Wait for GitHub checks to finish on the PR.
+   - Do not rely on a stale status from a previous commit.
+   - Re-check the live PR status after the latest push and wait until the required checks complete.
+   - Prefer direct PR status data from `gh pr view <number> --json statusCheckRollup`; `gh pr checks --required` may return no data in this repository even while the PR has active checks.
+   - Use a bounded wait of 6 polls spaced about 30 seconds apart for required checks; stop only if a required check ends in a terminal failing state or is still non-terminal after poll 6.
+   - Treat the `Django and Frontend Checks` run from `Pull Request Tests` as the PR gate even if GitHub does not mark it as a required check.
+
+5. Inspect CodeRabbit feedback in the PR discussion itself.
+   - Verify CodeRabbit by reading PR comments and review threads, not just the overall status text.
+   - Use the same bounded wait of 6 polls spaced about 30 seconds apart for CodeRabbit before treating it as stuck.
+   - If the PR discussion shows a CodeRabbit rate-limit or quota comment saying the review did not start, treat that as CodeRabbit not having reviewed the PR even if `statusCheckRollup` shows a green `CodeRabbit` context.
+   - If `reviewDecision` remains `REVIEW_REQUIRED` and there are no CodeRabbit review threads or review objects, do not treat the green status context alone as sufficient.
+   - If a CodeRabbit rate-limit comment already says the next review window is later than the remaining bounded wait, stop immediately instead of burning the rest of the polling loop.
+   - If actionable CodeRabbit feedback exists, fix it, push the follow-up commit, then repeat PR checks and CodeRabbit review until clear.
+   - Resolve or explicitly account for outstanding CodeRabbit comments before merge.
+   - Confirm no unresolved review threads remain on the PR.
+
+6. Merge the PR after reviews and checks are clear.
+   - Merge into `main` only after local verification, GitHub checks, and CodeRabbit review are all complete.
+   - Prefer the repository's standard merge method rather than ad hoc history rewriting during release.
+
+7. Create the next release tag from updated `main`.
+   - Pull or otherwise verify the local `main` matches the merged remote state before tagging.
+   - Derive the next version from existing `family-pickem-*` tags only, and stop if the next version is not unambiguous.
+   - Create the next Family Pickem release using the tag format `family-pickem-<version>`.
+   - Push the release tag only after confirming it points at the intended `main` commit.
+
+8. Verify deployment workflows for both release triggers.
+   - Confirm `.github/workflows/publish-artifacts-latest.yaml` runs successfully for the push to `main` even though its display name is `Publish Artifacts`.
+   - Confirm `.github/workflows/publish-artifacts.yaml` runs successfully for the `family-pickem-<version>` release event even though its display name is also `Publish Artifacts`.
+   - Treat release verification as incomplete until both workflow runs finish successfully.
+
+## Project Conventions
+
+- PR base branch: `main`
+- Release tag format: `family-pickem-<version>`
+- Deploy verification targets: `.github/workflows/publish-artifacts-latest.yaml` for push to `main`, `.github/workflows/publish-artifacts.yaml` for release publish
+- CodeRabbit verification source: PR comments and review threads
+
+## Command Reference
+
+- Worktree and branch state: `git status --short --branch`
+- Worktree inventory: `git worktree list`
+- PR discovery: `gh pr status`
+- PR details and checks summary: `gh pr view <number> --json number,state,isDraft,reviewDecision,statusCheckRollup,comments,reviews`
+- PR checks polling inside the required 6-poll loop: `gh pr view <number> --json statusCheckRollup`
+- Optional secondary check probe: `gh pr checks <number> --required --json name,state,workflow`
+- Do not use the unbounded shortcut: `gh pr checks --watch`
+- Local PR validation: `source venv/bin/activate && cd pickem && python manage.py check --settings=pickem.test_settings && python manage.py makemigrations --check --dry-run --settings=pickem.test_settings && python manage.py test --settings=pickem.test_settings --verbosity=2`
+- Frontend validation: `npm run build:prod`
+- Safe release-branch push from local `main`: `git push origin HEAD:refs/heads/<release-branch>`
+- CodeRabbit review threads, step 1: `gh api graphql -f owner='jimdaga' -f name='family-pickem' -F number=<number> -f query='query($owner:String!,$name:String!,$number:Int!,$threadCursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100,after:$threadCursor){pageInfo{hasNextPage,endCursor}nodes{id,isResolved,comments(first:1){pageInfo{hasNextPage,endCursor}nodes{author{login},url,createdAt}}}}}}}'` and continue paging thread pages until `pageInfo.hasNextPage` is `false`
+- CodeRabbit review threads, step 2: `gh api graphql -F threadId=<thread-id> -f query='query($threadId:ID!,$commentCursor:String){node(id:$threadId){... on PullRequestReviewThread{isResolved,comments(first:100,after:$commentCursor){pageInfo{hasNextPage,endCursor}nodes{author{login},body,url,createdAt}}}}}'` and continue paging that thread's comments until `pageInfo.hasNextPage` is `false`
+- Release tag safety flow: `git tag family-pickem-<version> <main-commit> && git show --stat family-pickem-<version> && git push origin family-pickem-<version>`
+- Release creation from verified tag: `gh release create family-pickem-<version> --verify-tag --title <title> --generate-notes`
+- Do not use the shortcut that skips local tag verification: `gh release create family-pickem-<version> --target main --title <title> --generate-notes`
+- Push-to-main workflow lookup: `gh run list --workflow publish-artifacts-latest.yaml --event push --commit <main-sha> --json databaseId,workflowName,status,conclusion,event,headSha,url`
+- Release workflow lookup: `gh run list --workflow publish-artifacts.yaml --event release --json databaseId,workflowName,status,conclusion,event,headSha,url` and accept a run only if its `headSha` matches the released tag target or merged `main` SHA
+- Workflow run inspection: `gh run view <run-id> --json databaseId,status,conclusion,event,workflowName,headBranch,headSha,url`
+
+## Stop Conditions
+
+Stop immediately if:
+
+- the worktree contains unrelated dirty worktree changes
+- the next release tag cannot be determined because of an ambiguous release version
+- required GitHub checks end in a terminal failing state, or remain non-terminal after 6 polls spaced about 30 seconds apart
+- CodeRabbit says the review did not start because of rate limiting or quota and the next review window is outside the remaining bounded wait
+- CodeRabbit produces actionable findings that cannot be resolved confidently
+- CodeRabbit remains stuck in a non-terminal state after 6 polls spaced about 30 seconds apart

@@ -151,3 +151,4 @@ charts/family-pickem/Chart.lock
 # Local test artifacts
 .playwright-mcp/
 /*.jpeg
+.worktrees/
