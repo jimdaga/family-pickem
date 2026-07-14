@@ -22,7 +22,21 @@ class UserProfile(models.Model):
     
     # Role Settings
     is_commissioner = models.BooleanField(default=False, help_text="User has commissioner privileges")
-    
+
+    # Site-wide block. Distinct from FamilyMembership.status, which only removes a
+    # user from one family. Blocking sets User.is_active = False (which Django's
+    # auth backend already refuses to log in) and records who/why/when here.
+    blocked_at = models.DateTimeField(
+        blank=True, null=True, help_text="When this user was blocked site-wide",
+    )
+    blocked_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, related_name='blocked_users',
+        blank=True, null=True, help_text="Superadmin who blocked this user",
+    )
+    blocked_reason = models.TextField(
+        blank=True, default='', help_text="Why this user was blocked",
+    )
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
