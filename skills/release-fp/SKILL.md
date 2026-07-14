@@ -61,6 +61,17 @@ Use this skill to execute the standard Family Pickem ship flow end to end. It is
 - Deploy verification targets: `.github/workflows/publish-artifacts-latest.yaml` for push to `main`, `.github/workflows/publish-artifacts.yaml` for release publish
 - CodeRabbit verification source: PR comments and review threads
 
+## Command Reference
+
+- Worktree and branch state: `git status --short --branch`
+- PR discovery: `gh pr status`
+- PR details and checks summary: `gh pr view <number> --json number,state,isDraft,reviewDecision,statusCheckRollup,comments,reviews`
+- Live PR checks: `gh pr checks --watch` or `gh pr checks <number> --watch`
+- CodeRabbit threads when comment state is unclear: `gh api graphql ...`
+- Release creation from `main`: `gh release create family-pickem-<version> --target main --title <title> --generate-notes`
+- Workflow discovery: `gh run list`
+- Workflow run inspection: `gh run view <run-id> --json databaseId,status,conclusion,event,workflowName,headBranch,headSha,url`
+
 ## Stop Conditions
 
 Stop immediately if:
