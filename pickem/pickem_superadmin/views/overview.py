@@ -89,9 +89,10 @@ def season_update(request):
     """get_season() reads this and it drives the whole app — picks, standings,
     scores, stats. Highest blast radius in the console, so it takes a typed
     confirmation."""
-    current = currentSeason.objects.first()
-    if current is None:
-        current = currentSeason.objects.create()
+    # Read-only lookup for validation/`before` capture — do NOT create a row
+    # here. A rejected request (bad int, or wrong confirm) must write nothing,
+    # same as every other action in this console.
+    existing = currentSeason.objects.first()
 
     try:
         new_season = int(request.POST.get('season', ''))
@@ -106,7 +107,13 @@ def season_update(request):
         )
         return redirect('superadmin:overview')
 
-    before = {'season': current.season, 'display_name': current.display_name}
+    before = {
+        'season': existing.season if existing else None,
+        'display_name': existing.display_name if existing else None,
+    }
+
+    # Only now, on the validated success path, do we create the row if needed.
+    current = existing or currentSeason.objects.create()
     current.season = new_season
     current.display_name = request.POST.get('display_name', '').strip()
     after = {'season': current.season, 'display_name': current.display_name}

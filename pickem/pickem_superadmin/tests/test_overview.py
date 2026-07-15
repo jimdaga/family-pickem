@@ -22,13 +22,25 @@ class OverviewTests(TestCase):
     def test_overview_shows_counts(self):
         """Migration 0074 seeds a permanent 'legacy-family-league' Family+Pool for
         pre-multi-family data, so the DB is never pristine — assert the counts
-        match a fresh recount rather than pinning an exact number."""
+        match a fresh recount rather than pinning an exact number.
+
+        Deliberately create an extra Pool (no extra Family) so families != pools:
+        without this, both counts land on 2 (legacy row + setUp row) and a view
+        bug that swaps the two querysets would still pass (2 == 2)."""
+        Pool.objects.create(
+            family=self.family, name='Second Pool', slug='second-pool', season=2627,
+        )
         response = self.client.get(reverse('superadmin:overview'))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['counts']['families'], Family.objects.count())
-        self.assertEqual(response.context['counts']['pools'], Pool.objects.count())
-        self.assertGreaterEqual(response.context['counts']['families'], 1)
-        self.assertGreaterEqual(response.context['counts']['pools'], 1)
+
+        families_count = Family.objects.count()
+        pools_count = Pool.objects.count()
+        self.assertNotEqual(families_count, pools_count)
+
+        self.assertEqual(response.context['counts']['families'], families_count)
+        self.assertEqual(response.context['counts']['pools'], pools_count)
+        self.assertGreaterEqual(families_count, 1)
+        self.assertGreaterEqual(pools_count, 1)
 
     def test_overview_flags_a_pool_with_no_settings_row(self):
         response = self.client.get(reverse('superadmin:overview'))
@@ -65,6 +77,19 @@ class OverviewTests(TestCase):
             {'season': '2728', 'display_name': '2027-2028', 'confirm': 'wrong'},
         )
         self.assertEqual(currentSeason.objects.first().season, 2627)
+        self.assertEqual(SuperAdminAuditLog.objects.count(), 0)
+
+    def test_rejected_season_update_creates_no_row_on_pristine_db(self):
+        """On a DB with no currentSeason row yet, a rejected update (wrong typed
+        confirmation) must write NOTHING — no blank currentSeason row, no audit
+        row. Every other rejected action in this console writes nothing; season
+        rejection should be no different."""
+        self.assertEqual(currentSeason.objects.count(), 0)
+        self.client.post(
+            reverse('superadmin:season_update'),
+            {'season': '2728', 'display_name': '2027-2028', 'confirm': 'wrong'},
+        )
+        self.assertEqual(currentSeason.objects.count(), 0)
         self.assertEqual(SuperAdminAuditLog.objects.count(), 0)
 
     def test_publishing_a_site_wide_banner_leaves_family_null(self):
