@@ -55,7 +55,7 @@
           {% for row in rows %}
             <tr>
               <td class="sticky left-0 z-10 bg-white sa-mono font-medium" style="border-right:1px solid #eef1f4">
-                {{ row.pool.family.slug }}/{{ row.pool.slug }}
+                <a href="{% url 'superadmin:pool_detail' row.pool.id %}" class="sa-link">{{ row.pool.family.slug }}/{{ row.pool.slug }}</a>
               </td>
               <td class="sa-mono">{{ row.pool.season }}</td>
               {% if row.form %}

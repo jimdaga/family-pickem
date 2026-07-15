@@ -33,6 +33,17 @@ SUPERADMIN_POST_URLS = [
     ('superadmin:pool_settings_backfill', [1]),
     ('superadmin:banner_publish', []),
     ('superadmin:banner_deactivate', [1]),
+    ('superadmin:pool_recompute', [1]),
+    ('superadmin:pool_rescore_week', [1]),
+    ('superadmin:pick_delete', ['x']),
+    ('superadmin:season_row_reset', [1]),
+    ('superadmin:game_fix', [1]),
+]
+
+# GET endpoints that take a required arg, so they cannot be reversed with no
+# args like SUPERADMIN_URLS. Covered by their own gate test class below.
+SUPERADMIN_GET_ARG_URLS = [
+    ('superadmin:pool_detail', [1]),
 ]
 
 
@@ -103,5 +114,37 @@ class SuperadminAccessTests(TestCase):
             for p in superadmin_urls.urlpatterns
             if p.name is not None
         }
-        covered = set(SUPERADMIN_URLS) | {name for name, _ in SUPERADMIN_POST_URLS}
+        covered = (
+            set(SUPERADMIN_URLS)
+            | {name for name, _ in SUPERADMIN_POST_URLS}
+            | {name for name, _ in SUPERADMIN_GET_ARG_URLS}
+        )
         self.assertEqual(registered, covered)
+
+
+class PoolDetailGateTests(TestCase):
+    """pool_detail is a GET view that requires an arg, so it can't live in
+    SUPERADMIN_URLS (which reverses with none). Same gate rule, own fixtures."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.superuser = User.objects.create_superuser(
+            username='root2', email='root2@example.com', password='pw',
+        )
+        cls.member = User.objects.create_user(
+            username='member2', email='member2@example.com', password='pw',
+        )
+        family = Family.objects.create(name='Smiths', slug='smiths')
+        cls.pool = Pool.objects.create(
+            family=family, name='Pickem Pool', slug='pickem-pool', season=2627,
+        )
+
+    def test_ordinary_member_gets_404(self):
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('superadmin:pool_detail', args=[self.pool.id]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_superuser_gets_200(self):
+        self.client.force_login(self.superuser)
+        response = self.client.get(reverse('superadmin:pool_detail', args=[self.pool.id]))
+        self.assertEqual(response.status_code, 200)

@@ -95,7 +95,17 @@
         <span class="sa-pill {% if anomalies.stuck_games %}sa-pill-warn{% else %}sa-pill-ok{% endif %}">{{ anomalies.stuck_games|length }}</span>
       </div>
       {% for game in anomalies.stuck_games %}
-        <div class="sa-mono py-0.5 text-[13px]">{{ game.slug }}</div>
+        <form method="post" action="{% url 'superadmin:game_fix' game.id %}" class="flex flex-wrap items-center gap-1.5 py-0.5 text-[13px]">
+          {% csrf_token %}
+          <span class="sa-mono flex-1">{{ game.slug }}</span>
+          <select name="status" class="sa-select w-28">
+            <option value="finished">finished</option>
+            <option value="inprogress">inprogress</option>
+          </select>
+          <input type="number" name="home_score" placeholder="H" class="sa-input sa-num w-16">
+          <input type="number" name="away_score" placeholder="A" class="sa-input sa-num w-16">
+          <button type="submit" class="sa-btn sa-btn-default sa-btn-sm">Fix</button>
+        </form>
       {% empty %}<div class="text-[12px] text-[#98a2b3]">No stuck games.</div>{% endfor %}
     </div>
 
