@@ -1,6 +1,6 @@
 from django import forms
 
-from pickem_api.models import PoolSettings
+from pickem_api.models import Family, PoolSettings
 
 CELL = 'border border-gray-300 px-1 py-0.5 w-full'
 NUM_CELL = 'border border-gray-300 px-1 py-0.5 w-14 font-mono'
@@ -47,3 +47,17 @@ class PoolSettingsRowForm(forms.ModelForm):
         for name in LOCKED_FIELDS:
             self.fields[name].disabled = True
             self.fields[name].help_text = 'Not implemented yet.'
+
+
+class FamilyRowForm(forms.ModelForm):
+    """One row of the families matrix. Prefixed by family id so many bind at once."""
+
+    class Meta:
+        model = Family
+        fields = ('name', 'slug', 'logo_url', 'status')
+        widgets = {
+            'name': forms.TextInput(attrs={'class': CELL}),
+            'slug': forms.TextInput(attrs={'class': CELL + ' font-mono'}),
+            'logo_url': forms.TextInput(attrs={'class': CELL}),
+            'status': forms.Select(attrs={'class': CELL}),
+        }

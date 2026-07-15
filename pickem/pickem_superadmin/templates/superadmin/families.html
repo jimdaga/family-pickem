@@ -1,0 +1,45 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}families{% endblock %}
+{% block heading %}Families <span class="font-normal text-gray-500">({{ rows|length }})</span>{% endblock %}
+{% block content %}
+  <form method="post" action="{% url 'superadmin:families_save' %}">
+    {% csrf_token %}
+    <div class="overflow-x-auto border border-gray-300 bg-white">
+      <table class="w-full border-collapse">
+        <thead class="bg-gray-200 text-left">
+          <tr>
+            <th class="px-2 py-1 font-semibold">name</th>
+            <th class="px-2 py-1 font-semibold">slug</th>
+            <th class="px-2 py-1 font-semibold">logo url</th>
+            <th class="px-2 py-1 font-semibold">status</th>
+            <th class="px-2 py-1 font-semibold">members</th>
+            <th class="px-2 py-1 font-semibold">pools</th>
+            <th class="px-2 py-1 font-semibold">created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr class="border-t border-gray-200 {% if row.family.status == 'inactive' %}bg-gray-100 text-gray-500{% endif %}">
+              <input type="hidden" name="{{ row.family.id }}-updated_at"
+                     value="{{ row.family.updated_at.isoformat }}">
+              <td class="px-2 py-1">{{ row.form.name }}</td>
+              <td class="px-2 py-1">{{ row.form.slug }}</td>
+              <td class="px-2 py-1">{{ row.form.logo_url }}</td>
+              <td class="px-2 py-1">{{ row.form.status }}</td>
+              <td class="px-2 py-1 font-mono">
+                <a href="{% url 'superadmin:users' %}" class="underline">{{ row.family.member_count }}</a>
+              </td>
+              <td class="px-2 py-1 font-mono">
+                <a href="{% url 'superadmin:pools' %}?family={{ row.family.slug }}" class="underline">{{ row.family.pool_count }}</a>
+              </td>
+              <td class="px-2 py-1 text-gray-600">{{ row.family.created_at|date:"Y-m-d" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <button type="submit" class="mt-3 border border-gray-800 bg-gray-800 px-3 py-1 text-white hover:bg-gray-700">
+      Save changes
+    </button>
+  </form>
+{% endblock %}

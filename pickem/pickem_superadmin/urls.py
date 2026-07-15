@@ -12,4 +12,6 @@ urlpatterns = [
     path('users/<int:user_id>/update/', views.user_update, name='user_update'),
     path('pools/', views.pools, name='pools'),
     path('pools/save/', views.pools_save, name='pools_save'),
+    path('families/', views.families, name='families'),
+    path('families/save/', views.families_save, name='families_save'),
 ]
