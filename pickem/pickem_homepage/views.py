@@ -381,15 +381,16 @@ def build_family_admin_sections(family, pool, user=None):
             'status': 'Manage winners',
         },
     ]
-    # Scheduler job runs are system-wide data, not scoped to any one family, so
-    # that tool now lives in the superadmin console rather than here.
+    # Site-wide operator tools (scheduler, cross-family settings, user blocking)
+    # live in the superadmin console, not in a single family's admin. Surface a
+    # single entry point, and only to superadmins.
     if user is not None and getattr(user, 'is_superuser', False):
         sections.append({
-            'label': 'Jobs',
-            'description': 'Scheduler run history for the data-update pipeline (superadmin console).',
-            'icon': 'fas fa-robot',
-            'url': '/superadmin/jobs/',
-            'status': 'View job runs',
+            'label': 'Superadmin',
+            'description': 'Cross-family operator console — health, settings, users, jobs, and repair tools.',
+            'icon': 'fas fa-shield-halved',
+            'url': '/superadmin/',
+            'status': 'Open console',
         })
     return sections
 
