@@ -1,11 +1,11 @@
-{% load static %}
+{% load static sa_extras %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}superadmin{% endblock %} · pickem superadmin</title>
-  <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+  <link rel="stylesheet" href="{% sa_static_v 'css/tailwind.css' %}">
 </head>
 <body class="sa-body min-h-screen">
   <header class="sa-chrome">
