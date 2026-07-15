@@ -106,7 +106,11 @@ def user_update(request, user_id):
         if field in BOOLEAN_PROFILE_FIELDS:
             setattr(profile, field, request.POST.get(field) == 'on')
         else:
-            setattr(profile, field, request.POST.get(field, '').strip())
+            # These text fields are null=True and the user-facing profile view
+            # stores None for "empty". Normalize to None so clearing a field
+            # matches that convention and doesn't record a spurious None -> ''
+            # diff (which would write an audit row for a no-op).
+            setattr(profile, field, request.POST.get(field, '').strip() or None)
     after = {field: getattr(profile, field) for field in EDITABLE_PROFILE_FIELDS}
 
     changes = diff_fields(before, after)

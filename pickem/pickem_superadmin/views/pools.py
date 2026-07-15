@@ -26,7 +26,13 @@ def _pool_queryset(request):
     if family_slug:
         pools = pools.filter(family__slug=family_slug)
     if season:
-        pools = pools.filter(season=season)
+        # Pool.season is an IntegerField; a hand-crafted non-numeric value would
+        # raise ValueError when the queryset evaluates. Ignore an unparseable
+        # filter rather than 500.
+        try:
+            pools = pools.filter(season=int(season))
+        except ValueError:
+            pass
     return pools
 
 
