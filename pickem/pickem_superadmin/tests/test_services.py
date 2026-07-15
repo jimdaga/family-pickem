@@ -10,6 +10,7 @@ from django.utils import timezone
 from pickem_api.models import (
     Family,
     FamilyAuditLog,
+    FamilyMembership,
     GamePicks,
     GamesAndScores,
     Pool,
@@ -143,17 +144,43 @@ class PoolScopedCommandTests(TestCase):
                 pick_correct=True,
             )
 
+        # An active family member with no pick at all, so the "every active
+        # member gets a zero-points row" path in update_standings actually
+        # runs (member_combos isn't empty). Both pools share self.family, so
+        # this member is eligible for a zero-row in EITHER pool depending on
+        # whether the --pool filter on the member/pool queryset is honored.
+        self.member = User.objects.create_user(username='carol', password='pw')
+        FamilyMembership.objects.create(
+            family=self.family, user=self.member,
+            role=FamilyMembership.Role.MEMBER, status=FamilyMembership.Status.ACTIVE,
+        )
+
     def test_update_standings_with_pool_touches_only_that_pool(self):
         """Without --pool there is no way to recompute one pool, which is what the
         repair action needs. The point is the *scoping*, so assert pool B is
         untouched — a test that only asserts pool A got a row would pass even if
-        the filter were ignored entirely."""
+        the filter were ignored entirely.
+
+        The zero-points member path is what actually exercises the pool filter
+        on the member/pool queryset: with no FamilyMembership fixture at all,
+        member_combos is empty regardless of the filter and this test would
+        pass even with the filter removed."""
         call_command(
             'update_standings', season=2627, pool=self.pool_a.id, stdout=StringIO(),
         )
 
         self.assertTrue(userSeasonPoints.objects.filter(pool=self.pool_a).exists())
         self.assertFalse(userSeasonPoints.objects.filter(pool=self.pool_b).exists())
+        self.assertTrue(
+            userSeasonPoints.objects.filter(
+                pool=self.pool_a, userID=str(self.member.id),
+            ).exists()
+        )
+        self.assertFalse(
+            userSeasonPoints.objects.filter(
+                pool=self.pool_b, userID=str(self.member.id),
+            ).exists()
+        )
 
     def test_update_standings_without_pool_still_touches_every_pool(self):
         """The existing season-wide behavior must not regress."""
@@ -163,9 +190,16 @@ class PoolScopedCommandTests(TestCase):
         self.assertTrue(userSeasonPoints.objects.filter(pool=self.pool_b).exists())
 
     def test_update_stats_with_pool_touches_only_that_pool(self):
+        """Assert on CONTENT, not just presence: `_upsert` always writes under
+        the constant --pool id passed in, so an unfiltered `identities` query
+        would silently mix pool B's user ('bob') into pool A's rows without
+        ever tripping a presence-only assertion on userStats.filter(pool=pool_b)."""
         call_command('update_stats', season=2627, pool=self.pool_a.id, stdout=StringIO())
 
-        self.assertTrue(userStats.objects.filter(pool=self.pool_a).exists())
+        pool_a_user_ids = set(
+            userStats.objects.filter(pool=self.pool_a).values_list('userID', flat=True)
+        )
+        self.assertEqual(pool_a_user_ids, {'alice'})
         self.assertFalse(userStats.objects.filter(pool=self.pool_b).exists())
 
     def test_update_stats_without_pool_still_writes_global_row(self):
@@ -291,22 +325,58 @@ class RepairServiceTests(TestCase):
         game = GamesAndScores.objects.create(
             id=401, slug='ne-at-nyj', competition='nfl', gameWeek='1',
             gameyear='2026', gameseason=2627, startTimestamp=timezone.now(),
-            statusType='STATUS_IN_PROGRESS', statusTitle='In Progress',
+            statusType='inprogress', statusTitle='In Progress',
             homeTeamId=1, homeTeamSlug='nyj', homeTeamName='Jets',
             awayTeamId=2, awayTeamSlug='ne', awayTeamName='Patriots',
         )
         before_status = game.statusType
 
         services.fix_stuck_game(
-            self._request(), game, status='STATUS_FINAL', home_score=21, away_score=17,
+            self._request(), game, status='finished', home_score=21, away_score=17,
         )
 
         game.refresh_from_db()
-        self.assertEqual(game.statusType, 'STATUS_FINAL')
+        self.assertEqual(game.statusType, 'finished')
         self.assertEqual(game.homeTeamScore, 21)
         self.assertEqual(game.awayTeamScore, 17)
+        # 21-17: home team (nyj) wins.
+        self.assertEqual(game.gameWinner, 'nyj')
+        self.assertFalse(game.gameScored)
         entry = SuperAdminAuditLog.objects.filter(
             action=SuperAdminAuditLog.Action.DATA_REPAIR,
         ).latest('created_at')
-        self.assertEqual(entry.changes['statusType'], [before_status, 'STATUS_FINAL'])
+        self.assertEqual(entry.changes['statusType'], [before_status, 'finished'])
+        self.assertEqual(entry.changes['gameWinner'], [None, 'nyj'])
         self.assertIsNone(FamilyAuditLog.objects.first())
+
+    def test_fix_stuck_game_actually_unsticks_scoring_end_to_end(self):
+        """The point of the repair action is to make a stuck game scoreable
+        again. Writing statusType alone is not enough: update_picks only scores
+        games with statusType="finished" AND a populated gameWinner, and only
+        picks up games with gameScored=False. This test drives the real
+        update_picks command so a no-op fix (raw status string, no winner, no
+        gameScored reset) fails here even though it would pass a test that only
+        checks the raw field got written."""
+        game = GamesAndScores.objects.create(
+            id=402, slug='ne-at-nyj-2', competition='nfl', gameWeek='2',
+            gameyear='2026', gameseason=2627, startTimestamp=timezone.now(),
+            statusType='inprogress', statusTitle='In Progress', gameScored=False,
+            homeTeamId=1, homeTeamSlug='nyj', homeTeamName='Jets',
+            awayTeamId=2, awayTeamSlug='ne', awayTeamName='Patriots',
+        )
+        pick = GamePicks.objects.create(
+            id='stuck-game-pick-1', pool=self.pool, userID='root',
+            pick='nyj', gameseason=2627, gameWeek='2', pick_game_id=game.id,
+            pick_correct=False,
+        )
+
+        services.fix_stuck_game(
+            self._request(), game, status='finished', home_score=24, away_score=10,
+        )
+        call_command('update_picks', season=2627, stdout=StringIO())
+
+        pick.refresh_from_db()
+        game.refresh_from_db()
+        self.assertEqual(game.gameWinner, 'nyj')
+        self.assertTrue(game.gameScored)
+        self.assertTrue(pick.pick_correct)

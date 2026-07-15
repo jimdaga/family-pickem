@@ -9,6 +9,7 @@ from django.core.management import call_command
 from django.db import transaction
 from django.utils import timezone
 
+from pickem_api.management.commands.update_games import STATUS_MAP
 from pickem_api.models import (
     FamilyAuditLog,
     GamePicks,
@@ -210,22 +211,61 @@ def rescore_week(request, pool, week):
 def fix_stuck_game(request, game, status, home_score, away_score):
     """Unwedge a game ESPN left in progress forever. Destructive: it overwrites
     what the feed reported, so record both sides. Global action (games aren't
-    owned by a pool), so no FamilyAuditLog dual-write."""
+    owned by a pool), so no FamilyAuditLog dual-write.
+
+    `status` is expected to be the NORMALIZED statusType value the rest of the
+    app stores (e.g. 'finished', 'inprogress') — the same vocabulary
+    update_games.py writes and update_picks.py reads (statusType="finished").
+    As a defensive fallback, a raw ESPN STATUS_* code is mapped through the
+    same STATUS_MAP update_games.py uses, so a caller that passes one by
+    mistake doesn't silently wedge the game further.
+
+    Just writing the status string is not enough to unstick anything:
+    update_picks only scores games with statusType="finished" AND a populated
+    gameWinner, and only re-scores games with gameScored=False. So this also
+    derives gameWinner from the corrected scores (higher score's team slug;
+    empty for a real tie) when the status is 'finished', and resets
+    gameScored=False so the next update_picks run actually picks this game up.
+    """
+    normalized_status = STATUS_MAP.get(status, status)
+
     before = {
         'statusType': game.statusType,
         'homeTeamScore': game.homeTeamScore,
         'awayTeamScore': game.awayTeamScore,
+        'gameWinner': game.gameWinner,
+        'gameScored': game.gameScored,
     }
 
-    game.statusType = status
+    game.statusType = normalized_status
     game.homeTeamScore = home_score
     game.awayTeamScore = away_score
-    game.save(update_fields=['statusType', 'homeTeamScore', 'awayTeamScore'])
+
+    if normalized_status == 'finished' and home_score is not None and away_score is not None:
+        if home_score > away_score:
+            game.gameWinner = game.homeTeamSlug
+        elif away_score > home_score:
+            game.gameWinner = game.awayTeamSlug
+        else:
+            # A real tie: no winner, update_picks marks it scored with zero
+            # correct picks once it sees the equal, populated scores.
+            game.gameWinner = ''
+    # Non-finished status: leave gameWinner untouched — there's nothing to
+    # derive a winner from yet.
+
+    game.gameScored = False
+    game.save(
+        update_fields=[
+            'statusType', 'homeTeamScore', 'awayTeamScore', 'gameWinner', 'gameScored',
+        ]
+    )
 
     after = {
         'statusType': game.statusType,
         'homeTeamScore': game.homeTeamScore,
         'awayTeamScore': game.awayTeamScore,
+        'gameWinner': game.gameWinner,
+        'gameScored': game.gameScored,
     }
     changes = diff_fields(before, after)
 
@@ -233,7 +273,7 @@ def fix_stuck_game(request, game, status, home_score, away_score):
         request,
         action=SuperAdminAuditLog.Action.DATA_REPAIR,
         target=game,
-        summary=f'Fixed stuck game {game.slug} -> {status}',
+        summary=f'Fixed stuck game {game.slug} -> {normalized_status}',
         changes=changes,
     )
     return changes
