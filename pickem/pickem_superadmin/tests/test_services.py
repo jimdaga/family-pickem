@@ -69,8 +69,22 @@ class BlockUserTests(TestCase):
         self.assertTrue(self.other_root.is_active)
 
     def test_cannot_block_yourself(self):
-        with self.assertRaises(ValidationError):
-            services.block_user(self._request(), self.root, reason='nope')
+        """A non-superuser actor must be blocked by the self-block guard, not the
+        superuser guard, or this test would pass even if self-block was unenforced."""
+        self_blocker = User.objects.create_user(
+            username='selfblock', email='selfblock@example.com', password='pw',
+        )
+        UserProfile.objects.get_or_create(user=self_blocker)
+        request = RequestFactory().post('/superadmin/users/')
+        request.user = self_blocker
+        request.META['REMOTE_ADDR'] = '10.0.0.5'
+
+        with self.assertRaisesMessage(ValidationError, 'You cannot block yourself.'):
+            services.block_user(request, self_blocker, reason='nope')
+
+        self_blocker.refresh_from_db()
+        self.assertTrue(self_blocker.is_active)
+        self.assertEqual(SuperAdminAuditLog.objects.count(), 0)
 
     def test_failed_block_writes_no_audit_row(self):
         with self.assertRaises(ValidationError):
