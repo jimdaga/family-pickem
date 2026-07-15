@@ -2,8 +2,8 @@ from django import forms
 
 from pickem_api.models import Family, PoolSettings, Teams
 
-CELL = 'border border-gray-300 px-1 py-0.5 w-full'
-NUM_CELL = 'border border-gray-300 px-1 py-0.5 w-14 font-mono'
+CELL = 'sa-select w-full !py-1'
+NUM_CELL = 'sa-input w-16 !px-2 !py-1 sa-num text-center'
 
 # Not permission-gated — unimplemented. Playoff scoring needs schema work
 # (userSeasonPoints only has week_1..18) and against-the-spread has no scoring

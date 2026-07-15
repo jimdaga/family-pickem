@@ -35,7 +35,7 @@ class TeamsPageTests(TestCase):
 
         response = self.client.get(reverse('superadmin:teams'))
 
-        self.assertContains(response, 'bg-white/60')
+        self.assertContains(response, 'bg-white/70')
 
     def test_saving_a_contrast_preset_persists_and_audits(self):
         self.client.post(

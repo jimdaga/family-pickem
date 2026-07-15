@@ -1,15 +1,36 @@
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from pickem_api.models import UserProfile
+from pickem_api.models import Teams, UserProfile
 from pickem_superadmin import services
 from pickem_superadmin.audit import diff_fields, log_action
 from pickem_superadmin.decorators import superadmin_required
 from pickem_superadmin.models import SuperAdminAuditLog
+
+# Users per page. Sized for a league that grows into the hundreds without
+# rendering one enormous table.
+USERS_PER_PAGE = 50
+
+
+def _nfl_teams():
+    """Distinct (slug, name) team choices for the favorite-team dropdown.
+
+    The Teams table carries one row per team per season, so collapse to the
+    latest name per slug and sort by name for a clean picker.
+    """
+    seen = {}
+    for slug, name in (
+        Teams.objects.exclude(teamNameSlug='')
+        .order_by('teamNameSlug')
+        .values_list('teamNameSlug', 'teamNameName')
+    ):
+        seen[slug] = name
+    return sorted(seen.items(), key=lambda pair: pair[1])
 
 # Profile fields this console may edit. is_superuser is deliberately absent:
 # granting superuser from a web form is a privilege-escalation surface.
@@ -23,7 +44,7 @@ BOOLEAN_PROFILE_FIELDS = ('is_commissioner', 'private_profile', 'email_notificat
 @superadmin_required
 def users(request):
     user_qs = (
-        User.objects.select_related('profile')
+        User.objects.select_related('profile', 'profile__blocked_by')
         .annotate(family_count=Count('family_memberships', distinct=True))
         .order_by('username')
     )
@@ -31,9 +52,13 @@ def users(request):
     if query:
         user_qs = user_qs.filter(username__icontains=query)
 
+    page_obj = Paginator(user_qs, USERS_PER_PAGE).get_page(request.GET.get('page'))
+
     return render(request, 'superadmin/users.html', {
-        'users': user_qs,
+        'users': page_obj,
+        'page_obj': page_obj,
         'query': query,
+        'nfl_teams': _nfl_teams(),
     })
 
 

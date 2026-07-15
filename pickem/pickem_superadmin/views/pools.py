@@ -1,8 +1,9 @@
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
-from pickem_api.models import FamilyAuditLog, Pool
+from pickem_api.models import Family, FamilyAuditLog, Pool
 from pickem_superadmin.audit import log_action
 from pickem_superadmin.decorators import superadmin_required
 from pickem_superadmin.forms import PoolSettingsRowForm
@@ -10,6 +11,10 @@ from pickem_superadmin.matrix import save_matrix
 from pickem_superadmin.models import SuperAdminAuditLog
 
 TRACKED_FIELDS = tuple(PoolSettingsRowForm.Meta.fields)
+
+# The matrix save only writes rows present in the POST, so paginating the
+# display is safe: saving on page 2 touches only page-2 rows.
+POOLS_PER_PAGE = 40
 
 
 def _pool_queryset(request):
@@ -27,8 +32,12 @@ def _pool_queryset(request):
 
 @superadmin_required
 def pools(request):
+    page_obj = Paginator(_pool_queryset(request), POOLS_PER_PAGE).get_page(
+        request.GET.get('page')
+    )
+
     rows = []
-    for pool in _pool_queryset(request):
+    for pool in page_obj:
         settings_obj = getattr(pool, 'settings', None)
         rows.append({
             'pool': pool,
@@ -46,6 +55,9 @@ def pools(request):
 
     return render(request, 'superadmin/pools.html', {
         'rows': rows,
+        'page_obj': page_obj,
+        'families': Family.objects.order_by('name').values_list('slug', 'name'),
+        'seasons': Pool.objects.order_by('-season').values_list('season', flat=True).distinct(),
         'family_filter': request.GET.get('family', ''),
         'season_filter': request.GET.get('season', ''),
     })

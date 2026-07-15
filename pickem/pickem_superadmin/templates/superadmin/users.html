@@ -1,83 +1,93 @@
 {% extends 'superadmin/base.html' %}
 {% block title %}users{% endblock %}
-{% block heading %}Users <span class="font-normal text-gray-500">({{ users|length }})</span>{% endblock %}
-{% block content %}
-  <form method="get" class="mb-3">
-    <input type="search" name="q" value="{{ query }}" placeholder="filter by username"
-           class="border border-gray-300 px-2 py-1 w-64">
-    <button type="submit" class="border border-gray-400 bg-white px-2 py-1 hover:bg-gray-50">filter</button>
+{% block eyebrow %}people{% endblock %}
+{% block heading %}Users <span class="sa-count">· {{ page_obj.paginator.count }}</span>{% endblock %}
+{% block actions %}
+  <form method="get" class="flex gap-2">
+    <input type="search" name="q" value="{{ query }}" placeholder="filter by username" class="sa-input w-56">
+    <button type="submit" class="sa-btn sa-btn-default">Filter</button>
+    {% if query %}<a href="{% url 'superadmin:users' %}" class="sa-btn sa-btn-default">Clear</a>{% endif %}
   </form>
-
-  <div class="overflow-x-auto border border-gray-300 bg-white">
-    <table class="w-full border-collapse">
-      <thead class="bg-gray-200 text-left">
+{% endblock %}
+{% block content %}
+  <div class="sa-table-wrap sa-table-scroll">
+    <table class="sa-table">
+      <thead>
         <tr>
-          <th class="px-2 py-1 font-semibold">username</th>
-          <th class="px-2 py-1 font-semibold">email</th>
-          <th class="px-2 py-1 font-semibold">families</th>
-          <th class="px-2 py-1 font-semibold">last login</th>
-          <th class="px-2 py-1 font-semibold">status</th>
-          <th class="px-2 py-1 font-semibold">profile</th>
-          <th class="px-2 py-1 font-semibold">actions</th>
+          <th>user</th>
+          <th>email</th>
+          <th>families</th>
+          <th>last login</th>
+          <th>status</th>
+          <th>profile</th>
+          <th>actions</th>
         </tr>
       </thead>
       <tbody>
         {% for u in users %}
-          <tr class="border-t border-gray-200 align-top {% if not u.is_active %}bg-red-50{% endif %}">
-            <td class="px-2 py-1 font-mono">{{ u.username }}{% if u.is_superuser %} <span class="text-purple-700">★</span>{% endif %}</td>
-            <td class="px-2 py-1 text-gray-600">{{ u.email }}</td>
-            <td class="px-2 py-1 font-mono">{{ u.family_count }}</td>
-            <td class="px-2 py-1 text-gray-600">{{ u.last_login|date:"Y-m-d H:i"|default:"never" }}</td>
-            <td class="px-2 py-1">
+          <tr class="{% if not u.is_active %}bg-red-50/40{% endif %}">
+            <td>
+              <span class="sa-mono font-medium text-[#1b212b]">{{ u.username }}</span>
+              {% if u.is_superuser %}<span class="sa-pill sa-pill-info ml-1">superuser</span>{% endif %}
+            </td>
+            <td class="text-[#667085]">{{ u.email|default:"—" }}</td>
+            <td class="sa-num text-[#475467]">{{ u.family_count }}</td>
+            <td class="sa-mono text-[#667085]">{{ u.last_login|date:"Y-m-d H:i"|default:"never" }}</td>
+            <td>
               {% if u.is_active %}
-                <span class="text-green-700">active</span>
+                <span class="sa-pill sa-pill-ok">active</span>
               {% else %}
-                <span class="text-red-700 font-semibold">BLOCKED</span>
-                <div class="text-gray-600">{{ u.profile.blocked_reason }}</div>
-                <div class="text-gray-500">by {{ u.profile.blocked_by.username }} {{ u.profile.blocked_at|date:"Y-m-d" }}</div>
+                <span class="sa-pill sa-pill-bad">blocked</span>
+                <div class="mt-1 text-[12px] text-[#667085]">{{ u.profile.blocked_reason }}</div>
+                <div class="text-[11px] text-[#98a2b3]">by {{ u.profile.blocked_by.username }} · {{ u.profile.blocked_at|date:"Y-m-d" }}</div>
               {% endif %}
             </td>
-            <td class="px-2 py-1">
-              <form method="post" action="{% url 'superadmin:user_update' u.id %}" class="flex flex-wrap items-center gap-1">
+            <td>
+              <form method="post" action="{% url 'superadmin:user_update' u.id %}" class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 {% csrf_token %}
-                <label class="flex items-center gap-1" title="commissioner">
-                  <input type="checkbox" name="is_commissioner" {% if u.profile.is_commissioner %}checked{% endif %}> comm
+                <label class="flex items-center gap-1 text-[12px] text-[#475467]">
+                  <input type="checkbox" name="is_commissioner" {% if u.profile.is_commissioner %}checked{% endif %}> commish
                 </label>
-                <label class="flex items-center gap-1" title="private profile">
-                  <input type="checkbox" name="private_profile" {% if u.profile.private_profile %}checked{% endif %}> priv
+                <label class="flex items-center gap-1 text-[12px] text-[#475467]">
+                  <input type="checkbox" name="private_profile" {% if u.profile.private_profile %}checked{% endif %}> private
                 </label>
-                <label class="flex items-center gap-1" title="email notifications">
+                <label class="flex items-center gap-1 text-[12px] text-[#475467]">
                   <input type="checkbox" name="email_notifications" {% if u.profile.email_notifications %}checked{% endif %}> email
                 </label>
-                <input type="text" name="favorite_team" value="{{ u.profile.favorite_team|default:'' }}"
-                       placeholder="team" class="w-16 border border-gray-300 px-1">
-                <input type="text" name="tagline" value="{{ u.profile.tagline|default:'' }}"
-                       placeholder="tagline" class="w-32 border border-gray-300 px-1">
-                <button type="submit" class="border border-gray-400 bg-white px-2 hover:bg-gray-50">save</button>
+                <select name="favorite_team" class="sa-select w-36" title="favorite team">
+                  <option value="">— no team —</option>
+                  {% for slug, name in nfl_teams %}
+                    <option value="{{ slug }}" {% if slug == u.profile.favorite_team %}selected{% endif %}>{{ name }}</option>
+                  {% endfor %}
+                </select>
+                <input type="text" name="tagline" value="{{ u.profile.tagline|default:'' }}" placeholder="tagline" class="sa-input w-40">
+                <button type="submit" class="sa-btn sa-btn-default sa-btn-sm">Save</button>
               </form>
             </td>
-            <td class="px-2 py-1">
+            <td>
               {% if u.is_superuser %}
-                <span class="text-gray-500">—</span>
+                <span class="text-[#98a2b3] text-[12px]">protected</span>
               {% elif u.is_active %}
-                <form method="post" action="{% url 'superadmin:user_block' u.id %}" class="flex flex-wrap items-center gap-1">
+                <form method="post" action="{% url 'superadmin:user_block' u.id %}" class="flex flex-wrap items-center gap-1.5">
                   {% csrf_token %}
-                  <input type="text" name="reason" placeholder="reason (required)"
-                         class="w-40 border border-gray-300 px-1" required>
-                  <input type="text" name="confirm" placeholder="type &quot;{{ u.username }}&quot;"
-                         class="w-40 border border-red-400 px-1" required>
-                  <button type="submit" class="border border-red-600 bg-red-600 px-2 text-white hover:bg-red-700">block</button>
+                  <input type="text" name="reason" placeholder="reason" class="sa-input w-36" required>
+                  <input type="text" name="confirm" placeholder="type &quot;{{ u.username }}&quot;" class="sa-input sa-input-danger w-40" required>
+                  <button type="submit" class="sa-btn sa-btn-danger sa-btn-sm">Block</button>
                 </form>
               {% else %}
                 <form method="post" action="{% url 'superadmin:user_unblock' u.id %}">
                   {% csrf_token %}
-                  <button type="submit" class="border border-gray-400 bg-white px-2 hover:bg-gray-50">unblock</button>
+                  <button type="submit" class="sa-btn sa-btn-default sa-btn-sm">Unblock</button>
                 </form>
               {% endif %}
             </td>
           </tr>
+        {% empty %}
+          <tr><td colspan="7" class="sa-empty">No users match this filter.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  {% include 'superadmin/_pagination.html' %}
 {% endblock %}
