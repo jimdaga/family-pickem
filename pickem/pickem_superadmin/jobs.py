@@ -45,32 +45,53 @@ def run_command(command_name):
 
 
 def get_scheduler():
-    """The live scheduler in this process, or a jobstore-only scheduler that can
-    still write to the shared DjangoJobStore from a web worker."""
+    """The live scheduler in this process, if this process IS the scheduler
+    process (RUN_SCHEDULER=true), else None.
+
+    On a plain web worker there is no running scheduler in-process, so callers
+    must fall back to a short-lived scheduler of their own -- see
+    ``queue_command`` for why that fallback has to be started (paused) rather
+    than left in the default stopped state.
+    """
+    from pickem_api import scheduler as scheduler_module
+
+    return scheduler_module._scheduler
+
+
+def _add_job_via_fallback_scheduler(command_name, job_id):
+    """Persist a one-off job from a plain web worker, with no live in-process
+    scheduler to hand it to.
+
+    APScheduler only writes to the jobstore from ``add_job()`` when the
+    scheduler is not in ``STATE_STOPPED`` -- a freshly constructed
+    ``BackgroundScheduler`` that is never ``.start()``-ed stays stopped
+    forever, so ``add_job()`` silently just appends to an in-memory
+    ``_pending_jobs`` list on an object that is garbage-collected the moment
+    this function returns. Zero rows would ever reach the database.
+
+    Starting the scheduler in PAUSED mode moves it to ``STATE_PAUSED``, which
+    is enough for ``add_job()`` to take the real persist path
+    (``_real_add_job`` -> ``store.add_job``), while guaranteeing it never
+    executes anything (a paused scheduler never processes the jobstore). We
+    then shut it down immediately -- that only stops our throwaway thread; the
+    row already written to the persistent DjangoJobStore remains.
+    """
     from apscheduler.schedulers.background import BackgroundScheduler
     from django.conf import settings
     from django_apscheduler.jobstores import DjangoJobStore
 
-    from pickem_api import scheduler as scheduler_module
-
-    if scheduler_module._scheduler is not None:
-        return scheduler_module._scheduler
-
-    # This process has no running scheduler (a plain web worker). Build one just
-    # to reach the jobstore; we never .start() it, so it only writes the row.
-    writer = BackgroundScheduler(timezone=settings.TIME_ZONE)
-    writer.add_jobstore(DjangoJobStore(), 'default')
-    return writer
+    scheduler = BackgroundScheduler(timezone=settings.TIME_ZONE)
+    scheduler.add_jobstore(DjangoJobStore(), 'default')
+    scheduler.start(paused=True)
+    try:
+        scheduler.add_job(**_one_off_job_kwargs(command_name, job_id))
+    finally:
+        scheduler.shutdown(wait=False)
 
 
-def queue_command(command_name):
-    """Enqueue a one-off run. Returns the job id."""
-    if command_name not in QUEUEABLE_COMMANDS:
-        raise ValueError(f'Command not allowed: {command_name}')
-
-    job_id = f'manual:{command_name}:{int(time.time())}'
-    get_scheduler().add_job(
-        run_command,
+def _one_off_job_kwargs(command_name, job_id):
+    return dict(
+        func=run_command,
         trigger='date',
         run_date=timezone.now(),
         id=job_id,
@@ -79,6 +100,23 @@ def queue_command(command_name):
         max_instances=1,
         replace_existing=True,
     )
+
+
+def queue_command(command_name):
+    """Enqueue a one-off run. Returns the job id."""
+    if command_name not in QUEUEABLE_COMMANDS:
+        raise ValueError(f'Command not allowed: {command_name}')
+
+    job_id = f'manual:{command_name}:{int(time.time())}'
+
+    live_scheduler = get_scheduler()
+    if live_scheduler is not None:
+        # This process IS the scheduler process: it's already STATE_RUNNING,
+        # so add_job() persists immediately through the normal running path.
+        live_scheduler.add_job(**_one_off_job_kwargs(command_name, job_id))
+    else:
+        _add_job_via_fallback_scheduler(command_name, job_id)
+
     return job_id
 
 
