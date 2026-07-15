@@ -37,7 +37,7 @@ def teams_save(request):
 
     # Teams has no updated_at column, so optimistic-concurrency staleness
     # checking is impossible and must be disabled here.
-    saved, failed, stale = save_matrix(
+    saved, failed, _ = save_matrix(
         request,
         objects=Teams.objects.all().order_by('id'),
         form_class=TeamRowForm,

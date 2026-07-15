@@ -27,6 +27,15 @@ class TeamsPageTests(TestCase):
     def test_page_lists_teams(self):
         response = self.client.get(reverse('superadmin:teams'))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Team One')
+
+    def test_page_renders_white_burst_preview(self):
+        self.team.logo_contrast_preset = 'white-burst'
+        self.team.save()
+
+        response = self.client.get(reverse('superadmin:teams'))
+
+        self.assertContains(response, 'bg-white/60')
 
     def test_saving_a_contrast_preset_persists_and_audits(self):
         self.client.post(
