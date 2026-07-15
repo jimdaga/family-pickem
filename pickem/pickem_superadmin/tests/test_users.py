@@ -62,9 +62,54 @@ class UsersPageTests(TestCase):
         self.assertTrue(self.spammer.is_active)
 
     def test_get_request_never_mutates(self):
-        self.client.get(reverse('superadmin:user_block', args=[self.spammer.id]))
+        response = self.client.get(reverse('superadmin:user_block', args=[self.spammer.id]))
+        self.assertEqual(response.status_code, 405)
         self.spammer.refresh_from_db()
         self.assertTrue(self.spammer.is_active)
+
+    def test_unblock_rejects_get_and_never_mutates(self):
+        # Block the user first via the real POST path, so the GET below has
+        # a blocked state that would be observably undone if it mutated.
+        self.client.post(
+            reverse('superadmin:user_block', args=[self.spammer.id]),
+            {'confirm': 'spammer', 'reason': 'Spamming'},
+        )
+        self.spammer.refresh_from_db()
+        self.assertFalse(self.spammer.is_active)
+
+        response = self.client.get(reverse('superadmin:user_unblock', args=[self.spammer.id]))
+        self.assertEqual(response.status_code, 405)
+
+        self.spammer.refresh_from_db()
+        self.assertFalse(self.spammer.is_active, 'GET must not unblock the user')
+
+    def test_update_rejects_get_and_never_mutates(self):
+        profile = UserProfile.objects.get(user=self.spammer)
+        profile.is_commissioner = False
+        profile.favorite_team = 'orig-team'
+        profile.tagline = 'orig-tagline'
+        profile.private_profile = True
+        profile.email_notifications = False
+        profile.save()
+
+        response = self.client.get(
+            reverse('superadmin:user_update', args=[self.spammer.id]),
+            {
+                'is_commissioner': 'on',
+                'favorite_team': 'ne',
+                'tagline': 'go pats',
+                'private_profile': '',
+                'email_notifications': 'on',
+            },
+        )
+        self.assertEqual(response.status_code, 405)
+
+        profile.refresh_from_db()
+        self.assertFalse(profile.is_commissioner)
+        self.assertEqual(profile.favorite_team, 'orig-team')
+        self.assertEqual(profile.tagline, 'orig-tagline')
+        self.assertTrue(profile.private_profile)
+        self.assertFalse(profile.email_notifications)
 
     def test_update_toggles_commissioner_and_profile_fields(self):
         self.client.post(
