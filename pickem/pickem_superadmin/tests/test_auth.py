@@ -12,6 +12,7 @@ from pickem_api.models import Family, FamilyMembership, Pool
 SUPERADMIN_URLS = [
     'superadmin:overview',
     'superadmin:users',
+    'superadmin:pools',
 ]
 
 # POST-only endpoints. The gate test hits them with POST and asserts the same
@@ -20,6 +21,7 @@ SUPERADMIN_POST_URLS = [
     ('superadmin:user_block', [1]),
     ('superadmin:user_unblock', [1]),
     ('superadmin:user_update', [1]),
+    ('superadmin:pools_save', []),
 ]
 
 

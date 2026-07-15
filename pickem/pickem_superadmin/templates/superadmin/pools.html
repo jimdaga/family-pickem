@@ -1,0 +1,79 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}pools{% endblock %}
+{% block heading %}Pool settings <span class="font-normal text-gray-500">({{ rows|length }})</span>{% endblock %}
+{% block content %}
+  <form method="get" class="mb-3 flex gap-2">
+    <input type="text" name="family" value="{{ family_filter }}" placeholder="family slug"
+           class="border border-gray-300 px-2 py-1">
+    <input type="text" name="season" value="{{ season_filter }}" placeholder="season (e.g. 2627)"
+           class="border border-gray-300 px-2 py-1 font-mono">
+    <button type="submit" class="border border-gray-400 bg-white px-2 py-1 hover:bg-gray-50">filter</button>
+  </form>
+
+  <form method="post" action="{% url 'superadmin:pools_save' %}">
+    {% csrf_token %}
+    <div class="overflow-x-auto border border-gray-300 bg-white">
+      <table class="border-collapse whitespace-nowrap">
+        <thead class="bg-gray-200 text-left">
+          <tr>
+            <th class="sticky left-0 z-10 bg-gray-200 px-2 py-1 font-semibold">family / pool</th>
+            <th class="px-2 py-1 font-semibold">season</th>
+            <th class="px-2 py-1 font-semibold">win</th>
+            <th class="px-2 py-1 font-semibold">tie</th>
+            <th class="px-2 py-1 font-semibold">wk win</th>
+            <th class="px-2 py-1 font-semibold">lock@KO</th>
+            <th class="px-2 py-1 font-semibold">tiebrk</th>
+            <th class="px-2 py-1 font-semibold">primary tiebrk</th>
+            <th class="px-2 py-1 font-semibold">secondary tiebrk</th>
+            <th class="px-2 py-1 font-semibold">perfect wk</th>
+            <th class="px-2 py-1 font-semibold">bonus</th>
+            <th class="px-2 py-1 font-semibold">fee?</th>
+            <th class="px-2 py-1 font-semibold">fee</th>
+            <th class="px-2 py-1 font-semibold">missed pick</th>
+            <th class="px-2 py-1 font-semibold">late join</th>
+            <th class="px-2 py-1 font-semibold">payout</th>
+            <th class="px-2 py-1 font-semibold text-gray-500">pick type &#128274;</th>
+            <th class="px-2 py-1 font-semibold text-gray-500">playoffs &#128274;</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr class="border-t border-gray-200">
+              <td class="sticky left-0 z-10 border-r border-gray-200 bg-white px-2 py-1 font-mono">
+                {{ row.pool.family.slug }}/{{ row.pool.slug }}
+              </td>
+              <td class="px-2 py-1 font-mono">{{ row.pool.season }}</td>
+              {% if row.form %}
+                <input type="hidden" name="{{ row.settings.pk }}-updated_at"
+                       value="{{ row.settings.updated_at.isoformat }}">
+                <td class="px-2 py-1">{{ row.form.win_points }}</td>
+                <td class="px-2 py-1">{{ row.form.tie_points }}</td>
+                <td class="px-2 py-1">{{ row.form.weekly_winner_points }}</td>
+                <td class="px-2 py-1 text-center">{{ row.form.picks_lock_at_kickoff }}</td>
+                <td class="px-2 py-1 text-center">{{ row.form.allow_tiebreaker }}</td>
+                <td class="px-2 py-1">{{ row.form.primary_tiebreaker }}</td>
+                <td class="px-2 py-1">{{ row.form.secondary_tiebreaker }}</td>
+                <td class="px-2 py-1 text-center">{{ row.form.perfect_week_bonus_enabled }}</td>
+                <td class="px-2 py-1">{{ row.form.perfect_week_bonus_amount }}</td>
+                <td class="px-2 py-1 text-center">{{ row.form.entry_fee_enabled }}</td>
+                <td class="px-2 py-1">{{ row.form.entry_fee_amount }}</td>
+                <td class="px-2 py-1">{{ row.form.missed_pick_policy }}</td>
+                <td class="px-2 py-1">{{ row.form.late_join_policy }}</td>
+                <td class="px-2 py-1">{{ row.form.payout_structure }}</td>
+                <td class="bg-gray-100 px-2 py-1" title="Not implemented yet.">{{ row.form.pick_type }}</td>
+                <td class="bg-gray-100 px-2 py-1 text-center" title="Not implemented yet.">{{ row.form.include_playoffs }}</td>
+              {% else %}
+                <td colspan="16" class="bg-yellow-50 px-2 py-1 text-yellow-900">
+                  no PoolSettings row — backfill it from Overview
+                </td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <button type="submit" class="mt-3 border border-gray-800 bg-gray-800 px-3 py-1 text-white hover:bg-gray-700">
+      Save changes
+    </button>
+  </form>
+{% endblock %}

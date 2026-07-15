@@ -21,7 +21,9 @@
       <a href="{{ u }}" class="px-2 py-1 hover:bg-gray-700 {% if request.path == u %}bg-gray-700{% endif %}">overview</a>
       {% url 'superadmin:users' as u_users %}
       <a href="{{ u_users }}" class="px-2 py-1 hover:bg-gray-700 {% if request.path == u_users %}bg-gray-700{% endif %}">users</a>
-      {# Later tasks add: families, pools, teams, jobs, audit #}
+      {% url 'superadmin:pools' as u_pools %}
+      <a href="{{ u_pools }}" class="px-2 py-1 hover:bg-gray-700 {% if request.path == u_pools %}bg-gray-700{% endif %}">pools</a>
+      {# Later tasks add: families, teams, jobs, audit #}
     </nav>
   </header>
 
