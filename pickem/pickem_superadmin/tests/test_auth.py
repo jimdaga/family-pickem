@@ -6,10 +6,20 @@ from django.urls import reverse
 from pickem_api.models import Family, FamilyMembership, Pool
 
 
-# Every superadmin URL. Add a row here when you add a view — test_all_urls_are_covered
-# asserts this list matches the registered URLconf, so you cannot forget.
+# Every superadmin GET URL. Add a row here when you add a view — test_all_urls_are_covered
+# asserts this list (plus SUPERADMIN_POST_URLS) matches the registered URLconf, so you
+# cannot forget.
 SUPERADMIN_URLS = [
     'superadmin:overview',
+    'superadmin:users',
+]
+
+# POST-only endpoints. The gate test hits them with POST and asserts the same
+# 404-for-non-superusers rule; they are excluded from the GET-200 test.
+SUPERADMIN_POST_URLS = [
+    ('superadmin:user_block', [1]),
+    ('superadmin:user_unblock', [1]),
+    ('superadmin:user_update', [1]),
 ]
 
 
@@ -63,8 +73,15 @@ class SuperadminAccessTests(TestCase):
             with self.subTest(url=name):
                 self.assertEqual(self.client.get(reverse(name)).status_code, 200)
 
+    def test_post_endpoints_reject_non_superusers(self):
+        self.client.force_login(self.member)
+        for name, args in SUPERADMIN_POST_URLS:
+            with self.subTest(url=name):
+                response = self.client.post(reverse(name, args=args))
+                self.assertEqual(response.status_code, 404)
+
     def test_all_urls_are_covered(self):
-        """A new view with no entry in SUPERADMIN_URLS fails here — so it can never
+        """A new view with no entry in these lists fails here — so it can never
         silently skip the gate tests above."""
         from pickem_superadmin import urls as superadmin_urls
 
@@ -73,4 +90,5 @@ class SuperadminAccessTests(TestCase):
             for p in superadmin_urls.urlpatterns
             if p.name is not None
         }
-        self.assertEqual(registered, set(SUPERADMIN_URLS))
+        covered = set(SUPERADMIN_URLS) | {name for name, _ in SUPERADMIN_POST_URLS}
+        self.assertEqual(registered, covered)

@@ -1,0 +1,83 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}users{% endblock %}
+{% block heading %}Users <span class="font-normal text-gray-500">({{ users|length }})</span>{% endblock %}
+{% block content %}
+  <form method="get" class="mb-3">
+    <input type="search" name="q" value="{{ query }}" placeholder="filter by username"
+           class="border border-gray-300 px-2 py-1 w-64">
+    <button type="submit" class="border border-gray-400 bg-white px-2 py-1 hover:bg-gray-50">filter</button>
+  </form>
+
+  <div class="overflow-x-auto border border-gray-300 bg-white">
+    <table class="w-full border-collapse">
+      <thead class="bg-gray-200 text-left">
+        <tr>
+          <th class="px-2 py-1 font-semibold">username</th>
+          <th class="px-2 py-1 font-semibold">email</th>
+          <th class="px-2 py-1 font-semibold">families</th>
+          <th class="px-2 py-1 font-semibold">last login</th>
+          <th class="px-2 py-1 font-semibold">status</th>
+          <th class="px-2 py-1 font-semibold">profile</th>
+          <th class="px-2 py-1 font-semibold">actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr class="border-t border-gray-200 align-top {% if not u.is_active %}bg-red-50{% endif %}">
+            <td class="px-2 py-1 font-mono">{{ u.username }}{% if u.is_superuser %} <span class="text-purple-700">★</span>{% endif %}</td>
+            <td class="px-2 py-1 text-gray-600">{{ u.email }}</td>
+            <td class="px-2 py-1 font-mono">{{ u.family_count }}</td>
+            <td class="px-2 py-1 text-gray-600">{{ u.last_login|date:"Y-m-d H:i"|default:"never" }}</td>
+            <td class="px-2 py-1">
+              {% if u.is_active %}
+                <span class="text-green-700">active</span>
+              {% else %}
+                <span class="text-red-700 font-semibold">BLOCKED</span>
+                <div class="text-gray-600">{{ u.profile.blocked_reason }}</div>
+                <div class="text-gray-500">by {{ u.profile.blocked_by.username }} {{ u.profile.blocked_at|date:"Y-m-d" }}</div>
+              {% endif %}
+            </td>
+            <td class="px-2 py-1">
+              <form method="post" action="{% url 'superadmin:user_update' u.id %}" class="flex flex-wrap items-center gap-1">
+                {% csrf_token %}
+                <label class="flex items-center gap-1" title="commissioner">
+                  <input type="checkbox" name="is_commissioner" {% if u.profile.is_commissioner %}checked{% endif %}> comm
+                </label>
+                <label class="flex items-center gap-1" title="private profile">
+                  <input type="checkbox" name="private_profile" {% if u.profile.private_profile %}checked{% endif %}> priv
+                </label>
+                <label class="flex items-center gap-1" title="email notifications">
+                  <input type="checkbox" name="email_notifications" {% if u.profile.email_notifications %}checked{% endif %}> email
+                </label>
+                <input type="text" name="favorite_team" value="{{ u.profile.favorite_team|default:'' }}"
+                       placeholder="team" class="w-16 border border-gray-300 px-1">
+                <input type="text" name="tagline" value="{{ u.profile.tagline|default:'' }}"
+                       placeholder="tagline" class="w-32 border border-gray-300 px-1">
+                <button type="submit" class="border border-gray-400 bg-white px-2 hover:bg-gray-50">save</button>
+              </form>
+            </td>
+            <td class="px-2 py-1">
+              {% if u.is_superuser %}
+                <span class="text-gray-500">—</span>
+              {% elif u.is_active %}
+                <form method="post" action="{% url 'superadmin:user_block' u.id %}" class="flex flex-wrap items-center gap-1">
+                  {% csrf_token %}
+                  <input type="text" name="reason" placeholder="reason (required)"
+                         class="w-40 border border-gray-300 px-1" required>
+                  <input type="text" name="confirm" placeholder="type &quot;{{ u.username }}&quot;"
+                         class="w-40 border border-red-400 px-1" required>
+                  <button type="submit" class="border border-red-600 bg-red-600 px-2 text-white hover:bg-red-700">block</button>
+                </form>
+              {% else %}
+                <form method="post" action="{% url 'superadmin:user_unblock' u.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="border border-gray-400 bg-white px-2 hover:bg-gray-50">unblock</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
