@@ -59,6 +59,7 @@ if 'CSRF_TRUSTED_ORIGINS' in os.environ:
 INSTALLED_APPS = [
     'pickem_homepage.apps.PickemHomepageConfig',
     'pickem_api.apps.PickemApiConfig',
+    'pickem_superadmin.apps.PickemSuperadminConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -132,6 +133,7 @@ TEMPLATES = [
                 'pickem.context_processors.family_switcher_context',
                 'pickem.context_processors.site_banner_context',
                 'pickem.context_processors.footer_stats_context',
+                'pickem_superadmin.context_processors.chrome',
             ],
         },
     },

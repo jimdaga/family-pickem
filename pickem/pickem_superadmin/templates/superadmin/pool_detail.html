@@ -1,0 +1,111 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}pool repair{% endblock %}
+{% block eyebrow %}repair{% endblock %}
+{% block heading %}{{ pool.family.slug }}/{{ pool.slug }} <span class="sa-count">· season {{ pool.season }}</span>{% endblock %}
+{% block content %}
+
+  <div class="sa-card mb-5 p-4">
+    <div class="sa-h2 mb-1">{{ pool.family.name }} — {{ pool.name }}</div>
+    <p class="mb-3 text-[13px] text-[#667085]">
+      Recompute is idempotent — safe to run any time standings or stats look stale.
+      Re-scoring a week clears that week's scoring first, then recomputes, so a corrected
+      game result actually flips a wrong pick.
+    </p>
+    <div class="flex flex-wrap items-center gap-3">
+      <form method="post" action="{% url 'superadmin:pool_recompute' pool.id %}">
+        {% csrf_token %}
+        <button type="submit" class="sa-btn sa-btn-primary">Recompute standings + stats</button>
+      </form>
+      <form method="post" action="{% url 'superadmin:pool_rescore_week' pool.id %}" class="flex items-center gap-2">
+        {% csrf_token %}
+        <select name="week" class="sa-select w-24">
+          {% for week in week_choices %}
+            <option value="{{ week }}">week {{ week }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="sa-btn sa-btn-default">Re-score week</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="sa-h2 mb-2">Season points</div>
+  <div class="sa-table-wrap sa-table-scroll mb-5">
+    <table class="sa-table">
+      <thead>
+        <tr>
+          <th>userID</th>
+          <th>total points</th>
+          <th>rank</th>
+          <th>year winner</th>
+          <th>actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in season_points %}
+          <tr>
+            <td class="sa-mono">{{ row.userID }}</td>
+            <td class="sa-num">{{ row.total_points|default:"—" }}</td>
+            <td class="sa-num">{{ row.current_rank|default:"—" }}</td>
+            <td>
+              {% if row.year_winner %}
+                <span class="sa-pill sa-pill-ok">winner</span>
+              {% else %}
+                <span class="sa-pill sa-pill-muted">no</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="post" action="{% url 'superadmin:season_row_reset' row.id %}" class="flex items-center gap-1.5">
+                {% csrf_token %}
+                <input type="text" name="confirm" placeholder="type the userID" class="sa-input sa-input-danger w-40">
+                <button type="submit" class="sa-btn sa-btn-danger sa-btn-sm">Reset</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="sa-empty">No season points rows for this pool.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sa-h2 mb-2">Recent picks</div>
+  <div class="sa-table-wrap sa-table-scroll">
+    <table class="sa-table">
+      <thead>
+        <tr>
+          <th>week</th>
+          <th>userID</th>
+          <th>pick</th>
+          <th>correct</th>
+          <th>actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pick in picks %}
+          <tr>
+            <td class="sa-mono">{{ pick.gameWeek }}</td>
+            <td class="sa-mono">{{ pick.userID }}</td>
+            <td class="sa-mono">{{ pick.pick }}</td>
+            <td>
+              {% if pick.pick_correct %}
+                <span class="sa-pill sa-pill-ok">correct</span>
+              {% else %}
+                <span class="sa-pill sa-pill-muted">no</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="post" action="{% url 'superadmin:pick_delete' pick.id %}" class="flex items-center gap-1.5">
+                {% csrf_token %}
+                <input type="text" name="confirm" placeholder="type the userID" class="sa-input sa-input-danger w-40">
+                <button type="submit" class="sa-btn sa-btn-danger sa-btn-sm">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="sa-empty">No picks for this pool.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+{% endblock %}

@@ -4,6 +4,8 @@ module.exports = {
   content: [
     './pickem/pickem_homepage/templates/**/*.html',
     './pickem/pickem_homepage/**/*.py',
+    './pickem/pickem_superadmin/templates/**/*.html',
+    './pickem/pickem_superadmin/**/*.py',
   ],
   theme: {
     extend: {

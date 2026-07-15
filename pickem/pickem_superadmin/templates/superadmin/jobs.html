@@ -1,0 +1,77 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}jobs{% endblock %}
+{% block eyebrow %}pipeline{% endblock %}
+{% block heading %}Jobs{% endblock %}
+{% block content %}
+
+  <div class="grid gap-4 lg:grid-cols-[320px_1fr]">
+    <div class="sa-card p-4 h-fit">
+      <div class="sa-h2 mb-2">Queue a run</div>
+      {% if health.alive %}
+        <div class="mb-3 flex items-center gap-2 text-[12px] text-[#067647]">
+          <span class="sa-dot sa-dot-ok"></span> scheduler alive · last run {{ health.last_run|date:"H:i:s" }}
+        </div>
+      {% else %}
+        <div class="mb-3 rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-[12px] text-red-800">
+          <div class="flex items-center gap-2 font-semibold"><span class="sa-dot sa-dot-bad"></span> No live scheduler</div>
+          <div class="mt-1">Queueing is disabled — a job would sit in the store and never run. Ensure a process has <span class="sa-mono">RUN_SCHEDULER=true</span>.</div>
+        </div>
+      {% endif %}
+      <p class="mb-2 text-[12px] text-[#667085]">Jobs are <em>queued</em>, not run instantly — the scheduler picks them up within ~60s and the run appears in history.</p>
+      <form method="post" action="{% url 'superadmin:jobs_queue' %}" class="flex flex-col gap-2">
+        {% csrf_token %}
+        <select name="command" class="sa-select sa-mono">
+          {% for command in queueable %}<option value="{{ command }}">{{ command }}</option>{% endfor %}
+        </select>
+        <button type="submit" {% if not health.alive %}disabled{% endif %} class="sa-btn sa-btn-primary justify-center">Queue run</button>
+      </form>
+
+      <div class="sa-h2 mt-5 mb-2">Registered jobs</div>
+      <div class="space-y-1.5">
+        {% for job in registered_jobs %}
+          <div class="flex items-center justify-between text-[12px]">
+            <span class="sa-mono text-[#1b212b]">{{ job.id }}</span>
+            <span class="sa-mono text-[#98a2b3]">{{ job.next_run_time|date:"H:i:s"|default:"—" }}</span>
+          </div>
+        {% empty %}
+          <div class="text-[12px] text-[#98a2b3]">none registered</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div>
+      <div class="sa-h2 mb-2">Run history</div>
+      <div class="sa-table-wrap sa-table-scroll">
+        <table class="sa-table">
+          <thead>
+            <tr>
+              <th>job</th>
+              <th>run time</th>
+              <th>status</th>
+              <th>duration</th>
+              <th>exception</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for execution in executions %}
+              <tr class="{% if execution.exception %}bg-red-50/50{% endif %}">
+                <td class="sa-mono">{{ execution.job_id }}</td>
+                <td class="sa-mono text-[#667085]">{{ execution.run_time|date:"Y-m-d H:i:s" }}</td>
+                <td>
+                  {% if execution.status == 'Executed' %}<span class="sa-pill sa-pill-ok">{{ execution.status }}</span>
+                  {% elif execution.exception or execution.status == 'Error' %}<span class="sa-pill sa-pill-bad">{{ execution.status }}</span>
+                  {% else %}<span class="sa-pill sa-pill-muted">{{ execution.status }}</span>{% endif %}
+                </td>
+                <td class="sa-mono">{{ execution.duration|default:"—" }}</td>
+                <td class="sa-mono text-red-700">{{ execution.exception|default:"" }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="sa-empty">No runs recorded yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include 'superadmin/_pagination.html' with page_obj=executions %}
+    </div>
+  </div>
+{% endblock %}

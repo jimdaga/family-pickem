@@ -20,4 +20,5 @@ urlpatterns = [
     path('', include('pickem_homepage.urls')),
     path('api/', include('pickem_api.urls')),
     path('admin/', admin.site.urls),
+    path('superadmin/', include('pickem_superadmin.urls')),
 ]
