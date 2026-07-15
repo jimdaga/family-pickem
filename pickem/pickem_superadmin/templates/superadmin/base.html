@@ -29,7 +29,8 @@
       <a href="{{ u_teams }}" class="px-2 py-1 hover:bg-gray-700 {% if request.path == u_teams %}bg-gray-700{% endif %}">teams</a>
       {% url 'superadmin:jobs' as u_jobs %}
       <a href="{{ u_jobs }}" class="px-2 py-1 hover:bg-gray-700 {% if request.path == u_jobs %}bg-gray-700{% endif %}">jobs</a>
-      {# Later tasks add: audit #}
+      {% url 'superadmin:audit' as u_audit %}
+      <a href="{{ u_audit }}" class="px-2 py-1 hover:bg-gray-700 {% if request.path == u_audit %}bg-gray-700{% endif %}">audit</a>
     </nav>
   </header>
 

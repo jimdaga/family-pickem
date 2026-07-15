@@ -1,4 +1,5 @@
 """Re-export every view so urls.py has one import surface."""
+from pickem_superadmin.views.audit import audit
 from pickem_superadmin.views.families import families, families_save
 from pickem_superadmin.views.jobs import jobs_page, jobs_queue
 from pickem_superadmin.views.overview import (
@@ -15,4 +16,5 @@ __all__ = [
     'teams', 'teams_save',
     'jobs_page', 'jobs_queue',
     'season_update', 'pool_settings_backfill', 'banner_publish', 'banner_deactivate',
+    'audit',
 ]

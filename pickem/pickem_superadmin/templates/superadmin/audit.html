@@ -1,0 +1,104 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}audit{% endblock %}
+{% block heading %}Audit{% endblock %}
+{% block content %}
+
+  <form method="get" class="mb-3 flex gap-2">
+    <select name="action" class="border border-gray-300 px-2 py-1">
+      <option value="">all actions</option>
+      {% for value, label in actions %}
+        <option value="{{ value }}" {% if action_filter == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="actor" value="{{ actor_filter }}" placeholder="actor username"
+           class="border border-gray-300 px-2 py-1">
+    <button type="submit" class="border border-gray-400 bg-white px-2 py-1 hover:bg-gray-50">filter</button>
+  </form>
+
+  <h2 class="mb-1 font-semibold">Superadmin actions</h2>
+  <div class="mb-5 overflow-x-auto border border-gray-300 bg-white">
+    <table class="w-full border-collapse">
+      <thead class="bg-gray-200 text-left">
+        <tr>
+          <th class="px-2 py-1 font-semibold">when</th>
+          <th class="px-2 py-1 font-semibold">actor</th>
+          <th class="px-2 py-1 font-semibold">action</th>
+          <th class="px-2 py-1 font-semibold">summary</th>
+          <th class="px-2 py-1 font-semibold">before &rarr; after</th>
+          <th class="px-2 py-1 font-semibold">ip</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+          <tr class="border-t border-gray-200 align-top">
+            <td class="px-2 py-1 font-mono">{{ entry.created_at|date:"Y-m-d H:i:s" }}</td>
+            <td class="px-2 py-1 font-mono">{{ entry.actor.username|default:"—" }}</td>
+            <td class="px-2 py-1">{{ entry.get_action_display }}</td>
+            <td class="px-2 py-1">{{ entry.summary }}</td>
+            <td class="px-2 py-1 font-mono text-gray-700">
+              {% for field, pair in entry.changes.items %}
+                <div>{{ field }}: {{ pair.0|default_if_none:"∅" }} &rarr; {{ pair.1|default_if_none:"∅" }}</div>
+              {% endfor %}
+            </td>
+            <td class="px-2 py-1 font-mono text-gray-600">{{ entry.ip_address|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="px-2 py-2 text-gray-500">no superadmin actions recorded</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if entries.has_other_pages %}
+    <div class="mb-5 flex gap-2">
+      {% if entries.has_previous %}
+        <a href="?page={{ entries.previous_page_number }}" class="underline">&larr; prev</a>
+      {% endif %}
+      <span class="text-gray-600">page {{ entries.number }} of {{ entries.paginator.num_pages }}</span>
+      {% if entries.has_next %}
+        <a href="?page={{ entries.next_page_number }}" class="underline">next &rarr;</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <h2 class="mb-1 font-semibold">All families' audit logs</h2>
+  <div class="overflow-x-auto border border-gray-300 bg-white">
+    <table class="w-full border-collapse">
+      <thead class="bg-gray-200 text-left">
+        <tr>
+          <th class="px-2 py-1 font-semibold">when</th>
+          <th class="px-2 py-1 font-semibold">family</th>
+          <th class="px-2 py-1 font-semibold">actor</th>
+          <th class="px-2 py-1 font-semibold">action</th>
+          <th class="px-2 py-1 font-semibold">metadata</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in family_entries %}
+          <tr class="border-t border-gray-200 align-top">
+            <td class="px-2 py-1 font-mono">{{ entry.created_at|date:"Y-m-d H:i:s" }}</td>
+            <td class="px-2 py-1 font-mono">{{ entry.family.slug }}</td>
+            <td class="px-2 py-1 font-mono">{{ entry.actor.username|default:"—" }}</td>
+            <td class="px-2 py-1">{{ entry.get_action_display }}</td>
+            <td class="px-2 py-1 font-mono text-gray-600">{{ entry.metadata }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="px-2 py-2 text-gray-500">no family audit entries</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if family_entries.has_other_pages %}
+    <div class="mt-2 flex gap-2">
+      {% if family_entries.has_previous %}
+        <a href="?family_page={{ family_entries.previous_page_number }}" class="underline">&larr; prev</a>
+      {% endif %}
+      <span class="text-gray-600">page {{ family_entries.number }} of {{ family_entries.paginator.num_pages }}</span>
+      {% if family_entries.has_next %}
+        <a href="?family_page={{ family_entries.next_page_number }}" class="underline">next &rarr;</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% endblock %}

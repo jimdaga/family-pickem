@@ -22,4 +22,5 @@ urlpatterns = [
     path('pools/<int:pool_id>/backfill-settings/', views.pool_settings_backfill, name='pool_settings_backfill'),
     path('banners/publish/', views.banner_publish, name='banner_publish'),
     path('banners/<int:banner_id>/deactivate/', views.banner_deactivate, name='banner_deactivate'),
+    path('audit/', views.audit, name='audit'),
 ]

@@ -148,3 +148,41 @@ class LogActionTests(TestCase):
             summary='Updated team colors',
         )
         self.assertIsNone(entry.ip_address)
+
+
+from django.urls import reverse
+
+
+class AuditPageTests(TestCase):
+    def setUp(self):
+        self.root = User.objects.create_superuser(
+            username='root', email='root@example.com', password='pw',
+        )
+        self.client.force_login(self.root)
+
+    def test_page_lists_superadmin_entries_with_before_after(self):
+        SuperAdminAuditLog.objects.create(
+            actor=self.root,
+            action=SuperAdminAuditLog.Action.USER_BLOCKED,
+            target_type='User', target_id='7',
+            summary='Blocked user spammer',
+            changes={'is_active': [True, False]},
+        )
+        response = self.client.get(reverse('superadmin:audit'))
+        self.assertContains(response, 'Blocked user spammer')
+        self.assertContains(response, 'is_active')
+
+    def test_filtering_by_action_narrows_the_list(self):
+        SuperAdminAuditLog.objects.create(
+            actor=self.root, action=SuperAdminAuditLog.Action.USER_BLOCKED,
+            summary='blocked someone',
+        )
+        SuperAdminAuditLog.objects.create(
+            actor=self.root, action=SuperAdminAuditLog.Action.TEAM_UPDATED,
+            summary='touched a team',
+        )
+        response = self.client.get(
+            reverse('superadmin:audit'), {'action': SuperAdminAuditLog.Action.USER_BLOCKED},
+        )
+        self.assertContains(response, 'blocked someone')
+        self.assertNotContains(response, 'touched a team')
