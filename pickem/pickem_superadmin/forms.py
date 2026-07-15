@@ -1,6 +1,6 @@
 from django import forms
 
-from pickem_api.models import Family, PoolSettings
+from pickem_api.models import Family, PoolSettings, Teams
 
 CELL = 'border border-gray-300 px-1 py-0.5 w-full'
 NUM_CELL = 'border border-gray-300 px-1 py-0.5 w-14 font-mono'
@@ -60,4 +60,17 @@ class FamilyRowForm(forms.ModelForm):
             'slug': forms.TextInput(attrs={'class': CELL + ' font-mono'}),
             'logo_url': forms.TextInput(attrs={'class': CELL}),
             'status': forms.Select(attrs={'class': CELL}),
+        }
+
+
+class TeamRowForm(forms.ModelForm):
+    """One row of the teams matrix. Prefixed by team id so many bind at once."""
+
+    class Meta:
+        model = Teams
+        fields = ('color', 'alternateColor', 'logo_contrast_preset')
+        widgets = {
+            'color': forms.TextInput(attrs={'class': CELL + ' font-mono w-20'}),
+            'alternateColor': forms.TextInput(attrs={'class': CELL + ' font-mono w-20'}),
+            'logo_contrast_preset': forms.Select(attrs={'class': CELL}),
         }

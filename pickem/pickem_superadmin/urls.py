@@ -14,4 +14,6 @@ urlpatterns = [
     path('pools/save/', views.pools_save, name='pools_save'),
     path('families/', views.families, name='families'),
     path('families/save/', views.families_save, name='families_save'),
+    path('teams/', views.teams, name='teams'),
+    path('teams/save/', views.teams_save, name='teams_save'),
 ]

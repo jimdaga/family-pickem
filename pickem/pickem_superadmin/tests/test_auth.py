@@ -14,6 +14,7 @@ SUPERADMIN_URLS = [
     'superadmin:users',
     'superadmin:pools',
     'superadmin:families',
+    'superadmin:teams',
 ]
 
 # POST-only endpoints. The gate test hits them with POST and asserts the same
@@ -24,6 +25,7 @@ SUPERADMIN_POST_URLS = [
     ('superadmin:user_update', [1]),
     ('superadmin:pools_save', []),
     ('superadmin:families_save', []),
+    ('superadmin:teams_save', []),
 ]
 
 
