@@ -74,11 +74,6 @@ urlpatterns = [
         name='family_pool_admin_winners',
     ),
     path(
-        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/job-runs/',
-        views.family_pool_admin_job_runs,
-        name='family_pool_admin_job_runs',
-    ),
-    path(
         'families/<slug:family_slug>/pools/<slug:pool_slug>/invites/create/',
         views.create_family_invite,
         name='create_family_invite',

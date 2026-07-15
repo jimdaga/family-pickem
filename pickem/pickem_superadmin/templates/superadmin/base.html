@@ -1,0 +1,80 @@
+{% load static sa_extras %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}superadmin{% endblock %} · pickem superadmin</title>
+  <link rel="stylesheet" href="{% sa_static_v 'css/tailwind.css' %}">
+</head>
+<body class="sa-body min-h-screen">
+  <header class="sa-chrome">
+    <div class="flex items-center justify-between px-4 py-2.5">
+      <div class="flex items-baseline gap-2">
+        <span class="sa-wordmark text-[15px]">pickem</span>
+        <span class="sa-wordmark-dim text-[13px]">superadmin</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="sa-env-badge">{{ sa_environment|default:"dev" }}</span>
+        <span class="sa-mono text-gray-400">{{ request.user.username }}</span>
+        <a href="/" class="text-gray-400 hover:text-white text-[13px]">exit &rarr;</a>
+      </div>
+    </div>
+    <nav class="flex gap-0.5 px-3">
+      {% url 'superadmin:overview' as u %}
+      <a href="{{ u }}" class="sa-tab {% if request.path == u %}sa-tab-active{% endif %}">overview</a>
+      {% url 'superadmin:users' as u_users %}
+      <a href="{{ u_users }}" class="sa-tab {% if '/users' in request.path %}sa-tab-active{% endif %}">users</a>
+      {% url 'superadmin:pools' as u_pools %}
+      <a href="{{ u_pools }}" class="sa-tab {% if '/pools' in request.path %}sa-tab-active{% endif %}">pools</a>
+      {% url 'superadmin:families' as u_families %}
+      <a href="{{ u_families }}" class="sa-tab {% if '/families' in request.path %}sa-tab-active{% endif %}">families</a>
+      {% url 'superadmin:teams' as u_teams %}
+      <a href="{{ u_teams }}" class="sa-tab {% if '/teams' in request.path %}sa-tab-active{% endif %}">teams</a>
+      {% url 'superadmin:jobs' as u_jobs %}
+      <a href="{{ u_jobs }}" class="sa-tab {% if '/jobs' in request.path %}sa-tab-active{% endif %}">jobs</a>
+      {% url 'superadmin:audit' as u_audit %}
+      <a href="{{ u_audit }}" class="sa-tab {% if '/audit' in request.path %}sa-tab-active{% endif %}">audit</a>
+    </nav>
+  </header>
+
+  {% if sa_health %}
+    <div class="{% if sa_health.alive %}sa-strip sa-strip-ok{% else %}sa-strip sa-strip-bad{% endif %}">
+      <span class="sa-dot {% if sa_health.alive %}sa-dot-ok{% else %}sa-dot-bad{% endif %}"></span>
+      {% if sa_health.alive %}
+        <span class="font-semibold">Pipeline healthy</span>
+        <span class="opacity-70">·</span>
+        <span>last run {{ sa_health.last_run|date:"H:i:s" }} ({{ sa_health.last_status }})</span>
+      {% else %}
+        <span class="font-semibold">Pipeline not running</span>
+        <span class="opacity-70">·</span>
+        <span>{% if sa_health.last_run %}last execution {{ sa_health.last_run|date:"Y-m-d H:i:s" }}{% else %}nothing has ever executed{% endif %}</span>
+        <a href="{% url 'superadmin:jobs' %}" class="ml-auto underline font-medium">Jobs &rarr;</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <main class="max-w-[1400px] mx-auto px-5 py-5">
+    <div class="mb-4 flex items-end justify-between gap-3">
+      <div>
+        <div class="sa-eyebrow mb-0.5">{% block eyebrow %}console{% endblock %}</div>
+        <h1 class="sa-title">{% block heading %}{% endblock %}</h1>
+      </div>
+      <div>{% block actions %}{% endblock %}</div>
+    </div>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="mb-2 flex items-center gap-2 rounded-lg border px-3 py-2 text-[13px]
+          {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-800
+          {% else %}border-emerald-200 bg-emerald-50 text-emerald-800{% endif %}">
+          <span class="sa-dot {% if message.tags == 'error' %}sa-dot-bad{% else %}sa-dot-ok{% endif %}"></span>
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

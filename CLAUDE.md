@@ -150,6 +150,19 @@ def admin_view(request):
 
 Commissioners are identified via `UserProfile.is_commissioner` flag or `is_superuser`.
 
+### Superadmin Console
+
+Superuser-only cross-family operator console at `/superadmin/` (app: `pickem_superadmin`).
+
+- **Gate**: `@superadmin_required` (`pickem_superadmin/decorators.py`) — `is_superuser` only; non-superusers get 404, not 403 (the console does not confirm its own existence). Anonymous users hit `RequireLoginForInternalPagesMiddleware` first and get a login redirect. Every view carries the gate; `tests/test_auth.py::test_all_urls_are_covered` fails if a new URL is added without a gate test.
+- **Pages**: overview (scheduler health + anomaly checks + current-season control + site-wide banners), users (site-wide block/unblock), pools (cross-family settings matrix), families, teams (`logo_contrast_preset` + live preview), jobs (queue pipeline runs), audit.
+- **Audit**: every write goes through `log_action()` (`pickem_superadmin/audit.py`), which writes a `SuperAdminAuditLog` row with a before/after diff and dual-writes `FamilyAuditLog` for family-scoped actions. Never call `SuperAdminAuditLog.objects.create()` directly.
+- **Editable matrices** (pools/families/teams) share `save_matrix()` (`pickem_superadmin/matrix.py`): per-row prefixed forms, optimistic-concurrency via `updated_at` (pass `stale_check=False` for models without it, e.g. `Teams`), only-changed-rows saved. Rows key on the settings/model row's own `pk`, not the parent `Pool.id`.
+- **Jobs are queued, not run inline** — a one-off job is written into the APScheduler `DjangoJobStore` and the scheduler process (`RUN_SCHEDULER=true`) executes it within ~60s. The web-worker path uses `scheduler.start(paused=True)` so `add_job` persists without executing. Commands are allowlisted in `pickem_superadmin/jobs.QUEUEABLE_COMMANDS`; queueing is refused when no scheduler is alive.
+- **Locked settings**: `pick_type=against_spread` and `include_playoffs` are rejected server-side (form `disabled=True`), here and in `FamilyAdminSettingsForm` — unimplemented downstream, not permission-gated. Unlock both together when the backend lands.
+- **Repair services** (`pickem_superadmin/services.py`): pool recompute, week re-score, stuck-game fix, pick delete, season-row reset, settings backfill. `update_standings`/`update_stats` accept `--pool` for pool-scoped recompute. Destructive actions capture before-state into the audit `changes` before mutating.
+- Django admin (`/admin/`) remains the raw-CRUD escape hatch.
+
 ### Rate Limiting
 
 Rate limiting is configured but **disabled in development** to avoid cache backend issues.

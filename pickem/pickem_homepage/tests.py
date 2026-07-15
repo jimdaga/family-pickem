@@ -3762,51 +3762,6 @@ class FamilyAdminExperienceTests(TestCase):
             kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
         )
 
-    def _job_runs_url(self, *, family=None, pool=None):
-        family = family or self.family
-        pool = pool or self.pool
-        return reverse(
-            "family_pool_admin_job_runs",
-            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
-        )
-
-    def test_job_runs_page_is_superuser_only_and_lists_executions(self):
-        from django_apscheduler.models import DjangoJob, DjangoJobExecution
-
-        job = DjangoJob.objects.create(id="update_all", next_run_time=timezone.now())
-        DjangoJobExecution.objects.create(
-            job=job, status="Executed", run_time=timezone.now(), duration=1.23,
-        )
-        DjangoJobExecution.objects.create(
-            job=job, status="Error!", run_time=timezone.now(), duration=0.5,
-            exception="boom", traceback="SECRET_TRACEBACK_MARKER at /app/secret.py",
-        )
-
-        # A family admin cannot see the tool...
-        self.client.force_login(self.admin_user)
-        self.assertEqual(self.client.get(self._job_runs_url()).status_code, 403)
-        # ...and the admin hub hides the Job Runs card for them.
-        self.assertNotContains(self.client.get(self._admin_url()), self._job_runs_url())
-
-        # A profile-flag commissioner is still scoped to their family: no
-        # system-wide scheduler data.
-        UserProfile.objects.create(user=self.owner, is_commissioner=True)
-        self.client.force_login(self.owner)
-        self.assertEqual(self.client.get(self._job_runs_url()).status_code, 403)
-        self.assertNotContains(self.client.get(self._admin_url()), self._job_runs_url())
-
-        # A superuser (site operator) sees the tool, the hub card, and the
-        # full traceback.
-        self.owner.is_superuser = True
-        self.owner.save(update_fields=["is_superuser"])
-        response = self.client.get(self._job_runs_url())
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Job Runs")
-        self.assertContains(response, "update_all")
-        self.assertContains(response, "Executed")
-        self.assertContains(response, "SECRET_TRACEBACK_MARKER")
-        self.assertContains(self.client.get(self._admin_url()), self._job_runs_url())
-
     def test_superuser_god_mode_accesses_any_family_with_badge(self):
         # A superuser with NO membership anywhere sees any family's pages.
         sre = User.objects.create_user(
@@ -6861,9 +6816,19 @@ class GlobalLeaderboardTests(TestCase):
     def test_leaderboard_excludes_superusers_and_blends_accuracy(self):
         self._points(self.smith_pool, self.alice, 10)
         self._points(self.smith_pool, self.admin, 999)  # admin must not appear
+        # The global leaderboard blends accuracy from the pool-null (global)
+        # userStats row — the one update_stats writes per user in its default,
+        # season-wide run. A per-pool row (pool=<pool>) is a different record and
+        # must not feed the global figure.
+        userStats.objects.create(
+            pool=None, userEmail=self.alice.email, userID=str(self.alice.id),
+            correctPickTotalSeason=8, totalPicksSeason=10, weeksWonSeason=1,
+        )
+        # A per-pool row for the same user with different numbers must be ignored
+        # by the global leaderboard (regression guard for pool-scoped rows).
         userStats.objects.create(
             pool=self.smith_pool, userEmail=self.alice.email, userID=str(self.alice.id),
-            correctPickTotalSeason=8, totalPicksSeason=10, weeksWonSeason=1,
+            correctPickTotalSeason=1, totalPicksSeason=10, weeksWonSeason=0,
         )
 
         response = self.client.get(reverse("global_leaderboard"))
@@ -6872,7 +6837,7 @@ class GlobalLeaderboardTests(TestCase):
         self.assertIn(str(self.alice.id), ids)
         self.assertNotIn(str(self.admin.id), ids)
         alice = next(e for e in response.context["entries"] if e["userID"] == str(self.alice.id))
-        self.assertEqual(alice["accuracy"], 80)  # 8/10
+        self.assertEqual(alice["accuracy"], 80)  # 8/10 from the global row, not 9/20
 
     def test_players_tied_at_zero_share_rank_one_and_podium_is_hidden(self):
         # Season just started: everyone has a standings row but no points, so

@@ -59,10 +59,21 @@ class Command(BaseCommand):
             default=None,
             help="Season in YYZZ format (defaults to the current season).",
         )
+        parser.add_argument(
+            "--pool",
+            type=int,
+            default=None,
+            help=(
+                "Limit the recompute to a single pool id (defaults to every pool). "
+                "Writes a per-pool userStats row instead of touching the global "
+                "(pool-null) row."
+            ),
+        )
 
     def handle(self, *args, **options):
         season = options.get("season") or get_season()
         season = int(season)
+        pool_id = options.get("pool")
 
         User = get_user_model()
         emails = {
@@ -70,7 +81,8 @@ class Command(BaseCommand):
             for uid, email in User.objects.values_list("id", "email")
         }
 
-        # Shared reference data, fetched once.
+        # Shared reference data, fetched once. Games aren't pool-scoped, so this
+        # is unaffected by --pool.
         finished_slugs = set(
             GamesAndScores.objects.filter(statusType="finished").values_list(
                 "slug", flat=True
@@ -92,32 +104,67 @@ class Command(BaseCommand):
             key = (g["gameseason"], g["gameWeek"])
             scored_by_week[key] = scored_by_week.get(key, 0) + 1
 
-        # order_by("uid") clears GamePicks' default Meta ordering (gameWeek);
-        # otherwise it's added to the SELECT and DISTINCT returns one row per
-        # (uid, week), processing each user once per week they picked.
-        uids = list(
-            GamePicks.objects.filter(gameseason__isnull=False)
-            .order_by("uid")
-            .values_list("uid", flat=True)
-            .distinct()
-        )
-
-        written = 0
-        for uid in uids:
-            if uid is None:
-                continue
-            user_id = str(uid)
-            stats = self._compute_for_user(
-                uid,
-                season,
-                finished_slugs,
-                scored_ids_all,
-                scored_ids_season,
-                scored_by_week,
+        if pool_id:
+            # Pool-scoped: identify users by their (string) userID within this
+            # pool's picks, and write a per-pool row for each — the global
+            # (pool-null) row from a season-wide run is left untouched.
+            identities = list(
+                GamePicks.objects.filter(gameseason__isnull=False, pool_id=pool_id)
+                .exclude(userID="")
+                .order_by("userID")
+                .values_list("userID", flat=True)
+                .distinct()
             )
-            stats["userEmail"] = emails.get(user_id, f"user-{user_id}@placeholder.local")
-            self._upsert(user_id, stats)
-            written += 1
+            written = 0
+            for user_id in identities:
+                if not user_id:
+                    continue
+                identity_filter = {"userID": user_id, "pool_id": pool_id}
+                stats = self._compute_for_user(
+                    identity_filter,
+                    user_id,
+                    season,
+                    finished_slugs,
+                    scored_ids_all,
+                    scored_ids_season,
+                    scored_by_week,
+                    pool_id=pool_id,
+                )
+                stats["userEmail"] = emails.get(
+                    user_id, f"user-{user_id}@placeholder.local"
+                )
+                self._upsert(user_id, stats, pool_id=pool_id)
+                written += 1
+        else:
+            # order_by("uid") clears GamePicks' default Meta ordering (gameWeek);
+            # otherwise it's added to the SELECT and DISTINCT returns one row per
+            # (uid, week), processing each user once per week they picked.
+            uids = list(
+                GamePicks.objects.filter(gameseason__isnull=False)
+                .order_by("uid")
+                .values_list("uid", flat=True)
+                .distinct()
+            )
+
+            written = 0
+            for uid in uids:
+                if uid is None:
+                    continue
+                user_id = str(uid)
+                identity_filter = {"uid": uid}
+                stats = self._compute_for_user(
+                    identity_filter,
+                    user_id,
+                    season,
+                    finished_slugs,
+                    scored_ids_all,
+                    scored_ids_season,
+                    scored_by_week,
+                    pool_id=None,
+                )
+                stats["userEmail"] = emails.get(user_id, f"user-{user_id}@placeholder.local")
+                self._upsert(user_id, stats, pool_id=None)
+                written += 1
 
         self.stdout.write(
             self.style.SUCCESS(f"update_stats: wrote {written} userStats row(s).")
@@ -125,18 +172,18 @@ class Command(BaseCommand):
 
     def _compute_for_user(
         self,
-        uid,
+        identity_filter,
+        user_id,
         season,
         finished_slugs,
         scored_ids_all,
         scored_ids_season,
         scored_by_week,
+        pool_id=None,
     ):
-        user_id = str(uid)
-
         # --- Pick accuracy (real picks whose game is finished) ---
         finished_picks = GamePicks.objects.filter(
-            uid=uid, gameseason__isnull=False, slug__in=finished_slugs,
+            **identity_filter, gameseason__isnull=False, slug__in=finished_slugs,
             auto_pick=False,
         )
         totals = finished_picks.aggregate(
@@ -152,6 +199,8 @@ class Command(BaseCommand):
 
         # --- Weeks won / seasons won (from userSeasonPoints) ---
         usp = userSeasonPoints.objects.filter(userID=user_id)
+        if pool_id:
+            usp = usp.filter(pool_id=pool_id)
         weeks_won_total = self._sum_weeks_won(usp.filter(gameseason__isnull=False))
         weeks_won_season = self._sum_weeks_won(usp.filter(gameseason=season))
         seasons_won = usp.filter(
@@ -161,19 +210,19 @@ class Command(BaseCommand):
         # --- Missed picks: scored games the user never picked themselves ---
         picked_game_ids = set(
             GamePicks.objects.filter(
-                uid=uid, gameseason__isnull=False, auto_pick=False
+                **identity_filter, gameseason__isnull=False, auto_pick=False
             ).values_list("pick_game_id", flat=True)
         )
         missed_total = len(scored_ids_all - picked_game_ids)
         missed_season = len(scored_ids_season - picked_game_ids)
 
         # --- Perfect weeks ---
-        perfect_total = self._perfect_weeks(uid, scored_by_week, None)
-        perfect_season = self._perfect_weeks(uid, scored_by_week, season)
+        perfect_total = self._perfect_weeks(identity_filter, scored_by_week, None)
+        perfect_season = self._perfect_weeks(identity_filter, scored_by_week, season)
 
         # --- Most / least picked team(s) ---
-        most_total, least_total = self._extreme_picked(uid, None)
-        most_season, least_season = self._extreme_picked(uid, season)
+        most_total, least_total = self._extreme_picked(identity_filter, None)
+        most_season, least_season = self._extreme_picked(identity_filter, season)
 
         return {
             "correctPickTotalTotal": correct_total,
@@ -204,7 +253,7 @@ class Command(BaseCommand):
         return total
 
     @staticmethod
-    def _perfect_weeks(uid, scored_by_week, season):
+    def _perfect_weeks(identity_filter, scored_by_week, season):
         """Count weeks where the user picked every scored game, all correct.
 
         Matches pickemctl: a week is perfect when the number of scored games in
@@ -212,9 +261,11 @@ class Command(BaseCommand):
         that week (so missing a game, getting one wrong, or extra cross-pool
         picks all disqualify it).
         """
-        pick_filter = {"uid": uid, "gameseason__isnull": False, "auto_pick": False}
+        pick_filter = dict(identity_filter, auto_pick=False)
         if season is not None:
-            pick_filter = {"uid": uid, "gameseason": season, "auto_pick": False}
+            pick_filter["gameseason"] = season
+        else:
+            pick_filter["gameseason__isnull"] = False
 
         # User's total and correct picks grouped by (season, week).
         per_week = {}
@@ -244,14 +295,14 @@ class Command(BaseCommand):
         return perfect
 
     @staticmethod
-    def _extreme_picked(uid, season):
+    def _extreme_picked(identity_filter, season):
         """Return (most_picked, least_picked) team display strings or None.
 
         Ties are joined by ", ". Counts every pick by the user (optionally in a
         single season), matching pickemctl.
         """
         qs = GamePicks.objects.filter(
-            uid=uid, gameseason__isnull=False, auto_pick=False
+            **identity_filter, gameseason__isnull=False, auto_pick=False
         )
         if season is not None:
             qs = qs.filter(gameseason=season)
@@ -269,15 +320,23 @@ class Command(BaseCommand):
         return most, least
 
     @staticmethod
-    def _upsert(user_id, fields):
-        """Write the single global (pool-null) userStats row for a user.
+    def _upsert(user_id, fields, pool_id=None):
+        """Write the userStats row for a user: the single global (pool-null) row
+        for a season-wide run, or a per-pool row when scoped with --pool.
 
         The duplicate-collapse delete and the save run in one transaction so a
         save failure can't leave the user with no stats row.
         """
         with transaction.atomic():
+            # Lock the matching rows: two concurrent runs for the same
+            # (userID, pool_id) — e.g. a superadmin "Recompute" overlapping the
+            # scheduled global run — could otherwise both see no row and both
+            # insert, leaving divergent duplicates ((pool, userID) is indexed
+            # but not unique).
             existing = list(
-                userStats.objects.filter(userID=user_id, pool__isnull=True).order_by("id")
+                userStats.objects.select_for_update()
+                .filter(userID=user_id, pool_id=pool_id)
+                .order_by("id")
             )
             if existing:
                 obj = existing[0]
@@ -285,7 +344,7 @@ class Command(BaseCommand):
                 for extra in existing[1:]:
                     extra.delete()
             else:
-                obj = userStats(userID=user_id, pool=None)
+                obj = userStats(userID=user_id, pool_id=pool_id)
 
             obj.userEmail = fields.pop("userEmail", obj.userEmail)
             for key, value in fields.items():

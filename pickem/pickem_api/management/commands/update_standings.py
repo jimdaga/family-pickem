@@ -53,13 +53,24 @@ class Command(BaseCommand):
             default=None,
             help="Season in YYZZ format (defaults to the current season).",
         )
+        parser.add_argument(
+            "--pool",
+            type=int,
+            default=None,
+            help="Limit the recompute to a single pool id (defaults to every pool).",
+        )
 
     def handle(self, *args, **options):
         season = options["season"] or get_season()
+        pool_id_filter = options.get("pool")
         self.stdout.write(f"Recomputing standings for season {season}")
 
+        pick_filter = {"gameseason": season}
+        if pool_id_filter:
+            pick_filter["pool_id"] = pool_id_filter
+
         pick_combos = (
-            GamePicks.objects.filter(gameseason=season)
+            GamePicks.objects.filter(**pick_filter)
             # order_by() clears Meta.ordering (gameWeek), which would leak
             # into the SELECT and break DISTINCT on (pool_id, userID).
             .order_by()
@@ -72,6 +83,8 @@ class Command(BaseCommand):
         # the lobby, scores, and standings pages.
         member_combos = set()
         season_pools = Pool.objects.filter(status=Pool.Status.ACTIVE, season=season)
+        if pool_id_filter:
+            season_pools = season_pools.filter(id=pool_id_filter)
         for pool in season_pools:
             member_ids = FamilyMembership.objects.filter(
                 family=pool.family,

@@ -381,15 +381,16 @@ def build_family_admin_sections(family, pool, user=None):
             'status': 'Manage winners',
         },
     ]
-    # Scheduler job runs are system-wide data; superuser-only (commissioners
-    # govern a single family, not the site).
+    # Site-wide operator tools (scheduler, cross-family settings, user blocking)
+    # live in the superadmin console, not in a single family's admin. Surface a
+    # single entry point, and only to superadmins.
     if user is not None and getattr(user, 'is_superuser', False):
         sections.append({
-            'label': 'Job Runs',
-            'description': 'Scheduler run history for the data-update pipeline.',
-            'icon': 'fas fa-robot',
-            'url': reverse('family_pool_admin_job_runs', kwargs=route_kwargs),
-            'status': 'View job runs',
+            'label': 'Superadmin',
+            'description': 'Cross-family operator console — health, settings, users, jobs, and repair tools.',
+            'icon': 'fas fa-shield-halved',
+            'url': '/superadmin/',
+            'status': 'Open console',
         })
     return sections
 
@@ -1072,41 +1073,6 @@ def family_pool_admin(request, family_slug, pool_slug):
         'pool_settings': pool_settings,
     }
     return render(request, 'pickem/family_admin.html', context)
-
-
-@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
-def family_pool_admin_job_runs(request, family_slug, pool_slug):
-    """View scheduler job runs (django-apscheduler). Superuser-only: the
-    scheduler and its execution history are system-wide, and commissioners
-    only govern a single family."""
-    from django.core.paginator import Paginator
-    from django.http import HttpResponseForbidden
-    from django_apscheduler.models import DjangoJob, DjangoJobExecution
-
-    tenant_context = request.tenant_context
-    if not request.user.is_superuser:
-        return HttpResponseForbidden('Superuser access is required to view job runs.')
-
-    jobs = DjangoJob.objects.all().order_by('id')
-    execution_qs = (
-        DjangoJobExecution.objects.select_related('job').order_by('-run_time')
-    )
-    paginator = Paginator(execution_qs, 25)
-    executions = paginator.get_page(request.GET.get('page'))
-
-    context = {
-        'family': tenant_context.family,
-        'pool': tenant_context.pool,
-        'membership': tenant_context.membership,
-        'gameseason': tenant_context.pool.season or get_season(),
-        'jobs': jobs,
-        'executions': executions,
-        # Raw exception/traceback output can leak internal paths and config,
-        # so it is limited to the site owner (superuser); other commissioners
-        # still see run status and duration.
-        'can_view_logs': request.user.is_superuser,
-    }
-    return render(request, 'pickem/family_admin_job_runs.html', context)
 
 
 # PoolSettings fields managed by the family admin settings form. The form,
@@ -2395,9 +2361,13 @@ def index(request):
         # If there's any error with season points, just skip rankings
         pass
     
-    # Get user stats for achievement badges  
+    # Get user stats for achievement badges
     for user_id in message_user_ids:
-        user_stats = userStats.objects.filter(userID=str(user_id)).first()
+        # Global all-time badges come from the pool-null row; per-pool rows
+        # (from a superadmin pool recompute) must not shadow it.
+        user_stats = userStats.objects.filter(
+            userID=str(user_id), pool__isnull=True,
+        ).first()
         if user_stats:
             user_achievements[user_id] = {
                 'perfect_weeks_season': user_stats.perfectWeeksSeason or 0,
@@ -2480,10 +2450,12 @@ def global_leaderboard(request):
         )
     )
 
-    # Accuracy + weeks won, blended across the player's pools.
+    # Accuracy + weeks won, blended across the player's pools. The pool-null row
+    # already IS that all-pools aggregate; summing per-pool rows in alongside it
+    # would double-count, so restrict to the global rows.
     stats_by_user = {}
     for row in (
-        userStats.objects.values('userID').annotate(
+        userStats.objects.filter(pool__isnull=True).values('userID').annotate(
             correct=Coalesce(Sum('correctPickTotalSeason'), 0),
             total=Coalesce(Sum('totalPicksSeason'), 0),
             weeks_won=Coalesce(Sum('weeksWonSeason'), 0),
@@ -3528,7 +3500,9 @@ def render_user_profile(request, user_id, *, tenant_context=None):
         gameseason = get_season()
         points_scope = userSeasonPoints.objects.all()
         picks_scope = GamePicks.objects.all()
-        stats_scope = userStats.objects.all()
+        # Non-tenant (global) profile view: the all-time stats live in the
+        # pool-null row; per-pool rows would make .first() nondeterministic.
+        stats_scope = userStats.objects.filter(pool__isnull=True)
         posts_scope = MessageBoardPost.objects.all()
 
     gameseason_display = get_season(display_name=True)

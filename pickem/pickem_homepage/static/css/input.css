@@ -694,3 +694,121 @@
    ======================================== */
 
 /* Legacy rules removed 2025-12-11: All dark mode styling now handled by Tailwind component classes */
+
+/* ========================================
+   Superadmin console design system (.sa-*)
+   Utilitarian "operator instrument" look: graphite chrome, a light
+   workspace, tabular numerics, uppercase micro-labels, semantic status
+   colors used sparingly. Deliberately not brand-colored. Written as
+   self-contained CSS (not @apply) so it never depends on JIT scanning.
+   ======================================== */
+
+.sa-body {
+  background: #eceff3;
+  color: #1b212b;
+  font-family: 'Inter', 'Urbanist', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 1;
+}
+.sa-num { font-variant-numeric: tabular-nums; }
+.sa-mono { font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; font-size: 12px; }
+
+/* --- chrome / header --- */
+.sa-chrome {
+  background: linear-gradient(#161b23, #12161d);
+  color: #c4ccd6;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+}
+.sa-wordmark { color: #fff; font-weight: 600; letter-spacing: -0.01em; }
+.sa-wordmark-dim { color: #6c7684; font-weight: 500; }
+.sa-eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a94a3; }
+.sa-env-badge {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 2px 7px; border-radius: 5px; background: rgba(52, 211, 153, 0.14); color: #6ee7b7;
+  border: 1px solid rgba(52, 211, 153, 0.25);
+}
+
+/* --- nav tabs --- */
+.sa-tab {
+  position: relative; padding: 9px 12px 10px; font-size: 13px; color: #97a1ad;
+  border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; text-decoration: none;
+}
+.sa-tab:hover { color: #fff; }
+.sa-tab-active { color: #fff; border-bottom-color: #fff; }
+
+/* --- health strip (the signature: a persistent live readout) --- */
+.sa-strip { display: flex; align-items: center; gap: 8px; padding: 6px 16px; font-size: 12px; border-bottom: 1px solid; }
+.sa-strip-ok { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.sa-strip-bad { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.sa-dot { width: 8px; height: 8px; border-radius: 9999px; flex: none; }
+.sa-dot-ok { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18); }
+.sa-dot-bad { background: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); animation: sa-pulse 1.6s ease-in-out infinite; }
+@keyframes sa-pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); } 50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } }
+
+/* --- page header --- */
+.sa-title { font-size: 16px; font-weight: 650; color: #171c24; letter-spacing: -0.01em; }
+.sa-count { font-weight: 400; color: #97a1ad; }
+.sa-h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #55606f; }
+
+/* --- cards / stats --- */
+.sa-card { background: #fff; border: 1px solid #e3e7ec; border-radius: 10px; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); }
+.sa-stat { background: #fff; border: 1px solid #e3e7ec; border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); }
+.sa-stat-value { font-size: 23px; font-weight: 650; line-height: 1; color: #171c24; font-variant-numeric: tabular-nums; }
+.sa-stat-label { margin-top: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #8a94a3; }
+
+/* --- tables --- */
+.sa-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sa-table thead th {
+  background: #f4f6f8; text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em; color: #6b7686; border-bottom: 1px solid #e3e7ec; white-space: nowrap;
+}
+.sa-table tbody td { padding: 9px 12px; border-bottom: 1px solid #eef1f4; vertical-align: top; }
+.sa-table tbody tr:last-child td { border-bottom: 0; }
+.sa-table tbody tr:hover { background: #f8fafc; }
+.sa-table-wrap { background: #fff; border: 1px solid #e3e7ec; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); }
+.sa-table-scroll { overflow-x: auto; }
+
+/* --- buttons --- */
+.sa-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 7px;
+  font-size: 13px; font-weight: 500; border: 1px solid transparent; cursor: pointer;
+  transition: background-color .15s, border-color .15s, box-shadow .15s; text-decoration: none; line-height: 1.2;
+}
+.sa-btn-default { background: #fff; border-color: #d0d7de; color: #2a2f38; }
+.sa-btn-default:hover { background: #f4f6f8; border-color: #b9c2cc; }
+.sa-btn-primary { background: #1f2632; border-color: #1f2632; color: #fff; }
+.sa-btn-primary:hover { background: #2c3646; }
+.sa-btn-danger { background: #dc2626; border-color: #dc2626; color: #fff; }
+.sa-btn-danger:hover { background: #b91c1c; }
+.sa-btn-sm { padding: 4px 8px; font-size: 12px; border-radius: 6px; }
+.sa-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* --- form controls --- */
+.sa-input, .sa-select {
+  padding: 6px 9px; border-radius: 7px; border: 1px solid #d0d7de; background: #fff;
+  font-size: 13px; color: #1b212b; line-height: 1.3; transition: border-color .15s, box-shadow .15s;
+}
+.sa-select { padding-right: 26px; }
+.sa-input:focus, .sa-select:focus { outline: none; border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(31, 38, 50, 0.1); }
+.sa-input::placeholder { color: #aab2bd; }
+.sa-input-danger { border-color: #f0a3a3; }
+.sa-input-danger:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12); }
+
+/* --- pills --- */
+.sa-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.sa-pill-ok { background: #ecfdf3; color: #067647; }
+.sa-pill-bad { background: #fef3f2; color: #b42318; }
+.sa-pill-warn { background: #fffaeb; color: #b54708; }
+.sa-pill-muted { background: #f2f4f7; color: #4a5568; }
+.sa-pill-info { background: #eff4ff; color: #3538cd; }
+/* Aliases matching SiteBanner.banner_type values (success/info/warning/danger). */
+.sa-pill-success { background: #ecfdf3; color: #067647; }
+.sa-pill-warning { background: #fffaeb; color: #b54708; }
+.sa-pill-danger { background: #fef3f2; color: #b42318; }
+
+/* --- misc --- */
+.sa-link { color: #3538cd; text-decoration: none; }
+.sa-link:hover { text-decoration: underline; }
+.sa-empty { padding: 18px 12px; color: #98a2b3; font-size: 13px; text-align: center; }
+.sa-locked { background: #f4f6f8; color: #98a2b3; }
+.sa-changes { font-family: ui-monospace, monospace; font-size: 11.5px; color: #475467; line-height: 1.5; }
