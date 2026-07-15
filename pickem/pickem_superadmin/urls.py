@@ -16,4 +16,6 @@ urlpatterns = [
     path('families/save/', views.families_save, name='families_save'),
     path('teams/', views.teams, name='teams'),
     path('teams/save/', views.teams_save, name='teams_save'),
+    path('jobs/', views.jobs_page, name='jobs'),
+    path('jobs/queue/', views.jobs_queue, name='jobs_queue'),
 ]

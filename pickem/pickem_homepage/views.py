@@ -381,14 +381,14 @@ def build_family_admin_sections(family, pool, user=None):
             'status': 'Manage winners',
         },
     ]
-    # Scheduler job runs are system-wide data; superuser-only (commissioners
-    # govern a single family, not the site).
+    # Scheduler job runs are system-wide data, not scoped to any one family, so
+    # that tool now lives in the superadmin console rather than here.
     if user is not None and getattr(user, 'is_superuser', False):
         sections.append({
-            'label': 'Job Runs',
-            'description': 'Scheduler run history for the data-update pipeline.',
+            'label': 'Jobs',
+            'description': 'Scheduler run history for the data-update pipeline (superadmin console).',
             'icon': 'fas fa-robot',
-            'url': reverse('family_pool_admin_job_runs', kwargs=route_kwargs),
+            'url': '/superadmin/jobs/',
             'status': 'View job runs',
         })
     return sections
@@ -1072,41 +1072,6 @@ def family_pool_admin(request, family_slug, pool_slug):
         'pool_settings': pool_settings,
     }
     return render(request, 'pickem/family_admin.html', context)
-
-
-@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
-def family_pool_admin_job_runs(request, family_slug, pool_slug):
-    """View scheduler job runs (django-apscheduler). Superuser-only: the
-    scheduler and its execution history are system-wide, and commissioners
-    only govern a single family."""
-    from django.core.paginator import Paginator
-    from django.http import HttpResponseForbidden
-    from django_apscheduler.models import DjangoJob, DjangoJobExecution
-
-    tenant_context = request.tenant_context
-    if not request.user.is_superuser:
-        return HttpResponseForbidden('Superuser access is required to view job runs.')
-
-    jobs = DjangoJob.objects.all().order_by('id')
-    execution_qs = (
-        DjangoJobExecution.objects.select_related('job').order_by('-run_time')
-    )
-    paginator = Paginator(execution_qs, 25)
-    executions = paginator.get_page(request.GET.get('page'))
-
-    context = {
-        'family': tenant_context.family,
-        'pool': tenant_context.pool,
-        'membership': tenant_context.membership,
-        'gameseason': tenant_context.pool.season or get_season(),
-        'jobs': jobs,
-        'executions': executions,
-        # Raw exception/traceback output can leak internal paths and config,
-        # so it is limited to the site owner (superuser); other commissioners
-        # still see run status and duration.
-        'can_view_logs': request.user.is_superuser,
-    }
-    return render(request, 'pickem/family_admin_job_runs.html', context)
 
 
 # PoolSettings fields managed by the family admin settings form. The form,

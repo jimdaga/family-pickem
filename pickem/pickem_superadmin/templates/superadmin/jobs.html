@@ -1,0 +1,95 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}jobs{% endblock %}
+{% block heading %}Jobs{% endblock %}
+{% block content %}
+  {% if health.alive %}
+    <div class="mb-3 border-l-4 border-green-600 bg-green-50 px-3 py-2 text-green-900">
+      Scheduler alive — last run {{ health.last_run|date:"Y-m-d H:i:s" }} ({{ health.last_status }}).
+    </div>
+  {% else %}
+    <div class="mb-3 border-l-4 border-red-600 bg-red-50 px-3 py-2 text-red-900">
+      <strong>No live scheduler.</strong>
+      {% if health.last_run %}
+        Nothing has executed since {{ health.last_run|date:"Y-m-d H:i:s" }}.
+      {% else %}
+        Nothing has ever executed.
+      {% endif %}
+      Queueing is disabled — a queued job would sit in the jobstore and never run.
+      Check that a process has <span class="font-mono">RUN_SCHEDULER=true</span>.
+    </div>
+  {% endif %}
+
+  <h2 class="mb-1 font-semibold">Queue a run</h2>
+  <p class="mb-2 text-gray-600">
+    Jobs are <em>enqueued</em>, not run immediately. The scheduler picks them up on its
+    next wakeup (~60s) and the run appears in the history below.
+  </p>
+  <form method="post" action="{% url 'superadmin:jobs_queue' %}" class="mb-5 flex gap-2">
+    {% csrf_token %}
+    <select name="command" class="border border-gray-300 px-2 py-1 font-mono">
+      {% for command in queueable %}<option value="{{ command }}">{{ command }}</option>{% endfor %}
+    </select>
+    <button type="submit" {% if not health.alive %}disabled{% endif %}
+            class="border border-gray-800 bg-gray-800 px-3 py-1 text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:border-gray-400 disabled:bg-gray-400">
+      Queue run
+    </button>
+  </form>
+
+  <h2 class="mb-1 font-semibold">Registered jobs</h2>
+  <div class="mb-5 overflow-x-auto border border-gray-300 bg-white">
+    <table class="w-full border-collapse">
+      <thead class="bg-gray-200 text-left">
+        <tr>
+          <th class="px-2 py-1 font-semibold">id</th>
+          <th class="px-2 py-1 font-semibold">next run</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in registered_jobs %}
+          <tr class="border-t border-gray-200">
+            <td class="px-2 py-1 font-mono">{{ job.id }}</td>
+            <td class="px-2 py-1 font-mono">{{ job.next_run_time|date:"Y-m-d H:i:s"|default:"—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="mb-1 font-semibold">Run history</h2>
+  <div class="overflow-x-auto border border-gray-300 bg-white">
+    <table class="w-full border-collapse">
+      <thead class="bg-gray-200 text-left">
+        <tr>
+          <th class="px-2 py-1 font-semibold">job</th>
+          <th class="px-2 py-1 font-semibold">run time</th>
+          <th class="px-2 py-1 font-semibold">status</th>
+          <th class="px-2 py-1 font-semibold">duration</th>
+          <th class="px-2 py-1 font-semibold">exception</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for execution in executions %}
+          <tr class="border-t border-gray-200 {% if execution.exception %}bg-red-50{% endif %}">
+            <td class="px-2 py-1 font-mono">{{ execution.job_id }}</td>
+            <td class="px-2 py-1 font-mono">{{ execution.run_time|date:"Y-m-d H:i:s" }}</td>
+            <td class="px-2 py-1">{{ execution.status }}</td>
+            <td class="px-2 py-1 font-mono">{{ execution.duration|default:"—" }}</td>
+            <td class="px-2 py-1 font-mono text-red-800">{{ execution.exception|default:"" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if executions.has_other_pages %}
+    <div class="mt-2 flex gap-2">
+      {% if executions.has_previous %}
+        <a href="?page={{ executions.previous_page_number }}" class="underline">&larr; prev</a>
+      {% endif %}
+      <span class="text-gray-600">page {{ executions.number }} of {{ executions.paginator.num_pages }}</span>
+      {% if executions.has_next %}
+        <a href="?page={{ executions.next_page_number }}" class="underline">next &rarr;</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}
