@@ -2361,9 +2361,13 @@ def index(request):
         # If there's any error with season points, just skip rankings
         pass
     
-    # Get user stats for achievement badges  
+    # Get user stats for achievement badges
     for user_id in message_user_ids:
-        user_stats = userStats.objects.filter(userID=str(user_id)).first()
+        # Global all-time badges come from the pool-null row; per-pool rows
+        # (from a superadmin pool recompute) must not shadow it.
+        user_stats = userStats.objects.filter(
+            userID=str(user_id), pool__isnull=True,
+        ).first()
         if user_stats:
             user_achievements[user_id] = {
                 'perfect_weeks_season': user_stats.perfectWeeksSeason or 0,
@@ -2446,10 +2450,12 @@ def global_leaderboard(request):
         )
     )
 
-    # Accuracy + weeks won, blended across the player's pools.
+    # Accuracy + weeks won, blended across the player's pools. The pool-null row
+    # already IS that all-pools aggregate; summing per-pool rows in alongside it
+    # would double-count, so restrict to the global rows.
     stats_by_user = {}
     for row in (
-        userStats.objects.values('userID').annotate(
+        userStats.objects.filter(pool__isnull=True).values('userID').annotate(
             correct=Coalesce(Sum('correctPickTotalSeason'), 0),
             total=Coalesce(Sum('totalPicksSeason'), 0),
             weeks_won=Coalesce(Sum('weeksWonSeason'), 0),
@@ -3494,7 +3500,9 @@ def render_user_profile(request, user_id, *, tenant_context=None):
         gameseason = get_season()
         points_scope = userSeasonPoints.objects.all()
         picks_scope = GamePicks.objects.all()
-        stats_scope = userStats.objects.all()
+        # Non-tenant (global) profile view: the all-time stats live in the
+        # pool-null row; per-pool rows would make .first() nondeterministic.
+        stats_scope = userStats.objects.filter(pool__isnull=True)
         posts_scope = MessageBoardPost.objects.all()
 
     gameseason_display = get_season(display_name=True)

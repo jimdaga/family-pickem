@@ -256,7 +256,9 @@ def safe_username(user_id):
 
 @register.filter
 def lookupStats(user_id):
-    stats = userStats.objects.filter(userID=str(user_id)).first()
+    # The global all-time stats row is the pool-null one. Per-pool rows (written
+    # by a superadmin pool recompute) must not shadow it here.
+    stats = userStats.objects.filter(userID=str(user_id), pool__isnull=True).first()
 
     weeksWonSeason = stats.weeksWonSeason if stats else '0'
     weeksWonTotal = stats.weeksWonTotal if stats else '0'

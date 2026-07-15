@@ -328,8 +328,15 @@ class Command(BaseCommand):
         save failure can't leave the user with no stats row.
         """
         with transaction.atomic():
+            # Lock the matching rows: two concurrent runs for the same
+            # (userID, pool_id) — e.g. a superadmin "Recompute" overlapping the
+            # scheduled global run — could otherwise both see no row and both
+            # insert, leaving divergent duplicates ((pool, userID) is indexed
+            # but not unique).
             existing = list(
-                userStats.objects.filter(userID=user_id, pool_id=pool_id).order_by("id")
+                userStats.objects.select_for_update()
+                .filter(userID=user_id, pool_id=pool_id)
+                .order_by("id")
             )
             if existing:
                 obj = existing[0]

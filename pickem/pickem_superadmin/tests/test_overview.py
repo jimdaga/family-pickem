@@ -68,6 +68,22 @@ class OverviewTests(TestCase):
         self.assertEqual(entry.action, SuperAdminAuditLog.Action.SEASON_UPDATED)
         self.assertEqual(entry.changes['season'], [2627, 2728])
 
+    def test_season_update_collapses_duplicate_currentseason_rows(self):
+        """currentSeason has no DB uniqueness constraint. If stray duplicates
+        exist, a season update must leave exactly one row so get_season()'s
+        .first() is deterministic."""
+        currentSeason.objects.create(season=2627, display_name='2026-2027')
+        currentSeason.objects.create(season=2627, display_name='dup')
+        self.assertEqual(currentSeason.objects.count(), 2)
+
+        self.client.post(
+            reverse('superadmin:season_update'),
+            {'season': '2728', 'display_name': '2027-2028', 'confirm': '2728'},
+        )
+
+        self.assertEqual(currentSeason.objects.count(), 1)
+        self.assertEqual(currentSeason.objects.first().season, 2728)
+
     def test_season_update_requires_typed_confirmation(self):
         """get_season() drives the entire app. This is the highest-blast-radius
         field in the console, so it does not change on a stray click."""

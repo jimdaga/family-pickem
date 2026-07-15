@@ -79,7 +79,7 @@ def pick_delete(request, pick_id):
     # anyway so the redirect target never depends on delete() internals.
     pool = pick.pool
 
-    if request.POST.get('confirm', '').strip() != pick.userID:
+    if request.POST.get('confirm', '').strip() != str(pick.userID):
         messages.error(
             request,
             f'Confirmation did not match. Type "{pick.userID}" exactly to delete.',
@@ -97,7 +97,7 @@ def season_row_reset(request, row_id):
     row = get_object_or_404(userSeasonPoints, pk=row_id)
     pool = row.pool
 
-    if request.POST.get('confirm', '').strip() != row.userID:
+    if request.POST.get('confirm', '').strip() != str(row.userID):
         messages.error(
             request,
             f'Confirmation did not match. Type "{row.userID}" exactly to reset.',

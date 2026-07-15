@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from pickem_api.models import Family, FamilyAuditLog, Pool
@@ -113,4 +114,10 @@ def pools_save(request):
     if not saved and not stale and not failed:
         messages.success(request, 'No changes.')
 
-    return redirect('superadmin:pools')
+    # Preserve the operator's filters/pagination (carried on the form action's
+    # query string) so a save doesn't drop them back to the unfiltered page 1.
+    url = reverse('superadmin:pools')
+    query = request.GET.urlencode()
+    if query:
+        url = f'{url}?{query}'
+    return redirect(url)

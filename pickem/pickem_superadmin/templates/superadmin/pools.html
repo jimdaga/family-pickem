@@ -25,7 +25,7 @@
     <span class="sa-pill sa-pill-muted ml-1">🔒 locked</span> settings are unimplemented downstream and can't be enabled here.
   </p>
 
-  <form method="post" action="{% url 'superadmin:pools_save' %}">
+  <form method="post" action="{% url 'superadmin:pools_save' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}">
     {% csrf_token %}
     <div class="sa-table-wrap sa-table-scroll">
       <table class="sa-table" style="white-space:nowrap">
@@ -57,9 +57,11 @@
               <td class="sticky left-0 z-10 bg-white sa-mono font-medium" style="border-right:1px solid #eef1f4">
                 <a href="{% url 'superadmin:pool_detail' row.pool.id %}" class="sa-link">{{ row.pool.family.slug }}/{{ row.pool.slug }}</a>
               </td>
-              <td class="sa-mono">{{ row.pool.season }}</td>
+              <td class="sa-mono">
+                {% if row.form %}<input type="hidden" name="{{ row.settings.pk }}-updated_at" value="{{ row.settings.updated_at.isoformat }}">{% endif %}
+                {{ row.pool.season }}
+              </td>
               {% if row.form %}
-                <input type="hidden" name="{{ row.settings.pk }}-updated_at" value="{{ row.settings.updated_at.isoformat }}">
                 <td>{{ row.form.win_points }}</td>
                 <td>{{ row.form.tie_points }}</td>
                 <td>{{ row.form.weekly_winner_points }}</td>

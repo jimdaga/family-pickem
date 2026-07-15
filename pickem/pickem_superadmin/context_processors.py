@@ -8,6 +8,20 @@ stale.
 """
 
 
+def _environment_label():
+    """A short badge for the chrome so an operator can't mistake prod for dev on
+    a console that performs destructive, audited writes. Prefer an explicit
+    APP_ENVIRONMENT if set; otherwise derive from DEBUG."""
+    import os
+
+    from django.conf import settings
+
+    explicit = os.environ.get('APP_ENVIRONMENT', '').strip()
+    if explicit:
+        return explicit
+    return 'dev' if settings.DEBUG else 'prod'
+
+
 def chrome(request):
     if not request.path.startswith('/superadmin/'):
         return {}
@@ -23,4 +37,4 @@ def chrome(request):
         # that errors reads as "unknown", not a 500.
         health = {'alive': False, 'last_run': None, 'last_status': None, 'stale': True}
 
-    return {'sa_health': health}
+    return {'sa_health': health, 'sa_environment': _environment_label()}

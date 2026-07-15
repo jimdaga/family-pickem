@@ -13,6 +13,7 @@ from pickem_api.management.commands.update_games import STATUS_MAP
 from pickem_api.models import (
     FamilyAuditLog,
     GamePicks,
+    GamesAndScores,
     PoolSettings,
     UserProfile,
 )
@@ -47,6 +48,7 @@ def block_user(request, user, reason):
     user.save(update_fields=['is_active'])
 
     profile, _ = UserProfile.objects.get_or_create(user=user)
+    previous_reason = profile.blocked_reason
     profile.blocked_at = timezone.now()
     profile.blocked_by = request.user
     profile.blocked_reason = reason.strip()
@@ -54,7 +56,12 @@ def block_user(request, user, reason):
 
     flush_user_sessions(user)
 
-    changes = {'is_active': [was_active, False], 'blocked_reason': ['', reason.strip()]}
+    changes = {
+        'is_active': [was_active, False],
+        # Capture the prior reason (Django admin can edit it directly), not a
+        # hardcoded '', so the audit trail reflects the real before-state.
+        'blocked_reason': [previous_reason, reason.strip()],
+    }
     log_action(
         request,
         action=SuperAdminAuditLog.Action.USER_BLOCKED,
@@ -184,13 +191,25 @@ def reset_season_row(request, season_points):
 def rescore_week(request, pool, week):
     """Re-score one week after a game result is corrected.
 
-    Clearing first is the whole point: update_picks only scores *unscored* picks,
-    so recomputing without clearing would leave an already-scored (and now wrong)
-    pick exactly as wrong as it was. Idempotent.
+    Two resets are required for this to actually recompute:
+      1. Clear pick_correct on this pool's week picks — update_picks only ever
+         sets picks True, never back to False, so a formerly-correct-now-wrong
+         pick would otherwise stay True.
+      2. Reset gameScored=False on the games those picks reference — update_picks
+         only revisits games where gameScored is False, so without this the
+         common case (games already scored) recomputes nothing and the cleared
+         picks stay False.
+    update_picks re-marks correct picks from the current game winners; re-running
+    it is idempotent for other pools' picks on the same (shared) games, since it
+    only ever sets True. Standings are then recomputed for this pool only.
     """
-    GamePicks.objects.filter(
+    week_picks = GamePicks.objects.filter(
         pool=pool, gameseason=pool.season, gameWeek=str(week),
-    ).update(pick_correct=False)
+    )
+    game_ids = list(week_picks.values_list('pick_game_id', flat=True).distinct())
+
+    week_picks.update(pick_correct=False)
+    GamesAndScores.objects.filter(id__in=game_ids).update(gameScored=False)
     call_command('update_picks', season=pool.season)
     call_command('update_standings', season=pool.season, pool=pool.id)
 

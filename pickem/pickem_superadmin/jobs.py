@@ -120,19 +120,45 @@ def queue_command(command_name):
     return job_id
 
 
+def _scheduler_is_scheduling():
+    """A running scheduler keeps a registered job's next_run_time in the future.
+    On a fresh deploy (or after execution-history cleanup) there are no
+    executions yet, but a live scheduler has already registered its jobs — so
+    this lets the console recognize it and allow the first manual run, instead
+    of hard-blocking on empty history.
+    """
+    from django_apscheduler.models import DjangoJob
+
+    upcoming = DjangoJob.objects.filter(next_run_time__gte=timezone.now()).exists()
+    return upcoming
+
+
 def scheduler_health():
     """Is anything actually executing jobs? A queued job on a dead scheduler sits
-    in the jobstore forever, so the console must be able to tell."""
+    in the jobstore forever, so the console must be able to tell.
+
+    Alive means either a recent execution OR a registered job scheduled to run
+    (the fresh-deploy case). A dead scheduler leaves stale (past) next_run_times
+    and no recent executions, so it still reads as not alive.
+    """
     from django_apscheduler.models import DjangoJobExecution
 
     last = DjangoJobExecution.objects.order_by('-run_time').first()
-    if last is None:
-        return {'alive': False, 'last_run': None, 'last_status': None, 'stale': True}
 
-    stale = (timezone.now() - last.run_time) > STALE_AFTER
+    if last is None:
+        scheduling = _scheduler_is_scheduling()
+        return {
+            'alive': scheduling,
+            'last_run': None,
+            'last_status': None,
+            'stale': not scheduling,
+        }
+
+    recent = (timezone.now() - last.run_time) <= STALE_AFTER
+    alive = recent or _scheduler_is_scheduling()
     return {
-        'alive': not stale,
+        'alive': alive,
         'last_run': last.run_time,
         'last_status': last.status,
-        'stale': stale,
+        'stale': not alive,
     }

@@ -59,6 +59,21 @@ class BlockUserTests(TestCase):
         self.assertEqual(entry.changes['is_active'], [True, False])
         self.assertEqual(entry.target_id, str(self.spammer.id))
 
+    def test_block_audit_captures_the_real_prior_blocked_reason(self):
+        """A stale reason (Django admin can set one on an active user) must be
+        recorded as the before-state, not a hardcoded ''."""
+        profile = UserProfile.objects.get(user=self.spammer)
+        profile.blocked_reason = 'left over from a previous block'
+        profile.save(update_fields=['blocked_reason'])
+
+        services.block_user(self._request(), self.spammer, reason='Spamming')
+
+        entry = SuperAdminAuditLog.objects.get()
+        self.assertEqual(
+            entry.changes['blocked_reason'],
+            ['left over from a previous block', 'Spamming'],
+        )
+
     def test_block_flushes_the_users_existing_sessions(self):
         """Without this, a blocked user keeps browsing until their session expires."""
         self.client.force_login(self.spammer)
@@ -320,6 +335,31 @@ class RepairServiceTests(TestCase):
                 summary__contains='Re-scored week 1',
             ).exists()
         )
+
+    def test_rescore_week_restores_correctness_on_already_scored_games(self):
+        """The common case: the week's games are already scored (gameScored=True).
+        update_picks skips scored games, so unless rescore resets them to
+        unscored, a formerly-correct pick cleared to False stays False and the
+        repair silently lowers points. Drives the real pipeline, so a fix that
+        only clears pick_correct (without resetting gameScored) fails here."""
+        GamesAndScores.objects.create(
+            id=410, slug='ne-at-nyj-w1', competition='nfl', gameWeek='1',
+            gameyear='2026', gameseason=2627, startTimestamp=timezone.now(),
+            statusType='finished', statusTitle='Final',
+            homeTeamId=1, homeTeamSlug='nyj', homeTeamName='Jets',
+            awayTeamId=2, awayTeamSlug='ne', awayTeamName='Patriots',
+            homeTeamScore=21, awayTeamScore=17, gameWinner='nyj', gameScored=True,
+        )
+        pick = GamePicks.objects.create(
+            id='dagostino-pickem-pool-root-w1', pool=self.pool, userID='root',
+            pick='nyj', gameseason=2627, gameWeek=1, pick_game_id=410,
+            pick_correct=False,
+        )
+
+        services.rescore_week(self._request(), self.pool, week=1)
+
+        pick.refresh_from_db()
+        self.assertTrue(pick.pick_correct)
 
     def test_fix_stuck_game_records_before_and_after(self):
         game = GamesAndScores.objects.create(

@@ -21,8 +21,10 @@
         <tbody>
           {% for row in rows %}
             <tr class="{% if row.family.status == 'inactive' %}sa-locked{% endif %}">
-              <input type="hidden" name="{{ row.family.id }}-updated_at" value="{{ row.family.updated_at.isoformat }}">
-              <td>{{ row.form.name }}</td>
+              <td>
+                <input type="hidden" name="{{ row.family.id }}-updated_at" value="{{ row.family.updated_at.isoformat }}">
+                {{ row.form.name }}
+              </td>
               <td>{{ row.form.slug }}</td>
               <td>{{ row.form.logo_url }}</td>
               <td>{{ row.form.status }}</td>

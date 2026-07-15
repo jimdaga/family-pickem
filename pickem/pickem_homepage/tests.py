@@ -6816,9 +6816,19 @@ class GlobalLeaderboardTests(TestCase):
     def test_leaderboard_excludes_superusers_and_blends_accuracy(self):
         self._points(self.smith_pool, self.alice, 10)
         self._points(self.smith_pool, self.admin, 999)  # admin must not appear
+        # The global leaderboard blends accuracy from the pool-null (global)
+        # userStats row — the one update_stats writes per user in its default,
+        # season-wide run. A per-pool row (pool=<pool>) is a different record and
+        # must not feed the global figure.
+        userStats.objects.create(
+            pool=None, userEmail=self.alice.email, userID=str(self.alice.id),
+            correctPickTotalSeason=8, totalPicksSeason=10, weeksWonSeason=1,
+        )
+        # A per-pool row for the same user with different numbers must be ignored
+        # by the global leaderboard (regression guard for pool-scoped rows).
         userStats.objects.create(
             pool=self.smith_pool, userEmail=self.alice.email, userID=str(self.alice.id),
-            correctPickTotalSeason=8, totalPicksSeason=10, weeksWonSeason=1,
+            correctPickTotalSeason=1, totalPicksSeason=10, weeksWonSeason=0,
         )
 
         response = self.client.get(reverse("global_leaderboard"))
@@ -6827,7 +6837,7 @@ class GlobalLeaderboardTests(TestCase):
         self.assertIn(str(self.alice.id), ids)
         self.assertNotIn(str(self.admin.id), ids)
         alice = next(e for e in response.context["entries"] if e["userID"] == str(self.alice.id))
-        self.assertEqual(alice["accuracy"], 80)  # 8/10
+        self.assertEqual(alice["accuracy"], 80)  # 8/10 from the global row, not 9/20
 
     def test_players_tied_at_zero_share_rank_one_and_podium_is_hidden(self):
         # Season just started: everyone has a standings row but no points, so

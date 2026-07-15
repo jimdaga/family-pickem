@@ -782,6 +782,12 @@ class currentSeason(models.Model):
     season = models.IntegerField(blank=True, null=True)
     display_name = models.CharField(max_length=20, blank=True, null=True, help_text="User-friendly season name (e.g., '2025-2026')")
 
+    class Meta:
+        # This table is a singleton in practice. Deterministic ordering keeps the
+        # ubiquitous `.first()` reads stable even if a stray second row ever
+        # appears; the superadmin season-update path collapses duplicates.
+        ordering = ['id']
+
     def __str__(self):
         return self.display_name or str(self.season)
 

@@ -1,11 +1,41 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from pickem_superadmin import jobs
 from pickem_superadmin.models import SuperAdminAuditLog
+
+
+class SchedulerHealthTests(TestCase):
+    def test_dead_scheduler_with_no_history_reads_as_not_alive(self):
+        # No executions, no registered jobs -> nothing is scheduling.
+        health = jobs.scheduler_health()
+        self.assertFalse(health['alive'])
+
+    def test_fresh_deploy_with_a_scheduled_job_reads_as_alive(self):
+        """A live scheduler on a fresh deploy has registered jobs (future
+        next_run_time) but no execution history yet. It must not be blocked from
+        queueing the first manual run."""
+        from django_apscheduler.models import DjangoJob
+
+        DjangoJob.objects.create(
+            id='update_all', next_run_time=timezone.now() + timedelta(seconds=30),
+        )
+        health = jobs.scheduler_health()
+        self.assertTrue(health['alive'])
+
+    def test_stale_next_run_time_with_no_history_reads_as_not_alive(self):
+        from django_apscheduler.models import DjangoJob
+
+        DjangoJob.objects.create(
+            id='update_all', next_run_time=timezone.now() - timedelta(hours=1),
+        )
+        health = jobs.scheduler_health()
+        self.assertFalse(health['alive'])
 
 
 class RunCommandTests(TestCase):

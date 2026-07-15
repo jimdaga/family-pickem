@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -112,18 +113,26 @@ def season_update(request):
         'display_name': existing.display_name if existing else None,
     }
 
-    # Only now, on the validated success path, do we create the row if needed.
-    current = existing or currentSeason.objects.create()
-    current.season = new_season
-    current.display_name = request.POST.get('display_name', '').strip()
-    after = {'season': current.season, 'display_name': current.display_name}
+    display_name = request.POST.get('display_name', '').strip()
+    after = {'season': new_season, 'display_name': display_name}
 
     changes = diff_fields(before, after)
     if not changes:
         messages.success(request, 'No changes.')
         return redirect('superadmin:overview')
 
-    current.save()
+    # currentSeason is a singleton but has no DB-level uniqueness constraint, so
+    # do the create/update under a row lock and collapse any stray duplicates in
+    # the same transaction. That serializes concurrent updates and keeps
+    # get_season()'s `.first()` reads deterministic.
+    with transaction.atomic():
+        current = currentSeason.objects.select_for_update().order_by('id').first()
+        if current is None:
+            current = currentSeason.objects.create()
+        current.season = new_season
+        current.display_name = display_name
+        current.save()
+        currentSeason.objects.exclude(pk=current.pk).delete()
     log_action(
         request,
         action=SuperAdminAuditLog.Action.SEASON_UPDATED,

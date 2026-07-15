@@ -15,7 +15,7 @@
         <span class="sa-wordmark-dim text-[13px]">superadmin</span>
       </div>
       <div class="flex items-center gap-3">
-        <span class="sa-env-badge">dev</span>
+        <span class="sa-env-badge">{{ sa_environment|default:"dev" }}</span>
         <span class="sa-mono text-gray-400">{{ request.user.username }}</span>
         <a href="/" class="text-gray-400 hover:text-white text-[13px]">exit &rarr;</a>
       </div>
@@ -26,7 +26,7 @@
       {% url 'superadmin:users' as u_users %}
       <a href="{{ u_users }}" class="sa-tab {% if '/users' in request.path %}sa-tab-active{% endif %}">users</a>
       {% url 'superadmin:pools' as u_pools %}
-      <a href="{{ u_pools }}" class="sa-tab {% if '/pools/' == request.path or request.path == u_pools %}sa-tab-active{% endif %}">pools</a>
+      <a href="{{ u_pools }}" class="sa-tab {% if '/pools' in request.path %}sa-tab-active{% endif %}">pools</a>
       {% url 'superadmin:families' as u_families %}
       <a href="{{ u_families }}" class="sa-tab {% if '/families' in request.path %}sa-tab-active{% endif %}">families</a>
       {% url 'superadmin:teams' as u_teams %}
