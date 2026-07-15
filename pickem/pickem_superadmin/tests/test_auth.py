@@ -28,6 +28,10 @@ SUPERADMIN_POST_URLS = [
     ('superadmin:families_save', []),
     ('superadmin:teams_save', []),
     ('superadmin:jobs_queue', []),
+    ('superadmin:season_update', []),
+    ('superadmin:pool_settings_backfill', [1]),
+    ('superadmin:banner_publish', []),
+    ('superadmin:banner_deactivate', [1]),
 ]
 
 

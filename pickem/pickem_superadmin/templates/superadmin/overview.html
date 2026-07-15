@@ -2,5 +2,132 @@
 {% block title %}overview{% endblock %}
 {% block heading %}Overview{% endblock %}
 {% block content %}
-  <p class="text-gray-600">Health, counts, and anomalies land here in Task 11.</p>
+
+  {% if not health.alive %}
+    <div class="mb-4 border-l-4 border-red-600 bg-red-50 px-3 py-2 text-red-900">
+      <strong>Pipeline is not running.</strong>
+      {% if health.last_run %}
+        Last execution {{ health.last_run|date:"Y-m-d H:i:s" }} ({{ health.last_status }}).
+      {% else %}
+        Nothing has ever executed.
+      {% endif %}
+      Scores, picks, and standings are going stale.
+      <a href="{% url 'superadmin:jobs' %}" class="underline">Jobs &rarr;</a>
+    </div>
+  {% else %}
+    <div class="mb-4 border-l-4 border-green-600 bg-green-50 px-3 py-2 text-green-900">
+      Pipeline healthy — last run {{ health.last_run|date:"Y-m-d H:i:s" }} ({{ health.last_status }}).
+    </div>
+  {% endif %}
+
+  <div class="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+    {% for label, value in counts.items %}
+      <div class="border border-gray-300 bg-white px-3 py-2">
+        <div class="font-mono text-lg">{{ value }}</div>
+        <div class="text-gray-600">{{ label }}</div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <h2 class="mb-1 font-semibold">Current season</h2>
+  <form method="post" action="{% url 'superadmin:season_update' %}" class="mb-5 flex flex-wrap items-center gap-2">
+    {% csrf_token %}
+    <span class="text-gray-600">
+      now: <span class="font-mono">{{ current_season.season|default:"unset" }}</span>
+      ({{ current_season.display_name|default:"—" }})
+    </span>
+    <input type="text" name="season" placeholder="2728" class="w-24 border border-gray-300 px-2 py-1 font-mono">
+    <input type="text" name="display_name" placeholder="2027-2028" class="w-32 border border-gray-300 px-2 py-1">
+    <input type="text" name="confirm" placeholder="type the season to confirm"
+           class="w-48 border border-red-400 px-2 py-1 font-mono">
+    <button type="submit" class="border border-red-600 bg-red-600 px-3 py-1 text-white hover:bg-red-700">
+      Change season
+    </button>
+    <span class="text-gray-500">drives get_season() everywhere — picks, scores, standings, stats</span>
+  </form>
+
+  <h2 class="mb-1 font-semibold">Site-wide banner</h2>
+  <form method="post" action="{% url 'superadmin:banner_publish' %}" class="mb-2 flex flex-wrap items-center gap-2">
+    {% csrf_token %}
+    <input type="text" name="title" placeholder="banner message" class="w-72 border border-gray-300 px-2 py-1">
+    <input type="text" name="description" placeholder="optional detail" class="w-72 border border-gray-300 px-2 py-1">
+    <select name="banner_type" class="border border-gray-300 px-2 py-1">
+      <option value="info">info</option>
+      <option value="warning">warning</option>
+      <option value="danger">danger</option>
+      <option value="success">success</option>
+    </select>
+    <button type="submit" class="border border-gray-800 bg-gray-800 px-3 py-1 text-white hover:bg-gray-700">
+      Publish site-wide
+    </button>
+  </form>
+  <div class="mb-5 border border-gray-300 bg-white p-3">
+    {% for banner in site_banners %}
+      <form method="post" action="{% url 'superadmin:banner_deactivate' banner.id %}"
+            class="flex items-center gap-2 py-0.5">
+        {% csrf_token %}
+        <span class="font-mono">[{{ banner.banner_type }}]</span>
+        <span>{{ banner.title }}</span>
+        <button type="submit" class="border border-gray-400 bg-white px-2 hover:bg-gray-50">deactivate</button>
+      </form>
+    {% empty %}
+      <span class="text-gray-500">no active site-wide banners</span>
+    {% endfor %}
+  </div>
+
+  <h2 class="mb-1 font-semibold">Anomalies</h2>
+
+  <div class="mb-3 border border-gray-300 bg-white p-3">
+    <div class="mb-1 font-semibold">
+      Pools with no settings row
+      <span class="font-mono text-gray-500">({{ anomalies.pools_without_settings|length }})</span>
+    </div>
+    {% for pool in anomalies.pools_without_settings %}
+      <form method="post" action="{% url 'superadmin:pool_settings_backfill' pool.id %}"
+            class="flex items-center gap-2 py-0.5">
+        {% csrf_token %}
+        <span class="font-mono">{{ pool.family.slug }}/{{ pool.slug }}</span>
+        <button type="submit" class="border border-gray-400 bg-white px-2 hover:bg-gray-50">backfill</button>
+      </form>
+    {% empty %}
+      <span class="text-gray-500">none</span>
+    {% endfor %}
+  </div>
+
+  <div class="mb-3 border border-gray-300 bg-white p-3">
+    <div class="mb-1 font-semibold">
+      Games stuck in progress
+      <span class="font-mono text-gray-500">({{ anomalies.stuck_games|length }})</span>
+    </div>
+    {% for game in anomalies.stuck_games %}
+      <div class="font-mono">{{ game.slug }}</div>
+    {% empty %}
+      <span class="text-gray-500">none</span>
+    {% endfor %}
+  </div>
+
+  <div class="mb-3 border border-gray-300 bg-white p-3">
+    <div class="mb-1 font-semibold">
+      Families with no active members
+      <span class="font-mono text-gray-500">({{ anomalies.families_without_members|length }})</span>
+    </div>
+    {% for family in anomalies.families_without_members %}
+      <div class="font-mono">{{ family.slug }}</div>
+    {% empty %}
+      <span class="text-gray-500">none</span>
+    {% endfor %}
+  </div>
+
+  <div class="mb-3 border border-gray-300 bg-white p-3">
+    <div class="mb-1 font-semibold">
+      Pools not on the current season
+      <span class="font-mono text-gray-500">({{ anomalies.pools_off_season|length }})</span>
+    </div>
+    {% for pool in anomalies.pools_off_season %}
+      <div class="font-mono">{{ pool.family.slug }}/{{ pool.slug }} — {{ pool.season }}</div>
+    {% empty %}
+      <span class="text-gray-500">none</span>
+    {% endfor %}
+  </div>
+
 {% endblock %}

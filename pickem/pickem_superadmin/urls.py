@@ -18,4 +18,8 @@ urlpatterns = [
     path('teams/save/', views.teams_save, name='teams_save'),
     path('jobs/', views.jobs_page, name='jobs'),
     path('jobs/queue/', views.jobs_queue, name='jobs_queue'),
+    path('season/update/', views.season_update, name='season_update'),
+    path('pools/<int:pool_id>/backfill-settings/', views.pool_settings_backfill, name='pool_settings_backfill'),
+    path('banners/publish/', views.banner_publish, name='banner_publish'),
+    path('banners/<int:banner_id>/deactivate/', views.banner_deactivate, name='banner_deactivate'),
 ]
