@@ -9,14 +9,22 @@ register = template.Library()
 
 @register.simple_tag
 def sa_static_v(path):
-    """Static URL with a cache-busting `?v=<mtime>` suffix.
+    """Static URL with a cache-busting `?v=<mtime>` suffix, for LOCAL dev only.
 
     The console's CSS changes often during development and is served with only a
     Last-Modified header, so browsers can hold a stale copy and render the page
-    unstyled. Keying the URL to the file's mtime forces a fresh fetch whenever
-    the file actually changes, and stays stable otherwise.
+    unstyled. Keying the URL to the file's mtime forces a fresh fetch.
+
+    CRITICAL: in production this app serves static files via S3 querystring-
+    signed URLs (`.../tailwind.css?X-Amz-Signature=...`). Appending `?v=` to one
+    of those corrupts the signature and the browser blocks the stylesheet,
+    rendering the whole console unstyled. So we only append the version when the
+    generated URL has NO existing query string — i.e. the plain local-dev case.
+    S3 (and any storage that hashes/signs its URLs) is returned untouched.
     """
     url = static(path)
+    if '?' in url:
+        return url
     absolute = finders.find(path)
     if absolute and os.path.exists(absolute):
         return f'{url}?v={int(os.path.getmtime(absolute))}'
