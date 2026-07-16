@@ -1727,6 +1727,68 @@ class TenantPickFlowIsolationTests(TestCase):
         )
 
 
+class HasRealFamilyMembershipTests(TestCase):
+    """Regression guard for the picks-page 404 (#61 gate + superuser synthetic
+    membership): a superuser is handed a synthetic, never-saved owner membership
+    (no pk) for god-mode oversight, even in families where they hold a real row.
+    has_real_family_membership must still recognise them as a real participant
+    there, or submitting picks 404s for a superuser in their own family."""
+
+    def setUp(self):
+        self.family = Family.objects.create(name='Daghouse', slug='daghouse')
+        self.superuser = User.objects.create_superuser(
+            username='root', email='root@example.com', password='pw',
+        )
+        self.member = User.objects.create_user(
+            username='mem', email='mem@example.com', password='pw',
+        )
+
+    def _synthetic(self, user):
+        # Mirrors authz._superuser_membership: constructed, never saved -> pk None.
+        return FamilyMembership(
+            family=self.family, user=user,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def test_saved_membership_is_real(self):
+        from pickem_homepage.views import has_real_family_membership
+
+        membership = FamilyMembership.objects.create(
+            family=self.family, user=self.member,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        self.assertTrue(has_real_family_membership(membership))
+
+    def test_synthetic_membership_counts_when_a_real_active_row_exists(self):
+        from pickem_homepage.views import has_real_family_membership
+
+        FamilyMembership.objects.create(
+            family=self.family, user=self.superuser,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        synthetic = self._synthetic(self.superuser)
+        self.assertIsNone(synthetic.pk)
+        self.assertTrue(has_real_family_membership(synthetic))
+
+    def test_synthetic_membership_is_not_real_without_a_row(self):
+        from pickem_homepage.views import has_real_family_membership
+
+        self.assertFalse(has_real_family_membership(self._synthetic(self.superuser)))
+
+    def test_inactive_real_row_does_not_count_for_synthetic(self):
+        from pickem_homepage.views import has_real_family_membership
+
+        FamilyMembership.objects.create(
+            family=self.family, user=self.superuser,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.INACTIVE,
+        )
+        self.assertFalse(has_real_family_membership(self._synthetic(self.superuser)))
+
+
 class TenantScoresStandingsRulesIsolationTests(TestCase):
     @classmethod
     def setUpTestData(cls):
