@@ -1545,6 +1545,25 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertEqual(response.json()["saved_pool_ids"], [self.smith_pool.id])
         self.assertFalse(GamePicks.objects.filter(pool=outsider_pool, userID=str(self.member.id)).exists())
 
+    def test_superuser_without_real_membership_cannot_open_or_submit_picks(self):
+        site_admin = User.objects.create_user(
+            "site-admin-picks",
+            email="site-admin-picks@example.com",
+            password="pass",
+            is_superuser=True,
+        )
+        self.client.force_login(site_admin)
+
+        page_response = self.client.get(self._tenant_picks_url())
+        post_response = self.client.post(
+            self._tenant_picks_url(),
+            self._pick_payload(),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(page_response.status_code, 404)
+        self.assertEqual(post_response.status_code, 404)
+
     def test_tenant_post_rejects_game_outside_current_week_context(self):
         self.client.force_login(self.member)
 
@@ -2947,16 +2966,13 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertTemplateUsed(response, "pickem/user_profile_private.html")
         self.assertContains(response, "This Profile is Private")
 
-    def test_legacy_signed_in_profile_redirects_to_default_tenant_profile(self):
+    def test_legacy_signed_in_profile_renders_global_profile_without_tenant_redirect(self):
         self.client.force_login(self.smith_member)
 
         response = self.client.get(reverse("user_profile", kwargs={"user_id": self.smith_player.id}))
 
-        self.assertRedirects(
-            response,
-            self._tenant_url("family_pool_user_profile", user_id=self.smith_player.id),
-            fetch_redirect_response=False,
-        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/user_profile.html")
 
     def test_legacy_anonymous_profile_detail_is_not_available(self):
         response = self.client.get(reverse("user_profile", kwargs={"user_id": self.smith_player.id}))
@@ -3782,11 +3798,8 @@ class FamilyAdminExperienceTests(TestCase):
             admin_page = self.client.get(self._admin_url(family=family, pool=pool))
             self.assertEqual(admin_page.status_code, 200)
 
-        # The switcher lists every active family (incl. any legacy family)...
-        self.assertLessEqual(
-            {self.family.slug, self.other_family.slug},
-            {c["family"].slug for c in lobby.context["family_switcher_choices"]},
-        )
+        # The switcher is reserved for real memberships only.
+        self.assertEqual(lobby.context["family_switcher_choices"], [])
         # ...without creating any membership rows (no roster contamination).
         self.assertFalse(FamilyMembership.objects.filter(user=sre).exists())
 
@@ -3804,7 +3817,7 @@ class FamilyAdminExperienceTests(TestCase):
         )
         self.assertNotContains(own_lobby, 'data-testid="superuser-badge"')
 
-    def test_commissioner_badge_shows_for_flag_and_stacks_with_superuser(self):
+    def test_commissioner_badge_is_scoped_to_the_current_family_owner_membership(self):
         lobby_url = reverse(
             "family_pool_home",
             kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
@@ -3824,20 +3837,20 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertNotContains(page, 'data-testid="superuser-badge"')
         self.client.force_login(self.member)
 
-        # Commissioner flag -> commissioner badge only. (The first page view
-        # auto-creates the profile, so update rather than create.)
+        # A legacy profile flag alone no longer grants the family-scoped badge.
         UserProfile.objects.update_or_create(
             user=self.member, defaults={"is_commissioner": True}
         )
         page = self.client.get(lobby_url)
-        self.assertContains(page, 'data-testid="commissioner-badge"')
+        self.assertNotContains(page, 'data-testid="commissioner-badge"')
         self.assertNotContains(page, 'data-testid="superuser-badge"')
 
-        # Commissioner + superuser -> both badges.
+        # Superuser without the owner membership still only shows the global
+        # superuser badge.
         self.member.is_superuser = True
         self.member.save(update_fields=["is_superuser"])
         page = self.client.get(lobby_url)
-        self.assertContains(page, 'data-testid="commissioner-badge"')
+        self.assertNotContains(page, 'data-testid="commissioner-badge"')
         self.assertContains(page, 'data-testid="superuser-badge"')
 
     def _settings_url(self, *, family=None, pool=None):
@@ -5339,7 +5352,7 @@ class FamilyAdminExperienceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pickem/family_admin_winners.html")
-        self.assertContains(response, "Week Winners")
+        self.assertContains(response, "Edit Winners")
         self.assertContains(response, "Smith Family")
         self.assertContains(response, self.member.username)
         self.assertContains(response, str(current_pick.uid))
@@ -5603,7 +5616,7 @@ class CreateFamilyFlowTests(TestCase):
         )
         self.assertEqual(family.slug, "smith-family")
         self.assertEqual(family.status, Family.Status.ACTIVE)
-        self.assertEqual(pool.name, "Pickem Pool")
+        self.assertEqual(pool.name, "NFL Pick'em - 2025 - 2026")
         self.assertEqual(pool.slug, "pickem-pool")
         self.assertEqual(pool.season, get_season())
         self.assertEqual(pool.competition, "nfl")
@@ -6787,6 +6800,24 @@ class GlobalLeaderboardTests(TestCase):
         self.admin = User.objects.create_user(
             "admin-gl", email="admin-gl@example.com", password="x", is_superuser=True
         )
+        FamilyMembership.objects.create(
+            family=self.smith_family,
+            user=self.alice,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.smith_family,
+            user=self.bob,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.smith_family,
+            user=self.admin,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
 
     def _points(self, pool, user, total):
         return userSeasonPoints.objects.create(
@@ -6829,6 +6860,21 @@ class GlobalLeaderboardTests(TestCase):
         alice = next(e for e in response.context["entries"] if e["userID"] == str(self.alice.id))
         self.assertEqual(alice["accuracy"], 80)  # 8/10
 
+    def test_leaderboard_includes_active_member_with_no_points_row(self):
+        FamilyMembership.objects.create(
+            family=self.jones_family,
+            user=self.bob,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+        response = self.client.get(reverse("global_leaderboard"))
+
+        entries = {e["userID"]: e for e in response.context["entries"]}
+        self.assertIn(str(self.bob.id), entries)
+        self.assertEqual(entries[str(self.bob.id)]["points"], 0)
+        self.assertEqual(entries[str(self.bob.id)]["leagues"], 0)
+
     def test_players_tied_at_zero_share_rank_one_and_podium_is_hidden(self):
         # Season just started: everyone has a standings row but no points, so
         # all players must be tied at rank 1 (not 1,2,3) and the podium hidden.
@@ -6848,6 +6894,12 @@ class GlobalLeaderboardTests(TestCase):
         self._points(self.smith_pool, self.alice, 10)
         self._points(self.smith_pool, self.bob, 10)
         carol = User.objects.create_user("carol-gl", email="carol-gl@example.com", password="x")
+        FamilyMembership.objects.create(
+            family=self.smith_family,
+            user=carol,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
         self._points(self.smith_pool, carol, 5)
 
         response = self.client.get(reverse("global_leaderboard"))

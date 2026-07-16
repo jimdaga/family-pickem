@@ -14,6 +14,7 @@ from pickem_api.authz import (
     AuthenticationRequired,
     PermissionDeniedForTenant,
     TenantNotFound,
+    get_real_user_family_memberships,
     get_user_family_memberships,
     require_tenant_context,
 )
@@ -51,18 +52,12 @@ def theme_context(request):
             context['user_dark_mode'] = user_profile.dark_mode
             context['user_theme_preference'] = 'dark' if user_profile.dark_mode else 'light'
             context['user_is_commissioner'] = user_profile.is_commissioner or request.user.is_superuser
-            # Family commissioners: the owner role in the family model
-            # (rebranded to "Commissioner"), or the legacy profile flag.
-            from pickem_api.models import FamilyMembership
-            context['user_is_commissioner_flag'] = (
-                user_profile.is_commissioner
-                # Superusers act as commissioner in every family (see authz).
-                or request.user.is_superuser
-                or FamilyMembership.objects.filter(
-                    user=request.user,
-                    role=FamilyMembership.Role.OWNER,
-                    status=FamilyMembership.Status.ACTIVE,
-                ).exists()
+            tenant_context = _tenant_context_from_request(request)
+            membership = getattr(tenant_context, 'membership', None)
+            context['user_is_commissioner_flag'] = bool(
+                membership
+                and getattr(membership, 'pk', None)
+                and membership.role == 'owner'
             )
         except Exception as e:
             # Fallback to default values if there's any issue
@@ -156,6 +151,7 @@ def family_switcher_context(request):
         'current_membership': None,
         'family_switcher_choices': [],
         'has_family_memberships': False,
+        'current_user_can_submit_picks': False,
     }
 
     if not getattr(request, 'user', None) or not request.user.is_authenticated:
@@ -164,7 +160,7 @@ def family_switcher_context(request):
     try:
         choices = [
             _switcher_choice_for_membership(membership)
-            for membership in get_user_family_memberships(request.user)
+            for membership in get_real_user_family_memberships(request.user)
         ]
         context['family_switcher_choices'] = choices
         context['has_family_memberships'] = bool(choices)
@@ -175,6 +171,9 @@ def family_switcher_context(request):
             context['current_family'] = tenant_context.family
             context['current_pool'] = tenant_context.pool
             context['current_membership'] = tenant_context.membership
+            context['current_user_can_submit_picks'] = bool(
+                getattr(tenant_context.membership, 'pk', None)
+            )
     except (AuthenticationRequired, TenantNotFound, PermissionDeniedForTenant):
         pass
     except Exception:

@@ -172,6 +172,8 @@ urlpatterns = [
     path('scores/', views.scores, name='scores'),
     path('standings/', views.standings, name='standings'),
     path('rules/', views.rules, name='rules'),
+    path('accounts/signup/', views.account_signup_google_only, name='account_signup'),
+    path('accounts/inactive/', views.account_inactive, name='account_inactive'),
     path('accounts/', include('allauth.urls')),
     # POST-only: logout via GET is deprecated (removed in Django 5) and would
     # let third-party pages log users out (CSRF).

@@ -1,6 +1,6 @@
 {% extends "pickem/base.html" %}
 
-{% block title %}Week Winners - {{ family.name }}{% endblock %}
+{% block title %}Edit Winners - {{ family.name }}{% endblock %}
 
 {% block content %}
 <main class="min-h-screen bg-gray-50 dark:bg-bg-dark">
@@ -8,7 +8,7 @@
         <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <div class="text-sm font-semibold uppercase tracking-wide text-primary">Family Admin</div>
-                <h1 class="mt-2 text-3xl font-bold text-text-dark dark:text-white">Week Winners</h1>
+                <h1 class="mt-2 text-3xl font-bold text-text-dark dark:text-white">Edit Winners</h1>
                 <p class="mt-2 text-text-secondary-light dark:text-text-secondary">
                     {{ family.name }} - {{ pool.name }} - {{ gameseason }} {{ pool.competition|upper }}
                 </p>
@@ -29,7 +29,7 @@
             <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
                 <h2 class="text-xl font-bold text-text-dark dark:text-white">Winner Controls</h2>
                 <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
-                    Current-family candidates with current-pool standings only.
+                    Weekly winners are usually assigned by background jobs. Use this page to review or correct them.
                 </p>
             </div>
 
@@ -56,7 +56,7 @@
                     <label for="winner-uid" class="block text-sm font-semibold text-text-dark dark:text-white">Winner</label>
                     <select id="winner-uid" name="winner_uid" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white" required>
                         {% for candidate in candidates %}
-                        <option value="{{ candidate.uid }}">
+                        <option value="{{ candidate.uid }}" {% if current_winner and current_winner.userID == candidate.uid|stringformat:"s" %}selected{% endif %}>
                             {{ candidate.user.username }} - {{ candidate.wins }} correct pick{{ candidate.wins|pluralize }} - uid {{ candidate.uid }}
                         </option>
                         {% endfor %}
@@ -72,17 +72,40 @@
                 <div class="flex items-end">
                     <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60" {% if not candidates %}disabled{% endif %}>
                         <i class="fas fa-trophy"></i>
-                        Save Winner
+                        Save Changes
                     </button>
                 </div>
             </form>
         </section>
 
+        <section class="grid gap-4 lg:grid-cols-3">
+            <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                <div class="text-xs font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Current winner</div>
+                {% if current_winner %}
+                <div class="mt-3 text-xl font-bold text-text-dark dark:text-white">{{ current_winner.userID }}</div>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Week {{ selected_week }} currently has a saved winner.</p>
+                {% else %}
+                <div class="mt-3 text-xl font-bold text-text-dark dark:text-white">Not set</div>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">No winner is saved for this week yet.</p>
+                {% endif %}
+            </div>
+            <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                <div class="text-xs font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Eligible players</div>
+                <div class="mt-3 text-3xl font-black text-text-dark dark:text-white">{{ candidates|length }}</div>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Only current-family, current-pool candidates are shown here.</p>
+            </div>
+            <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
+                <div class="text-xs font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Weekly winner bonus</div>
+                <div class="mt-3 text-3xl font-black text-text-dark dark:text-white">+{{ pool_settings.weekly_winner_points }}</div>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Bonus points awarded when this winner is saved.</p>
+            </div>
+        </section>
+
         <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden">
             <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
-                <h2 class="text-xl font-bold text-text-dark dark:text-white">Week {{ selected_week }} Candidates</h2>
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Week {{ selected_week }} Snapshot</h2>
                 <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
-                    {% if current_winner %}Current winner row #{{ current_winner.id }}{% else %}No winner selected yet{% endif %}
+                    Review the candidates before making edits.
                 </p>
             </div>
             {% if candidates %}
@@ -111,7 +134,7 @@
                 <div class="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-text-secondary-light dark:bg-slate-800 dark:text-text-secondary">
                     <i class="fas fa-trophy"></i>
                 </div>
-                <p class="mt-4 font-semibold text-text-dark dark:text-white">No candidates for this week</p>
+                <p class="mt-4 font-semibold text-text-dark dark:text-white">No eligible players for this week</p>
                 <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Candidates appear after current-pool picks are scored.</p>
             </div>
             {% endif %}

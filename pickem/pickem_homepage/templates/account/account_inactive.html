@@ -1,0 +1,27 @@
+{% extends 'pickem/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
+    <div class="w-full max-w-md">
+        <div class="text-center mb-8">
+            <img src="{% static 'images/logo.png' %}" alt="Family Pick'em logo" class="w-16 h-16 mx-auto mb-3">
+            <h1 class="text-2xl font-black text-text-dark dark:text-white">Account unavailable</h1>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary mt-1">Your sign-in has been disabled.</p>
+        </div>
+
+        <div class="section-container text-center">
+            <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
+                <i class="fas fa-user-lock text-2xl"></i>
+            </div>
+            <p class="text-sm leading-6 text-text-secondary-light dark:text-text-secondary">
+                This account is currently inactive. If you think this is a mistake, contact a Family Pick'em administrator for help.
+            </p>
+            <a href="{% url 'public_home' %}" class="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+                <i class="fas fa-arrow-left"></i>
+                Return to public home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
