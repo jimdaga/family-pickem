@@ -1,4 +1,3 @@
-from time import timezone
 import uuid
 from xmlrpc.client import Boolean
 from django.core.validators import MinValueValidator
