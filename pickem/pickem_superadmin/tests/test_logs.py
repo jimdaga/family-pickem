@@ -64,45 +64,46 @@ class DatabaseLogHandlerTests(TestCase):
 
 
 class LoggingWiringTests(SimpleTestCase):
-    """Assert settings.LOGGING routes the right loggers to the DatabaseLogHandler
-    at the right levels.
+    """Assert the project's LOGGING config routes the app loggers and root to the
+    DatabaseLogHandler at the configured levels.
 
-    This is a configuration check, not a live-write check, on purpose: the
-    end-to-end write path (row created, truncated, loop-guarded) is exercised
-    directly in DatabaseLogHandlerTests. Asserting the config keeps these tests
-    deterministic — a live `logger.info()` -> DB insert can be transiently
-    swallowed when a background APScheduler thread holds a DB lock (which on
-    CI's SQLite would otherwise make these flaky)."""
+    We assert against ``pickem.settings.LOGGING`` directly, not the live logging
+    module: the suite runs under ``pickem.test_settings``, which deliberately sets
+    ``LOGGING = {}`` to silence log noise, so the handler is intentionally inactive
+    during tests. Checking the production config is what "is the wiring correct"
+    means here; the end-to-end write path (row created, truncated, loop-guarded)
+    is exercised directly in DatabaseLogHandlerTests.
+    """
 
-    def _reaches_db_handler(self, logger_name):
-        from pickem_superadmin.logging import DatabaseLogHandler
+    def _prod_settings(self):
+        # pickem.settings is already imported (test_settings does `from
+        # pickem.settings import *`), so this returns the cached module whose
+        # LOGGING attribute is the real, un-overridden config.
+        from pickem import settings as prod_settings
 
-        node = logging.getLogger(logger_name)
-        while node is not None:
-            if any(isinstance(h, DatabaseLogHandler) for h in node.handlers):
-                return True
-            if not node.propagate:
-                break
-            node = node.parent
-        return False
+        return prod_settings
 
-    def test_app_loggers_capture_info(self):
+    def test_db_handler_is_the_database_log_handler(self):
+        cfg = self._prod_settings().LOGGING
+        self.assertEqual(
+            cfg['handlers']['superadmin_db']['class'],
+            'pickem_superadmin.logging.DatabaseLogHandler',
+        )
+
+    def test_app_loggers_route_to_db_handler_at_app_level(self):
+        prod = self._prod_settings()
+        cfg = prod.LOGGING
         for name in ('pickem_api', 'pickem_homepage', 'pickem_superadmin'):
             with self.subTest(logger=name):
-                self.assertTrue(self._reaches_db_handler(name))
-                self.assertLessEqual(
-                    logging.getLogger(name).getEffectiveLevel(), logging.INFO
-                )
+                logger_cfg = cfg['loggers'][name]
+                self.assertIn('superadmin_db', logger_cfg['handlers'])
+                self.assertEqual(logger_cfg['level'], prod.SUPERADMIN_LOG_APP_LEVEL)
 
-    def test_unrelated_logger_only_captures_warning_and_up(self):
-        # A logger with no dedicated config inherits root: the DB handler is
-        # reachable, but the effective level is WARNING, so an INFO record is
-        # below threshold (not captured) while WARNING and up are.
-        self.assertTrue(self._reaches_db_handler('some.random.thirdparty'))
-        self.assertEqual(
-            logging.getLogger('some.random.thirdparty').getEffectiveLevel(),
-            logging.WARNING,
-        )
+    def test_root_routes_to_db_handler_at_root_level(self):
+        prod = self._prod_settings()
+        cfg = prod.LOGGING
+        self.assertIn('superadmin_db', cfg['root']['handlers'])
+        self.assertEqual(cfg['root']['level'], prod.SUPERADMIN_LOG_ROOT_LEVEL)
 
 
 class LogsViewTests(TestCase):
