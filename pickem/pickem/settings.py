@@ -298,3 +298,36 @@ if 'AWS_STORAGE_BUCKET_NAME' in os.environ:
 
     AWS_S3_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID']
     AWS_S3_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY']
+
+# --- Application logging -> superadmin console -------------------------------
+# App loggers are captured at INFO so the pipeline's own activity is visible in
+# the console ("I feel blind"); everything else at WARNING to avoid per-request
+# noise. Both are env-tunable. The DB handler writes SuperAdminLogEntry rows;
+# the console handler keeps stdout intact for `kubectl logs`.
+SUPERADMIN_LOG_APP_LEVEL = os.environ.get('SUPERADMIN_LOG_APP_LEVEL', 'INFO')
+SUPERADMIN_LOG_ROOT_LEVEL = os.environ.get('SUPERADMIN_LOG_ROOT_LEVEL', 'WARNING')
+LOG_RETENTION_DAYS = int(os.environ.get('LOG_RETENTION_DAYS', '14'))
+LOG_MAX_ROWS = int(os.environ.get('LOG_MAX_ROWS', '10000'))
+
+_SUPERADMIN_APP_LOGGERS = ('pickem_api', 'pickem_homepage', 'pickem_superadmin')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler'},
+        'superadmin_db': {'class': 'pickem_superadmin.logging.DatabaseLogHandler'},
+    },
+    'root': {
+        'handlers': ['console', 'superadmin_db'],
+        'level': SUPERADMIN_LOG_ROOT_LEVEL,
+    },
+    'loggers': {
+        name: {
+            'handlers': ['console', 'superadmin_db'],
+            'level': SUPERADMIN_LOG_APP_LEVEL,
+            'propagate': False,
+        }
+        for name in _SUPERADMIN_APP_LOGGERS
+    },
+}

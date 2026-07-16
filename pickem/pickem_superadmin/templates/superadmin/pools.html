@@ -3,7 +3,7 @@
 {% block eyebrow %}configuration{% endblock %}
 {% block heading %}Pool settings <span class="sa-count">· {{ page_obj.paginator.count }}</span>{% endblock %}
 {% block actions %}
-  <form method="get" class="flex gap-2">
+  <form method="get" class="flex flex-wrap gap-2">
     <select name="family" class="sa-select w-44">
       <option value="">all families</option>
       {% for slug, name in families %}

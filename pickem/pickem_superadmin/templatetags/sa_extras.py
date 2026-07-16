@@ -1,3 +1,4 @@
+import logging
 import os
 
 from django import template
@@ -29,6 +30,22 @@ def sa_static_v(path):
     if absolute and os.path.exists(absolute):
         return f'{url}?v={int(os.path.getmtime(absolute))}'
     return url
+
+
+@register.filter
+def dictkey(mapping, key):
+    """Look up mapping[key] in a template (Django can't index by variable key)."""
+    try:
+        return mapping.get(key)
+    except AttributeError:
+        return None
+
+
+@register.filter
+def level_no(level_name):
+    """Map a log level name (e.g. 'WARNING') to its numeric value for use in
+    the logs console's level-filter dropdown."""
+    return getattr(logging, level_name, 0)
 
 
 @register.simple_tag(takes_context=True)

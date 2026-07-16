@@ -4,7 +4,7 @@
 {% block eyebrow %}accountability{% endblock %}
 {% block heading %}Audit{% endblock %}
 {% block actions %}
-  <form method="get" class="flex gap-2">
+  <form method="get" class="flex flex-wrap gap-2">
     <select name="action" class="sa-select w-52">
       <option value="">all actions</option>
       {% for value, label in actions %}

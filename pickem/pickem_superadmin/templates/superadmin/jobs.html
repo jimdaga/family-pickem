@@ -1,4 +1,5 @@
 {% extends 'superadmin/base.html' %}
+{% load sa_extras %}
 {% block title %}jobs{% endblock %}
 {% block eyebrow %}pipeline{% endblock %}
 {% block heading %}Jobs{% endblock %}
@@ -37,9 +38,30 @@
           <div class="text-[12px] text-[#98a2b3]">none registered</div>
         {% endfor %}
       </div>
+
+      <div class="sa-h2 mt-5 mb-2">Schedules</div>
+      <form method="post" action="{% url 'superadmin:jobs_schedule_save' %}" class="space-y-2">
+        {% csrf_token %}
+        {% for cfg in schedule_configs %}
+          {% with form=schedule_forms|dictkey:cfg.pk %}
+          <div class="flex items-center justify-between gap-2 text-[12px]">
+            <span class="sa-mono">{{ cfg.job_id }}</span>
+            <span class="flex items-center gap-1">
+              every {{ form.interval_minutes }} min
+              <label class="ml-2 inline-flex items-center gap-1">{{ form.enabled }} on</label>
+              <input type="hidden" name="{{ cfg.pk }}-updated_at" value="{{ cfg.updated_at.isoformat }}">
+            </span>
+          </div>
+          {% endwith %}
+        {% endfor %}
+        <button type="submit" class="sa-btn sa-btn-default sa-btn-sm justify-center w-full">Save schedules</button>
+      </form>
     </div>
 
     <div>
+      <div id="sa-live-status" class="mb-2 flex items-center gap-2 text-[12px] text-[#667085]">
+        <span class="sa-dot sa-dot-muted"></span> checking…
+      </div>
       <div class="sa-h2 mb-2">Run history</div>
       <div class="sa-table-wrap sa-table-scroll">
         <table class="sa-table">
@@ -74,4 +96,37 @@
       {% include 'superadmin/_pagination.html' with page_obj=executions %}
     </div>
   </div>
+
+  <script>
+    (function () {
+      const el = document.getElementById('sa-live-status');
+      const url = "{% url 'superadmin:jobs_status' %}";
+      let timer = null;
+
+      function render(data) {
+        if (data.running && data.running.length) {
+          const names = data.running.map(r => r.job_id + ' (' + r.seconds + 's)').join(', ');
+          el.innerHTML = '<span class="sa-dot sa-dot-bad"></span> running: ' + names;
+        } else if (data.health && data.health.alive) {
+          el.innerHTML = '<span class="sa-dot sa-dot-ok"></span> idle · scheduler alive';
+        } else {
+          el.innerHTML = '<span class="sa-dot sa-dot-bad"></span> scheduler not running';
+        }
+      }
+
+      async function poll() {
+        try {
+          const res = await fetch(url, { headers: { 'X-Requested-With': 'fetch' } });
+          if (res.ok) render(await res.json());
+        } catch (e) { /* transient; next tick retries */ }
+      }
+
+      function start() { if (!timer) { poll(); timer = setInterval(poll, 3000); } }
+      function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+      document.addEventListener('visibilitychange', () =>
+        document.hidden ? stop() : start());
+      start();
+    })();
+  </script>
 {% endblock %}

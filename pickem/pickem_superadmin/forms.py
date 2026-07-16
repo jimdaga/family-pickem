@@ -1,6 +1,6 @@
 from django import forms
 
-from pickem_api.models import Family, PoolSettings, Teams
+from pickem_api.models import Family, PoolSettings, ScheduledJobConfig, Teams
 
 CELL = 'sa-select w-full !py-1'
 NUM_CELL = 'sa-input w-16 !px-2 !py-1 sa-num text-center'
@@ -73,4 +73,15 @@ class TeamRowForm(forms.ModelForm):
             'color': forms.TextInput(attrs={'class': CELL + ' font-mono w-20'}),
             'alternateColor': forms.TextInput(attrs={'class': CELL + ' font-mono w-20'}),
             'logo_contrast_preset': forms.Select(attrs={'class': CELL}),
+        }
+
+
+class ScheduledJobConfigForm(forms.ModelForm):
+    """One editable schedule row (interval minutes + enabled), prefixed by pk."""
+
+    class Meta:
+        model = ScheduledJobConfig
+        fields = ('interval_minutes', 'enabled')
+        widgets = {
+            'interval_minutes': forms.NumberInput(attrs={'class': NUM_CELL, 'min': 1}),
         }

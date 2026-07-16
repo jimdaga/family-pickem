@@ -20,7 +20,7 @@
         <a href="/" class="text-gray-400 hover:text-white text-[13px]">exit &rarr;</a>
       </div>
     </div>
-    <nav class="flex gap-0.5 px-3">
+    <nav class="flex flex-wrap gap-0.5 px-3">
       {% url 'superadmin:overview' as u %}
       <a href="{{ u }}" class="sa-tab {% if request.path == u %}sa-tab-active{% endif %}">overview</a>
       {% url 'superadmin:users' as u_users %}
@@ -35,6 +35,8 @@
       <a href="{{ u_jobs }}" class="sa-tab {% if '/jobs' in request.path %}sa-tab-active{% endif %}">jobs</a>
       {% url 'superadmin:audit' as u_audit %}
       <a href="{{ u_audit }}" class="sa-tab {% if '/audit' in request.path %}sa-tab-active{% endif %}">audit</a>
+      {% url 'superadmin:logs' as u_logs %}
+      <a href="{{ u_logs }}" class="sa-tab {% if '/logs' in request.path %}sa-tab-active{% endif %}">logs</a>
     </nav>
   </header>
 
@@ -55,7 +57,7 @@
   {% endif %}
 
   <main class="max-w-[1400px] mx-auto px-5 py-5">
-    <div class="mb-4 flex items-end justify-between gap-3">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
         <div class="sa-eyebrow mb-0.5">{% block eyebrow %}console{% endblock %}</div>
         <h1 class="sa-title">{% block heading %}{% endblock %}</h1>

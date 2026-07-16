@@ -30,6 +30,7 @@ QUEUEABLE_COMMANDS = (
     'update_season_winners',
     'update_missed_picks',
     'update_rankings',
+    'prune_superadmin_logs',
 )
 
 # If the scheduler has not executed anything in this long, treat it as dead.

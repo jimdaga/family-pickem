@@ -193,3 +193,27 @@ class OverviewTests(TestCase):
         self.assertIn(stuck, stuck_games)
         self.assertNotIn(fresh, stuck_games)
         self.assertNotIn(finished, stuck_games)
+
+    def test_family_on_current_season_not_flagged(self):
+        from pickem_api.models import currentSeason
+        currentSeason.objects.create(season=2627, display_name='2026-2027')
+        # self.pool (season 2627) is this family's latest; an older pool exists too.
+        Pool.objects.create(
+            family=self.family, name='Old', slug='old', season=2526,
+        )
+        response = self.client.get(reverse('superadmin:overview'))
+        flagged = [e['family'] for e in response.context['anomalies']['families_off_season']]
+        self.assertNotIn(self.family, flagged)
+
+    def test_family_whose_latest_pool_is_stale_is_flagged(self):
+        from pickem_api.models import currentSeason
+        currentSeason.objects.create(season=2728, display_name='2027-2028')
+        # self.family's newest pool is season 2627 < current 2728 -> stale.
+        response = self.client.get(reverse('superadmin:overview'))
+        flagged = {e['family'].id: e for e in response.context['anomalies']['families_off_season']}
+        self.assertIn(self.family.id, flagged)
+        self.assertEqual(flagged[self.family.id]['latest_pool'].season, 2627)
+
+    def test_no_current_season_flags_nothing(self):
+        response = self.client.get(reverse('superadmin:overview'))
+        self.assertEqual(response.context['anomalies']['families_off_season'], [])

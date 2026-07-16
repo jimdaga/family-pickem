@@ -121,12 +121,15 @@
 
     <div class="sa-card p-4">
       <div class="mb-2 flex items-center justify-between">
-        <span class="font-medium text-[#1b212b]">Pools not on the current season</span>
-        <span class="sa-pill {% if anomalies.pools_off_season %}sa-pill-muted{% else %}sa-pill-ok{% endif %}">{{ anomalies.pools_off_season|length }}</span>
+        <span class="font-medium text-[#1b212b]">Families not on the current season</span>
+        <span class="sa-pill {% if anomalies.families_off_season %}sa-pill-muted{% else %}sa-pill-ok{% endif %}">{{ anomalies.families_off_season|length }}</span>
       </div>
-      {% for pool in anomalies.pools_off_season %}
-        <div class="py-0.5 text-[13px]"><span class="sa-mono">{{ pool.family.slug }}/{{ pool.slug }}</span> <span class="text-[#98a2b3]">— {{ pool.season }}</span></div>
-      {% empty %}<div class="text-[12px] text-[#98a2b3]">All pools on the current season.</div>{% endfor %}
+      {% for entry in anomalies.families_off_season %}
+        <div class="flex items-center justify-between gap-2 py-0.5 text-[13px]">
+          <span>{{ entry.family.name }}</span>
+          <span class="sa-mono text-[#98a2b3]">latest: {{ entry.latest_pool.display_season }}</span>
+        </div>
+      {% empty %}<div class="text-[12px] text-[#98a2b3]">All families on the current season.</div>{% endfor %}
     </div>
 
   </div>

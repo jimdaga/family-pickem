@@ -40,13 +40,23 @@ def _anomalies(season):
         ).filter(active_members=0)
     )
 
-    pools_off_season = list(Pool.objects.exclude(season=season)) if season else []
+    # "Stale current pools": a family whose most-recent pool never rolled forward
+    # to the current season. Historical pools are expected and never flagged —
+    # only the newest pool per family, and only if it is behind the current season.
+    families_off_season = []
+    if season:
+        latest_by_family = {}
+        for pool in Pool.objects.select_related('family').order_by('family_id', '-season', '-id'):
+            latest_by_family.setdefault(pool.family_id, pool)
+        for pool in latest_by_family.values():
+            if pool.season != season:
+                families_off_season.append({'family': pool.family, 'latest_pool': pool})
 
     return {
         'pools_without_settings': pools_without_settings,
         'stuck_games': stuck_games,
         'families_without_members': families_without_members,
-        'pools_off_season': pools_off_season,
+        'families_off_season': families_off_season,
     }
 
 

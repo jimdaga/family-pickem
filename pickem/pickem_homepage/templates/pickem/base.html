@@ -47,11 +47,14 @@
                         <img src="{% static 'images/logo.png' %}" alt="Family Pick'em Logo" class="h-10 w-auto">
                     </a>
                     {% if user.is_superuser %}
-                    <!-- Superuser (god mode) indicator: site-operator access to every family -->
-                    <span data-testid="superuser-badge" class="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/60 bg-yellow-400/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-yellow-300" title="Signed in as a Django superuser: you can see and administer every family.">
+                    <!-- Superuser (god mode) indicator: links to the site-operator console -->
+                    <a href="{% url 'superadmin:overview' %}"
+                       class="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/60 bg-yellow-400/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-yellow-300 hover:bg-yellow-400/25 transition-colors"
+                       data-testid="superuser-badge"
+                       title="Open the superadmin operator console">
                         <i class="fas fa-bolt" aria-hidden="true"></i>
                         Superuser
-                    </span>
+                    </a>
                     {% endif %}
                     {% if current_family and current_pool and user_is_commissioner_flag %}
                     <!-- Commissioner indicator: single-family governance role -->
