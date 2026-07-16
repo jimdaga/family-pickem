@@ -4,6 +4,7 @@ from xmlrpc.client import Boolean
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 # Create your models here.
 
@@ -837,3 +838,18 @@ class ScheduledJobConfig(models.Model):
                 job_id=job_id,
                 defaults={'interval_minutes': spec['default_minutes']},
             )
+
+
+class RunningJobMarker(models.Model):
+    """A row exists while an APScheduler job is executing. Written by scheduler
+    event listeners, read by the superadmin jobs status endpoint. DB-backed (not
+    in-memory) because a console request may run in a different worker than the
+    scheduler."""
+    job_id = models.CharField(max_length=100, unique=True)
+    started_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['started_at']
+
+    def __str__(self):
+        return f'{self.job_id} running since {self.started_at}'

@@ -13,6 +13,7 @@ restarts.
 """
 
 import logging
+from datetime import timedelta
 
 from apscheduler.jobstores.base import JobLookupError
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -26,7 +27,34 @@ logger = logging.getLogger(__name__)
 UPDATE_INTERVAL_MINUTES = 1
 RECORDS_INTERVAL_MINUTES = 30
 
+# A marker older than this is treated as a crash between submit and finish, so
+# the UI never gets stuck showing "running" forever.
+STALE_RUNNING_AFTER = timedelta(minutes=10)
+
 _scheduler = None
+
+
+def mark_job_started(job_id):
+    from django.utils import timezone
+    from pickem_api.models import RunningJobMarker
+
+    RunningJobMarker.objects.update_or_create(
+        job_id=job_id, defaults={'started_at': timezone.now()},
+    )
+
+
+def mark_job_finished(job_id):
+    from pickem_api.models import RunningJobMarker
+
+    RunningJobMarker.objects.filter(job_id=job_id).delete()
+
+
+def current_running_jobs():
+    from django.utils import timezone
+    from pickem_api.models import RunningJobMarker
+
+    cutoff = timezone.now() - STALE_RUNNING_AFTER
+    return list(RunningJobMarker.objects.filter(started_at__gte=cutoff))
 
 
 def run_update_all():
