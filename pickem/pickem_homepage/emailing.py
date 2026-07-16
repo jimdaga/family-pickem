@@ -1,6 +1,8 @@
 import logging
 
 from django.conf import settings
+from django.template.loader import render_to_string
+
 from pickem_superadmin.models import EmailProviderSettings
 
 try:
@@ -62,21 +64,21 @@ def send_family_invitation_email(*, invitation, invite_link, invite_code):
 
     resend.api_key = config['api_key']
     pool_name = invitation.pool.name if invitation.pool else "Family Pick'em"
+    # Render from templates: Django auto-escapes the HTML context (family/pool
+    # names are user-controlled, so building the HTML by hand would be an
+    # injection hole) and keeps the branding in one place.
+    email_context = {
+        'family_name': invitation.family.name,
+        'pool_name': pool_name,
+        'invite_link': invite_link,
+        'logo_url': getattr(settings, 'INVITE_EMAIL_LOGO_URL', ''),
+    }
     params = {
         'from': config['from_email'],
         'to': [recipient_email],
         'subject': f"You're invited to join {invitation.family.name} on Family Pick'em",
-        'html': (
-            f"<p>You have been invited to join <strong>{invitation.family.name}</strong>"
-            f" in <strong>{pool_name}</strong>.</p>"
-            f"<p><a href=\"{invite_link}\">Accept your invite</a></p>"
-            f"<p>If the button does not work, use this invite link:</p>"
-            f"<p>{invite_link}</p>"
-        ),
-        'text': (
-            f"You have been invited to join {invitation.family.name} on Family Pick'em.\n\n"
-            f"Accept your invite: {invite_link}"
-        ),
+        'html': render_to_string('emails/family_invite.html', email_context),
+        'text': render_to_string('emails/family_invite.txt', email_context),
     }
     if config['reply_to']:
         params['reply_to'] = config['reply_to']
@@ -117,12 +119,16 @@ def send_test_email(*, to_email):
     params = {
         'from': config['from_email'],
         'to': [to_email],
-        'subject': 'Family Pickem email configuration test',
+        'subject': "Family Pick'em email configuration test",
         'html': (
-            '<p>This is a test email from Family Pickem.</p>'
-            '<p>Your Resend configuration is working.</p>'
+            '<div style="font-family:\'Segoe UI\',Helvetica,Arial,sans-serif; max-width:480px; margin:0 auto;">'
+            '<div style="background:#0B3D91; color:#fff; padding:20px 24px; border-radius:12px 12px 0 0; font-weight:800; font-size:18px;">🏈 Family Pick&rsquo;em</div>'
+            '<div style="border:1px solid #eef1f5; border-top:0; border-radius:0 0 12px 12px; padding:24px;">'
+            '<p style="margin:0 0 8px; font-size:16px; color:#111827;">Your Resend email configuration is working. ✅</p>'
+            '<p style="margin:0; font-size:14px; color:#6b7280;">This is a test message sent from the Family Pick&rsquo;em superadmin console.</p>'
+            '</div></div>'
         ),
-        'text': 'This is a test email from Family Pickem. Your Resend configuration is working.',
+        'text': "Family Pick'em: your Resend email configuration is working. This is a test message from the superadmin console.",
     }
     if config['reply_to']:
         params['reply_to'] = config['reply_to']

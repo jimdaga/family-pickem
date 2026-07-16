@@ -227,6 +227,12 @@ LOGOUT_REDIRECT_URL = '/'
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip()
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', '').strip()
 RESEND_INVITE_REPLY_TO = os.environ.get('RESEND_INVITE_REPLY_TO', '').strip()
+# Absolute, publicly-reachable URL to the logo shown in invite emails. Left blank
+# by default because production static is served from S3 (URLs can be signed and
+# expire, which would break the image in delivered mail); the invite template
+# falls back to a styled text wordmark when this is empty. Point it at a stable
+# public logo URL to show the image.
+INVITE_EMAIL_LOGO_URL = os.environ.get('INVITE_EMAIL_LOGO_URL', '').strip()
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/

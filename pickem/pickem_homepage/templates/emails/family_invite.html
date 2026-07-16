@@ -1,0 +1,54 @@
+{% autoescape on %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>You're invited to {{ family_name }}</title>
+</head>
+<body style="margin:0; padding:0; background:#eef1f5; font-family:'Segoe UI',Helvetica,Arial,sans-serif; color:#1f2937;">
+  <!-- Email clients need table layout + inline styles; keep this self-contained. -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f5; padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 1px 3px rgba(16,24,40,0.08);">
+          <!-- Header -->
+          <tr>
+            <td style="background:#0B3D91; padding:28px 32px; text-align:center;">
+              {% if logo_url %}<img src="{{ logo_url }}" alt="Family Pick'em" height="40" style="height:40px; width:auto; display:inline-block;">{% else %}<span style="color:#ffffff; font-size:22px; font-weight:800;">Family Pick'em</span>{% endif %}
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 32px 8px;">
+              <p style="margin:0 0 6px; font-size:13px; text-transform:uppercase; letter-spacing:0.08em; color:#0B3D91; font-weight:700;">🏈 You're invited</p>
+              <h1 style="margin:0 0 16px; font-size:24px; line-height:1.25; color:#111827;">Join {{ family_name }} on Family&nbsp;Pick'em</h1>
+              <p style="margin:0 0 24px; font-size:16px; line-height:1.6; color:#4b5563;">
+                You've been invited to play in <strong>{{ pool_name }}</strong>. Pick game winners each week, climb the leaderboard, and settle who really knows football.
+              </p>
+              <!-- Bulletproof CTA button -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td align="center" bgcolor="#0B3D91" style="border-radius:10px;">
+                    <a href="{{ invite_link }}" style="display:inline-block; padding:14px 28px; font-size:16px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:10px;">Accept your invite</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 6px; font-size:13px; color:#6b7280;">If the button doesn't work, copy and paste this link:</p>
+              <p style="margin:0 0 8px; font-size:13px; word-break:break-all;"><a href="{{ invite_link }}" style="color:#0B3D91;">{{ invite_link }}</a></p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px 28px; border-top:1px solid #eef1f5;">
+              <p style="margin:0; font-size:12px; line-height:1.5; color:#98a2b3;">
+                You received this because someone invited you to a Family Pick'em league. If you weren't expecting it, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+        <p style="max-width:560px; margin:16px auto 0; font-size:12px; color:#98a2b3; text-align:center;">Family Pick'em &middot; Your NFL pick'em league</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>{% endautoescape %}
