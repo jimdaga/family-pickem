@@ -59,6 +59,9 @@
     </div>
 
     <div>
+      <div id="sa-live-status" class="mb-2 flex items-center gap-2 text-[12px] text-[#667085]">
+        <span class="sa-dot sa-dot-muted"></span> checking…
+      </div>
       <div class="sa-h2 mb-2">Run history</div>
       <div class="sa-table-wrap sa-table-scroll">
         <table class="sa-table">
@@ -93,4 +96,37 @@
       {% include 'superadmin/_pagination.html' with page_obj=executions %}
     </div>
   </div>
+
+  <script>
+    (function () {
+      const el = document.getElementById('sa-live-status');
+      const url = "{% url 'superadmin:jobs_status' %}";
+      let timer = null;
+
+      function render(data) {
+        if (data.running && data.running.length) {
+          const names = data.running.map(r => r.job_id + ' (' + r.seconds + 's)').join(', ');
+          el.innerHTML = '<span class="sa-dot sa-dot-bad"></span> running: ' + names;
+        } else if (data.health && data.health.alive) {
+          el.innerHTML = '<span class="sa-dot sa-dot-ok"></span> idle · scheduler alive';
+        } else {
+          el.innerHTML = '<span class="sa-dot sa-dot-bad"></span> scheduler not running';
+        }
+      }
+
+      async function poll() {
+        try {
+          const res = await fetch(url, { headers: { 'X-Requested-With': 'fetch' } });
+          if (res.ok) render(await res.json());
+        } catch (e) { /* transient; next tick retries */ }
+      }
+
+      function start() { if (!timer) { poll(); timer = setInterval(poll, 3000); } }
+      function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+      document.addEventListener('visibilitychange', () =>
+        document.hidden ? stop() : start());
+      start();
+    })();
+  </script>
 {% endblock %}

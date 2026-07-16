@@ -141,6 +141,26 @@ class JobsPageTests(TestCase):
         self.assertEqual(SuperAdminAuditLog.objects.count(), 0)
 
 
+class JobsStatusEndpointTests(TestCase):
+    def setUp(self):
+        self.root = User.objects.create_superuser(
+            username='root2', email='root2@example.com', password='pw',
+        )
+        self.client.force_login(self.root)
+
+    def test_status_json_reports_running_jobs(self):
+        from pickem_api import scheduler
+
+        scheduler.mark_job_started('update_all')
+        data = self.client.get(reverse('superadmin:jobs_status')).json()
+        self.assertEqual([r['job_id'] for r in data['running']], ['update_all'])
+        self.assertIn('health', data)
+
+    def test_status_json_empty_when_idle(self):
+        data = self.client.get(reverse('superadmin:jobs_status')).json()
+        self.assertEqual(data['running'], [])
+
+
 class ScheduleEditTests(TestCase):
     def setUp(self):
         self.root = User.objects.create_superuser(

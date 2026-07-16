@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from pickem_api import scheduler as scheduler_module
@@ -32,6 +34,28 @@ def jobs_page(request):
         'schedule_forms': {
             c.pk: ScheduledJobConfigForm(instance=c, prefix=str(c.pk))
             for c in schedule_configs
+        },
+    })
+
+
+@superadmin_required
+def jobs_status(request):
+    now = timezone.now()
+    running = [
+        {
+            'job_id': m.job_id,
+            'started_at': m.started_at.isoformat(),
+            'seconds': int((now - m.started_at).total_seconds()),
+        }
+        for m in scheduler_module.current_running_jobs()
+    ]
+    health = jobs.scheduler_health()
+    return JsonResponse({
+        'running': running,
+        'health': {
+            'alive': health['alive'],
+            'last_run': health['last_run'].isoformat() if health['last_run'] else None,
+            'last_status': health['last_status'],
         },
     })
 

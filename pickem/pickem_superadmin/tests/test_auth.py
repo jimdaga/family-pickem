@@ -16,6 +16,7 @@ SUPERADMIN_URLS = [
     'superadmin:families',
     'superadmin:teams',
     'superadmin:jobs',
+    'superadmin:jobs_status',
     'superadmin:audit',
 ]
 
