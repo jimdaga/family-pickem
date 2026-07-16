@@ -965,9 +965,11 @@ class ListenerCallbackTests(TestCase):
 
         from pickem_api import scheduler
 
-        # A malformed event (no job_id) must not raise out of the listener.
+        # A malformed event (no job_id) must not raise out of the listener, and
+        # must not create a junk marker row.
         scheduler._on_job_submitted(SimpleNamespace())
         scheduler._on_job_done(SimpleNamespace())
+        self.assertEqual(scheduler.current_running_jobs(), [])
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
