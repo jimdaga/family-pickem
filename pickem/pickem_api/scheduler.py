@@ -38,6 +38,26 @@ def run_update_records():
     call_command("update_records")
 
 
+# The recurring jobs whose cadence is editable from the superadmin console.
+# The console reads this to know which jobs exist and their seed defaults;
+# start() and reschedule_live() read it to (re)register those jobs. Keep this
+# to genuinely user-tunable pipeline jobs only (maintenance jobs like the log
+# prune are registered separately and are NOT listed here, so they can't be
+# edited).
+JOB_REGISTRY = {
+    'update_all': {
+        'func': run_update_all,
+        'name': 'Run full data-update pipeline',
+        'default_minutes': UPDATE_INTERVAL_MINUTES,
+    },
+    'update_records': {
+        'func': run_update_records,
+        'name': 'Run team records refresh',
+        'default_minutes': RECORDS_INTERVAL_MINUTES,
+    },
+}
+
+
 def start():
     """Start the background scheduler. Idempotent within a process."""
     global _scheduler

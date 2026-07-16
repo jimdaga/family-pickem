@@ -1,6 +1,7 @@
 from time import timezone
 import uuid
 from xmlrpc.client import Boolean
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -803,3 +804,36 @@ class currentSeason(models.Model):
                 year2 = season_str[2:]
                 return f"20{year1}-20{year2}"
         return str(self.season)
+
+
+class ScheduledJobConfig(models.Model):
+    """Editable cadence for a recurring APScheduler job (see scheduler.JOB_REGISTRY).
+
+    The scheduler reads this at start() and on live reschedule; the superadmin
+    console edits it. Only job_ids present in JOB_REGISTRY are ever created here.
+    """
+    job_id = models.CharField(max_length=100, unique=True)
+    interval_minutes = models.PositiveIntegerField(
+        default=1, validators=[MinValueValidator(1)],
+    )
+    enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['job_id']
+
+    def __str__(self):
+        state = 'on' if self.enabled else 'off'
+        return f'{self.job_id}: every {self.interval_minutes}m ({state})'
+
+    @classmethod
+    def seed_from_registry(cls):
+        """Create a config row for any registry job that has none. Never
+        overwrites an existing (possibly edited) row."""
+        from pickem_api.scheduler import JOB_REGISTRY  # local: scheduler imports models
+
+        for job_id, spec in JOB_REGISTRY.items():
+            cls.objects.get_or_create(
+                job_id=job_id,
+                defaults={'interval_minutes': spec['default_minutes']},
+            )
