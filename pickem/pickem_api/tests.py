@@ -150,6 +150,7 @@ class TenantDomainModelTest(TestCase):
             family=family,
             pool=pool,
             code_hash='sha256:invite-hash',
+            recipient_email='joiner@example.com',
             role=FamilyMembership.Role.MEMBER,
             expires_at=timezone.now() + timedelta(days=7),
             max_uses=3,
@@ -157,6 +158,7 @@ class TenantDomainModelTest(TestCase):
         )
 
         self.assertEqual(invitation.code_hash, 'sha256:invite-hash')
+        self.assertEqual(invitation.recipient_email, 'joiner@example.com')
         self.assertFalse(invitation.is_revoked)
         self.assertEqual(invitation.use_count, 0)
         self.assertFalse(hasattr(invitation, 'code'))
@@ -207,6 +209,7 @@ class TenantDomainAdminTest(TestCase):
     def test_invitation_admin_displays_hash_without_raw_code_fields(self):
         invitation_admin = admin.site._registry[FamilyInvitation]
 
+        self.assertIn('recipient_email', invitation_admin.list_display)
         self.assertIn('code_hash', invitation_admin.list_display)
         self.assertNotIn('code', invitation_admin.list_display)
         self.assertNotIn('raw_code', invitation_admin.list_display)

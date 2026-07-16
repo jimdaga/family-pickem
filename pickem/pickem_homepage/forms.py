@@ -17,6 +17,18 @@ class CreateFamilyForm(forms.Form):
             'autocomplete': 'organization',
         }),
     )
+    invite_emails_placeholder = forms.CharField(
+        label="Who do you plan to invite?",
+        required=False,
+        strip=True,
+        widget=forms.Textarea(attrs={
+            'class': 'w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
+            'placeholder': 'cousin@example.com, aunt@example.com',
+            'rows': 3,
+            'autocomplete': 'off',
+        }),
+        help_text="Optional placeholder only for now. Email invitations will be wired up separately.",
+    )
 
     def clean_name(self):
         name = self.cleaned_data.get('name', '').strip()
@@ -329,6 +341,16 @@ class FamilyWeekWinnerForm(forms.Form):
 
 class FamilyInviteCreateForm(forms.Form):
     role = forms.ChoiceField(required=True)
+    recipient_email = forms.EmailField(
+        label="Recipient email",
+        required=False,
+        widget=forms.EmailInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'autocomplete': 'email',
+            'placeholder': 'optional@example.com',
+        }),
+        help_text="Optional. If set, only that email address can redeem the invite.",
+    )
     expires_in_days = forms.IntegerField(
         label="Expires after",
         min_value=1,
@@ -364,6 +386,10 @@ class FamilyInviteCreateForm(forms.Form):
                 'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
             ),
         })
+
+    def clean_recipient_email(self):
+        recipient_email = (self.cleaned_data.get('recipient_email') or '').strip().lower()
+        return recipient_email or ''
 
 
 class MessageBoardPostForm(forms.ModelForm):

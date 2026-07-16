@@ -56,6 +56,10 @@ from pickem_api.authz import (
 )
 from pickem_api.models import Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, Pool, PoolSettings
 from pickem_homepage.authz import family_member_required
+from pickem_homepage.emailing import (
+    resend_invite_email_is_configured,
+    send_family_invitation_email,
+)
 
 ESPN_NEWS_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news'
 
@@ -600,6 +604,9 @@ def get_valid_invitation_for_code(raw_code):
 ENTRIES_LOCKED_MESSAGE = (
     "This pool locked its entries after Week 1, so new members can no longer join."
 )
+INVITE_EMAIL_MISMATCH_MESSAGE = (
+    "This invite was issued for {recipient_email}. Sign in with that email to accept it."
+)
 
 
 def pool_entries_locked(pool):
@@ -627,6 +634,13 @@ def accept_invitation_for_user(request, raw_code):
         pool = invitation.pool or get_default_active_pool_for_family(invitation.family)
         if not pool or pool.family_id != invitation.family_id:
             return None, None, None, None
+
+        required_email = (invitation.recipient_email or '').strip().lower()
+        user_email = (request.user.email or '').strip().lower()
+        if required_email and user_email != required_email:
+            return None, None, None, INVITE_EMAIL_MISMATCH_MESSAGE.format(
+                recipient_email=invitation.recipient_email,
+            )
 
         # Late-join policy: once Week 1 is complete, a lock_after_week_1 pool
         # only admits people who are already active members (re-activation of
@@ -764,7 +778,7 @@ def create_family(request):
                 **audit_context,
             )
 
-        messages.success(request, f"{family.name} is ready.")
+            messages.success(request, f"{family.name} is ready.")
         return redirect(
             'family_pool_home',
             family_slug=family.slug,
@@ -1125,6 +1139,10 @@ def family_pool_admin(request, family_slug, pool_slug):
         'admin_sections': build_family_admin_sections(family, pool, request.user),
         'active_member_count': active_member_count,
         'active_invite_count': active_invite_count,
+        'invites_url': reverse(
+            'family_pool_admin_invites',
+            kwargs={'family_slug': family.slug, 'pool_slug': pool.slug},
+        ),
         'pool_settings': pool_settings,
     }
     return render(request, 'pickem/family_admin.html', context)
@@ -1924,6 +1942,7 @@ def build_invite_audit_metadata(invitation, *, source, replacement_for=None):
     metadata = {
         'source': source,
         'role': invitation.role,
+        'recipient_email': invitation.recipient_email,
         'expires_at': invitation.expires_at.isoformat() if invitation.expires_at else None,
         'max_uses': invitation.max_uses,
         'use_count': invitation.use_count,
@@ -1934,12 +1953,53 @@ def build_invite_audit_metadata(invitation, *, source, replacement_for=None):
     return metadata
 
 
-def create_admin_invitation(*, family, pool, actor, role, expires_in_days, max_uses, request, replacement_for=None):
+def handle_targeted_invite_email_feedback(request, *, invitation, raw_code):
+    if not invitation.recipient_email:
+        return
+
+    invite_link = request.build_absolute_uri(
+        reverse('accept_invite_link', kwargs={'invite_code': raw_code})
+    )
+    if resend_invite_email_is_configured():
+        transaction.on_commit(
+            lambda: send_family_invitation_email(
+                invitation=invitation,
+                invite_link=invite_link,
+                invite_code=raw_code,
+            )
+        )
+        messages.success(
+            request,
+            f"Invite email will be sent to {invitation.recipient_email}.",
+        )
+    else:
+        messages.warning(
+            request,
+            (
+                f"Invite saved for {invitation.recipient_email}, but Resend is not "
+                "configured yet so no email was sent."
+            ),
+        )
+
+
+def create_admin_invitation(
+    *,
+    family,
+    pool,
+    actor,
+    role,
+    recipient_email,
+    expires_in_days,
+    max_uses,
+    request,
+    replacement_for=None,
+):
     raw_code = generate_invite_code()
     invitation = FamilyInvitation.objects.create(
         family=family,
         pool=pool,
         code_hash=hash_invite_code(raw_code),
+        recipient_email=recipient_email or None,
         role=role,
         expires_at=timezone.now() + timedelta(days=expires_in_days),
         max_uses=max_uses,
@@ -2016,12 +2076,18 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
                 pool=tenant_context.pool,
                 actor=request.user,
                 role=form.cleaned_data['role'],
+                recipient_email=form.cleaned_data['recipient_email'],
                 expires_in_days=form.cleaned_data['expires_in_days'],
                 max_uses=form.cleaned_data['max_uses'],
                 request=request,
             )
 
         messages.success(request, "Invite created. Copy it now; it will not be shown again.")
+        handle_targeted_invite_email_feedback(
+            request,
+            invitation=invitation,
+            raw_code=raw_code,
+        )
         return render_family_admin_invites(
             request,
             tenant_context,
@@ -2105,6 +2171,7 @@ def family_pool_admin_invite_replace(request, family_slug, pool_slug, invitation
             pool=tenant_context.pool,
             actor=request.user,
             role=old_invitation.role,
+            recipient_email=old_invitation.recipient_email,
             expires_in_days=14,
             max_uses=old_invitation.max_uses or 20,
             request=request,
@@ -2119,6 +2186,11 @@ def family_pool_admin_invite_replace(request, family_slug, pool_slug, invitation
             'expires_in_days': 14,
             'max_uses': 20,
         },
+    )
+    handle_targeted_invite_email_feedback(
+        request,
+        invitation=new_invitation,
+        raw_code=raw_code,
     )
     messages.success(request, "Invite replaced. Copy the new code now.")
     return render_family_admin_invites(

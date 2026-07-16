@@ -40,9 +40,18 @@
         <section class="rounded-lg border border-primary/30 bg-white dark:bg-surface p-5 shadow-sm" data-testid="invite-created-once">
             <p class="text-xs font-bold uppercase tracking-wider text-primary">Invite created - copy now</p>
             <h2 class="mt-1 text-lg font-bold text-text-dark dark:text-white">This raw code is only shown once</h2>
+            <p class="mt-2 text-sm text-text-secondary-light dark:text-text-secondary">
+                Share the invite link when possible. The raw code below is fallback-only.
+            </p>
             <div class="mt-4 grid gap-3">
-                <code class="block rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark px-4 py-3 text-sm text-text-dark dark:text-white break-all font-mono">{{ invite_code }}</code>
-                <code class="block rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark px-4 py-3 text-sm text-text-dark dark:text-white break-all font-mono">{{ invite_link }}</code>
+                <div>
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Invite link</p>
+                    <code class="block rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark px-4 py-3 text-sm text-text-dark dark:text-white break-all font-mono">{{ invite_link }}</code>
+                </div>
+                <div>
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Raw code</p>
+                    <code class="block rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark px-4 py-3 text-sm text-text-dark dark:text-white break-all font-mono">{{ invite_code }}</code>
+                </div>
             </div>
         </section>
         {% endif %}
@@ -54,12 +63,20 @@
                     Admins can create member invites. Owners can also create admin invites.
                 </p>
             </div>
-            <form method="post" action="{% url 'family_pool_admin_invites' family.slug pool.slug %}" class="grid gap-4 p-5 md:grid-cols-4" data-testid="invite-create-form">
+            <form method="post" action="{% url 'family_pool_admin_invites' family.slug pool.slug %}" class="grid gap-4 p-5 md:grid-cols-5" data-testid="invite-create-form">
                 {% csrf_token %}
                 <div>
                     <label for="{{ form.role.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white">Role</label>
                     <div class="mt-2">{{ form.role }}</div>
                     {% for error in form.role.errors %}
+                    <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="md:col-span-2">
+                    <label for="{{ form.recipient_email.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white">Recipient Email</label>
+                    <div class="mt-2">{{ form.recipient_email }}</div>
+                    <p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary">{{ form.recipient_email.help_text }}</p>
+                    {% for error in form.recipient_email.errors %}
                     <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ error }}</p>
                     {% endfor %}
                 </div>
@@ -101,6 +118,7 @@
                         <tr>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">ID</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Role</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Recipient</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Status</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Uses</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Expires</th>
@@ -114,6 +132,7 @@
                         <tr>
                             <td class="px-5 py-4 text-sm font-semibold text-text-dark dark:text-white">#{{ invite.id }}</td>
                             <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.get_role_display }}</td>
+                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.recipient_email|default:"Anyone with link" }}</td>
                             <td class="px-5 py-4">
                                 {% if invite.is_revoked %}
                                 <span class="inline-flex rounded-lg bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700 dark:bg-slate-800 dark:text-text-secondary">Revoked</span>
@@ -152,6 +171,7 @@
                         <div>
                             <h3 class="font-bold text-text-dark dark:text-white">Invite #{{ invite.id }}</h3>
                             <p class="text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.get_role_display }} by {% if invite.created_by %}{{ invite.created_by.username }}{% else %}System{% endif %}</p>
+                            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.recipient_email|default:"Anyone with link" }}</p>
                         </div>
                         {% if invite.is_revoked %}
                         <span class="rounded-lg bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700 dark:bg-slate-800 dark:text-text-secondary">Revoked</span>

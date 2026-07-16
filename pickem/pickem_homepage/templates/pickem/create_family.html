@@ -36,6 +36,21 @@
                 {% endif %}
             </div>
 
+            <div>
+                <label for="{{ form.invite_emails_placeholder.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
+                    {{ form.invite_emails_placeholder.label }}
+                </label>
+                {{ form.invite_emails_placeholder }}
+                <p class="mt-2 text-sm text-text-secondary-light dark:text-text-secondary">
+                    {{ form.invite_emails_placeholder.help_text }}
+                </p>
+                {% if form.invite_emails_placeholder.errors %}
+                <div class="mt-2 text-sm font-medium text-red-600 dark:text-red-400">
+                    {{ form.invite_emails_placeholder.errors }}
+                </div>
+                {% endif %}
+            </div>
+
             <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
                 <button type="submit" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
                     <i class="fas fa-plus"></i>

@@ -25,6 +25,8 @@
       <a href="{{ u }}" class="sa-tab {% if request.path == u %}sa-tab-active{% endif %}">overview</a>
       {% url 'superadmin:users' as u_users %}
       <a href="{{ u_users }}" class="sa-tab {% if '/users' in request.path %}sa-tab-active{% endif %}">users</a>
+      {% url 'superadmin:email_settings' as u_email %}
+      <a href="{{ u_email }}" class="sa-tab {% if '/email' in request.path %}sa-tab-active{% endif %}">email</a>
       {% url 'superadmin:pools' as u_pools %}
       <a href="{{ u_pools }}" class="sa-tab {% if '/pools' in request.path %}sa-tab-active{% endif %}">pools</a>
       {% url 'superadmin:families' as u_families %}

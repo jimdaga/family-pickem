@@ -78,9 +78,9 @@ class PoolSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(FamilyInvitation)
 class FamilyInvitationAdmin(admin.ModelAdmin):
-    list_display = ('family', 'pool', 'code_hash', 'role', 'expires_at', 'is_revoked', 'max_uses', 'use_count', 'created_by', 'created_at')
+    list_display = ('family', 'pool', 'recipient_email', 'code_hash', 'role', 'expires_at', 'is_revoked', 'max_uses', 'use_count', 'created_by', 'created_at')
     list_filter = ('role', 'is_revoked', 'expires_at', 'created_at')
-    search_fields = ('family__name', 'family__slug', 'pool__name', 'pool__slug', 'code_hash', 'created_by__username', 'created_by__email')
+    search_fields = ('family__name', 'family__slug', 'pool__name', 'pool__slug', 'recipient_email', 'code_hash', 'created_by__username', 'created_by__email')
     date_hierarchy = 'created_at'
     ordering = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at')

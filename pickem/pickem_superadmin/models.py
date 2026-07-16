@@ -1,6 +1,15 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
+import base64
+import hashlib
+import logging
+
+from cryptography.fernet import Fernet
+from django.conf import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class SuperAdminAuditLog(models.Model):
@@ -24,6 +33,8 @@ class SuperAdminAuditLog(models.Model):
         JOB_QUEUED = 'job_queued', 'Pipeline job queued'
         DATA_REPAIR = 'data_repair', 'Data repair action'
         SCHEDULE_UPDATED = 'schedule_updated', 'Job schedule updated'
+        EMAIL_SETTINGS_UPDATED = 'email_settings_updated', 'Email settings updated'
+        EMAIL_TEST_SENT = 'email_test_sent', 'Email test sent'
 
     actor = models.ForeignKey(
         User, on_delete=models.SET_NULL, related_name='superadmin_audit_logs',
@@ -76,3 +87,76 @@ class SuperAdminLogEntry(models.Model):
 
     def __str__(self):
         return f'[{self.level}] {self.logger_name}: {self.message[:60]}'
+
+
+def _superadmin_secret_fernet():
+    secret = settings.SECRET_KEY.encode('utf-8')
+    digest = hashlib.sha256(b'pickem-superadmin-secrets:' + secret).digest()
+    return Fernet(base64.urlsafe_b64encode(digest))
+
+
+class EmailProviderSettings(models.Model):
+    class Provider(models.TextChoices):
+        RESEND = 'resend', 'Resend'
+
+    singleton = models.CharField(max_length=20, unique=True, default='default')
+    provider = models.CharField(
+        max_length=30,
+        choices=Provider.choices,
+        default=Provider.RESEND,
+    )
+    invites_enabled = models.BooleanField(default=False)
+    from_email = models.CharField(max_length=255, blank=True, default='')
+    reply_to_email = models.CharField(max_length=255, blank=True, default='')
+    api_key_ciphertext = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Email provider settings'
+        verbose_name_plural = 'Email provider settings'
+
+    def __str__(self):
+        return f'{self.get_provider_display()} email settings'
+
+    @classmethod
+    def load(cls):
+        obj, _created = cls.objects.get_or_create(singleton='default')
+        return obj
+
+    @classmethod
+    def current(cls):
+        return cls.objects.filter(singleton='default').first()
+
+    def set_api_key(self, raw_api_key):
+        raw_api_key = (raw_api_key or '').strip()
+        if not raw_api_key:
+            self.api_key_ciphertext = ''
+            return
+        self.api_key_ciphertext = _superadmin_secret_fernet().encrypt(
+            raw_api_key.encode('utf-8')
+        ).decode('utf-8')
+
+    def get_api_key(self):
+        if not self.api_key_ciphertext:
+            return ''
+        try:
+            return _superadmin_secret_fernet().decrypt(
+                self.api_key_ciphertext.encode('utf-8')
+            ).decode('utf-8')
+        except Exception:
+            logger.warning('Failed to decrypt stored email provider API key.')
+            return ''
+
+    @property
+    def has_api_key(self):
+        return bool(self.get_api_key())
+
+    @property
+    def masked_api_key(self):
+        if not self.has_api_key:
+            return ''
+        raw = self.get_api_key()
+        if len(raw) <= 8:
+            return '•' * len(raw)
+        return f"{raw[:4]}{'•' * max(len(raw) - 8, 4)}{raw[-4:]}"

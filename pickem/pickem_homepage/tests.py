@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from io import StringIO
 from importlib import import_module
 import json
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from django.contrib import admin
 from django.contrib.auth.models import AnonymousUser
@@ -4277,6 +4277,8 @@ class FamilyAdminExperienceTests(TestCase):
                 self.assertContains(response, "Invitation created")
                 self.assertContains(response, "Settings")
                 self.assertContains(response, self._settings_url())
+                self.assertContains(response, "Invite Users")
+                self.assertContains(response, self._invites_url())
                 self.assertContains(response, "Picks")
                 self.assertContains(response, self._picks_url())
                 self.assertNotContains(response, "Jones Family")
@@ -4810,11 +4812,18 @@ class FamilyAdminExperienceTests(TestCase):
         current_invite = self._admin_invitation(
             raw_code="SAFE-LIST-CODE",
             role=FamilyMembership.Role.MEMBER,
+            recipient_email="target@example.com",
             use_count=3,
             max_uses=10,
         )
         current_invite.is_revoked = True
         current_invite.save(update_fields=["is_revoked", "updated_at"])
+        self._admin_invitation(
+            raw_code="OPEN-INVITE-CODE",
+            role=FamilyMembership.Role.MEMBER,
+            use_count=0,
+            max_uses=5,
+        )
         self._admin_invitation(
             raw_code="OTHER-FAMILY-CODE",
             family=self.other_family,
@@ -4831,9 +4840,11 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertContains(response, "Member")
         self.assertContains(response, "10")
         self.assertContains(response, "3")
+        self.assertContains(response, "target@example.com")
         self.assertContains(response, "admin-owner")
         self.assertContains(response, "Revoked")
         self.assertContains(response, str(current_invite.id))
+        self.assertContains(response, "Anyone with link")
         self.assertNotContains(response, "SAFE-LIST-CODE")
         self.assertNotContains(response, current_invite.code_hash)
         self.assertNotContains(response, "OTHER-FAMILY-CODE")
@@ -4849,6 +4860,7 @@ class FamilyAdminExperienceTests(TestCase):
                     self._invites_url(),
                     {
                         "role": FamilyMembership.Role.MEMBER,
+                        "recipient_email": " TargetUser@Example.com ",
                         "expires_in_days": "21",
                         "max_uses": "7",
                     },
@@ -4866,6 +4878,7 @@ class FamilyAdminExperienceTests(TestCase):
                     before_count + 1,
                 )
                 self.assertEqual(invitation.role, FamilyMembership.Role.MEMBER)
+                self.assertEqual(invitation.recipient_email, "targetuser@example.com")
                 self.assertEqual(invitation.max_uses, 7)
                 self.assertEqual(invitation.use_count, 0)
                 self.assertFalse(invitation.is_revoked)
@@ -4873,16 +4886,121 @@ class FamilyAdminExperienceTests(TestCase):
                 self.assertNotEqual(invitation.code_hash, raw_code)
                 self.assertContains(response, raw_code)
                 self.assertContains(response, reverse("accept_invite_link", kwargs={"invite_code": raw_code}))
-                self.assertNotIn(raw_code, str(FamilyAuditLog.objects.get(
+                audit = FamilyAuditLog.objects.get(
                     family=self.family,
                     actor=user,
                     action=FamilyAuditLog.Action.INVITATION_CREATED,
                     target_id=str(invitation.id),
-                ).metadata))
+                )
+                self.assertEqual(audit.metadata["recipient_email"], "targetuser@example.com")
+                self.assertNotIn(raw_code, str(audit.metadata))
 
                 reload_response = self.client.get(self._invites_url())
                 self.assertNotContains(reload_response, raw_code)
                 self.assertNotContains(reload_response, invitation.code_hash)
+
+    @patch("pickem_homepage.views.transaction.on_commit", side_effect=lambda callback: callback())
+    @patch("pickem_homepage.views.send_family_invitation_email")
+    @patch("pickem_homepage.views.resend_invite_email_is_configured", return_value=True)
+    def test_targeted_invite_queues_resend_delivery_when_configured(
+        self,
+        configured_mock,
+        send_mock,
+        on_commit_mock,
+    ):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.MEMBER,
+                "recipient_email": "target@example.com",
+                "expires_in_days": "14",
+                "max_uses": "5",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Invite email will be sent to target@example.com.")
+        configured_mock.assert_called_once_with()
+        on_commit_mock.assert_called_once()
+        send_mock.assert_called_once_with(
+            invitation=ANY,
+            invite_link=ANY,
+            invite_code=ANY,
+        )
+
+    @patch("pickem_homepage.views.send_family_invitation_email")
+    @patch("pickem_homepage.views.resend_invite_email_is_configured", return_value=False)
+    def test_targeted_invite_warns_when_resend_not_configured(
+        self,
+        configured_mock,
+        send_mock,
+    ):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.MEMBER,
+                "recipient_email": "target@example.com",
+                "expires_in_days": "14",
+                "max_uses": "5",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Invite saved for target@example.com, but Resend is not configured yet so no email was sent.",
+        )
+        configured_mock.assert_called_once_with()
+        send_mock.assert_not_called()
+
+    @patch("pickem_homepage.views.transaction.on_commit", side_effect=lambda callback: callback())
+    @patch("pickem_homepage.views.send_family_invitation_email")
+    @patch("pickem_homepage.views.resend_invite_email_is_configured", return_value=True)
+    def test_replacing_targeted_invite_requeues_resend_delivery_when_configured(
+        self,
+        configured_mock,
+        send_mock,
+        on_commit_mock,
+    ):
+        invite = self._admin_invitation(raw_code="REPLACE-TARGET", recipient_email="target@example.com")
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(self._invite_replace_url(invite))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Invite replaced. Copy the new code now.")
+        self.assertContains(response, "Invite email will be sent to target@example.com.")
+        configured_mock.assert_called_once_with()
+        on_commit_mock.assert_called_once()
+        send_mock.assert_called_once_with(
+            invitation=ANY,
+            invite_link=ANY,
+            invite_code=ANY,
+        )
+
+    @patch("pickem_homepage.views.send_family_invitation_email")
+    @patch("pickem_homepage.views.resend_invite_email_is_configured", return_value=False)
+    def test_replacing_targeted_invite_warns_when_resend_not_configured(
+        self,
+        configured_mock,
+        send_mock,
+    ):
+        invite = self._admin_invitation(raw_code="REPLACE-TARGET-WARN", recipient_email="target@example.com")
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(self._invite_replace_url(invite))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Invite saved for target@example.com, but Resend is not configured yet so no email was sent.",
+        )
+        configured_mock.assert_called_once_with()
+        send_mock.assert_not_called()
 
     def test_admin_cannot_create_admin_role_invite_but_owner_can(self):
         self.client.force_login(self.admin_user)
@@ -5598,10 +5716,25 @@ class CreateFamilyFlowTests(TestCase):
         self.assertContains(response, "This field is required.")
         self.assertEqual(Family.objects.count(), family_count)
 
+    def test_create_family_form_renders_invite_email_placeholder_copy(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("create_family"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Who do you plan to invite?")
+        self.assertContains(response, "Email invitations will be wired up separately.")
+
     def test_valid_post_creates_family_default_pool_settings_owner_and_audit(self):
         self.client.force_login(self.user)
 
-        response = self.client.post(reverse("create_family"), {"name": "Smith Family"})
+        response = self.client.post(
+            reverse("create_family"),
+            {
+                "name": "Smith Family",
+                "invite_emails_placeholder": "cousin@example.com, aunt@example.com",
+            },
+        )
 
         family = Family.objects.get(name="Smith Family")
         pool = Pool.objects.get(family=family)
@@ -5954,6 +6087,49 @@ class InviteFlowTests(TestCase):
                 status=FamilyMembership.Status.ACTIVE,
             ).exists()
         )
+
+    def test_email_targeted_invite_accepts_case_insensitive_matching_user_email(self):
+        invite = self._invitation(
+            raw_code="email-code",
+            recipient_email="Joiner@Example.com",
+            use_count=0,
+        )
+        self.client.force_login(self.joiner)
+
+        response = self.client.post(self._join_url(), {"code": "email-code"})
+
+        invite.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            FamilyMembership.objects.filter(
+                family=self.family,
+                user=self.joiner,
+                status=FamilyMembership.Status.ACTIVE,
+            ).exists()
+        )
+        self.assertEqual(invite.use_count, 1)
+
+    def test_email_targeted_invite_rejects_wrong_account_without_mutation(self):
+        invite = self._invitation(
+            raw_code="wrong-email-code",
+            recipient_email="someoneelse@example.com",
+            use_count=0,
+        )
+        self.client.force_login(self.joiner)
+
+        response = self.client.post(self._join_url(), {"code": "wrong-email-code"})
+
+        invite.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "someoneelse@example.com")
+        self.assertFalse(
+            FamilyMembership.objects.filter(
+                family=self.family,
+                user=self.joiner,
+                status=FamilyMembership.Status.ACTIVE,
+            ).exists()
+        )
+        self.assertEqual(invite.use_count, 0)
 
     def test_valid_invite_reactivates_inactive_same_family_membership(self):
         self._invitation(raw_code="reactivate-code")

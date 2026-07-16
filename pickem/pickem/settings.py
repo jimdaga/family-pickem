@@ -224,6 +224,10 @@ SITE_ID = 1
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip()
+RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', '').strip()
+RESEND_INVITE_REPLY_TO = os.environ.get('RESEND_INVITE_REPLY_TO', '').strip()
+
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
