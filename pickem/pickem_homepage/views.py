@@ -50,6 +50,7 @@ from pickem_api.authz import (
     AuthenticationRequired,
     PermissionDeniedForTenant,
     TenantNotFound,
+    get_real_user_family_memberships,
     get_user_family_memberships,
     require_tenant_context,
 )
@@ -57,6 +58,15 @@ from pickem_api.models import Family, FamilyAuditLog, FamilyInvitation, FamilyMe
 from pickem_homepage.authz import family_member_required
 
 ESPN_NEWS_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news'
+
+
+@require_http_methods(["GET", "POST"])
+def account_signup_google_only(request):
+    return render(request, 'account/signup.html', {'gameseason': get_season()})
+
+
+def account_inactive(request):
+    return render(request, 'account/account_inactive.html', {'gameseason': get_season()})
 
 
 def get_espn_nfl_news(limit=6):
@@ -286,6 +296,28 @@ def get_default_active_pool_for_family(family):
     )
 
 
+def format_display_season_range(season):
+    season_str = str(season or "").zfill(4)
+    if len(season_str) == 4 and season_str.isdigit():
+        return f"20{season_str[:2]} - 20{season_str[2:]}"
+    return str(season or "")
+
+
+def default_pool_name(*, season, competition='nfl'):
+    competition_labels = {
+        'nfl': "NFL Pick'em",
+    }
+    competition_label = competition_labels.get(
+        (competition or '').lower(),
+        (competition or 'Pool').upper(),
+    )
+    return f"{competition_label} - {format_display_season_range(season)}"
+
+
+def has_real_family_membership(membership):
+    return bool(getattr(membership, 'pk', None))
+
+
 def generate_unique_slug(model, value, *, scoped_filters=None, max_length=80):
     base_slug = slugify(value)[:max_length].strip('-') or 'family'
     scoped_filters = scoped_filters or {}
@@ -320,7 +352,7 @@ def generate_invite_code():
 
 def get_family_pool_choices(user):
     choices = []
-    for membership in get_user_family_memberships(user):
+    for membership in get_real_user_family_memberships(user):
         family = membership.family
         pool = get_default_active_pool_for_family(family)
         choices.append({
@@ -386,9 +418,9 @@ def build_family_admin_sections(family, pool, user=None):
     # single entry point, and only to superadmins.
     if user is not None and getattr(user, 'is_superuser', False):
         sections.append({
-            'label': 'Superadmin',
+            'label': 'Super Admin',
             'description': 'Cross-family operator console — health, settings, users, jobs, and repair tools.',
-            'icon': 'fas fa-shield-halved',
+            'icon': 'fas fa-user-shield',
             'url': '/superadmin/',
             'status': 'Open console',
         })
@@ -407,6 +439,8 @@ def get_current_week_context(gameseason):
 def redirect_to_default_pool_route(request, route_name, **route_kwargs):
     family_choices = get_family_pool_choices(request.user)
     if not family_choices:
+        if getattr(request.user, 'is_superuser', False) and get_user_family_memberships(request.user):
+            return redirect('family_picker')
         return redirect('onboarding')
     if len(family_choices) > 1:
         return redirect('family_picker')
@@ -677,10 +711,10 @@ def create_family(request):
             )
             pool = Pool.objects.create(
                 family=family,
-                name='Pickem Pool',
+                name=default_pool_name(season=get_season(), competition='nfl'),
                 slug=generate_unique_slug(
                     Pool,
-                    'Pickem Pool',
+                    'pickem-pool',
                     scoped_filters={'family': family},
                 ),
                 season=get_season(),
@@ -848,12 +882,33 @@ def create_family_invite(request, family_slug, pool_slug):
 
 @login_required
 def family_picker(request):
-    choices = get_family_pool_choices(request.user)
-    if not choices:
+    member_choices = get_family_pool_choices(request.user)
+    visible_family_ids = {choice['family'].id for choice in member_choices}
+    superadmin_choices = []
+    if request.user.is_superuser:
+        for membership in get_user_family_memberships(request.user):
+            if membership.family_id in visible_family_ids:
+                continue
+            family = membership.family
+            pool = get_default_active_pool_for_family(family)
+            superadmin_choices.append({
+                'membership': membership,
+                'family': family,
+                'pool': pool,
+                'url': reverse(
+                    'family_pool_home',
+                    kwargs={'family_slug': family.slug, 'pool_slug': pool.slug},
+                ) if pool else None,
+                'is_superadmin_access': True,
+            })
+
+    if not member_choices and not superadmin_choices:
         return redirect('onboarding')
 
     context = {
-        'family_choices': choices,
+        'family_choices': member_choices,
+        'member_family_choices': member_choices,
+        'superadmin_family_choices': superadmin_choices,
         'gameseason': get_season(),
     }
     return render(request, 'pickem/family_picker.html', context)
@@ -1650,7 +1705,7 @@ def render_family_admin_winners(request, tenant_context, form=None, *, status=20
         .order_by('id')
         .first()
     )
-    pool_settings = PoolSettings.objects.filter(pool=pool).first()
+    pool_settings = PoolSettings.objects.filter(pool=pool).first() or PoolSettings()
     context = {
         'family': family,
         'pool': pool,
@@ -2432,23 +2487,30 @@ def global_leaderboard(request):
     )
 
     User = get_user_model()
-    # Only real competitors — no admins, no deactivated accounts.
-    valid_ids = {
+    season_pools = Pool.objects.filter(season=season, status=Pool.Status.ACTIVE)
+    competitor_ids = {
         str(uid)
-        for uid in User.objects.filter(
-            is_active=True, is_superuser=False
-        ).values_list('id', flat=True)
+        for uid in FamilyMembership.objects.filter(
+            family__pools__in=season_pools,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+            user__is_superuser=False,
+        ).values_list('user_id', flat=True).distinct()
     }
 
     # Blend every pool: total points + number of leagues per player this season.
-    points_rows = (
-        userSeasonPoints.objects.filter(gameseason=season)
-        .values('userID')
-        .annotate(
-            points=Coalesce(Sum('total_points'), 0),
-            leagues=Count('pool', distinct=True),
+    points_rows = {
+        str(row['userID']): row
+        for row in (
+            userSeasonPoints.objects.filter(gameseason=season)
+            .values('userID')
+            .annotate(
+                points=Coalesce(Sum('total_points'), 0),
+                leagues=Count('pool', distinct=True),
+            )
         )
-    )
+        if row['userID']
+    }
 
     # Accuracy + weeks won, blended across the player's pools. The pool-null row
     # already IS that all-pools aggregate; summing per-pool rows in alongside it
@@ -2465,18 +2527,16 @@ def global_leaderboard(request):
             stats_by_user[str(row['userID'])] = row
 
     entries = []
-    for row in points_rows:
-        uid = str(row['userID'] or '')
-        if uid not in valid_ids:
-            continue
+    for uid in sorted(competitor_ids, key=int):
+        row = points_rows.get(uid, {})
         s = stats_by_user.get(uid, {})
         correct = s.get('correct') or 0
         total = s.get('total') or 0
         accuracy = round((correct / total) * 100) if total else None
         entries.append({
             'userID': uid,
-            'points': row['points'] or 0,
-            'leagues': row['leagues'] or 0,
+            'points': row.get('points') or 0,
+            'leagues': row.get('leagues') or 0,
             'weeks_won': s.get('weeks_won') or 0,
             'correct': correct,
             'accuracy': accuracy,
@@ -2515,7 +2575,7 @@ def global_leaderboard(request):
         'avatars': avatars,
         'has_scores': has_scores,
         'total_players': len(entries),
-        'total_leagues': Pool.objects.filter(season=season).count(),
+        'total_leagues': season_pools.count(),
     }
     return render(request, 'pickem/global_leaderboard.html', context)
 
@@ -3025,6 +3085,8 @@ def tenant_submit_game_picks(request, family_slug, pool_slug):
 
 def render_pick_page(request, *, tenant_context=None):
     is_default_week = False
+    if tenant_context and not has_real_family_membership(tenant_context.membership):
+        raise Http404
     gameseason = tenant_context.pool.season if tenant_context else get_season()
     game_week, game_competition = get_current_week_context(gameseason)
     if not GameWeeks.objects.filter(
@@ -3207,6 +3269,10 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
     if request.method != 'POST':
         return JsonResponse({'error': True, 'message': 'Only POST requests allowed'}, status=405)
     
+    tenant_context = request.tenant_context
+    if not has_real_family_membership(tenant_context.membership):
+        raise Http404
+
     try:
         pick_id = request.POST.get('pick_id')
         new_pick = request.POST.get('pick')
@@ -3216,8 +3282,6 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
         if not pick_id or not new_pick:
             return JsonResponse({'error': True, 'message': 'Missing required fields'}, status=400)
         
-        tenant_context = request.tenant_context
-
         # Get the existing pick through current pool and user scope before any lock/team checks.
         try:
             existing_pick = GamePicks.objects.get(
@@ -3456,13 +3520,9 @@ def profile(request):
 
 
 def user_profile(request, user_id):
-    """Legacy profile route. Signed-in users are bridged into tenant context."""
+    """Global profile route used when no family/pool tenant is selected."""
     if request.user.is_authenticated:
-        return redirect_to_default_pool_route(
-            request,
-            'family_pool_user_profile',
-            user_id=user_id,
-        )
+        return render_user_profile(request, user_id, tenant_context=None)
     raise Http404
 
 

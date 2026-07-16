@@ -11,7 +11,7 @@
                 Pick where you want to play
             </h1>
             <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
-                These are the active families linked to your account.
+                Use this page to choose a family pool, manage your global profile, or jump into families you oversee as a superuser.
             </p>
         </div>
         <a href="{% url 'create_family' %}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
@@ -20,12 +20,24 @@
         </a>
     </section>
 
-    {% if family_choices %}
+    {% if member_family_choices %}
     <section class="space-y-4">
-        {% for choice in family_choices %}
+        <div>
+            <h2 class="text-sm font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Families you're part of</h2>
+            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Real memberships where you can make picks and play.</p>
+        </div>
+        {% for choice in member_family_choices %}
         <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-                <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                    {% if choice.membership.role == "owner" %}
+                    <span class="inline-flex items-center gap-1 rounded-full border border-sky-400/40 bg-sky-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-sky-600 dark:text-sky-300">
+                        <i class="fas fa-gavel text-[10px]"></i>
+                        Family Commissioner
+                    </span>
+                    {% endif %}
+                </div>
                 {% if choice.pool %}
                 <p class="text-sm text-text-secondary-light dark:text-text-secondary">
                     {{ choice.pool.name }} - {{ choice.pool.display_season }}
@@ -37,7 +49,10 @@
                 {% endif %}
             </div>
             {% if choice.url %}
-            <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
+            <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
+                {% if choice.family.logo_url %}
+                <img src="{{ choice.family.logo_url }}" alt="{{ choice.family.name }} logo" class="h-7 w-7 rounded-full object-cover bg-white/20" onerror="this.remove()">
+                {% endif %}
                 <span>Enter pool</span>
                 <i class="fas fa-arrow-right"></i>
             </a>
@@ -49,7 +64,53 @@
         </div>
         {% endfor %}
     </section>
-    {% else %}
+    {% endif %}
+
+    {% if superadmin_family_choices %}
+    <section class="mt-8 space-y-4">
+        <div>
+            <h2 class="text-sm font-black uppercase tracking-wide text-yellow-600 dark:text-yellow-300">Families you can oversee as Superuser</h2>
+            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">You can administer these families, but you are not a playing member unless you join them directly.</p>
+        </div>
+        {% for choice in superadmin_family_choices %}
+        <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                    <span class="inline-flex items-center gap-1 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300">
+                        <i class="fas fa-bolt text-[10px]"></i>
+                        Superuser
+                    </span>
+                </div>
+                {% if choice.pool %}
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                    {{ choice.pool.name }} - {{ choice.pool.display_season }}
+                </p>
+                {% else %}
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                    This family needs an active pool before play can begin.
+                </p>
+                {% endif %}
+            </div>
+            {% if choice.url %}
+            <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-yellow-400/40 bg-yellow-400/10 text-yellow-700 dark:text-yellow-200 font-semibold hover:bg-yellow-400/15 transition-colors">
+                {% if choice.family.logo_url %}
+                <img src="{{ choice.family.logo_url }}" alt="{{ choice.family.name }} logo" class="h-7 w-7 rounded-full object-cover bg-white/20" onerror="this.remove()">
+                {% endif %}
+                <span>Open family</span>
+                <i class="fas fa-arrow-right"></i>
+            </a>
+            {% else %}
+            <span class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-border-light dark:bg-surface-hover text-text-secondary-light dark:text-text-secondary font-semibold">
+                Pool setup needed
+            </span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if not member_family_choices and not superadmin_family_choices %}
     <section class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-6">
         <h2 class="text-xl font-bold text-text-dark dark:text-white mb-2">No active families</h2>
         <p class="text-sm text-text-secondary-light dark:text-text-secondary mb-4">

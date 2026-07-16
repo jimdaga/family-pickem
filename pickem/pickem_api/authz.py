@@ -251,3 +251,18 @@ def get_user_family_memberships(user):
     combined = real + extras
     combined.sort(key=lambda m: (m.family.name, m.family.slug))
     return combined
+
+
+def get_real_user_family_memberships(user):
+    """Return only the user's persisted active family memberships.
+
+    Unlike `get_user_family_memberships`, this never expands superusers into
+    synthetic cross-family access. Use it for participant-only features such as
+    picks, family switchers, and "your families" listings.
+    """
+    _require_authenticated(user)
+    return FamilyMembership.objects.filter(
+        user=user,
+        status=FamilyMembership.Status.ACTIVE,
+        family__status=Family.Status.ACTIVE,
+    ).select_related('family').order_by('family__name', 'family__slug')
