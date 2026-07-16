@@ -3,7 +3,7 @@
 {% block eyebrow %}people{% endblock %}
 {% block heading %}Users <span class="sa-count">· {{ page_obj.paginator.count }}</span>{% endblock %}
 {% block actions %}
-  <form method="get" class="flex gap-2">
+  <form method="get" class="flex flex-wrap gap-2">
     <input type="search" name="q" value="{{ query }}" placeholder="filter by username" class="sa-input w-56">
     <button type="submit" class="sa-btn sa-btn-default">Filter</button>
     {% if query %}<a href="{% url 'superadmin:users' %}" class="sa-btn sa-btn-default">Clear</a>{% endif %}
