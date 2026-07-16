@@ -2,8 +2,23 @@ apiVersion: v1
 entries:
   family-pickem:
   - apiVersion: v2
+    appVersion: 0.0.166
+    created: "2026-07-16T19:12:09.02125473Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 12.5.6
+    description: A Helm chart to install the family pickem django app
+    digest: f779c4a5baa498734289e309a7e33d33812fe7f39a3e6a83c0befa95b28bfe64
+    name: family-pickem
+    type: application
+    urls:
+    - https://jimdaga.github.io/family-pickem/family-pickem-0.0.166.tgz
+    version: 0.0.166
+  - apiVersion: v2
     appVersion: 0.0.166-latest
-    created: "2026-07-16T19:10:15.558563468Z"
+    created: "2026-07-16T19:12:09.016375862Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -18,7 +33,7 @@ entries:
     version: 0.0.166-latest
   - apiVersion: v2
     appVersion: 0.0.165
-    created: "2026-07-16T19:10:15.555583873Z"
+    created: "2026-07-16T19:12:09.012331028Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -33,7 +48,7 @@ entries:
     version: 0.0.165
   - apiVersion: v2
     appVersion: 0.0.165-latest
-    created: "2026-07-16T19:10:15.552037545Z"
+    created: "2026-07-16T19:12:09.007457538Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -48,7 +63,7 @@ entries:
     version: 0.0.165-latest
   - apiVersion: v2
     appVersion: 0.0.164
-    created: "2026-07-16T19:10:15.549018751Z"
+    created: "2026-07-16T19:12:09.003586657Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -63,7 +78,7 @@ entries:
     version: 0.0.164
   - apiVersion: v2
     appVersion: 0.0.164-latest
-    created: "2026-07-16T19:10:15.546016172Z"
+    created: "2026-07-16T19:12:08.999541712Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -78,7 +93,7 @@ entries:
     version: 0.0.164-latest
   - apiVersion: v2
     appVersion: 0.0.163
-    created: "2026-07-16T19:10:15.542143682Z"
+    created: "2026-07-16T19:12:08.994419382Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -93,7 +108,7 @@ entries:
     version: 0.0.163
   - apiVersion: v2
     appVersion: 0.0.163-latest
-    created: "2026-07-16T19:10:15.539073521Z"
+    created: "2026-07-16T19:12:08.990393687Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -108,7 +123,7 @@ entries:
     version: 0.0.163-latest
   - apiVersion: v2
     appVersion: 0.0.162
-    created: "2026-07-16T19:10:15.53527374Z"
+    created: "2026-07-16T19:12:08.985341944Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -2786,4 +2801,4 @@ entries:
     urls:
     - https://github.com/jimdaga/family-pickem/releases/download/family-pickem-0.0.3/family-pickem-0.0.3.tgz
     version: 0.0.3
-generated: "2026-07-16T19:10:15.531992373Z"
+generated: "2026-07-16T19:12:08.98087336Z"
