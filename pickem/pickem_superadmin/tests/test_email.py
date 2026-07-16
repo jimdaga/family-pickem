@@ -207,6 +207,8 @@ class InviteEmailSendingTests(TestCase):
         self.assertEqual(params['reply_to'], 'reply@family-pickem.com')
         self.assertEqual(params['to'], ['target@example.com'])
         self.assertIn('https://family-pickem.com/invite/abc123', params['html'])
+        self.assertNotIn('Fallback invite code', params['html'])
+        self.assertNotIn('Fallback invite code', params['text'])
 
     def test_send_family_invitation_email_skips_when_not_configured(self):
         result = send_family_invitation_email(

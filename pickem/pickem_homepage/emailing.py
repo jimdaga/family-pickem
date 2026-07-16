@@ -72,12 +72,10 @@ def send_family_invitation_email(*, invitation, invite_link, invite_code):
             f"<p><a href=\"{invite_link}\">Accept your invite</a></p>"
             f"<p>If the button does not work, use this invite link:</p>"
             f"<p>{invite_link}</p>"
-            f"<p>Fallback invite code: <code>{invite_code}</code></p>"
         ),
         'text': (
             f"You have been invited to join {invitation.family.name} on Family Pick'em.\n\n"
-            f"Accept your invite: {invite_link}\n\n"
-            f"Fallback invite code: {invite_code}"
+            f"Accept your invite: {invite_link}"
         ),
     }
     if config['reply_to']:

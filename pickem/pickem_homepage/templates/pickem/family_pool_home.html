@@ -410,12 +410,11 @@
     </div>
 
     <!-- Invite code (shown once after creation) -->
-    {% if invite_code %}
+    {% if invite_link %}
     <div class="lobby-section section-container mb-8 border-primary/30">
         <p class="text-xs font-bold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary mb-1">Invite created — copy now</p>
-        <h2 class="text-lg font-bold text-text-dark dark:text-white mb-3">This code is only shown once</h2>
+        <h2 class="text-lg font-bold text-text-dark dark:text-white mb-3">This invite link is only shown once</h2>
         <div class="space-y-2">
-            <code class="block rounded-xl border border-border-light dark:border-border-subtle bg-white dark:bg-surface-hover px-4 py-3 text-sm text-text-dark dark:text-white break-all font-mono">{{ invite_code }}</code>
             <code class="block rounded-xl border border-border-light dark:border-border-subtle bg-white dark:bg-surface-hover px-4 py-3 text-sm text-text-dark dark:text-white break-all font-mono">{{ invite_link }}</code>
         </div>
     </div>

@@ -36,21 +36,17 @@
         </section>
         {% endif %}
 
-        {% if invite_code %}
+        {% if invite_link %}
         <section class="rounded-lg border border-primary/30 bg-white dark:bg-surface p-5 shadow-sm" data-testid="invite-created-once">
-            <p class="text-xs font-bold uppercase tracking-wider text-primary">Invite created - copy now</p>
-            <h2 class="mt-1 text-lg font-bold text-text-dark dark:text-white">This raw code is only shown once</h2>
+            <p class="text-xs font-bold uppercase tracking-wider text-primary">Invite created</p>
+            <h2 class="mt-1 text-lg font-bold text-text-dark dark:text-white">This invite link is only shown once</h2>
             <p class="mt-2 text-sm text-text-secondary-light dark:text-text-secondary">
-                Share the invite link when possible. The raw code below is fallback-only.
+                Send this one-time link to the invited user if the email was not delivered automatically.
             </p>
             <div class="mt-4 grid gap-3">
                 <div>
                     <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Invite link</p>
                     <code class="block rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark px-4 py-3 text-sm text-text-dark dark:text-white break-all font-mono">{{ invite_link }}</code>
-                </div>
-                <div>
-                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Raw code</p>
-                    <code class="block rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark px-4 py-3 text-sm text-text-dark dark:text-white break-all font-mono">{{ invite_code }}</code>
                 </div>
             </div>
         </section>
@@ -63,7 +59,7 @@
                     Admins can create member invites. Owners can also create admin invites.
                 </p>
             </div>
-            <form method="post" action="{% url 'family_pool_admin_invites' family.slug pool.slug %}" class="grid gap-4 p-5 md:grid-cols-5" data-testid="invite-create-form">
+            <form method="post" action="{% url 'family_pool_admin_invites' family.slug pool.slug %}" class="grid gap-4 p-5 md:grid-cols-4" data-testid="invite-create-form">
                 {% csrf_token %}
                 <div>
                     <label for="{{ form.role.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white">Role</label>
@@ -87,17 +83,10 @@
                     <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ error }}</p>
                     {% endfor %}
                 </div>
-                <div>
-                    <label for="{{ form.max_uses.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white">Max Uses</label>
-                    <div class="mt-2">{{ form.max_uses }}</div>
-                    {% for error in form.max_uses.errors %}
-                    <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ error }}</p>
-                    {% endfor %}
-                </div>
                 <div class="flex items-end">
                     <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90">
                         <i class="fas fa-ticket-alt"></i>
-                        Create Invite
+                        Send Invite
                     </button>
                 </div>
             </form>
@@ -107,7 +96,7 @@
             <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
                 <h2 class="text-xl font-bold text-text-dark dark:text-white">Invite History</h2>
                 <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
-                    Safe metadata only. Raw invite codes and hashes are never redisplayed here.
+                    One-time invites are locked to a single email address. Invite links are never redisplayed here.
                 </p>
             </div>
 
@@ -120,7 +109,7 @@
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Role</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Recipient</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Status</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Uses</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Accepted</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Expires</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Created</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Creator</th>
@@ -132,7 +121,7 @@
                         <tr>
                             <td class="px-5 py-4 text-sm font-semibold text-text-dark dark:text-white">#{{ invite.id }}</td>
                             <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.get_role_display }}</td>
-                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.recipient_email|default:"Anyone with link" }}</td>
+                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.recipient_email|default:"No recipient set" }}</td>
                             <td class="px-5 py-4">
                                 {% if invite.is_revoked %}
                                 <span class="inline-flex rounded-lg bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700 dark:bg-slate-800 dark:text-text-secondary">Revoked</span>
@@ -140,7 +129,7 @@
                                 <span class="inline-flex rounded-lg bg-green-100 px-3 py-1 text-sm font-semibold text-green-800 dark:bg-green-900/30 dark:text-green-300">Active</span>
                                 {% endif %}
                             </td>
-                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.use_count }} / {% if invite.max_uses %}{{ invite.max_uses }}{% else %}Unlimited{% endif %}</td>
+                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{% if invite.use_count %}Yes{% else %}No{% endif %}</td>
                             <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary whitespace-nowrap">{% if invite.expires_at %}{{ invite.expires_at|date:"M j, Y" }}{% else %}Never{% endif %}</td>
                             <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary whitespace-nowrap">{{ invite.created_at|date:"M j, Y" }}</td>
                             <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{% if invite.created_by %}{{ invite.created_by.username }}{% else %}System{% endif %}</td>
@@ -171,7 +160,7 @@
                         <div>
                             <h3 class="font-bold text-text-dark dark:text-white">Invite #{{ invite.id }}</h3>
                             <p class="text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.get_role_display }} by {% if invite.created_by %}{{ invite.created_by.username }}{% else %}System{% endif %}</p>
-                            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.recipient_email|default:"Anyone with link" }}</p>
+                            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">{{ invite.recipient_email|default:"No recipient set" }}</p>
                         </div>
                         {% if invite.is_revoked %}
                         <span class="rounded-lg bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700 dark:bg-slate-800 dark:text-text-secondary">Revoked</span>
@@ -181,8 +170,8 @@
                     </div>
                     <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                            <dt class="font-semibold text-text-dark dark:text-white">Uses</dt>
-                            <dd class="text-text-secondary-light dark:text-text-secondary">{{ invite.use_count }} / {% if invite.max_uses %}{{ invite.max_uses }}{% else %}Unlimited{% endif %}</dd>
+                            <dt class="font-semibold text-text-dark dark:text-white">Accepted</dt>
+                            <dd class="text-text-secondary-light dark:text-text-secondary">{% if invite.use_count %}Yes{% else %}No{% endif %}</dd>
                         </div>
                         <div>
                             <dt class="font-semibold text-text-dark dark:text-white">Expires</dt>
@@ -210,7 +199,7 @@
                     <i class="fas fa-ticket-alt"></i>
                 </div>
                 <p class="mt-4 font-semibold text-text-dark dark:text-white">No invites yet</p>
-                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Created invites will appear here without raw codes.</p>
+                <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Created invites will appear here without reusable invite links.</p>
             </div>
             {% endif %}
         </section>
