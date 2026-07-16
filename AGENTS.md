@@ -324,3 +324,5 @@ GitHub Actions workflows in `.github/workflows/` handle artifact publishing.
 - The release tag format is `family-pickem-<version>` (example: `family-pickem-0.0.159`).
 - Pushing the tag without creating the GitHub Release will not run the production release workflow.
 - The workflow [`.github/workflows/publish-artifacts-latest.yaml`](.github/workflows/publish-artifacts-latest.yaml) runs separately on pushes to `main` and handles the `-latest` publish flow.
+- Helm chart publishing is critical to deploys: before advancing ArgoCD, the workflow must publish `family-pickem-<version>.tgz` to `gh-pages` and verify that `https://jimdaga.github.io/family-pickem/index.yaml` contains the target version.
+- If ArgoCD shows `chart "family-pickem" version "<version>" not found`, the release likely updated `pickem-prd.yaml` before the public Helm repo actually served that chart version.
