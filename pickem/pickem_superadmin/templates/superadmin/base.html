@@ -78,5 +78,28 @@
 
     {% block content %}{% endblock %}
   </main>
+  <script>
+    // Mobile stacked tables: on narrow screens a .sa-table-stack table reflows
+    // into one card per row (see .sa-table-stack CSS). Copy each column header
+    // into its cells' data-label so the CSS can render "LABEL  value" per line,
+    // and flag cells holding an inline control so their label stacks above it.
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('table.sa-table-stack').forEach(function (table) {
+        var headers = Array.prototype.map.call(
+          table.querySelectorAll('thead th'),
+          function (th) { return th.textContent.trim(); }
+        );
+        table.querySelectorAll('tbody tr').forEach(function (row) {
+          Array.prototype.forEach.call(row.children, function (cell, i) {
+            if (cell.classList.contains('sa-empty')) return;
+            if (headers[i]) cell.setAttribute('data-label', headers[i]);
+            if (cell.querySelector('form, input, select, textarea, button')) {
+              cell.classList.add('sa-cell-full');
+            }
+          });
+        });
+      });
+    });
+  </script>
 </body>
 </html>
