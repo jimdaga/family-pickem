@@ -318,6 +318,11 @@ class FamilyInvitation(models.Model):
         null=True,
     )
     code_hash = models.CharField(max_length=128, unique=True, help_text="Hashed invite code")
+    recipient_email = models.EmailField(
+        blank=True,
+        null=True,
+        help_text="Optional recipient email that must match the redeemer's account",
+    )
     role = models.CharField(
         max_length=20,
         choices=FamilyMembership.Role.choices,
