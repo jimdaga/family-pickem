@@ -318,7 +318,7 @@
                     </div>
                     {% endif %}
                     {% if current_family and current_pool and current_user_can_submit_picks %}
-                    <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="{% if current_family and current_pool %}{% url 'family_pool_game_picks' current_family.slug current_pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}">
+                    <a class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center" href="{% url 'family_pool_game_picks' current_family.slug current_pool.slug %}">
                         <i class="fas fa-edit mr-2"></i>Submit Weekly Picks
                     </a>
                     {% endif %}

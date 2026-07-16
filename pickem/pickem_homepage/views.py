@@ -2495,6 +2495,7 @@ def global_leaderboard(request):
             status=FamilyMembership.Status.ACTIVE,
             user__is_active=True,
             user__is_superuser=False,
+            user__socialaccount__provider='google',
         ).values_list('user_id', flat=True).distinct()
     }
 
@@ -3269,8 +3270,8 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
     if request.method != 'POST':
         return JsonResponse({'error': True, 'message': 'Only POST requests allowed'}, status=405)
     
-    tenant_context = request.tenant_context
-    if not has_real_family_membership(tenant_context.membership):
+    tenant_context = getattr(request, 'tenant_context', None)
+    if tenant_context is None or not has_real_family_membership(tenant_context.membership):
         raise Http404
 
     try:

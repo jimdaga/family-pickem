@@ -68,7 +68,7 @@
 
     {% if superadmin_family_choices %}
     <section class="mt-8 space-y-4">
-        <div>
+        <div class="pt-2">
             <h2 class="text-sm font-black uppercase tracking-wide text-yellow-600 dark:text-yellow-300">Families you can oversee as Superuser</h2>
             <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">You can administer these families, but you are not a playing member unless you join them directly.</p>
         </div>
@@ -107,19 +107,6 @@
             {% endif %}
         </div>
         {% endfor %}
-    </section>
-    {% endif %}
-
-    {% if not member_family_choices and not superadmin_family_choices %}
-    <section class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-6">
-        <h2 class="text-xl font-bold text-text-dark dark:text-white mb-2">No active families</h2>
-        <p class="text-sm text-text-secondary-light dark:text-text-secondary mb-4">
-            Create a family or join one with an invite code.
-        </p>
-        <a href="{% url 'onboarding' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
-            <i class="fas fa-arrow-left"></i>
-            <span>Go to setup</span>
-        </a>
     </section>
     {% endif %}
 </main>

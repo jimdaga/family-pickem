@@ -316,3 +316,11 @@ Production deployments use:
 - Environment-based configuration (see `settings.py` for RDS/K8s detection)
 
 GitHub Actions workflows in `.github/workflows/` handle artifact publishing.
+
+### Release Workflow
+
+- Production release publishing is triggered by publishing a GitHub Release, not by pushing a git tag alone.
+- The workflow [`.github/workflows/publish-artifacts.yaml`](.github/workflows/publish-artifacts.yaml) runs on `release: published`.
+- The release tag format is `family-pickem-<version>` (example: `family-pickem-0.0.159`).
+- Pushing the tag without creating the GitHub Release will not run the production release workflow.
+- The workflow [`.github/workflows/publish-artifacts-latest.yaml`](.github/workflows/publish-artifacts-latest.yaml) runs separately on pushes to `main` and handles the `-latest` publish flow.
