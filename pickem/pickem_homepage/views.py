@@ -320,7 +320,26 @@ def default_pool_name(*, season, competition='nfl'):
 
 
 def has_real_family_membership(membership):
-    return bool(getattr(membership, 'pk', None))
+    """Is this user a genuine participant in the membership's family?
+
+    A saved membership (has a pk) is real. Superusers, though, are handed a
+    synthetic never-saved owner membership for god-mode oversight (see
+    require_family_membership) — it has no pk even in families where they hold
+    a real row. So when there's no pk, fall back to checking for an actual
+    active membership before rejecting: otherwise participant-only pages (like
+    submitting picks) would 404 for a superuser in their own family.
+    """
+    if getattr(membership, 'pk', None):
+        return True
+    user = getattr(membership, 'user', None)
+    family = getattr(membership, 'family', None)
+    if user is None or family is None:
+        return False
+    return FamilyMembership.objects.filter(
+        user=user,
+        family=family,
+        status=FamilyMembership.Status.ACTIVE,
+    ).exists()
 
 
 def generate_unique_slug(model, value, *, scoped_filters=None, max_length=80):
