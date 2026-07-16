@@ -14,7 +14,6 @@ The tradeoff is real: the job is enqueued, not instant. The UI says so.
 import time
 from datetime import timedelta
 
-from django.core.management import call_command
 from django.utils import timezone
 
 # Allowlist. A POST body must never be able to name an arbitrary management
@@ -42,7 +41,11 @@ def run_command(command_name):
     """APScheduler job target. Must be importable at module level."""
     if command_name not in QUEUEABLE_COMMANDS:
         raise ValueError(f'Command not allowed: {command_name}')
-    call_command(command_name)
+    # Capture the command's output into the logs console, same as the recurring
+    # pipeline, so a hand-queued run is just as visible.
+    from pickem_api.log_bridge import call_command_logged
+
+    call_command_logged(command_name)
 
 
 def get_scheduler():

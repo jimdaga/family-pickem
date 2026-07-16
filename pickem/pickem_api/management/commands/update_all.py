@@ -62,7 +62,12 @@ class Command(BaseCommand):
         for command in pipeline:
             self.stdout.write(self.style.MIGRATE_HEADING(f"== {command} =="))
             try:
-                call_command(command, **step_kwargs)
+                # Forward our stdout/stderr so each step's output is captured by
+                # whatever is driving update_all (the scheduler's LoggerWriter in
+                # production, or the terminal when run by hand).
+                call_command(
+                    command, stdout=self.stdout, stderr=self.stderr, **step_kwargs
+                )
             except Exception as exc:  # noqa: BLE001 - keep the pipeline going
                 failures += 1
                 logger.exception("Pipeline step %s failed", command)
