@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
 
 
 class SuperAdminAuditLog(models.Model):
@@ -48,3 +49,30 @@ class SuperAdminAuditLog(models.Model):
 
     def __str__(self):
         return f'{self.action} by {self.actor} at {self.created_at}'
+
+
+class SuperAdminLogEntry(models.Model):
+    """Application log records captured to the DB so the console can show them
+    without shell/kubectl access. Written by pickem_superadmin.logging.DatabaseLogHandler,
+    aged out by the prune_superadmin_logs command."""
+
+    LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    level = models.CharField(max_length=10, choices=[(l, l) for l in LEVELS])
+    level_no = models.PositiveSmallIntegerField(default=0)
+    logger_name = models.CharField(max_length=200, blank=True)
+    message = models.TextField(blank=True)
+    traceback = models.TextField(blank=True, null=True)
+    pathname = models.CharField(max_length=255, blank=True, null=True)
+    lineno = models.PositiveIntegerField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['level_no', '-timestamp'], name='sa_log_level_ts_idx'),
+            models.Index(fields=['-timestamp'], name='sa_log_ts_idx'),
+        ]
+
+    def __str__(self):
+        return f'[{self.level}] {self.logger_name}: {self.message[:60]}'
