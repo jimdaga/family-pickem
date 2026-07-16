@@ -1,3 +1,4 @@
+import logging
 import os
 
 from django import template
@@ -38,6 +39,13 @@ def dictkey(mapping, key):
         return mapping.get(key)
     except AttributeError:
         return None
+
+
+@register.filter
+def level_no(level_name):
+    """Map a log level name (e.g. 'WARNING') to its numeric value for use in
+    the logs console's level-filter dropdown."""
+    return getattr(logging, level_name, 0)
 
 
 @register.simple_tag(takes_context=True)

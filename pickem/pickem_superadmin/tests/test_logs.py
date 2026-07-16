@@ -1,6 +1,8 @@
 import logging
 
+from django.contrib.auth.models import User
 from django.test import TestCase
+from django.urls import reverse
 
 from pickem_superadmin.models import SuperAdminLogEntry
 
@@ -75,3 +77,35 @@ class LoggingWiringTests(TestCase):
         self.assertTrue(
             SuperAdminLogEntry.objects.filter(message__contains='WIRING-ROOT-WARN-marker').exists()
         )
+
+
+class LogsViewTests(TestCase):
+    def setUp(self):
+        self.root = User.objects.create_superuser(
+            username='root', email='root@example.com', password='pw',
+        )
+        self.client.force_login(self.root)
+        SuperAdminLogEntry.objects.create(level='INFO', level_no=logging.INFO,
+                                          logger_name='pickem_api.a', message='info-row')
+        SuperAdminLogEntry.objects.create(level='ERROR', level_no=logging.ERROR,
+                                          logger_name='pickem_api.b', message='error-row')
+
+    def test_page_renders(self):
+        response = self.client.get(reverse('superadmin:logs'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_level_filter_limits_rows(self):
+        response = self.client.get(reverse('superadmin:logs'), {'level': str(logging.ERROR)})
+        messages = [e.message for e in response.context['page_obj']]
+        self.assertIn('error-row', messages)
+        self.assertNotIn('info-row', messages)
+
+    def test_text_search_filters_message(self):
+        response = self.client.get(reverse('superadmin:logs'), {'q': 'error-row'})
+        messages = [e.message for e in response.context['page_obj']]
+        self.assertEqual(messages, ['error-row'])
+
+    def test_logger_filter(self):
+        response = self.client.get(reverse('superadmin:logs'), {'logger': 'pickem_api.b'})
+        messages = [e.message for e in response.context['page_obj']]
+        self.assertEqual(messages, ['error-row'])

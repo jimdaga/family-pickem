@@ -18,6 +18,7 @@ SUPERADMIN_URLS = [
     'superadmin:jobs',
     'superadmin:jobs_status',
     'superadmin:audit',
+    'superadmin:logs',
 ]
 
 # POST-only endpoints. The gate test hits them with POST and asserts the same
