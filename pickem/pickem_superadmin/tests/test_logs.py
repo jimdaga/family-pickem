@@ -55,3 +55,23 @@ class DatabaseLogHandlerTests(TestCase):
         self._handler().emit(rec)
         row = SuperAdminLogEntry.objects.get()
         self.assertIn('ValueError: boom', row.traceback)
+
+
+class LoggingWiringTests(TestCase):
+    def test_app_logger_info_is_captured(self):
+        logging.getLogger('pickem_api').info('WIRING-APP-INFO-marker')
+        self.assertTrue(
+            SuperAdminLogEntry.objects.filter(message__contains='WIRING-APP-INFO-marker').exists()
+        )
+
+    def test_unrelated_info_is_not_captured(self):
+        logging.getLogger('some.random.thirdparty').info('WIRING-ROOT-INFO-marker')
+        self.assertFalse(
+            SuperAdminLogEntry.objects.filter(message__contains='WIRING-ROOT-INFO-marker').exists()
+        )
+
+    def test_unrelated_warning_is_captured(self):
+        logging.getLogger('some.random.thirdparty').warning('WIRING-ROOT-WARN-marker')
+        self.assertTrue(
+            SuperAdminLogEntry.objects.filter(message__contains='WIRING-ROOT-WARN-marker').exists()
+        )
