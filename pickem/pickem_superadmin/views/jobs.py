@@ -3,9 +3,13 @@ from django.core.paginator import Paginator
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
+from pickem_api import scheduler as scheduler_module
+from pickem_api.models import ScheduledJobConfig
 from pickem_superadmin import jobs
 from pickem_superadmin.audit import log_action
 from pickem_superadmin.decorators import superadmin_required
+from pickem_superadmin.forms import ScheduledJobConfigForm
+from pickem_superadmin.matrix import save_matrix
 from pickem_superadmin.models import SuperAdminAuditLog
 
 
@@ -17,11 +21,18 @@ def jobs_page(request):
         DjangoJobExecution.objects.select_related('job').order_by('-run_time'), 25,
     ).get_page(request.GET.get('page'))
 
+    schedule_configs = ScheduledJobConfig.objects.all()
+
     return render(request, 'superadmin/jobs.html', {
         'registered_jobs': DjangoJob.objects.all().order_by('id'),
         'executions': executions,
         'queueable': jobs.QUEUEABLE_COMMANDS,
         'health': jobs.scheduler_health(),
+        'schedule_configs': schedule_configs,
+        'schedule_forms': {
+            c.pk: ScheduledJobConfigForm(instance=c, prefix=str(c.pk))
+            for c in schedule_configs
+        },
     })
 
 
@@ -55,4 +66,42 @@ def jobs_queue(request):
         request,
         f'Queued {command}. It runs on the scheduler within ~60s — watch the history below.',
     )
+    return redirect('superadmin:jobs')
+
+
+@superadmin_required
+@require_POST
+def jobs_schedule_save(request):
+    ScheduledJobConfig.seed_from_registry()
+    configs = list(ScheduledJobConfig.objects.all())
+
+    def on_save(cfg, changes):
+        log_action(
+            request,
+            action=SuperAdminAuditLog.Action.SCHEDULE_UPDATED,
+            target=cfg,
+            summary=f'Updated schedule for {cfg.job_id}',
+            changes=changes,
+        )
+        # Apply to the live scheduler if this process is the scheduler process;
+        # otherwise the change is already persisted and applies on next start().
+        scheduler_module.reschedule_live(cfg.job_id, cfg.interval_minutes, cfg.enabled)
+
+    saved, failed, stale = save_matrix(
+        request,
+        objects=configs,
+        form_class=ScheduledJobConfigForm,
+        tracked_fields=('interval_minutes', 'enabled'),
+        key_field='interval_minutes',
+        on_save=on_save,
+    )
+
+    if saved:
+        messages.success(request, f'Updated {saved} schedule(s).')
+    if stale:
+        messages.error(request, 'Not saved — changed since you loaded it. Reload and retry.')
+    if failed:
+        messages.error(request, 'Invalid interval (must be a whole number ≥ 1).')
+    if not saved and not stale and not failed:
+        messages.success(request, 'No changes.')
     return redirect('superadmin:jobs')

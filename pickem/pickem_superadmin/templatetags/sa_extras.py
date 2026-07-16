@@ -31,6 +31,15 @@ def sa_static_v(path):
     return url
 
 
+@register.filter
+def dictkey(mapping, key):
+    """Look up mapping[key] in a template (Django can't index by variable key)."""
+    try:
+        return mapping.get(key)
+    except AttributeError:
+        return None
+
+
 @register.simple_tag(takes_context=True)
 def sa_qs(context, **kwargs):
     """Return the current query string with the given params replaced.

@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from pickem_api.models import ScheduledJobConfig
 from pickem_superadmin import jobs
 from pickem_superadmin.models import SuperAdminAuditLog
 
@@ -138,3 +139,42 @@ class JobsPageTests(TestCase):
         health.return_value = {'alive': True, 'last_run': None, 'last_status': None, 'stale': False}
         self.client.post(reverse('superadmin:jobs_queue'), {'command': 'flush'})
         self.assertEqual(SuperAdminAuditLog.objects.count(), 0)
+
+
+class ScheduleEditTests(TestCase):
+    def setUp(self):
+        self.root = User.objects.create_superuser(
+            username='root', email='root@example.com', password='pw',
+        )
+        ScheduledJobConfig.seed_from_registry()
+        self.client.force_login(self.root)
+
+    def _post(self, cfg, **overrides):
+        data = {
+            f'{cfg.pk}-interval_minutes': cfg.interval_minutes,
+            f'{cfg.pk}-enabled': 'on' if cfg.enabled else '',
+            f'{cfg.pk}-updated_at': cfg.updated_at.isoformat(),
+        }
+        data.update(overrides)
+        return self.client.post(reverse('superadmin:jobs_schedule_save'), data)
+
+    def test_editing_the_interval_persists_and_audits(self):
+        cfg = ScheduledJobConfig.objects.get(job_id='update_all')
+        self._post(cfg, **{f'{cfg.pk}-interval_minutes': 5})
+        cfg.refresh_from_db()
+        self.assertEqual(cfg.interval_minutes, 5)
+        entry = SuperAdminAuditLog.objects.get()
+        self.assertEqual(entry.action, SuperAdminAuditLog.Action.SCHEDULE_UPDATED)
+        self.assertEqual(entry.changes['interval_minutes'], [1, 5])
+
+    def test_interval_below_one_is_rejected(self):
+        cfg = ScheduledJobConfig.objects.get(job_id='update_all')
+        self._post(cfg, **{f'{cfg.pk}-interval_minutes': 0})
+        cfg.refresh_from_db()
+        self.assertEqual(cfg.interval_minutes, 1)  # unchanged
+
+    def test_disabling_a_job_persists(self):
+        cfg = ScheduledJobConfig.objects.get(job_id='update_records')
+        self._post(cfg, **{f'{cfg.pk}-enabled': ''})
+        cfg.refresh_from_db()
+        self.assertFalse(cfg.enabled)

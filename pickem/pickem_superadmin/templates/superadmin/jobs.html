@@ -1,4 +1,5 @@
 {% extends 'superadmin/base.html' %}
+{% load sa_extras %}
 {% block title %}jobs{% endblock %}
 {% block eyebrow %}pipeline{% endblock %}
 {% block heading %}Jobs{% endblock %}
@@ -37,6 +38,24 @@
           <div class="text-[12px] text-[#98a2b3]">none registered</div>
         {% endfor %}
       </div>
+
+      <div class="sa-h2 mt-5 mb-2">Schedules</div>
+      <form method="post" action="{% url 'superadmin:jobs_schedule_save' %}" class="space-y-2">
+        {% csrf_token %}
+        {% for cfg in schedule_configs %}
+          {% with form=schedule_forms|dictkey:cfg.pk %}
+          <div class="flex items-center justify-between gap-2 text-[12px]">
+            <span class="sa-mono">{{ cfg.job_id }}</span>
+            <span class="flex items-center gap-1">
+              every {{ form.interval_minutes }} min
+              <label class="ml-2 inline-flex items-center gap-1">{{ form.enabled }} on</label>
+              <input type="hidden" name="{{ cfg.pk }}-updated_at" value="{{ cfg.updated_at.isoformat }}">
+            </span>
+          </div>
+          {% endwith %}
+        {% endfor %}
+        <button type="submit" class="sa-btn sa-btn-default sa-btn-sm justify-center w-full">Save schedules</button>
+      </form>
     </div>
 
     <div>

@@ -22,6 +22,7 @@ class SuperAdminAuditLog(models.Model):
         BANNER_PUBLISHED = 'banner_published', 'Site banner published'
         JOB_QUEUED = 'job_queued', 'Pipeline job queued'
         DATA_REPAIR = 'data_repair', 'Data repair action'
+        SCHEDULE_UPDATED = 'schedule_updated', 'Job schedule updated'
 
     actor = models.ForeignKey(
         User, on_delete=models.SET_NULL, related_name='superadmin_audit_logs',

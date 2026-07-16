@@ -18,6 +18,7 @@ urlpatterns = [
     path('teams/save/', views.teams_save, name='teams_save'),
     path('jobs/', views.jobs_page, name='jobs'),
     path('jobs/queue/', views.jobs_queue, name='jobs_queue'),
+    path('jobs/schedule/save/', views.jobs_schedule_save, name='jobs_schedule_save'),
     path('season/update/', views.season_update, name='season_update'),
     path('pools/<int:pool_id>/backfill-settings/', views.pool_settings_backfill, name='pool_settings_backfill'),
     path('banners/publish/', views.banner_publish, name='banner_publish'),
