@@ -84,6 +84,11 @@ def run_update_records():
     call_command("update_records")
 
 
+def run_prune_logs():
+    """Job target: age out captured log rows."""
+    call_command('prune_superadmin_logs')
+
+
 # The recurring jobs whose cadence is editable from the superadmin console.
 # The console reads this to know which jobs exist and their seed defaults;
 # start() and reschedule_live() read it to (re)register those jobs. Keep this
@@ -154,6 +159,16 @@ def start():
     for cfg in ScheduledJobConfig.objects.filter(job_id__in=JOB_REGISTRY.keys()):
         if cfg.enabled:
             _register_job(scheduler, cfg.job_id, cfg.interval_minutes)
+
+    scheduler.add_job(
+        run_prune_logs,
+        trigger=IntervalTrigger(hours=24),
+        id='prune_superadmin_logs',
+        name='Prune superadmin logs',
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
 
     scheduler.add_listener(_on_job_submitted, EVENT_JOB_SUBMITTED)
     scheduler.add_listener(_on_job_done, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)

@@ -1,8 +1,12 @@
 import logging
 
+from datetime import timedelta
+
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.core.management import call_command
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from pickem_superadmin.models import SuperAdminLogEntry
 
@@ -109,3 +113,26 @@ class LogsViewTests(TestCase):
         response = self.client.get(reverse('superadmin:logs'), {'logger': 'pickem_api.b'})
         messages = [e.message for e in response.context['page_obj']]
         self.assertEqual(messages, ['error-row'])
+
+
+class PruneLogsTests(TestCase):
+    @override_settings(LOG_RETENTION_DAYS=14, LOG_MAX_ROWS=100000)
+    def test_prunes_rows_older_than_retention(self):
+        old = SuperAdminLogEntry.objects.create(level='INFO', level_no=20, message='old')
+        SuperAdminLogEntry.objects.filter(pk=old.pk).update(
+            timestamp=timezone.now() - timedelta(days=30),
+        )
+        SuperAdminLogEntry.objects.create(level='INFO', level_no=20, message='fresh')
+        call_command('prune_superadmin_logs')
+        remaining = list(SuperAdminLogEntry.objects.values_list('message', flat=True))
+        self.assertEqual(remaining, ['fresh'])
+
+    @override_settings(LOG_RETENTION_DAYS=3650, LOG_MAX_ROWS=5)
+    def test_trims_to_row_cap_keeping_newest(self):
+        for i in range(9):
+            SuperAdminLogEntry.objects.create(level='INFO', level_no=20, message=f'm{i}')
+        call_command('prune_superadmin_logs')
+        self.assertEqual(SuperAdminLogEntry.objects.count(), 5)
+        # Newest kept (m8..m4), oldest (m0..m3) removed.
+        self.assertTrue(SuperAdminLogEntry.objects.filter(message='m8').exists())
+        self.assertFalse(SuperAdminLogEntry.objects.filter(message='m0').exists())
