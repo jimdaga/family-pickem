@@ -210,6 +210,46 @@ class InviteEmailSendingTests(TestCase):
         self.assertNotIn('Fallback invite code', params['html'])
         self.assertNotIn('Fallback invite code', params['text'])
 
+    def test_invite_email_is_branded_and_escapes_html(self):
+        settings_obj = EmailProviderSettings.load()
+        settings_obj.invites_enabled = True
+        settings_obj.from_email = "Family Pick'em <invite@family-pickem.com>"
+        settings_obj.set_api_key('re_configured_secret')
+        settings_obj.save()
+
+        # A family name carrying HTML must never render unescaped into the email.
+        evil_family = Family.objects.create(name='<script>x</script>Crew', slug='evil')
+        evil_pool = Pool.objects.create(
+            family=evil_family, name='Pickem Pool', slug='pickem-pool', season=2627,
+        )
+        invitation = FamilyInvitation.objects.create(
+            family=evil_family, pool=evil_pool,
+            code_hash=hash_invite_code('xyz789'),
+            recipient_email='target@example.com',
+            role=FamilyMembership.Role.MEMBER, created_by=self.owner,
+        )
+
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'email_456'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            send_family_invitation_email(
+                invitation=invitation,
+                invite_link='https://family-pickem.com/invite/xyz789',
+                invite_code='xyz789',
+            )
+        params = resend_mock.Emails.send.call_args.args[0]
+
+        # Escaping: the raw tag is gone, the escaped form is present.
+        self.assertNotIn('<script>x</script>', params['html'])
+        self.assertIn('&lt;script&gt;', params['html'])
+        # Branding: styled CTA, brand colour, and the wordmark are present.
+        self.assertIn('Accept your invite', params['html'])
+        self.assertIn('#0B3D91', params['html'])
+        self.assertIn("Family Pick'em", params['html'])
+        # Plain-text alternative carries the raw (unescaped) name and the link.
+        self.assertIn('<script>x</script>Crew', params['text'])
+        self.assertIn('https://family-pickem.com/invite/xyz789', params['text'])
+
     def test_send_family_invitation_email_skips_when_not_configured(self):
         result = send_family_invitation_email(
             invitation=self.invitation,
@@ -245,7 +285,7 @@ class InviteEmailSendingTests(TestCase):
         self.assertEqual(params['from'], 'Family Pickem <invite@family-pickem.com>')
         self.assertEqual(params['reply_to'], 'reply@family-pickem.com')
         self.assertEqual(params['to'], ['check@example.com'])
-        self.assertIn('Family Pickem email configuration test', params['subject'])
+        self.assertIn("Family Pick'em email configuration test", params['subject'])
 
     @patch.dict(
         'os.environ',

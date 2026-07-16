@@ -1,0 +1,12 @@
+{% autoescape off %}You're invited to join {{ family_name }} on Family Pick'em!
+
+You've been invited to play in {{ pool_name }}. Pick game winners each week,
+climb the leaderboard, and settle who really knows football.
+
+Accept your invite:
+{{ invite_link }}
+
+If you weren't expecting this, you can safely ignore this email.
+
+— Family Pick'em
+{% endautoescape %}
