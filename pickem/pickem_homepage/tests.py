@@ -12,7 +12,7 @@ from django.core.management import call_command
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.http import Http404, HttpResponse
-from django.test import TestCase, Client, RequestFactory
+from django.test import TestCase, Client, RequestFactory, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from allauth.socialaccount.models import SocialAccount, SocialApp
@@ -1787,6 +1787,26 @@ class HasRealFamilyMembershipTests(TestCase):
             status=FamilyMembership.Status.INACTIVE,
         )
         self.assertFalse(has_real_family_membership(self._synthetic(self.superuser)))
+
+
+@override_settings(DEBUG=False, ALLOWED_HOSTS=['testserver'])
+class BrandedErrorPageTests(TestCase):
+    """With DEBUG off (production), an unknown URL should render the branded 404
+    template, not Django's plain 'Not Found' page."""
+
+    def test_unknown_url_renders_branded_404(self):
+        # Anonymous users get login-redirected by RequireLoginForInternalPages
+        # before a 404 can happen, so exercise the 404 as a signed-in user
+        # (the reported scenario).
+        user = User.objects.create_user(
+            username='visitor', email='visitor@example.com', password='pw',
+        )
+        self.client.force_login(user)
+        response = self.client.get('/definitely-not-a-real-page-xyz/')
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, 'that play didn', status_code=404)
+        self.assertContains(response, 'Back to Home', status_code=404)
+        self.assertTemplateUsed(response, '404.html')
 
 
 class TenantScoresStandingsRulesIsolationTests(TestCase):
