@@ -69,8 +69,8 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     needs: [get_tag, run_tests]
-    # Shared with the release workflow's publish_helm so the two chart-releaser
-    # runs never push to gh-pages at the same time (avoids non-fast-forward).
+    # Shared with the release workflow's publish_helm because both publish
+    # directly to gh-pages.
     concurrency:
       group: helm-chart-release
       cancel-in-progress: false
@@ -92,12 +92,41 @@ jobs:
 
       - name: Install Helm
         uses: azure/setup-helm@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.5.0
-        with:
-          config: .github/chart-releaser.yaml
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Package chart
+        run: |
+          mkdir -p .chart-packages
+          helm dependency build ./charts/family-pickem
+          helm package ./charts/family-pickem --destination .chart-packages
+          test -f ".chart-packages/family-pickem-${{needs.get_tag.outputs.tag}}.tgz"
+
+      - name: Publish chart to gh-pages
+        run: |
+          git fetch origin gh-pages
+          rm -rf .gh-pages
+          git worktree add .gh-pages origin/gh-pages
+          cp ".chart-packages/family-pickem-${{needs.get_tag.outputs.tag}}.tgz" .gh-pages/
+          (
+            cd .gh-pages
+            helm repo index . \
+              --url https://jimdaga.github.io/family-pickem \
+              --merge index.yaml
+            git config user.name "$GITHUB_ACTOR"
+            git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+            git add "family-pickem-${{needs.get_tag.outputs.tag}}.tgz" index.yaml
+            git diff --cached --quiet && echo "No chart changes to commit" && exit 0
+            git commit -m "chore: publish helm chart ${{needs.get_tag.outputs.tag}}"
+            git push origin HEAD:gh-pages
+          )
+
+      - name: Verify chart version is in published index
+        run: |
+          for attempt in $(seq 1 18); do
+            if curl -fsSL https://jimdaga.github.io/family-pickem/index.yaml | grep -Fq "version: ${{needs.get_tag.outputs.tag}}"; then
+              exit 0
+            fi
+            echo "Waiting for gh-pages to publish chart ${{needs.get_tag.outputs.tag}} (attempt ${attempt}/18)"
+            sleep 10
+          done
+          echo "Chart ${{needs.get_tag.outputs.tag}} was not visible in the published Helm index"
+          exit 1
