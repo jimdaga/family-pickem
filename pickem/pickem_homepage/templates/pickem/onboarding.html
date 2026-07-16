@@ -10,7 +10,7 @@
             Start your family pick'em league
         </h1>
         <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
-            Create a private family league or join one with an invite code before making picks.
+            Create a private family league or join one from an invitation email before making picks.
         </p>
     </section>
 
@@ -34,23 +34,17 @@
         <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-6">
             <div class="flex items-center gap-3 mb-4">
                 <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700 text-white">
-                    <i class="fas fa-ticket"></i>
+                    <i class="fas fa-envelope-open-text"></i>
                 </span>
-                <h2 class="text-xl font-bold text-text-dark dark:text-white">Join with a code</h2>
+                <h2 class="text-xl font-bold text-text-dark dark:text-white">Join from your email</h2>
             </div>
             <p class="text-sm text-text-secondary-light dark:text-text-secondary mb-5">
-                Use an invite from your family owner to enter their pool.
+                Ask your commissioner to send you an invite. The email link will add you to the family.
             </p>
-            <form action="{% url 'join_family' %}" method="get" class="flex flex-col sm:flex-row gap-3">
-                <label class="sr-only" for="invite_code">Invite code</label>
-                <input id="invite_code" name="code" type="text" autocomplete="off"
-                       class="flex-1 rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface-hover px-3 py-2 text-text-dark dark:text-white"
-                       placeholder="Invite code">
-                <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold hover:bg-slate-700 transition-colors">
-                    <i class="fas fa-arrow-right"></i>
-                    <span>Join</span>
-                </button>
-            </form>
+            <a href="{% url 'join_family' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-800 text-white font-semibold hover:bg-slate-700 transition-colors">
+                <i class="fas fa-link"></i>
+                <span>Paste invite link</span>
+            </a>
         </div>
     </section>
 

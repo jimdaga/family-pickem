@@ -343,28 +343,19 @@ class FamilyInviteCreateForm(forms.Form):
     role = forms.ChoiceField(required=True)
     recipient_email = forms.EmailField(
         label="Recipient email",
-        required=False,
+        required=True,
         widget=forms.EmailInput(attrs={
             'class': ADMIN_TEXT_INPUT_CLASSES,
             'autocomplete': 'email',
-            'placeholder': 'optional@example.com',
+            'placeholder': 'invitee@example.com',
         }),
-        help_text="Optional. If set, only that email address can redeem the invite.",
+        help_text="The invite link will only work once and only for this email address.",
     )
     expires_in_days = forms.IntegerField(
         label="Expires after",
         min_value=1,
         max_value=365,
         initial=14,
-        widget=forms.NumberInput(attrs={
-            'class': ADMIN_TEXT_INPUT_CLASSES,
-        }),
-    )
-    max_uses = forms.IntegerField(
-        label="Max uses",
-        min_value=1,
-        max_value=1000,
-        initial=20,
         widget=forms.NumberInput(attrs={
             'class': ADMIN_TEXT_INPUT_CLASSES,
         }),

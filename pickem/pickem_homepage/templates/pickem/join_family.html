@@ -10,7 +10,7 @@
             Join a family pick'em league
         </h1>
         <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
-            Enter the invite code from your family owner.
+            Open the invitation link from your email. If needed, you can paste the invite link here.
         </p>
     </section>
 
@@ -19,7 +19,7 @@
             {% csrf_token %}
             <div>
                 <label for="{{ form.code.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
-                    Invite code
+                    Invitation link
                 </label>
                 {{ form.code }}
                 {% if form.code.errors %}

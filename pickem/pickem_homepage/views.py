@@ -35,6 +35,7 @@ from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from functools import wraps
+from urllib.parse import parse_qs, urlparse
 # from django_ratelimit.decorators import ratelimit  # Disabled for now
 from collections import defaultdict
 import hashlib
@@ -337,9 +338,17 @@ def generate_unique_slug(model, value, *, scoped_filters=None, max_length=80):
 
 
 def normalize_invite_code(raw_code):
+    raw_code = (raw_code or '').strip()
+    if raw_code.startswith(('http://', 'https://')):
+        parsed = urlparse(raw_code)
+        path = parsed.path.rstrip('/')
+        if '/invites/' in path:
+            raw_code = path.rsplit('/invites/', 1)[-1].strip('/')
+        else:
+            raw_code = parse_qs(parsed.query).get('code', [raw_code])[0]
     return ''.join(
         char.lower()
-        for char in (raw_code or '').strip()
+        for char in raw_code
         if char.isalnum()
     )
 
@@ -623,7 +632,7 @@ def pool_entries_locked(pool):
 
 
 def accept_invitation_for_user(request, raw_code):
-    """Redeem an invite code. Returns (invitation, pool, membership, error) —
+    """Redeem an invite token. Returns (invitation, pool, membership, error) —
     the first three are None on failure, and error carries a user-facing
     message only when the failure deserves a specific explanation."""
     with transaction.atomic():
@@ -698,7 +707,7 @@ def accept_invitation_for_user(request, raw_code):
 def render_invalid_invite(request, form=None, *, invite_code='', message=None):
     if form is None:
         form = JoinFamilyForm(initial={'code': invite_code} if invite_code else None)
-    form.add_error('code', message or "Invite code is invalid or unavailable.")
+    form.add_error('code', message or "This invitation is invalid or unavailable.")
     return render(request, 'pickem/join_family.html', {
         'form': form,
         'invite_code': invite_code,
@@ -822,31 +831,17 @@ def join_family(request):
 
 @login_required
 def accept_invite_link(request, invite_code):
-    form = JoinFamilyForm(
-        initial={'code': invite_code},
-        data={'code': invite_code} if request.method == 'POST' else None,
-    )
-
-    if request.method == 'POST' and form.is_valid():
-        invitation, pool, _membership, error = accept_invitation_for_user(
-            request,
-            form.cleaned_data['code'],
+    invitation, pool, _membership, error = accept_invitation_for_user(request, invite_code)
+    if invitation:
+        messages.success(request, f"You joined {invitation.family.name}.")
+        return redirect(
+            'family_pool_home',
+            family_slug=invitation.family.slug,
+            pool_slug=pool.slug,
         )
-        if invitation:
-            messages.success(request, f"You joined {invitation.family.name}.")
-            return redirect(
-                'family_pool_home',
-                family_slug=invitation.family.slug,
-                pool_slug=pool.slug,
-            )
-        return render_invalid_invite(request, form, invite_code=invite_code, message=error)
 
-    context = {
-        'form': form,
-        'invite_code': invite_code,
-        'gameseason': get_season(),
-    }
-    return render(request, 'pickem/join_family.html', context)
+    form = JoinFamilyForm(initial={'code': invite_code})
+    return render_invalid_invite(request, form, invite_code=invite_code, message=error)
 
 
 @require_http_methods(["POST"])
@@ -862,7 +857,7 @@ def create_family_invite(request, family_slug, pool_slug):
             code_hash=hash_invite_code(raw_code),
             role=FamilyMembership.Role.MEMBER,
             expires_at=timezone.now() + timedelta(days=14),
-            max_uses=20,
+            max_uses=1,
             created_by=request.user,
         )
         FamilyAuditLog.objects.create(
@@ -884,13 +879,12 @@ def create_family_invite(request, family_slug, pool_slug):
         'family': tenant_context.family,
         'pool': tenant_context.pool,
         'membership': tenant_context.membership,
-        'invite_code': raw_code,
         'invite_link': request.build_absolute_uri(
             reverse('accept_invite_link', kwargs={'invite_code': raw_code})
         ),
         'gameseason': get_season(),
     }
-    messages.success(request, "Invite created. Copy it now; it will not be shown again.")
+    messages.success(request, "Invite created. Share the invite link now; it will not be shown again.")
     return render(request, 'pickem/family_pool_home.html', context)
 
 
@@ -1954,9 +1948,6 @@ def build_invite_audit_metadata(invitation, *, source, replacement_for=None):
 
 
 def handle_targeted_invite_email_feedback(request, *, invitation, raw_code):
-    if not invitation.recipient_email:
-        return
-
     invite_link = request.build_absolute_uri(
         reverse('accept_invite_link', kwargs={'invite_code': raw_code})
     )
@@ -1977,7 +1968,7 @@ def handle_targeted_invite_email_feedback(request, *, invitation, raw_code):
             request,
             (
                 f"Invite saved for {invitation.recipient_email}, but Resend is not "
-                "configured yet so no email was sent."
+                "configured yet so no email was sent. Use the invite link below."
             ),
         )
 
@@ -1990,7 +1981,6 @@ def create_admin_invitation(
     role,
     recipient_email,
     expires_in_days,
-    max_uses,
     request,
     replacement_for=None,
 ):
@@ -2002,7 +1992,7 @@ def create_admin_invitation(
         recipient_email=recipient_email or None,
         role=role,
         expires_at=timezone.now() + timedelta(days=expires_in_days),
-        max_uses=max_uses,
+        max_uses=1,
         created_by=actor,
     )
     FamilyAuditLog.objects.create(
@@ -2037,7 +2027,6 @@ def render_family_admin_invites(request, tenant_context, form, *, invite_code=No
         'gameseason': pool.season or get_season(),
         'form': form,
         'invitations': invitations,
-        'invite_code': invite_code,
         'invite_link': invite_link,
         'can_create_admin_invites': (
             tenant_context.membership.role == FamilyMembership.Role.OWNER
@@ -2057,7 +2046,6 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
         initial={
             'role': FamilyMembership.Role.MEMBER,
             'expires_in_days': 14,
-            'max_uses': 20,
         },
     )
 
@@ -2078,11 +2066,10 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
                 role=form.cleaned_data['role'],
                 recipient_email=form.cleaned_data['recipient_email'],
                 expires_in_days=form.cleaned_data['expires_in_days'],
-                max_uses=form.cleaned_data['max_uses'],
                 request=request,
             )
 
-        messages.success(request, "Invite created. Copy it now; it will not be shown again.")
+        messages.success(request, "Invite created. Share the invite link now; it will not be shown again.")
         handle_targeted_invite_email_feedback(
             request,
             invitation=invitation,
@@ -2092,7 +2079,6 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
             request,
             tenant_context,
             form,
-            invite_code=raw_code,
             invite_link=request.build_absolute_uri(
                 reverse('accept_invite_link', kwargs={'invite_code': raw_code})
             ),
@@ -2173,7 +2159,6 @@ def family_pool_admin_invite_replace(request, family_slug, pool_slug, invitation
             role=old_invitation.role,
             recipient_email=old_invitation.recipient_email,
             expires_in_days=14,
-            max_uses=old_invitation.max_uses or 20,
             request=request,
             replacement_for=old_invitation.id,
         )
@@ -2184,7 +2169,6 @@ def family_pool_admin_invite_replace(request, family_slug, pool_slug, invitation
         initial={
             'role': FamilyMembership.Role.MEMBER,
             'expires_in_days': 14,
-            'max_uses': 20,
         },
     )
     handle_targeted_invite_email_feedback(
@@ -2192,12 +2176,11 @@ def family_pool_admin_invite_replace(request, family_slug, pool_slug, invitation
         invitation=new_invitation,
         raw_code=raw_code,
     )
-    messages.success(request, "Invite replaced. Copy the new code now.")
+    messages.success(request, "Invite replaced. Share the new invite link now.")
     return render_family_admin_invites(
         request,
         tenant_context,
         form,
-        invite_code=raw_code,
         invite_link=request.build_absolute_uri(
             reverse('accept_invite_link', kwargs={'invite_code': raw_code})
         ),

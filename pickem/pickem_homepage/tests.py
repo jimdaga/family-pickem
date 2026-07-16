@@ -4205,7 +4205,7 @@ class FamilyAdminExperienceTests(TestCase):
             "code_hash": hash_invite_code(raw_code),
             "role": FamilyMembership.Role.MEMBER,
             "expires_at": timezone.now() + timedelta(days=14),
-            "max_uses": 20,
+            "max_uses": 1,
             "use_count": 1,
             "created_by": self.owner,
         }
@@ -4814,15 +4814,16 @@ class FamilyAdminExperienceTests(TestCase):
             role=FamilyMembership.Role.MEMBER,
             recipient_email="target@example.com",
             use_count=3,
-            max_uses=10,
+            max_uses=1,
         )
         current_invite.is_revoked = True
         current_invite.save(update_fields=["is_revoked", "updated_at"])
         self._admin_invitation(
             raw_code="OPEN-INVITE-CODE",
             role=FamilyMembership.Role.MEMBER,
+            recipient_email="pending@example.com",
             use_count=0,
-            max_uses=5,
+            max_uses=1,
         )
         self._admin_invitation(
             raw_code="OTHER-FAMILY-CODE",
@@ -4838,19 +4839,19 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertTemplateUsed(response, "pickem/family_admin_invites.html")
         self.assertContains(response, "Smith Family")
         self.assertContains(response, "Member")
-        self.assertContains(response, "10")
-        self.assertContains(response, "3")
+        self.assertContains(response, "Yes")
+        self.assertContains(response, "No")
         self.assertContains(response, "target@example.com")
         self.assertContains(response, "admin-owner")
         self.assertContains(response, "Revoked")
         self.assertContains(response, str(current_invite.id))
-        self.assertContains(response, "Anyone with link")
+        self.assertContains(response, "pending@example.com")
         self.assertNotContains(response, "SAFE-LIST-CODE")
         self.assertNotContains(response, current_invite.code_hash)
         self.assertNotContains(response, "OTHER-FAMILY-CODE")
         self.assertNotContains(response, "Jones Family")
 
-    def test_admin_and_owner_can_create_member_invites_with_one_time_raw_display(self):
+    def test_admin_and_owner_can_create_member_invites_with_one_time_link_display(self):
         for user in (self.owner, self.admin_user):
             with self.subTest(user=user.username):
                 self.client.force_login(user)
@@ -4862,7 +4863,6 @@ class FamilyAdminExperienceTests(TestCase):
                         "role": FamilyMembership.Role.MEMBER,
                         "recipient_email": " TargetUser@Example.com ",
                         "expires_in_days": "21",
-                        "max_uses": "7",
                     },
                 )
 
@@ -4872,20 +4872,19 @@ class FamilyAdminExperienceTests(TestCase):
                     family=self.family,
                     created_by=user,
                 ).latest("created_at")
-                raw_code = response.context["invite_code"]
+                invite_link = response.context["invite_link"]
                 self.assertEqual(
                     FamilyInvitation.objects.filter(family=self.family).count(),
                     before_count + 1,
                 )
                 self.assertEqual(invitation.role, FamilyMembership.Role.MEMBER)
                 self.assertEqual(invitation.recipient_email, "targetuser@example.com")
-                self.assertEqual(invitation.max_uses, 7)
+                self.assertEqual(invitation.max_uses, 1)
                 self.assertEqual(invitation.use_count, 0)
                 self.assertFalse(invitation.is_revoked)
                 self.assertTrue(invitation.code_hash.startswith("sha256:"))
-                self.assertNotEqual(invitation.code_hash, raw_code)
-                self.assertContains(response, raw_code)
-                self.assertContains(response, reverse("accept_invite_link", kwargs={"invite_code": raw_code}))
+                self.assertContains(response, invite_link)
+                self.assertIn("/invites/", invite_link)
                 audit = FamilyAuditLog.objects.get(
                     family=self.family,
                     actor=user,
@@ -4893,10 +4892,10 @@ class FamilyAdminExperienceTests(TestCase):
                     target_id=str(invitation.id),
                 )
                 self.assertEqual(audit.metadata["recipient_email"], "targetuser@example.com")
-                self.assertNotIn(raw_code, str(audit.metadata))
+                self.assertNotIn(invite_link, str(audit.metadata))
 
                 reload_response = self.client.get(self._invites_url())
-                self.assertNotContains(reload_response, raw_code)
+                self.assertNotContains(reload_response, invite_link)
                 self.assertNotContains(reload_response, invitation.code_hash)
 
     @patch("pickem_homepage.views.transaction.on_commit", side_effect=lambda callback: callback())
@@ -4916,7 +4915,6 @@ class FamilyAdminExperienceTests(TestCase):
                 "role": FamilyMembership.Role.MEMBER,
                 "recipient_email": "target@example.com",
                 "expires_in_days": "14",
-                "max_uses": "5",
             },
         )
 
@@ -4945,14 +4943,13 @@ class FamilyAdminExperienceTests(TestCase):
                 "role": FamilyMembership.Role.MEMBER,
                 "recipient_email": "target@example.com",
                 "expires_in_days": "14",
-                "max_uses": "5",
             },
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "Invite saved for target@example.com, but Resend is not configured yet so no email was sent.",
+            "Invite saved for target@example.com, but Resend is not configured yet so no email was sent. Use the invite link below.",
         )
         configured_mock.assert_called_once_with()
         send_mock.assert_not_called()
@@ -4972,7 +4969,7 @@ class FamilyAdminExperienceTests(TestCase):
         response = self.client.post(self._invite_replace_url(invite))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Invite replaced. Copy the new code now.")
+        self.assertContains(response, "Invite replaced. Share the new invite link now.")
         self.assertContains(response, "Invite email will be sent to target@example.com.")
         configured_mock.assert_called_once_with()
         on_commit_mock.assert_called_once()
@@ -4997,7 +4994,7 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "Invite saved for target@example.com, but Resend is not configured yet so no email was sent.",
+            "Invite saved for target@example.com, but Resend is not configured yet so no email was sent. Use the invite link below.",
         )
         configured_mock.assert_called_once_with()
         send_mock.assert_not_called()
@@ -5010,7 +5007,7 @@ class FamilyAdminExperienceTests(TestCase):
             {
                 "role": FamilyMembership.Role.ADMIN,
                 "expires_in_days": "14",
-                "max_uses": "5",
+                "recipient_email": "admin-target@example.com",
             },
         )
 
@@ -5028,7 +5025,7 @@ class FamilyAdminExperienceTests(TestCase):
             {
                 "role": FamilyMembership.Role.ADMIN,
                 "expires_in_days": "14",
-                "max_uses": "5",
+                "recipient_email": "admin-target@example.com",
             },
         )
 
@@ -5070,10 +5067,9 @@ class FamilyAdminExperienceTests(TestCase):
             created_by=self.admin_user,
         )
         self.assertEqual(replacement.role, replacement_source.role)
-        self.assertEqual(replacement.max_uses, replacement_source.max_uses)
-        raw_code = replace_response.context["invite_code"]
-        self.assertContains(replace_response, raw_code)
-        self.assertNotIn(raw_code, str(FamilyAuditLog.objects.filter(
+        self.assertEqual(replacement.max_uses, 1)
+        self.assertContains(replace_response, replace_response.context["invite_link"])
+        self.assertNotIn("REPLACE-ME", str(FamilyAuditLog.objects.filter(
             family=self.family,
             target_id=str(replacement.id),
         ).values_list("metadata", flat=True)))
@@ -5124,7 +5120,7 @@ class FamilyAdminExperienceTests(TestCase):
                     {
                         "role": FamilyMembership.Role.MEMBER,
                         "expires_in_days": "14",
-                        "max_uses": "5",
+                        "recipient_email": "blocked@example.com",
                     },
                 )
                 revoke_response = self.client.post(self._invite_revoke_url(invite))
@@ -5148,7 +5144,7 @@ class FamilyAdminExperienceTests(TestCase):
             {
                 "role": FamilyMembership.Role.MEMBER,
                 "expires_in_days": "14",
-                "max_uses": "5",
+                "recipient_email": "blocked@example.com",
             },
         )
         csrf_revoke = csrf_client.post(self._invite_revoke_url(invite))
@@ -5949,7 +5945,7 @@ class InviteFlowTests(TestCase):
             "code_hash": self._hash_code(raw_code),
             "role": FamilyMembership.Role.MEMBER,
             "expires_at": timezone.now() + timedelta(days=14),
-            "max_uses": 20,
+            "max_uses": 1,
             "created_by": self.owner,
         }
         defaults.update(overrides)
@@ -5962,27 +5958,22 @@ class InviteFlowTests(TestCase):
         response = self.client.post(self._create_invite_url())
 
         invitation = FamilyInvitation.objects.get(family=self.family)
-        raw_code = response.context["invite_code"]
+        invite_link = response.context["invite_link"]
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pickem/family_pool_home.html")
         self.assertEqual(invitation.pool, self.pool)
         self.assertEqual(invitation.role, FamilyMembership.Role.MEMBER)
-        self.assertEqual(invitation.max_uses, 20)
+        self.assertEqual(invitation.max_uses, 1)
         self.assertEqual(invitation.use_count, 0)
         self.assertFalse(invitation.is_revoked)
         self.assertGreaterEqual(invitation.expires_at, before + timedelta(days=13, hours=23))
         self.assertLessEqual(invitation.expires_at, timezone.now() + timedelta(days=14, minutes=1))
         self.assertTrue(invitation.code_hash.startswith("sha256:"))
-        self.assertNotEqual(invitation.code_hash, raw_code)
-        self.assertFalse(
-            FamilyInvitation.objects.filter(code_hash__icontains=raw_code).exists()
-        )
         self.assertFalse(hasattr(invitation, "code"))
         self.assertFalse(hasattr(invitation, "raw_code"))
-        self.assertGreaterEqual(len(raw_code), 32)
-        self.assertContains(response, raw_code)
-        self.assertContains(response, self._link_url(raw_code))
+        self.assertIn("/invites/", invite_link)
+        self.assertContains(response, invite_link)
         self.assertTrue(
             FamilyAuditLog.objects.filter(
                 family=self.family,
@@ -5997,7 +5988,7 @@ class InviteFlowTests(TestCase):
             action=FamilyAuditLog.Action.INVITATION_CREATED,
             target_id=str(invitation.id),
         )
-        self.assertNotIn(raw_code, str(audit.metadata))
+        self.assertNotIn(invite_link, str(audit.metadata))
 
     def test_non_owners_cannot_create_phase_three_invites(self):
         for user, expected_status in [
@@ -6058,7 +6049,7 @@ class InviteFlowTests(TestCase):
             ).exists()
         )
 
-    def test_link_acceptance_requires_login_and_accepts_by_post(self):
+    def test_link_acceptance_requires_login_and_accepts_on_get(self):
         self._invitation(raw_code="link-code")
 
         anonymous = self.client.get(self._link_url("link-code"))
@@ -6068,12 +6059,9 @@ class InviteFlowTests(TestCase):
         self.client.force_login(self.joiner)
 
         get_response = self.client.get(self._link_url("link-code"))
-        post_response = self.client.post(self._link_url("link-code"))
 
-        self.assertEqual(get_response.status_code, 200)
-        self.assertTemplateUsed(get_response, "pickem/join_family.html")
         self.assertRedirects(
-            post_response,
+            get_response,
             reverse(
                 "family_pool_home",
                 kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
@@ -6107,6 +6095,23 @@ class InviteFlowTests(TestCase):
                 status=FamilyMembership.Status.ACTIVE,
             ).exists()
         )
+        self.assertEqual(invite.use_count, 1)
+
+    def test_join_family_accepts_full_invite_link_pasted_into_form(self):
+        invite = self._invitation(
+            raw_code="paste-link-code",
+            recipient_email="joiner@example.com",
+            use_count=0,
+        )
+        self.client.force_login(self.joiner)
+
+        response = self.client.post(
+            self._join_url(),
+            {"code": "https://family-pickem.com/invites/paste-link-code/"},
+        )
+
+        invite.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(invite.use_count, 1)
 
     def test_email_targeted_invite_rejects_wrong_account_without_mutation(self):
@@ -6231,7 +6236,7 @@ class InviteFlowTests(TestCase):
 
                 self.assertEqual(response.status_code, 200)
                 self.assertTemplateUsed(response, "pickem/join_family.html")
-                self.assertContains(response, "Invite code is invalid or unavailable.")
+                self.assertContains(response, "This invitation is invalid or unavailable.")
                 self.assertNotContains(response, "Smith Family")
                 self.assertNotContains(response, "Inactive Family")
                 self.assertNotContains(response, "Other Family")
