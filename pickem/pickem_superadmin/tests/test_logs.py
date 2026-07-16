@@ -106,6 +106,44 @@ class LoggingWiringTests(SimpleTestCase):
         self.assertEqual(cfg['root']['level'], prod.SUPERADMIN_LOG_ROOT_LEVEL)
 
 
+class LoggerWriterTests(SimpleTestCase):
+    """The stdout->logging bridge that restores old-cron pipeline verbosity."""
+
+    def test_emits_one_record_per_complete_line(self):
+        from pickem_api.log_bridge import LoggerWriter
+
+        logger = logging.getLogger('pickem_api.pipeline')
+        with self.assertLogs(logger, level='INFO') as cm:
+            writer = LoggerWriter(logger, logging.INFO)
+            writer.write('first line\nsecond line\n')
+            writer.write('partial ')      # no newline yet — buffered
+            writer.write('continued\n')
+        self.assertEqual(
+            [r.getMessage() for r in cm.records],
+            ['first line', 'second line', 'partial continued'],
+        )
+
+    def test_flush_emits_trailing_partial_and_strips_ansi(self):
+        from pickem_api.log_bridge import LoggerWriter
+
+        logger = logging.getLogger('pickem_api.pipeline')
+        with self.assertLogs(logger, level='INFO') as cm:
+            writer = LoggerWriter(logger, logging.INFO)
+            writer.write('\x1b[1mUpserted 5 games.\x1b[0m')  # styled, no newline
+            writer.flush()
+        self.assertEqual([r.getMessage() for r in cm.records], ['Upserted 5 games.'])
+
+    def test_blank_lines_are_not_logged(self):
+        from pickem_api.log_bridge import LoggerWriter
+
+        logger = logging.getLogger('pickem_api.pipeline')
+        with self.assertLogs(logger, level='INFO') as cm:
+            writer = LoggerWriter(logger, logging.INFO)
+            writer.write('\n\n   \nreal line\n')
+            # assertLogs fails if nothing is logged, so log one guaranteed record.
+        self.assertEqual([r.getMessage() for r in cm.records], ['real line'])
+
+
 class LogsViewTests(TestCase):
     def setUp(self):
         self.root = User.objects.create_superuser(

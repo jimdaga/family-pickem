@@ -10,7 +10,7 @@
   <form method="post" action="{% url 'superadmin:teams_save' %}">
     {% csrf_token %}
     <div class="sa-table-wrap sa-table-scroll">
-      <table class="sa-table">
+      <table class="sa-table sa-table-stack">
         <thead>
           <tr>
             <th>id</th>

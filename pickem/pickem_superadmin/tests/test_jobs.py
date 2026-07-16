@@ -45,10 +45,10 @@ class RunCommandTests(TestCase):
         it into the jobstore, APScheduler's execution-time call into
         run_command() must still refuse to run it -- and must not have called
         call_command at all."""
-        with patch('pickem_superadmin.jobs.call_command') as call_command:
+        with patch('pickem_api.log_bridge.call_command_logged') as runner:
             with self.assertRaises(ValueError):
                 jobs.run_command('flush')
-            call_command.assert_not_called()
+            runner.assert_not_called()
 
 
 class QueueCommandTests(TestCase):

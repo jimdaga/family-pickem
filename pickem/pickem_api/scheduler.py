@@ -76,12 +76,16 @@ def _on_job_done(event):
 
 def run_update_all():
     """Job target: run the full data-update pipeline."""
-    call_command("update_all", skip_records=True)
+    from pickem_api.log_bridge import call_command_logged
+
+    call_command_logged("update_all", skip_records=True)
 
 
 def run_update_records():
     """Job target: refresh team records on a slower cadence."""
-    call_command("update_records")
+    from pickem_api.log_bridge import call_command_logged
+
+    call_command_logged("update_records")
 
 
 def run_prune_logs():

@@ -769,6 +769,43 @@
 .sa-table-wrap { background: #fff; border: 1px solid #e3e7ec; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); }
 .sa-table-scroll { overflow-x: auto; }
 
+/* --- responsive stacked tables (phones) ---
+   A .sa-table-stack table reflows below 768px into one card per row: the header
+   row is hidden and each cell sits on its own line labelled by its data-label
+   attribute. The table grows vertically instead of scrolling sideways. Cells
+   holding a wide control (an inline form) get .sa-cell-full to stack the label
+   above the control. */
+@media (max-width: 767px) {
+  .sa-table-wrap:has(.sa-table-stack) {
+    border: 0; background: transparent; box-shadow: none; overflow: visible;
+  }
+  .sa-table-stack, .sa-table-stack thead, .sa-table-stack tbody,
+  .sa-table-stack tr, .sa-table-stack th, .sa-table-stack td { display: block; width: auto; }
+  .sa-table-stack thead { display: none; }
+  .sa-table-stack tr {
+    border: 1px solid #e3e7ec; border-radius: 9px; margin-bottom: 10px;
+    background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); overflow: hidden;
+  }
+  .sa-table-stack tbody tr:hover { background: #fff; }
+  .sa-table-stack td {
+    border: 0; border-bottom: 1px solid #f2f4f7; padding: 9px 12px;
+    display: flex; gap: 12px; align-items: baseline; white-space: normal;
+  }
+  .sa-table-stack td:last-child { border-bottom: 0; }
+  .sa-table-stack td::before {
+    content: attr(data-label);
+    flex: 0 0 38%; min-width: 0;
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #8a94a3; line-height: 1.5;
+  }
+  .sa-table-stack td[data-label=""]::before { content: none; }
+  .sa-table-stack td > * { min-width: 0; }
+  .sa-table-stack td.sa-cell-full { flex-direction: column; align-items: stretch; gap: 6px; }
+  .sa-table-stack td.sa-cell-full::before { flex: none; }
+  .sa-table-stack td.sa-empty { display: block; text-align: center; }
+  .sa-table-stack td.sa-empty::before { content: none; }
+}
+
 /* --- buttons --- */
 .sa-btn {
   display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 7px;
