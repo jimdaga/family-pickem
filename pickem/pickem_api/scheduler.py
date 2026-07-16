@@ -14,6 +14,7 @@ restarts.
 
 import logging
 
+from apscheduler.jobstores.base import JobLookupError
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from django.conf import settings
@@ -58,6 +59,39 @@ JOB_REGISTRY = {
 }
 
 
+def _register_job(scheduler, job_id, interval_minutes):
+    """(Re)register one registry job at the given cadence."""
+    spec = JOB_REGISTRY[job_id]
+    scheduler.add_job(
+        spec['func'],
+        trigger=IntervalTrigger(minutes=interval_minutes),
+        id=job_id,
+        name=spec['name'],
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+
+
+def reschedule_live(job_id, interval_minutes, enabled):
+    """Apply a schedule change to the running scheduler in THIS process.
+
+    Returns True if applied live, False if this process has no live scheduler
+    (the change is still persisted in ScheduledJobConfig and takes effect on the
+    next start()). Re-registers from scratch so an interval change and an
+    enable/disable use one code path.
+    """
+    if _scheduler is None or job_id not in JOB_REGISTRY:
+        return False
+    try:
+        _scheduler.remove_job(job_id)
+    except JobLookupError:
+        pass
+    if enabled:
+        _register_job(_scheduler, job_id, interval_minutes)
+    return True
+
+
 def start():
     """Start the background scheduler. Idempotent within a process."""
     global _scheduler
@@ -66,26 +100,16 @@ def start():
 
     from django_apscheduler.jobstores import DjangoJobStore
 
+    from pickem_api.models import ScheduledJobConfig
+
     scheduler = BackgroundScheduler(timezone=settings.TIME_ZONE)
     scheduler.add_jobstore(DjangoJobStore(), "default")
-    scheduler.add_job(
-        run_update_all,
-        trigger=IntervalTrigger(minutes=UPDATE_INTERVAL_MINUTES),
-        id="update_all",
-        name="Run full data-update pipeline",
-        max_instances=1,
-        coalesce=True,
-        replace_existing=True,
-    )
-    scheduler.add_job(
-        run_update_records,
-        trigger=IntervalTrigger(minutes=RECORDS_INTERVAL_MINUTES),
-        id="update_records",
-        name="Run team records refresh",
-        max_instances=1,
-        coalesce=True,
-        replace_existing=True,
-    )
+
+    ScheduledJobConfig.seed_from_registry()
+    for cfg in ScheduledJobConfig.objects.filter(job_id__in=JOB_REGISTRY.keys()):
+        if cfg.enabled:
+            _register_job(scheduler, cfg.job_id, cfg.interval_minutes)
+
     scheduler.start()
     _scheduler = scheduler
     logger.info(

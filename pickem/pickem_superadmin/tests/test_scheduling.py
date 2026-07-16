@@ -37,3 +37,34 @@ class ScheduledJobConfigTests(TestCase):
         cfg = ScheduledJobConfig(job_id='x', interval_minutes=0)
         with self.assertRaises(ValidationError):
             cfg.full_clean()
+
+
+class RescheduleLiveTests(TestCase):
+    def test_reschedule_live_returns_false_without_a_scheduler(self):
+        from pickem_api import scheduler
+
+        original = scheduler._scheduler
+        scheduler._scheduler = None
+        try:
+            self.assertFalse(scheduler.reschedule_live('update_all', 5, True))
+        finally:
+            scheduler._scheduler = original
+
+    def test_reschedule_live_reregisters_on_a_live_scheduler(self):
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from pickem_api import scheduler
+
+        fake = BackgroundScheduler()
+        fake.start(paused=True)
+        original = scheduler._scheduler
+        scheduler._scheduler = fake
+        try:
+            self.assertTrue(scheduler.reschedule_live('update_all', 5, True))
+            job = fake.get_job('update_all')
+            self.assertIsNotNone(job)
+            # Disabling removes it entirely.
+            self.assertTrue(scheduler.reschedule_live('update_all', 5, False))
+            self.assertIsNone(fake.get_job('update_all'))
+        finally:
+            fake.shutdown(wait=False)
+            scheduler._scheduler = original
