@@ -15,6 +15,7 @@ restarts.
 import logging
 from datetime import timedelta
 
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_SUBMITTED
 from apscheduler.jobstores.base import JobLookupError
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -55,6 +56,22 @@ def current_running_jobs():
 
     cutoff = timezone.now() - STALE_RUNNING_AFTER
     return list(RunningJobMarker.objects.filter(started_at__gte=cutoff))
+
+
+def _on_job_submitted(event):
+    """APScheduler EVENT_JOB_SUBMITTED: a job started executing."""
+    try:
+        mark_job_started(event.job_id)
+    except Exception:
+        logger.exception('Failed to record job start marker')
+
+
+def _on_job_done(event):
+    """APScheduler EVENT_JOB_EXECUTED | EVENT_JOB_ERROR: a job finished."""
+    try:
+        mark_job_finished(event.job_id)
+    except Exception:
+        logger.exception('Failed to clear job start marker')
 
 
 def run_update_all():
@@ -137,6 +154,9 @@ def start():
     for cfg in ScheduledJobConfig.objects.filter(job_id__in=JOB_REGISTRY.keys()):
         if cfg.enabled:
             _register_job(scheduler, cfg.job_id, cfg.interval_minutes)
+
+    scheduler.add_listener(_on_job_submitted, EVENT_JOB_SUBMITTED)
+    scheduler.add_listener(_on_job_done, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
     scheduler.start()
     _scheduler = scheduler

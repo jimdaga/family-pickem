@@ -25,3 +25,26 @@ class RunningMarkerTests(TestCase):
             started_at=timezone.now() - timedelta(minutes=30),
         )
         self.assertEqual(scheduler.current_running_jobs(), [])
+
+
+class ListenerCallbackTests(TestCase):
+    def test_submitted_then_executed_callbacks_toggle_the_marker(self):
+        from types import SimpleNamespace
+
+        from pickem_api import scheduler
+
+        scheduler._on_job_submitted(SimpleNamespace(job_id='update_all'))
+        self.assertEqual(len(scheduler.current_running_jobs()), 1)
+        scheduler._on_job_done(SimpleNamespace(job_id='update_all'))
+        self.assertEqual(scheduler.current_running_jobs(), [])
+
+    def test_callbacks_swallow_errors(self):
+        from types import SimpleNamespace
+
+        from pickem_api import scheduler
+
+        # A malformed event (no job_id) must not raise out of the listener, and
+        # must not create a junk marker row.
+        scheduler._on_job_submitted(SimpleNamespace())
+        scheduler._on_job_done(SimpleNamespace())
+        self.assertEqual(scheduler.current_running_jobs(), [])
