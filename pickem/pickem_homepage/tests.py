@@ -15,6 +15,7 @@ from django.http import Http404, HttpResponse
 from django.test import TestCase, Client, RequestFactory
 from django.urls import reverse
 from django.utils import timezone
+from allauth.socialaccount.models import SocialAccount, SocialApp
 
 from pickem.utils import get_season
 from pickem_api.models import (
@@ -5616,7 +5617,9 @@ class CreateFamilyFlowTests(TestCase):
         )
         self.assertEqual(family.slug, "smith-family")
         self.assertEqual(family.status, Family.Status.ACTIVE)
-        self.assertEqual(pool.name, "NFL Pick'em - 2025 - 2026")
+        season_raw = str(get_season()).zfill(4)
+        expected_pool_name = f"NFL Pick'em - 20{season_raw[:2]} - 20{season_raw[2:]}"
+        self.assertEqual(pool.name, expected_pool_name)
         self.assertEqual(pool.slug, "pickem-pool")
         self.assertEqual(pool.season, get_season())
         self.assertEqual(pool.competition, "nfl")
@@ -6782,6 +6785,18 @@ class GlobalLeaderboardTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.season = 2526
+        site, _ = Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        social_app, _ = SocialApp.objects.get_or_create(
+            provider="google",
+            defaults={
+                "name": "Google",
+                "client_id": "test-client-id",
+                "secret": "test-secret",
+            },
+        )
+        social_app.sites.add(site)
         currentSeason.objects.create(season=self.season, display_name="2025-2026")
         self.smith_family = Family.objects.create(name="Smith", slug="smith-gl")
         self.jones_family = Family.objects.create(name="Jones", slug="jones-gl")
@@ -6800,6 +6815,8 @@ class GlobalLeaderboardTests(TestCase):
         self.admin = User.objects.create_user(
             "admin-gl", email="admin-gl@example.com", password="x", is_superuser=True
         )
+        self._link_google(self.alice, given_name="Alice")
+        self._link_google(self.bob, given_name="Bob")
         FamilyMembership.objects.create(
             family=self.smith_family,
             user=self.alice,
@@ -6817,6 +6834,14 @@ class GlobalLeaderboardTests(TestCase):
             user=self.admin,
             role=FamilyMembership.Role.MEMBER,
             status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _link_google(self, user, *, given_name=None):
+        return SocialAccount.objects.create(
+            user=user,
+            provider="google",
+            uid=f"google-{user.id}",
+            extra_data={"given_name": given_name or user.username},
         )
 
     def _points(self, pool, user, total):
@@ -6847,6 +6872,16 @@ class GlobalLeaderboardTests(TestCase):
     def test_leaderboard_excludes_superusers_and_blends_accuracy(self):
         self._points(self.smith_pool, self.alice, 10)
         self._points(self.smith_pool, self.admin, 999)  # admin must not appear
+        local_adminjim = User.objects.create_user(
+            "ADMINJIM", email="adminjim@example.com", password="x"
+        )
+        FamilyMembership.objects.create(
+            family=self.smith_family,
+            user=local_adminjim,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        self._points(self.smith_pool, local_adminjim, 250)
         # The global leaderboard blends accuracy from the pool-null (global)
         # userStats row — the one update_stats writes per user in its default,
         # season-wide run. A per-pool row (pool=<pool>) is a different record and
@@ -6867,6 +6902,7 @@ class GlobalLeaderboardTests(TestCase):
         ids = [e["userID"] for e in response.context["entries"]]
         self.assertIn(str(self.alice.id), ids)
         self.assertNotIn(str(self.admin.id), ids)
+        self.assertNotIn(str(local_adminjim.id), ids)
         alice = next(e for e in response.context["entries"] if e["userID"] == str(self.alice.id))
         self.assertEqual(alice["accuracy"], 80)  # 8/10 from the global row, not 9/20
 
@@ -6904,6 +6940,7 @@ class GlobalLeaderboardTests(TestCase):
         self._points(self.smith_pool, self.alice, 10)
         self._points(self.smith_pool, self.bob, 10)
         carol = User.objects.create_user("carol-gl", email="carol-gl@example.com", password="x")
+        self._link_google(carol, given_name="Carol")
         FamilyMembership.objects.create(
             family=self.smith_family,
             user=carol,

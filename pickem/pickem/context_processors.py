@@ -38,7 +38,7 @@ def theme_context(request):
         'user_dark_mode': None,
         'user_theme_preference': None,
         'user_is_commissioner': False,
-        # Pure profile flag (no superuser OR) — drives the Commissioner badge.
+        # Tenant-scoped owner flag derived from the current family membership.
         'user_is_commissioner_flag': False,
         # Stable per-deployment cache-buster for static assets (see settings).
         'static_version': settings.STATIC_VERSION,
