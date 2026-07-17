@@ -6,6 +6,10 @@ and competition again — "NFL Pick'em - 2026 - 2027 - 2026-2027 NFL". The
 default is now "Pick'em Pool"; this renames only pools whose name exactly
 matches the old default for their own season, so any commissioner-customized
 name is left alone.
+
+The reverse is a no-op: the forward pass doesn't record which rows it
+changed, so a real reversal would clobber every pool legitimately named
+"Pick'em Pool" (including ones created after this migration ran).
 """
 
 from django.db import migrations
@@ -28,15 +32,6 @@ def rename_default_pools(apps, schema_editor):
             pool.save(update_fields=['name', 'updated_at'])
 
 
-def restore_seasoned_names(apps, schema_editor):
-    Pool = apps.get_model('pickem_api', 'Pool')
-    for pool in Pool.objects.filter(name=NEW_DEFAULT_NAME):
-        old_name = old_default_name(pool.season)
-        if old_name:
-            pool.name = old_name
-            pool.save(update_fields=['name', 'updated_at'])
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -44,5 +39,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(rename_default_pools, restore_seasoned_names),
+        migrations.RunPython(rename_default_pools, migrations.RunPython.noop),
     ]

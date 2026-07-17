@@ -1,7 +1,9 @@
 # Family Pickem — TODO
 
-Audited 2026-07-17: every open item below was verified against the current
-code. Finished and stale items are collapsed under **Done** at the bottom.
+Audited 2026-07-17: every code-related open item below was verified against
+the current code (manual infra chores, like the AWS Secrets Manager cleanup,
+can't be — they're marked as manual). Finished and stale items are collapsed
+under **Done** at the bottom.
 
 ## Active Backlog
 

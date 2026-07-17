@@ -53,9 +53,12 @@ class Command(BaseCommand):
         stats_provider = EspnGameStatsProvider()
         awarded = 0
         # Skip pools of deactivated (soft-deleted) families — no bonuses are
-        # awarded while a family is inactive.
+        # awarded while a family is inactive — and other seasons' pools,
+        # which could never award anything for this season anyway.
         for pool in Pool.objects.filter(
-            status=Pool.Status.ACTIVE, family__status=Family.Status.ACTIVE
+            status=Pool.Status.ACTIVE,
+            season=season,
+            family__status=Family.Status.ACTIVE,
         ):
             try:
                 result = award_weekly_winners(
