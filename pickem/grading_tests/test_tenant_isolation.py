@@ -16,7 +16,7 @@ per-pool ``PoolSettings``. So the assertions here are:
 from django.core.management import call_command
 from io import StringIO
 
-from pickem_api.models import userSeasonPoints
+from pickem_api.models import Family, GamePicks, PoolSettings, userSeasonPoints
 
 from .factories import create_game, create_league, create_user, finish_game, join_family, make_pick
 from .harness import GradingTestCase
@@ -146,3 +146,42 @@ class TenantIsolationTest(GradingTestCase):
         # The regular full pipeline then brings Jones up to date too.
         self.run_pipeline()
         self.assertStandings(jones.pool, [(jones["cara"], 5, 1)])
+
+    def test_deactivated_family_is_skipped_by_the_pipeline(self):
+        games = _shared_slate()
+        active = create_league("alice", family_name="Active")
+        sunset = create_league(
+            "sam", family_name="Sunset",
+            missed_pick_policy=PoolSettings.MissedPickPolicy.AUTO_HOME,
+        )
+        for game in games:
+            make_pick(active.pool, active["alice"], game, "home")
+            # sam never picks — auto_home would normally fill these in.
+        for game in games:
+            finish_game(game, 20, 10)
+
+        # Commissioner soft-deleted the family before grading ran.
+        sunset.family.status = Family.Status.INACTIVE
+        sunset.family.save(update_fields=["status"])
+
+        self.run_pipeline()
+
+        # The inactive family got no auto picks, no standings rows, no
+        # winner bonus — while the active family graded normally.
+        self.assertFalse(
+            GamePicks.objects.filter(pool=sunset.pool).exists(),
+            "auto-pick policy must not fire for a deactivated family",
+        )
+        self.assertFalse(
+            userSeasonPoints.objects.filter(pool=sunset.pool).exists(),
+            "standings must not be created for a deactivated family",
+        )
+        self.assertStandings(active.pool, [(active["alice"], 5, 1)])
+
+        # Reactivation self-heals on the next scheduled run.
+        sunset.family.status = Family.Status.ACTIVE
+        sunset.family.save(update_fields=["status"])
+        self.run_pipeline()
+        self.assertTrue(
+            userSeasonPoints.objects.filter(pool=sunset.pool).exists()
+        )

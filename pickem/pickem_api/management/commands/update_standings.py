@@ -30,6 +30,7 @@ from django.db.models import F
 
 from pickem.utils import get_season
 from pickem_api.models import (
+    Family,
     FamilyMembership,
     GamePicks,
     GamesAndScores,
@@ -69,8 +70,15 @@ class Command(BaseCommand):
         if pool_id_filter:
             pick_filter["pool_id"] = pool_id_filter
 
+        picks_qs = GamePicks.objects.filter(**pick_filter)
+        if not pool_id_filter:
+            # Deactivated (soft-deleted) families keep their data but stop
+            # being recomputed; exclude() (not filter) so legacy null-pool
+            # picks are unaffected. An explicit --pool skips this so
+            # operators can still repair an inactive family's pool.
+            picks_qs = picks_qs.exclude(pool__family__status=Family.Status.INACTIVE)
         pick_combos = (
-            GamePicks.objects.filter(**pick_filter)
+            picks_qs
             # order_by() clears Meta.ordering (gameWeek), which would leak
             # into the SELECT and break DISTINCT on (pool_id, userID).
             .order_by()
@@ -85,6 +93,8 @@ class Command(BaseCommand):
         season_pools = Pool.objects.filter(status=Pool.Status.ACTIVE, season=season)
         if pool_id_filter:
             season_pools = season_pools.filter(id=pool_id_filter)
+        else:
+            season_pools = season_pools.filter(family__status=Family.Status.ACTIVE)
         for pool in season_pools:
             member_ids = FamilyMembership.objects.filter(
                 family=pool.family,

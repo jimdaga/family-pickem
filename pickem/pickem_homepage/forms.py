@@ -1,40 +1,11 @@
 from django import forms
 from django.contrib.auth.models import User
-from django.core.validators import URLValidator
+from django.core.validators import URLValidator, validate_email
 from pickem_api.models import FamilyMembership, GamePicks, PoolSettings, userSeasonPoints
 from .models import MessageBoardPost, MessageBoardComment, SiteBanner
 
 
-class CreateFamilyForm(forms.Form):
-    name = forms.CharField(
-        label="Family name",
-        max_length=200,
-        min_length=2,
-        strip=True,
-        widget=forms.TextInput(attrs={
-            'class': 'w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
-            'placeholder': 'Smith Family',
-            'autocomplete': 'organization',
-        }),
-    )
-    invite_emails_placeholder = forms.CharField(
-        label="Who do you plan to invite?",
-        required=False,
-        strip=True,
-        widget=forms.Textarea(attrs={
-            'class': 'w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
-            'placeholder': 'cousin@example.com, aunt@example.com',
-            'rows': 3,
-            'autocomplete': 'off',
-        }),
-        help_text="Optional placeholder only for now. Email invitations will be wired up separately.",
-    )
-
-    def clean_name(self):
-        name = self.cleaned_data.get('name', '').strip()
-        if not name:
-            raise forms.ValidationError("Family name is required.")
-        return " ".join(name.split())
+MAX_CREATE_FAMILY_INVITES = 20
 
 
 class JoinFamilyForm(forms.Form):
@@ -93,61 +64,10 @@ class DisabledOptionSelect(forms.Select):
         return option
 
 
-class FamilyAdminSettingsForm(forms.Form):
-    family_name = forms.CharField(
-        label="Family display name",
-        max_length=200,
-        min_length=2,
-        strip=True,
-        widget=forms.TextInput(attrs={
-            'class': ADMIN_TEXT_INPUT_CLASSES,
-            'autocomplete': 'organization',
-        }),
-    )
-    pool_name = forms.CharField(
-        label="Pool display name",
-        max_length=200,
-        min_length=2,
-        strip=True,
-        widget=forms.TextInput(attrs={
-            'class': ADMIN_TEXT_INPUT_CLASSES,
-            'autocomplete': 'off',
-        }),
-    )
-    logo_url = forms.CharField(
-        label="Family logo URL",
-        max_length=500,
-        required=False,
-        strip=True,
-        widget=forms.TextInput(attrs={
-            'class': ADMIN_TEXT_INPUT_CLASSES,
-            'placeholder': 'https://example.com/logo.png or /static/images/logo.png',
-            'autocomplete': 'off',
-        }),
-        help_text="Shown at the top of your family's lobby. Leave blank to use the default Pick'em logo.",
-    )
-
-    def clean_logo_url(self):
-        value = (self.cleaned_data.get('logo_url') or '').strip()
-        if not value:
-            return value
-        # Site-relative paths are fine, but '//' is protocol-relative (an
-        # arbitrary external host) and browsers normalize '\' to '/', so
-        # '/\evil.com/...' would resolve protocol-relative too — both must go
-        # through the URL validator instead of the fast path.
-        if (
-            value.startswith('/')
-            and not value.startswith('//')
-            and '\\' not in value
-        ):
-            return value
-        try:
-            URLValidator(schemes=['http', 'https'])(value)
-        except forms.ValidationError:
-            raise forms.ValidationError(
-                "Enter a full URL (https://...) or a site-relative path starting with /."
-            )
-        return value
+class PoolRulesForm(forms.Form):
+    """The full set of pool rule fields, shared by the admin Settings page
+    and the create-family flow so both enforce identical validation
+    (locked pick types, tiebreaker-chain sanity, bonus/fee amounts)."""
 
     picks_lock_at_kickoff = forms.BooleanField(
         label="Pick Locking",
@@ -300,6 +220,63 @@ class FamilyAdminSettingsForm(forms.Form):
             )
         return cleaned
 
+
+class FamilyAdminSettingsForm(PoolRulesForm):
+    family_name = forms.CharField(
+        label="Family display name",
+        max_length=200,
+        min_length=2,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'autocomplete': 'organization',
+        }),
+    )
+    pool_name = forms.CharField(
+        label="Pool display name",
+        max_length=200,
+        min_length=2,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'autocomplete': 'off',
+        }),
+    )
+    logo_url = forms.CharField(
+        label="Family logo URL",
+        max_length=500,
+        required=False,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'placeholder': 'https://example.com/logo.png or /static/images/logo.png',
+            'autocomplete': 'off',
+        }),
+        help_text="Shown at the top of your family's lobby. Leave blank to use the default Pick'em logo.",
+    )
+
+    def clean_logo_url(self):
+        value = (self.cleaned_data.get('logo_url') or '').strip()
+        if not value:
+            return value
+        # Site-relative paths are fine, but '//' is protocol-relative (an
+        # arbitrary external host) and browsers normalize '\' to '/', so
+        # '/\evil.com/...' would resolve protocol-relative too — both must go
+        # through the URL validator instead of the fast path.
+        if (
+            value.startswith('/')
+            and not value.startswith('//')
+            and '\\' not in value
+        ):
+            return value
+        try:
+            URLValidator(schemes=['http', 'https'])(value)
+        except forms.ValidationError:
+            raise forms.ValidationError(
+                "Enter a full URL (https://...) or a site-relative path starting with /."
+            )
+        return value
+
     def clean_family_name(self):
         name = self.cleaned_data.get('family_name', '').strip()
         if not name:
@@ -311,6 +288,79 @@ class FamilyAdminSettingsForm(forms.Form):
         if not name:
             raise forms.ValidationError("Pool display name is required.")
         return " ".join(name.split())
+
+
+class CreateFamilyForm(PoolRulesForm):
+    """Create-family signup: the family name, the full pool rules (so a new
+    commissioner makes deliberate choices instead of inheriting silent
+    defaults), and any number of invite email rows.
+
+    The email rows arrive as repeated ``invite_emails`` inputs (one per row,
+    added client-side with the + button), so they're read via
+    ``data.getlist`` rather than a declared field; ``submitted_invite_emails``
+    preserves the raw rows for re-rendering after a validation error.
+    """
+
+    name = forms.CharField(
+        label="Family name",
+        max_length=200,
+        min_length=2,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'placeholder': 'Smith Family',
+            'autocomplete': 'organization',
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.submitted_invite_emails = []
+        if self.is_bound and hasattr(self.data, 'getlist'):
+            self.submitted_invite_emails = [
+                value for value in self.data.getlist('invite_emails')
+            ]
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '').strip()
+        if not name:
+            raise forms.ValidationError("Family name is required.")
+        return " ".join(name.split())
+
+    def clean(self):
+        cleaned = super().clean()
+        emails = []
+        seen = set()
+        invalid = []
+        for value in self.submitted_invite_emails:
+            value = (value or '').strip()
+            if not value:
+                continue
+            try:
+                validate_email(value)
+            except forms.ValidationError:
+                invalid.append(value)
+                continue
+            key = value.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            emails.append(value)
+        if invalid:
+            self.add_error(
+                None,
+                "These invite emails don't look right: "
+                + ", ".join(invalid)
+                + ". Fix or clear them to continue.",
+            )
+        if len(emails) > MAX_CREATE_FAMILY_INVITES:
+            self.add_error(
+                None,
+                f"You can invite up to {MAX_CREATE_FAMILY_INVITES} people while "
+                "creating the family. Add the rest from the admin Invites page after.",
+            )
+        cleaned['invite_emails'] = emails
+        return cleaned
 
 
 class FamilyMembershipUpdateForm(forms.Form):

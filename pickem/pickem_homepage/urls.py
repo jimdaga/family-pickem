@@ -29,6 +29,11 @@ urlpatterns = [
         name='family_pool_admin_settings',
     ),
     path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/settings/delete-family/',
+        views.family_pool_admin_delete_family,
+        name='family_pool_admin_delete_family',
+    ),
+    path(
         'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/banners/',
         views.family_pool_admin_banners,
         name='family_pool_admin_banners',

@@ -4,27 +4,20 @@
 
 {% block content %}
 <main class="max-w-5xl mx-auto px-6 py-10">
-    <section class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-            <p class="text-sm font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-3">Choose family</p>
-            <h1 class="text-3xl lg:text-4xl font-black text-text-dark dark:text-white mb-4">
-                Pick where you want to play
-            </h1>
-            <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
-                Use this page to choose a family pool, manage your global profile, or jump into families you oversee as a superuser.
-            </p>
-        </div>
-        <a href="{% url 'create_family' %}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
-            <i class="fas fa-plus"></i>
-            <span>Add a family</span>
-        </a>
+    <section class="mb-8">
+        <p class="text-sm font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-3">Choose family</p>
+        <h1 class="text-3xl lg:text-4xl font-black text-text-dark dark:text-white mb-4">
+            Pick where you want to play
+        </h1>
+        <p class="text-base text-text-secondary-light dark:text-text-secondary max-w-2xl">
+            Choose a family to make picks, follow live scores, and keep up with the standings.
+        </p>
     </section>
 
     {% if member_family_choices %}
     <section class="space-y-4">
         <div>
             <h2 class="text-sm font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Families you're part of</h2>
-            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Real memberships where you can make picks and play.</p>
         </div>
         {% for choice in member_family_choices %}
         <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -109,5 +102,19 @@
         {% endfor %}
     </section>
     {% endif %}
+
+    <section class="mt-10 rounded-lg border border-dashed border-border-light dark:border-border-subtle p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <h2 class="text-sm font-bold text-text-dark dark:text-white">Starting a brand-new league?</h2>
+            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
+                Most people join an existing family with an invite. Create a new one only
+                if you're the commissioner of a separate group of players.
+            </p>
+        </div>
+        <a href="{% url 'create_family' %}" class="inline-flex items-center justify-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white hover:bg-border-light dark:hover:bg-surface-hover transition-colors flex-none">
+            <i class="fas fa-plus"></i>
+            <span>Add a family</span>
+        </a>
+    </section>
 </main>
 {% endblock %}
