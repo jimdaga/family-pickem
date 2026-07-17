@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import User
@@ -811,16 +812,20 @@ class currentSeason(models.Model):
 
 
 class ScheduledJobConfig(models.Model):
-    """Editable cadence for a recurring APScheduler job (see scheduler.JOB_REGISTRY).
+    """Editable cadence for one orchestrated job (a pipeline step or a standalone
+    evaluator — see scheduler.ORCHESTRATED_JOBS).
 
-    The scheduler reads this at start() and on live reschedule; the superadmin
-    console edits it. Only job_ids present in JOB_REGISTRY are ever created here.
+    The scheduler's single orchestrator tick reads these every minute and runs
+    each job whose row is enabled and due (now - last_run_at >= interval). The
+    superadmin console edits interval/enabled; last_run_at is bookkeeping the
+    orchestrator writes.
     """
     job_id = models.CharField(max_length=100, unique=True)
     interval_minutes = models.PositiveIntegerField(
         default=1, validators=[MinValueValidator(1)],
     )
     enabled = models.BooleanField(default=True)
+    last_run_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -830,16 +835,21 @@ class ScheduledJobConfig(models.Model):
         state = 'on' if self.enabled else 'off'
         return f'{self.job_id}: every {self.interval_minutes}m ({state})'
 
-    @classmethod
-    def seed_from_registry(cls):
-        """Create a config row for any registry job that has none. Never
-        overwrites an existing (possibly edited) row."""
-        from pickem_api.scheduler import JOB_REGISTRY  # local: scheduler imports models
+    def is_due(self, now):
+        if self.last_run_at is None:
+            return True
+        return (now - self.last_run_at) >= timedelta(minutes=self.interval_minutes)
 
-        for job_id, spec in JOB_REGISTRY.items():
+    @classmethod
+    def seed_from_pipeline(cls):
+        """Create a config row for any orchestrated job that has none. Never
+        overwrites an existing (possibly edited) row."""
+        from pickem_api.scheduler import JOB_DEFAULT_MINUTES  # local: scheduler imports models
+
+        for job_id, default_minutes in JOB_DEFAULT_MINUTES.items():
             cls.objects.get_or_create(
                 job_id=job_id,
-                defaults={'interval_minutes': spec['default_minutes']},
+                defaults={'interval_minutes': default_minutes},
             )
 
 
@@ -856,3 +866,34 @@ class RunningJobMarker(models.Model):
 
     def __str__(self):
         return f'{self.job_id} running since {self.started_at}'
+
+
+class JobRun(models.Model):
+    """One execution of an orchestrated job. Its `run_id` is stamped onto every
+    SuperAdminLogEntry written during the run, so the jobs page can link a run to
+    its exact logs."""
+
+    class Status(models.TextChoices):
+        RUNNING = 'running', 'Running'
+        SUCCESS = 'success', 'Success'
+        ERROR = 'error', 'Error'
+
+    run_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    job_id = models.CharField(max_length=100, db_index=True)
+    started_at = models.DateTimeField(default=timezone.now)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.RUNNING,
+    )
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+    exception = models.TextField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['job_id', '-started_at'], name='jobrun_job_started_idx'),
+            models.Index(fields=['-started_at'], name='jobrun_started_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.job_id} {self.status} @ {self.started_at:%Y-%m-%d %H:%M:%S}'

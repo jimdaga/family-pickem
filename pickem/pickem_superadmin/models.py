@@ -80,12 +80,17 @@ class SuperAdminLogEntry(models.Model):
     traceback = models.TextField(blank=True, null=True)
     pathname = models.CharField(max_length=255, blank=True, null=True)
     lineno = models.PositiveIntegerField(blank=True, null=True)
+    # Set (via a contextvar the DatabaseLogHandler reads) while a scheduled job
+    # runs, so a run's logs can be pulled by run_id and shown on the jobs page.
+    run_id = models.UUIDField(null=True, blank=True, db_index=True)
+    job_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
 
     class Meta:
         ordering = ['-timestamp']
         indexes = [
             models.Index(fields=['level_no', '-timestamp'], name='sa_log_level_ts_idx'),
             models.Index(fields=['-timestamp'], name='sa_log_ts_idx'),
+            models.Index(fields=['run_id'], name='sa_log_run_idx'),
         ]
 
     def __str__(self):

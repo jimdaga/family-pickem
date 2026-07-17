@@ -41,11 +41,12 @@ def run_command(command_name):
     """APScheduler job target. Must be importable at module level."""
     if command_name not in QUEUEABLE_COMMANDS:
         raise ValueError(f'Command not allowed: {command_name}')
-    # Capture the command's output into the logs console, same as the recurring
-    # pipeline, so a hand-queued run is just as visible.
-    from pickem_api.log_bridge import call_command_logged
+    # Run it through the orchestrator's per-run machinery so a hand-queued run
+    # gets a JobRun record, a run_id, and per-step logging — exactly like the
+    # scheduled tick.
+    from pickem_api.scheduler import run_job_once
 
-    call_command_logged(command_name)
+    run_job_once(command_name)
 
 
 def get_scheduler():
@@ -138,31 +139,20 @@ def _scheduler_is_scheduling():
 
 
 def scheduler_health():
-    """Is anything actually executing jobs? A queued job on a dead scheduler sits
-    in the jobstore forever, so the console must be able to tell.
-
-    Alive means either a recent execution OR a registered job scheduled to run
-    (the fresh-deploy case). A dead scheduler leaves stale (past) next_run_times
-    and no recent executions, so it still reads as not alive.
+    """Is the orchestrator alive? A live scheduler always keeps the `pipeline_tick`
+    job registered with a future next_run_time; a recent JobRun confirms it is
+    actually executing. A dead scheduler leaves a stale (past) next_run_time and
+    no recent runs, so it reads as not alive.
     """
-    from django_apscheduler.models import DjangoJobExecution
+    from pickem_api.models import JobRun
 
-    last = DjangoJobExecution.objects.order_by('-run_time').first()
-
-    if last is None:
-        scheduling = _scheduler_is_scheduling()
-        return {
-            'alive': scheduling,
-            'last_run': None,
-            'last_status': None,
-            'stale': not scheduling,
-        }
-
-    recent = (timezone.now() - last.run_time) <= STALE_AFTER
-    alive = recent or _scheduler_is_scheduling()
+    last = JobRun.objects.order_by('-started_at').first()
+    scheduling = _scheduler_is_scheduling()
+    recent = last is not None and (timezone.now() - last.started_at) <= STALE_AFTER
+    alive = scheduling or recent
     return {
         'alive': alive,
-        'last_run': last.run_time,
-        'last_status': last.status,
+        'last_run': last.started_at if last else None,
+        'last_status': last.status if last else None,
         'stale': not alive,
     }

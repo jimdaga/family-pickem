@@ -337,7 +337,12 @@ SUPERADMIN_LOG_ROOT_LEVEL = os.environ.get('SUPERADMIN_LOG_ROOT_LEVEL', 'WARNING
 LOG_RETENTION_DAYS = int(os.environ.get('LOG_RETENTION_DAYS', '14'))
 LOG_MAX_ROWS = int(os.environ.get('LOG_MAX_ROWS', '10000'))
 
-_SUPERADMIN_APP_LOGGERS = ('pickem_api', 'pickem_homepage', 'pickem_superadmin')
+# 'django.job' is the per-step pipeline logger namespace (django.job.<step>).
+# It must be listed explicitly at app level — under 'django' it would otherwise
+# inherit the root WARNING threshold and INFO step output would be dropped.
+_SUPERADMIN_APP_LOGGERS = (
+    'pickem_api', 'pickem_homepage', 'pickem_superadmin', 'django.job',
+)
 
 LOGGING = {
     'version': 1,

@@ -26,6 +26,19 @@ def logs(request):
     if query:
         entries = entries.filter(message__icontains=query)
 
+    job = request.GET.get('job', '').strip()
+    if job:
+        entries = entries.filter(job_id__icontains=job)
+
+    # Deep-linked from the jobs page: show exactly one run's log lines.
+    run_id = request.GET.get('run_id', '').strip()
+    if run_id:
+        import uuid as _uuid
+        try:
+            entries = entries.filter(run_id=_uuid.UUID(run_id))
+        except (ValueError, TypeError):
+            entries = entries.none()
+
     page_obj = Paginator(entries, LOGS_PER_PAGE).get_page(request.GET.get('page'))
 
     return render(request, 'superadmin/logs.html', {
@@ -34,4 +47,6 @@ def logs(request):
         'level_filter': level,
         'logger_filter': logger_name,
         'q': query,
+        'job_filter': job,
+        'run_id_filter': run_id,
     })

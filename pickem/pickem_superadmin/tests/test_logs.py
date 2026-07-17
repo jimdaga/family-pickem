@@ -52,6 +52,29 @@ class DatabaseLogHandlerTests(TestCase):
         self._handler().emit(self._record(msg='x' * (MAX_MESSAGE_LEN + 500)))
         self.assertEqual(len(SuperAdminLogEntry.objects.get().message), MAX_MESSAGE_LEN)
 
+    def test_stamps_run_context_when_a_job_is_running(self):
+        import uuid
+
+        from pickem_api import scheduler
+
+        run_id = uuid.uuid4()
+        t1 = scheduler._current_run_id.set(run_id)
+        t2 = scheduler._current_job_id.set('update_picks')
+        try:
+            self._handler().emit(self._record(msg='inside a run'))
+        finally:
+            scheduler._current_run_id.reset(t1)
+            scheduler._current_job_id.reset(t2)
+        row = SuperAdminLogEntry.objects.get()
+        self.assertEqual(str(row.run_id), str(run_id))
+        self.assertEqual(row.job_id, 'update_picks')
+
+    def test_no_run_context_leaves_run_fields_null(self):
+        self._handler().emit(self._record(msg='outside a run'))
+        row = SuperAdminLogEntry.objects.get()
+        self.assertIsNone(row.run_id)
+        self.assertIsNone(row.job_id)
+
     def test_exception_records_capture_a_traceback(self):
         try:
             raise ValueError('boom')

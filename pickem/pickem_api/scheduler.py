@@ -12,11 +12,12 @@ so ``replace_existing`` keeps a single ``update_all`` job registered across
 restarts.
 """
 
+import contextvars
+import functools
 import logging
+import traceback
 from datetime import timedelta
 
-from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_SUBMITTED
-from apscheduler.jobstores.base import JobLookupError
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from django.conf import settings
@@ -59,104 +60,132 @@ def current_running_jobs():
     return list(RunningJobMarker.objects.filter(started_at__gte=cutoff))
 
 
-def _on_job_submitted(event):
-    """APScheduler EVENT_JOB_SUBMITTED: a job started executing."""
-    try:
-        mark_job_started(event.job_id)
-    except Exception:
-        logger.exception('Failed to record job start marker')
+# --- per-run log context -------------------------------------------------
+# Set around each job run so DatabaseLogHandler can stamp run_id/job_id onto
+# every log row written during the run (see pickem_superadmin.logging).
+_current_run_id = contextvars.ContextVar('pickem_job_run_id', default=None)
+_current_job_id = contextvars.ContextVar('pickem_job_id', default=None)
 
 
-def _on_job_done(event):
-    """APScheduler EVENT_JOB_EXECUTED | EVENT_JOB_ERROR: a job finished."""
-    try:
-        mark_job_finished(event.job_id)
-    except Exception:
-        logger.exception('Failed to clear job start marker')
+def current_log_context():
+    """(run_id, job_id) for the job running in this context, or (None, None)."""
+    return _current_run_id.get(), _current_job_id.get()
 
 
-def run_update_all():
-    """Job target: run the full data-update pipeline."""
+def _run_command_step(job_id):
     from pickem_api.log_bridge import call_command_logged
 
-    call_command_logged("update_all", skip_records=True)
+    call_command_logged(job_id, logger_name=f'django.job.{job_id}')
 
 
-def run_update_records():
-    """Job target: refresh team records on a slower cadence."""
-    from pickem_api.log_bridge import call_command_logged
-
-    call_command_logged("update_records")
-
-
-def run_prune_logs():
-    """Job target: age out captured log rows."""
-    call_command('prune_superadmin_logs')
-
-
-def run_scheduled_email_campaigns():
-    """Job target: evaluate and send due email campaigns."""
+def _run_email_campaigns(job_id):
     from pickem_homepage.emailing import send_due_email_campaigns
 
     send_due_email_campaigns()
 
 
-# The recurring jobs whose cadence is editable from the superadmin console.
-# The console reads this to know which jobs exist and their seed defaults;
-# start() and reschedule_live() read it to (re)register those jobs. Keep this
-# to genuinely user-tunable pipeline jobs only (maintenance jobs like the log
-# prune are registered separately and are NOT listed here, so they can't be
-# edited).
-JOB_REGISTRY = {
-    'update_all': {
-        'func': run_update_all,
-        'name': 'Run full data-update pipeline',
-        'default_minutes': UPDATE_INTERVAL_MINUTES,
-    },
-    'update_records': {
-        'func': run_update_records,
-        'name': 'Run team records refresh',
-        'default_minutes': RECORDS_INTERVAL_MINUTES,
-    },
-    'send_scheduled_email_campaigns': {
-        'func': run_scheduled_email_campaigns,
-        'name': 'Evaluate scheduled email campaigns',
-        'default_minutes': EMAIL_CAMPAIGN_INTERVAL_MINUTES,
-    },
-}
+# The data pipeline in strict dependency order (games -> picks -> standings ->
+# winners/rankings -> stats). Order is fixed by data dependencies and is NOT
+# user-editable. Each entry: (job_id, label, default_minutes).
+PIPELINE = [
+    ('update_records', 'Team records', RECORDS_INTERVAL_MINUTES),
+    ('update_games', 'Game scores', UPDATE_INTERVAL_MINUTES),
+    ('update_missed_picks', 'Missed picks', UPDATE_INTERVAL_MINUTES),
+    ('update_picks', 'Score picks', UPDATE_INTERVAL_MINUTES),
+    ('update_standings', 'Standings', UPDATE_INTERVAL_MINUTES),
+    ('update_weekly_winners', 'Weekly winners', UPDATE_INTERVAL_MINUTES),
+    ('update_rankings', 'Rankings', UPDATE_INTERVAL_MINUTES),
+    ('update_season_winners', 'Season winners', UPDATE_INTERVAL_MINUTES),
+    ('update_stats', 'User stats', 5),
+]
+
+# Standalone evaluators with no pipeline dependency; run after the pipeline in
+# the same tick when due. Each: (job_id, label, default_minutes, run_callable).
+STANDALONE = [
+    ('send_scheduled_email_campaigns', 'Email campaigns',
+     EMAIL_CAMPAIGN_INTERVAL_MINUTES, _run_email_campaigns),
+]
 
 
-def _register_job(scheduler, job_id, interval_minutes):
-    """(Re)register one registry job at the given cadence."""
-    spec = JOB_REGISTRY[job_id]
-    scheduler.add_job(
-        spec['func'],
-        trigger=IntervalTrigger(minutes=interval_minutes),
-        id=job_id,
-        name=spec['name'],
-        max_instances=1,
-        coalesce=True,
-        replace_existing=True,
-    )
+def orchestrated_jobs():
+    """Ordered (job_id, label, default_minutes, run) — pipeline steps first (in
+    dependency order), then standalone evaluators."""
+    jobs = [
+        (jid, label, mins, functools.partial(_run_command_step, jid))
+        for (jid, label, mins) in PIPELINE
+    ]
+    jobs += list(STANDALONE)
+    return jobs
 
 
-def reschedule_live(job_id, interval_minutes, enabled):
-    """Apply a schedule change to the running scheduler in THIS process.
+JOB_DEFAULT_MINUTES = {jid: mins for (jid, _l, mins, _r) in orchestrated_jobs()}
+JOB_LABELS = {jid: label for (jid, label, _m, _r) in orchestrated_jobs()}
+JOB_ORDER = [jid for (jid, _l, _m, _r) in orchestrated_jobs()]
+_RUN_BY_ID = {jid: run for (jid, _l, _m, run) in orchestrated_jobs()}
 
-    Returns True if applied live, False if this process has no live scheduler
-    (the change is still persisted in ScheduledJobConfig and takes effect on the
-    next start()). Re-registers from scratch so an interval change and an
-    enable/disable use one code path.
-    """
-    if _scheduler is None or job_id not in JOB_REGISTRY:
-        return False
+
+def run_job_once(job_id, run=None):
+    """Execute one orchestrated job now: record a JobRun, set the per-run log
+    context, run it, update markers + last_run_at. A failure is captured on the
+    JobRun and never propagates (one bad step must not abort the tick)."""
+    from django.utils import timezone
+    from pickem_api.models import JobRun, ScheduledJobConfig
+
+    if run is None:
+        run = _RUN_BY_ID.get(job_id) or functools.partial(_run_command_step, job_id)
+
+    job_run = JobRun.objects.create(job_id=job_id, started_at=timezone.now())
+    token_run = _current_run_id.set(job_run.run_id)
+    token_job = _current_job_id.set(job_id)
+    mark_job_started(job_id)
+    status = JobRun.Status.SUCCESS
+    exc_text = None
     try:
-        _scheduler.remove_job(job_id)
-    except JobLookupError:
-        pass
-    if enabled:
-        _register_job(_scheduler, job_id, interval_minutes)
-    return True
+        run()
+    except Exception:
+        status = JobRun.Status.ERROR
+        exc_text = traceback.format_exc()
+        logging.getLogger(f'django.job.{job_id}').exception('Job %s failed', job_id)
+    finally:
+        finished = timezone.now()
+        JobRun.objects.filter(pk=job_run.pk).update(
+            finished_at=finished,
+            status=status,
+            duration_ms=int((finished - job_run.started_at).total_seconds() * 1000),
+            exception=exc_text,
+        )
+        ScheduledJobConfig.objects.filter(job_id=job_id).update(last_run_at=finished)
+        mark_job_finished(job_id)
+        _current_job_id.reset(token_job)
+        _current_run_id.reset(token_run)
+    return job_run
+
+
+def run_pipeline_tick():
+    """The single orchestrator job (every minute). Runs each enabled, due job in
+    dependency order — sequentially, so steps never overlap or run out of order.
+    max_instances=1 means a slow tick just delays the next one."""
+    from django.utils import timezone
+    from pickem_api.models import ScheduledJobConfig
+
+    ScheduledJobConfig.seed_from_pipeline()
+    configs = {c.job_id: c for c in ScheduledJobConfig.objects.all()}
+    now = timezone.now()
+    for job_id, _label, _mins, run in orchestrated_jobs():
+        cfg = configs.get(job_id)
+        if cfg is None or not cfg.enabled or not cfg.is_due(now):
+            continue
+        run_job_once(job_id, run)
+
+
+def run_prune_logs():
+    """Job target: age out captured log rows and old job-run records."""
+    from django.utils import timezone
+    from pickem_api.models import JobRun
+
+    call_command('prune_superadmin_logs')
+    cutoff = timezone.now() - timedelta(days=getattr(settings, 'LOG_RETENTION_DAYS', 14))
+    JobRun.objects.filter(started_at__lt=cutoff).delete()
 
 
 def start():
@@ -166,17 +195,32 @@ def start():
         return _scheduler
 
     from django_apscheduler.jobstores import DjangoJobStore
+    from django_apscheduler.models import DjangoJob
 
     from pickem_api.models import ScheduledJobConfig
 
     scheduler = BackgroundScheduler(timezone=settings.TIME_ZONE)
     scheduler.add_jobstore(DjangoJobStore(), "default")
 
-    ScheduledJobConfig.seed_from_registry()
-    for cfg in ScheduledJobConfig.objects.filter(job_id__in=JOB_REGISTRY.keys()):
-        if cfg.enabled:
-            _register_job(scheduler, cfg.job_id, cfg.interval_minutes)
+    ScheduledJobConfig.seed_from_pipeline()
 
+    # Retire the old per-job APScheduler jobs (update_all/update_records/etc.):
+    # everything now runs through the single orchestrator tick. Removing the
+    # stale rows keeps the jobstore from trying to import functions that no
+    # longer exist.
+    DjangoJob.objects.exclude(
+        id__in=('pipeline_tick', 'prune_superadmin_logs')
+    ).delete()
+
+    scheduler.add_job(
+        run_pipeline_tick,
+        trigger=IntervalTrigger(minutes=1),
+        id='pipeline_tick',
+        name='Pipeline orchestrator',
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
     scheduler.add_job(
         run_prune_logs,
         trigger=IntervalTrigger(hours=24),
@@ -187,12 +231,7 @@ def start():
         replace_existing=True,
     )
 
-    scheduler.add_listener(_on_job_submitted, EVENT_JOB_SUBMITTED)
-    scheduler.add_listener(_on_job_done, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
-
     scheduler.start()
     _scheduler = scheduler
-    logger.info(
-        "APScheduler started: update_all every %s minute(s)", UPDATE_INTERVAL_MINUTES
-    )
+    logger.info('APScheduler started: pipeline orchestrator tick every 1 minute')
     return scheduler
