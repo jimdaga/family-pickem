@@ -1,0 +1,169 @@
+# Grafana Cloud monitoring — k8s-monitoring chart v4.3.0 values.
+#
+# Credentials come from the ESO-managed Secret 'grafana-cloud-credentials'
+# (keys: prometheus-username, loki-username, otlp-username, profiles-username,
+# access-token). Only non-secret endpoint URLs live here. The access token is
+# the shared password for every destination.
+#
+# Full observability stack: metrics, logs, events, host, traces (OTLP), profiles
+# (Pyroscope + eBPF), cost (OpenCost). Traces/profiles receivers sit ready until
+# the app is instrumented. Fleet Management remoteConfig is deliberately NOT used
+# (config is GitOps, not portal-managed).
+cluster:
+  name: databuntu
+
+destinations:
+  grafana-cloud-metrics:
+    type: prometheus
+    url: https://prometheus-prod-56-prod-us-east-2.grafana.net/api/prom/push
+    auth:
+      type: basic
+      usernameKey: prometheus-username
+      passwordKey: access-token
+    secret:
+      create: false
+      name: grafana-cloud-credentials
+      namespace: monitoring
+
+  grafana-cloud-logs:
+    type: loki
+    url: https://logs-prod-036.grafana.net/loki/api/v1/push
+    auth:
+      type: basic
+      usernameKey: loki-username
+      passwordKey: access-token
+    secret:
+      create: false
+      name: grafana-cloud-credentials
+      namespace: monitoring
+
+  gc-otlp-endpoint:
+    type: otlp
+    url: https://otlp-gateway-prod-us-east-2.grafana.net/otlp
+    protocol: http
+    auth:
+      type: basic
+      usernameKey: otlp-username
+      passwordKey: access-token
+    secret:
+      create: false
+      name: grafana-cloud-credentials
+      namespace: monitoring
+    metrics:
+      enabled: true
+    logs:
+      enabled: true
+    traces:
+      enabled: true
+
+  grafana-cloud-profiles:
+    type: pyroscope
+    url: https://profiles-prod-001.grafana.net:443
+    auth:
+      type: basic
+      usernameKey: profiles-username
+      passwordKey: access-token
+    secret:
+      create: false
+      name: grafana-cloud-credentials
+      namespace: monitoring
+
+# --- Features ---
+clusterMetrics:
+  enabled: true
+  collector: alloy-metrics
+
+hostMetrics:
+  enabled: true
+  collector: alloy-metrics
+  linuxHosts:
+    enabled: true
+  windowsHosts:
+    enabled: false
+  energyMetrics:
+    enabled: true
+
+costMetrics:
+  enabled: true
+  collector: alloy-metrics
+
+clusterEvents:
+  enabled: true
+  collector: alloy-singleton
+
+podLogsViaLoki:
+  enabled: true
+  collector: alloy-logs
+  structuredMetadata:
+    pod: ""
+
+applicationObservability:
+  enabled: true
+  collector: alloy-receiver
+  receivers:
+    otlp:
+      grpc:
+        enabled: true
+        port: 4317
+      http:
+        enabled: true
+        port: 4318
+    zipkin:
+      enabled: true
+      port: 9411
+
+autoInstrumentation:
+  enabled: true
+  collector: alloy-metrics
+  beyla:
+    deliverTracesToApplicationObservability: false
+
+profiling:
+  enabled: true
+  collector: alloy-profiles
+  ebpf:
+    enabled: true
+
+# --- Collectors: single-node sizing ---
+collectors:
+  alloy-metrics:
+    presets:
+      - clustered
+      - statefulset
+  alloy-singleton:
+    presets:
+      - singleton
+  alloy-logs:
+    presets:
+      - filesystem-log-reader
+      - daemonset
+  alloy-receiver:
+    presets:
+      - deployment
+  alloy-profiles:
+    presets:
+      - privileged
+      - daemonset
+
+# --- Telemetry backends ---
+telemetryServices:
+  kube-state-metrics:
+    deploy: true
+  node-exporter:
+    deploy: true
+  windows-exporter:
+    deploy: false
+  kepler:
+    deploy: true
+  opencost:
+    deploy: true
+    metricsSource: grafana-cloud-metrics
+    opencost:
+      exporter:
+        defaultClusterId: databuntu
+      prometheus:
+        existingSecretName: grafana-cloud-credentials
+        username_key: prometheus-username
+        password_key: access-token
+        external:
+          url: https://prometheus-prod-56-prod-us-east-2.grafana.net/api/prom
