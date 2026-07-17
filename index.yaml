@@ -2,8 +2,23 @@ apiVersion: v1
 entries:
   family-pickem:
   - apiVersion: v2
+    appVersion: 0.0.172
+    created: "2026-07-17T13:18:02.293865013Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 12.5.6
+    description: A Helm chart to install the family pickem django app
+    digest: d15aa57a69a06322a60488c2ec0dd076f034f8e37913ff39d429ecb3a19baafa
+    name: family-pickem
+    type: application
+    urls:
+    - https://jimdaga.github.io/family-pickem/family-pickem-0.0.172.tgz
+    version: 0.0.172
+  - apiVersion: v2
     appVersion: 0.0.172-latest
-    created: "2026-07-17T13:17:13.603935719Z"
+    created: "2026-07-17T13:18:02.290359191Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -18,7 +33,7 @@ entries:
     version: 0.0.172-latest
   - apiVersion: v2
     appVersion: 0.0.171
-    created: "2026-07-17T13:17:13.60003605Z"
+    created: "2026-07-17T13:18:02.28758513Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -33,7 +48,7 @@ entries:
     version: 0.0.171
   - apiVersion: v2
     appVersion: 0.0.171-latest
-    created: "2026-07-17T13:17:13.595345714Z"
+    created: "2026-07-17T13:18:02.28409904Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -48,7 +63,7 @@ entries:
     version: 0.0.171-latest
   - apiVersion: v2
     appVersion: 0.0.170
-    created: "2026-07-17T13:17:13.591382906Z"
+    created: "2026-07-17T13:18:02.281281383Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -63,7 +78,7 @@ entries:
     version: 0.0.170
   - apiVersion: v2
     appVersion: 0.0.170-latest
-    created: "2026-07-17T13:17:13.586885282Z"
+    created: "2026-07-17T13:18:02.277908235Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -78,7 +93,7 @@ entries:
     version: 0.0.170-latest
   - apiVersion: v2
     appVersion: 0.0.169
-    created: "2026-07-17T13:17:13.58261773Z"
+    created: "2026-07-17T13:18:02.274053028Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -93,7 +108,7 @@ entries:
     version: 0.0.169
   - apiVersion: v2
     appVersion: 0.0.169-latest
-    created: "2026-07-17T13:17:13.578695102Z"
+    created: "2026-07-17T13:18:02.269846246Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -108,7 +123,7 @@ entries:
     version: 0.0.169-latest
   - apiVersion: v2
     appVersion: 0.0.168
-    created: "2026-07-17T13:17:13.573627704Z"
+    created: "2026-07-17T13:18:02.265322308Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -123,7 +138,7 @@ entries:
     version: 0.0.168
   - apiVersion: v2
     appVersion: 0.0.168-latest
-    created: "2026-07-17T13:17:13.569662117Z"
+    created: "2026-07-17T13:18:02.262240771Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -138,7 +153,7 @@ entries:
     version: 0.0.168-latest
   - apiVersion: v2
     appVersion: 0.0.167
-    created: "2026-07-17T13:17:13.564661413Z"
+    created: "2026-07-17T13:18:02.259439624Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -153,7 +168,7 @@ entries:
     version: 0.0.167
   - apiVersion: v2
     appVersion: 0.0.167-latest
-    created: "2026-07-17T13:17:13.560673724Z"
+    created: "2026-07-17T13:18:02.255645593Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -168,7 +183,7 @@ entries:
     version: 0.0.167-latest
   - apiVersion: v2
     appVersion: 0.0.166
-    created: "2026-07-17T13:17:13.556681016Z"
+    created: "2026-07-17T13:18:02.252907012Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -183,7 +198,7 @@ entries:
     version: 0.0.166
   - apiVersion: v2
     appVersion: 0.0.166-latest
-    created: "2026-07-17T13:17:13.550815624Z"
+    created: "2026-07-17T13:18:02.250194321Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -198,7 +213,7 @@ entries:
     version: 0.0.166-latest
   - apiVersion: v2
     appVersion: 0.0.165
-    created: "2026-07-17T13:17:13.546815215Z"
+    created: "2026-07-17T13:18:02.246834279Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -213,7 +228,7 @@ entries:
     version: 0.0.165
   - apiVersion: v2
     appVersion: 0.0.165-latest
-    created: "2026-07-17T13:17:13.541374521Z"
+    created: "2026-07-17T13:18:02.242994017Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -228,7 +243,7 @@ entries:
     version: 0.0.165-latest
   - apiVersion: v2
     appVersion: 0.0.164
-    created: "2026-07-17T13:17:13.537415284Z"
+    created: "2026-07-17T13:18:02.240269754Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -243,7 +258,7 @@ entries:
     version: 0.0.164
   - apiVersion: v2
     appVersion: 0.0.164-latest
-    created: "2026-07-17T13:17:13.532397415Z"
+    created: "2026-07-17T13:18:02.236645504Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -258,7 +273,7 @@ entries:
     version: 0.0.164-latest
   - apiVersion: v2
     appVersion: 0.0.163
-    created: "2026-07-17T13:17:13.528432289Z"
+    created: "2026-07-17T13:18:02.232429757Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -273,7 +288,7 @@ entries:
     version: 0.0.163
   - apiVersion: v2
     appVersion: 0.0.163-latest
-    created: "2026-07-17T13:17:13.524462385Z"
+    created: "2026-07-17T13:18:02.226642268Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -288,7 +303,7 @@ entries:
     version: 0.0.163-latest
   - apiVersion: v2
     appVersion: 0.0.162
-    created: "2026-07-17T13:17:13.519127854Z"
+    created: "2026-07-17T13:18:02.223818935Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -2966,4 +2981,4 @@ entries:
     urls:
     - https://github.com/jimdaga/family-pickem/releases/download/family-pickem-0.0.3/family-pickem-0.0.3.tgz
     version: 0.0.3
-generated: "2026-07-17T13:17:13.514605357Z"
+generated: "2026-07-17T13:18:02.220359614Z"
