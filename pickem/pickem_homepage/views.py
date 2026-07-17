@@ -1413,20 +1413,22 @@ def family_pool_admin_delete_family(request, family_slug, pool_slug):
     tenant_context = request.tenant_context
     family = tenant_context.family
     confirmed_name = (request.POST.get('confirm_name') or '').strip()
-    if confirmed_name != family.name:
-        messages.error(
-            request,
-            "The name you typed doesn't exactly match the family name, so "
-            "nothing was deactivated.",
-        )
-        return redirect(
-            'family_pool_admin_settings',
-            family_slug=family.slug,
-            pool_slug=tenant_context.pool.slug,
-        )
 
     with transaction.atomic():
         locked_family = Family.objects.select_for_update().get(id=family.id)
+        # Compare against the locked row, not the request-time snapshot — a
+        # concurrent rename must not let a stale name deactivate the family.
+        if confirmed_name != locked_family.name:
+            messages.error(
+                request,
+                "The name you typed doesn't exactly match the family name, so "
+                "nothing was deactivated.",
+            )
+            return redirect(
+                'family_pool_admin_settings',
+                family_slug=family.slug,
+                pool_slug=tenant_context.pool.slug,
+            )
         previous_status = locked_family.status
         if previous_status == Family.Status.ACTIVE:
             locked_family.status = Family.Status.INACTIVE
