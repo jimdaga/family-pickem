@@ -45,7 +45,7 @@ class RunCommandTests(TestCase):
         it into the jobstore, APScheduler's execution-time call into
         run_command() must still refuse to run it -- and must not have called
         call_command at all."""
-        with patch('pickem_api.log_bridge.call_command_logged') as runner:
+        with patch('pickem_api.scheduler.run_job_once') as runner:
             with self.assertRaises(ValueError):
                 jobs.run_command('flush')
             runner.assert_not_called()
@@ -166,7 +166,7 @@ class ScheduleEditTests(TestCase):
         self.root = User.objects.create_superuser(
             username='root', email='root@example.com', password='pw',
         )
-        ScheduledJobConfig.seed_from_registry()
+        ScheduledJobConfig.seed_from_pipeline()
         self.client.force_login(self.root)
 
     def _post(self, cfg, **overrides):
@@ -179,7 +179,7 @@ class ScheduleEditTests(TestCase):
         return self.client.post(reverse('superadmin:jobs_schedule_save'), data)
 
     def test_editing_the_interval_persists_and_audits(self):
-        cfg = ScheduledJobConfig.objects.get(job_id='update_all')
+        cfg = ScheduledJobConfig.objects.get(job_id='update_games')
         self._post(cfg, **{f'{cfg.pk}-interval_minutes': 5})
         cfg.refresh_from_db()
         self.assertEqual(cfg.interval_minutes, 5)
@@ -188,7 +188,7 @@ class ScheduleEditTests(TestCase):
         self.assertEqual(entry.changes['interval_minutes'], [1, 5])
 
     def test_interval_below_one_is_rejected(self):
-        cfg = ScheduledJobConfig.objects.get(job_id='update_all')
+        cfg = ScheduledJobConfig.objects.get(job_id='update_games')
         self._post(cfg, **{f'{cfg.pk}-interval_minutes': 0})
         cfg.refresh_from_db()
         self.assertEqual(cfg.interval_minutes, 1)  # unchanged

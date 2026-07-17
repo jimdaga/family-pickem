@@ -17,24 +17,31 @@ from pickem_superadmin.models import SuperAdminAuditLog
 
 @superadmin_required
 def jobs_page(request):
-    from django_apscheduler.models import DjangoJob, DjangoJobExecution
+    from pickem_api.models import JobRun
 
-    executions = Paginator(
-        DjangoJobExecution.objects.select_related('job').order_by('-run_time'), 25,
-    ).get_page(request.GET.get('page'))
+    runs = Paginator(JobRun.objects.all(), 25).get_page(request.GET.get('page'))
 
-    schedule_configs = ScheduledJobConfig.objects.all()
+    # One editable row per orchestrated job, in fixed pipeline (dependency)
+    # order — the order itself is read-only.
+    ScheduledJobConfig.seed_from_pipeline()
+    configs = {c.job_id: c for c in ScheduledJobConfig.objects.all()}
+    schedule_rows = []
+    for job_id in scheduler_module.JOB_ORDER:
+        cfg = configs.get(job_id)
+        if cfg is None:
+            continue
+        schedule_rows.append({
+            'job_id': job_id,
+            'label': scheduler_module.JOB_LABELS.get(job_id, job_id),
+            'config': cfg,
+            'form': ScheduledJobConfigForm(instance=cfg, prefix=str(cfg.pk)),
+        })
 
     return render(request, 'superadmin/jobs.html', {
-        'registered_jobs': DjangoJob.objects.all().order_by('id'),
-        'executions': executions,
+        'runs': runs,
+        'schedule_rows': schedule_rows,
         'queueable': jobs.QUEUEABLE_COMMANDS,
         'health': jobs.scheduler_health(),
-        'schedule_configs': schedule_configs,
-        'schedule_forms': {
-            c.pk: ScheduledJobConfigForm(instance=c, prefix=str(c.pk))
-            for c in schedule_configs
-        },
     })
 
 
@@ -96,7 +103,7 @@ def jobs_queue(request):
 @superadmin_required
 @require_POST
 def jobs_schedule_save(request):
-    ScheduledJobConfig.seed_from_registry()
+    ScheduledJobConfig.seed_from_pipeline()
     configs = list(ScheduledJobConfig.objects.all())
 
     def on_save(cfg, changes):
@@ -107,9 +114,8 @@ def jobs_schedule_save(request):
             summary=f'Updated schedule for {cfg.job_id}',
             changes=changes,
         )
-        # Apply to the live scheduler if this process is the scheduler process;
-        # otherwise the change is already persisted and applies on next start().
-        scheduler_module.reschedule_live(cfg.job_id, cfg.interval_minutes, cfg.enabled)
+        # No live reschedule needed: the orchestrator tick reads ScheduledJobConfig
+        # every minute, so an edit takes effect on the next tick.
 
     saved, failed, stale = save_matrix(
         request,

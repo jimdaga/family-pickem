@@ -1,70 +1,111 @@
+from datetime import timedelta
+from unittest.mock import patch
+
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.utils import timezone
 
-from pickem_api.models import ScheduledJobConfig
+from pickem_api.models import JobRun, RunningJobMarker, ScheduledJobConfig
 
 
 class ScheduledJobConfigTests(TestCase):
-    def test_seed_from_registry_creates_a_row_per_registry_job(self):
-        from pickem_api.scheduler import JOB_REGISTRY
+    def test_seed_creates_a_row_per_orchestrated_job(self):
+        from pickem_api.scheduler import JOB_ORDER
 
         ScheduledJobConfig.objects.all().delete()
-        ScheduledJobConfig.seed_from_registry()
+        ScheduledJobConfig.seed_from_pipeline()
         self.assertEqual(
             set(ScheduledJobConfig.objects.values_list('job_id', flat=True)),
-            set(JOB_REGISTRY.keys()),
+            set(JOB_ORDER),
         )
 
-    def test_seed_uses_registry_default_minutes(self):
+    def test_seed_uses_default_minutes(self):
         ScheduledJobConfig.objects.all().delete()
-        ScheduledJobConfig.seed_from_registry()
-        cfg = ScheduledJobConfig.objects.get(job_id='update_records')
-        self.assertEqual(cfg.interval_minutes, 30)
-        self.assertTrue(cfg.enabled)
+        ScheduledJobConfig.seed_from_pipeline()
+        self.assertEqual(ScheduledJobConfig.objects.get(job_id='update_records').interval_minutes, 30)
+        self.assertEqual(ScheduledJobConfig.objects.get(job_id='update_stats').interval_minutes, 5)
+        self.assertEqual(ScheduledJobConfig.objects.get(job_id='update_games').interval_minutes, 1)
 
     def test_seed_is_idempotent_and_preserves_edits(self):
         ScheduledJobConfig.objects.all().delete()
-        ScheduledJobConfig.seed_from_registry()
-        cfg = ScheduledJobConfig.objects.get(job_id='update_all')
-        cfg.interval_minutes = 5
-        cfg.save()
-        ScheduledJobConfig.seed_from_registry()  # must not reset the edit
-        self.assertEqual(
-            ScheduledJobConfig.objects.get(job_id='update_all').interval_minutes, 5,
-        )
+        ScheduledJobConfig.seed_from_pipeline()
+        ScheduledJobConfig.objects.filter(job_id='update_games').update(interval_minutes=7)
+        ScheduledJobConfig.seed_from_pipeline()
+        self.assertEqual(ScheduledJobConfig.objects.get(job_id='update_games').interval_minutes, 7)
 
     def test_interval_must_be_at_least_one(self):
         cfg = ScheduledJobConfig(job_id='x', interval_minutes=0)
         with self.assertRaises(ValidationError):
             cfg.full_clean()
 
+    def test_is_due(self):
+        now = timezone.now()
+        cfg = ScheduledJobConfig(job_id='x', interval_minutes=10, last_run_at=None)
+        self.assertTrue(cfg.is_due(now))  # never run
+        cfg.last_run_at = now - timedelta(minutes=5)
+        self.assertFalse(cfg.is_due(now))  # 5 < 10
+        cfg.last_run_at = now - timedelta(minutes=15)
+        self.assertTrue(cfg.is_due(now))  # 15 >= 10
 
-class RescheduleLiveTests(TestCase):
-    def test_reschedule_live_returns_false_without_a_scheduler(self):
+
+class RunJobOnceTests(TestCase):
+    def setUp(self):
+        ScheduledJobConfig.seed_from_pipeline()
+
+    def test_records_jobrun_updates_config_and_clears_marker(self):
         from pickem_api import scheduler
 
-        original = scheduler._scheduler
-        scheduler._scheduler = None
-        try:
-            self.assertFalse(scheduler.reschedule_live('update_all', 5, True))
-        finally:
-            scheduler._scheduler = original
+        ran = []
+        scheduler.run_job_once('update_picks', run=lambda: ran.append('x'))
 
-    def test_reschedule_live_reregisters_on_a_live_scheduler(self):
-        from apscheduler.schedulers.background import BackgroundScheduler
+        self.assertEqual(ran, ['x'])
+        run = JobRun.objects.get(job_id='update_picks')
+        self.assertEqual(run.status, JobRun.Status.SUCCESS)
+        self.assertIsNotNone(run.finished_at)
+        self.assertIsNotNone(ScheduledJobConfig.objects.get(job_id='update_picks').last_run_at)
+        self.assertFalse(RunningJobMarker.objects.filter(job_id='update_picks').exists())
+
+    def test_captures_failure_without_raising(self):
         from pickem_api import scheduler
 
-        fake = BackgroundScheduler()
-        fake.start(paused=True)
-        original = scheduler._scheduler
-        scheduler._scheduler = fake
-        try:
-            self.assertTrue(scheduler.reschedule_live('update_all', 5, True))
-            job = fake.get_job('update_all')
-            self.assertIsNotNone(job)
-            # Disabling removes it entirely.
-            self.assertTrue(scheduler.reschedule_live('update_all', 5, False))
-            self.assertIsNone(fake.get_job('update_all'))
-        finally:
-            fake.shutdown(wait=False)
-            scheduler._scheduler = original
+        def boom():
+            raise RuntimeError('nope')
+
+        scheduler.run_job_once('update_games', run=boom)  # must not raise
+        run = JobRun.objects.get(job_id='update_games')
+        self.assertEqual(run.status, JobRun.Status.ERROR)
+        self.assertIn('RuntimeError', run.exception)
+
+    def test_log_context_set_during_run_and_cleared_after(self):
+        from pickem_api import scheduler
+
+        seen = {}
+        scheduler.run_job_once('update_stats', run=lambda: seen.update(ctx=scheduler.current_log_context()))
+        run_id, job_id = seen['ctx']
+        self.assertIsNotNone(run_id)
+        self.assertEqual(job_id, 'update_stats')
+        self.assertEqual(scheduler.current_log_context(), (None, None))
+
+
+class PipelineTickTests(TestCase):
+    def setUp(self):
+        ScheduledJobConfig.seed_from_pipeline()
+
+    def test_runs_due_enabled_jobs_in_dependency_order(self):
+        from pickem_api import scheduler
+
+        # Disable one step; make update_records not due (it just ran).
+        ScheduledJobConfig.objects.filter(job_id='update_stats').update(enabled=False)
+        ScheduledJobConfig.objects.filter(job_id='update_records').update(last_run_at=timezone.now())
+
+        ran = []
+        with patch.object(scheduler, 'run_job_once', side_effect=lambda jid, run=None: ran.append(jid)):
+            scheduler.run_pipeline_tick()
+
+        self.assertNotIn('update_records', ran)   # not due
+        self.assertNotIn('update_stats', ran)     # disabled
+        self.assertIn('update_games', ran)
+        self.assertIn('update_picks', ran)
+        # Dependency order preserved.
+        self.assertLess(ran.index('update_games'), ran.index('update_picks'))
+        self.assertLess(ran.index('update_picks'), ran.index('update_standings'))

@@ -1546,18 +1546,24 @@ class PickemApiConfigReadyTest(TestCase):
         mock_start.assert_not_called()
 
     @patch("pickem_api.scheduler.BackgroundScheduler")
-    def test_scheduler_splits_update_records_onto_slower_cadence(self, mock_scheduler_cls):
+    def test_start_registers_the_orchestrator_and_prune_jobs(self, mock_scheduler_cls):
         import pickem_api.scheduler as scheduler_module
 
         scheduler_module._scheduler = None
         scheduler = mock_scheduler_cls.return_value
+        try:
+            started = scheduler_module.start()
 
-        started = scheduler_module.start()
-
-        self.assertEqual(started, scheduler)
-        job_names = [call.kwargs["name"] for call in scheduler.add_job.call_args_list]
-        self.assertIn("Run full data-update pipeline", job_names)
-        self.assertIn("Run team records refresh", job_names)
+            self.assertEqual(started, scheduler)
+            # Everything now runs through the single orchestrator tick; only it
+            # and the daily prune are registered as APScheduler jobs.
+            job_names = [call.kwargs["name"] for call in scheduler.add_job.call_args_list]
+            self.assertIn("Pipeline orchestrator", job_names)
+            self.assertIn("Prune superadmin logs", job_names)
+            job_ids = [call.kwargs["id"] for call in scheduler.add_job.call_args_list]
+            self.assertIn("pipeline_tick", job_ids)
+        finally:
+            scheduler_module._scheduler = None
 
 
 class WeeklyWinnerEngineTest(TestCase):

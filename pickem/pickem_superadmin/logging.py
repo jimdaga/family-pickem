@@ -33,6 +33,16 @@ class DatabaseLogHandler(logging.Handler):
                     record.exc_info
                 )[:MAX_TB_LEN]
 
+            # Attribute the row to the scheduled job run active in this context,
+            # if any, so the jobs page can link a run to its logs.
+            run_id = job_id = None
+            try:
+                from pickem_api.scheduler import current_log_context
+
+                run_id, job_id = current_log_context()
+            except Exception:
+                pass
+
             SuperAdminLogEntry.objects.create(
                 level=record.levelname,
                 level_no=record.levelno,
@@ -41,6 +51,8 @@ class DatabaseLogHandler(logging.Handler):
                 traceback=traceback_text,
                 pathname=(record.pathname or '')[:255] or None,
                 lineno=record.lineno,
+                run_id=run_id,
+                job_id=job_id,
             )
         except Exception:
             # Never raise out of logging, and never log this failure back into

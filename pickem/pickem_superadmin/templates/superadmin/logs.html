@@ -4,6 +4,12 @@
 {% block eyebrow %}observability{% endblock %}
 {% block heading %}Logs{% endblock %}
 {% block content %}
+  {% if run_id_filter %}
+    <div class="mb-3 flex items-center justify-between gap-3 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[12px] text-sky-900">
+      <span>Showing logs for one job run · <span class="sa-mono">{{ run_id_filter }}</span></span>
+      <a href="{% url 'superadmin:logs' %}" class="sa-link">clear</a>
+    </div>
+  {% endif %}
   <form method="get" class="mb-3 flex flex-wrap items-center gap-2">
     <select name="level" class="sa-select">
       <option value="">all levels</option>
@@ -11,15 +17,17 @@
         <option value="{{ lvl|level_no }}" {% if level_filter == lvl|level_no|stringformat:'s' %}selected{% endif %}>{{ lvl }}+</option>
       {% endfor %}
     </select>
+    <input type="text" name="job" value="{{ job_filter }}" placeholder="job (e.g. update_picks)…" class="sa-input">
     <input type="text" name="logger" value="{{ logger_filter }}" placeholder="logger contains…" class="sa-input">
     <input type="text" name="q" value="{{ q }}" placeholder="search message…" class="sa-input">
+    {% if run_id_filter %}<input type="hidden" name="run_id" value="{{ run_id_filter }}">{% endif %}
     <button type="submit" class="sa-btn sa-btn-default sa-btn-sm">Filter</button>
   </form>
 
   <div class="sa-table-wrap sa-table-scroll">
     <table class="sa-table">
       <thead>
-        <tr><th>time</th><th>level</th><th>logger</th><th>message</th></tr>
+        <tr><th>time</th><th>level</th><th>job</th><th>logger</th><th>message</th></tr>
       </thead>
       <tbody>
         {% for entry in page_obj %}
@@ -30,6 +38,9 @@
               {% elif entry.level == 'WARNING' %}<span class="sa-pill sa-pill-warn">{{ entry.level }}</span>
               {% else %}<span class="sa-pill sa-pill-muted">{{ entry.level }}</span>{% endif %}
             </td>
+            <td class="sa-mono text-[#667085] whitespace-nowrap">
+              {% if entry.job_id %}<a class="sa-link" href="{% url 'superadmin:logs' %}?run_id={{ entry.run_id }}">{{ entry.job_id }}</a>{% else %}—{% endif %}
+            </td>
             <td class="sa-mono text-[#667085] whitespace-nowrap">{{ entry.logger_name }}</td>
             <td>
               <div>{{ entry.message }}</div>
@@ -37,7 +48,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="4" class="sa-empty">No log entries match.</td></tr>
+          <tr><td colspan="5" class="sa-empty">No log entries match.</td></tr>
         {% endfor %}
       </tbody>
     </table>

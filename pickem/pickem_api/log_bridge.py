@@ -53,16 +53,18 @@ class LoggerWriter:
         return False
 
 
-def call_command_logged(command, **kwargs):
+def call_command_logged(command, *, logger_name=None, **kwargs):
     """Run a management command, capturing its stdout (as INFO) and stderr (as
-    ERROR) into the pipeline logger — and thus into the superadmin logs console.
+    ERROR) into a logger — and thus into the superadmin logs console.
 
-    Used by the scheduler and the manual job-queue path. Commands that fan out
-    to sub-commands (update_all) forward this same stdout/stderr down, so the
-    whole pipeline's output is captured.
+    `logger_name` picks the logger (e.g. per-step `django.job.update_picks`);
+    it defaults to the shared `pickem_api.pipeline` logger for ad-hoc use. The
+    run_id/job_id stamping is handled separately by DatabaseLogHandler reading
+    the scheduler's contextvars, so this only needs to choose the logger.
     """
-    out = LoggerWriter(pipeline_logger, logging.INFO)
-    err = LoggerWriter(pipeline_logger, logging.ERROR)
+    target_logger = logging.getLogger(logger_name) if logger_name else pipeline_logger
+    out = LoggerWriter(target_logger, logging.INFO)
+    err = LoggerWriter(target_logger, logging.ERROR)
     try:
         call_command(command, stdout=out, stderr=err, **kwargs)
     finally:
