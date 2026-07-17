@@ -726,10 +726,14 @@ def accept_invitation_for_user(request, raw_code):
 def render_invalid_invite(request, form=None, *, invite_code='', message=None):
     if form is None:
         form = JoinFamilyForm(initial={'code': invite_code} if invite_code else None)
-    form.add_error('code', message or "This invitation is invalid or unavailable.")
+    # Pass the error via context rather than form.add_error(): the link path
+    # (accept_invite_link) hands us an UNBOUND form, and add_error() raises
+    # AttributeError('cleaned_data') on an unvalidated form — which is what used
+    # to 500 the wrong-account and already-used invite cases.
     return render(request, 'pickem/join_family.html', {
         'form': form,
         'invite_code': invite_code,
+        'invite_error': message or "This invitation is invalid or unavailable.",
         'gameseason': get_season(),
     })
 
@@ -858,6 +862,27 @@ def accept_invite_link(request, invite_code):
             family_slug=invitation.family.slug,
             pool_slug=pool.slug,
         )
+
+    # The link didn't redeem. If it's simply spent/expired (no specific error)
+    # but the signed-in user is already a member of that family, send them home
+    # rather than showing an "invalid invite" page — re-clicking a used link is
+    # a normal thing to do.
+    if error is None:
+        spent = FamilyInvitation.objects.select_related('family').filter(
+            code_hash=hash_invite_code(invite_code),
+        ).first()
+        if spent and FamilyMembership.objects.filter(
+            family=spent.family, user=request.user,
+            status=FamilyMembership.Status.ACTIVE,
+        ).exists():
+            home_pool = spent.pool or get_default_active_pool_for_family(spent.family)
+            if home_pool:
+                messages.info(request, f"You're already in {spent.family.name}.")
+                return redirect(
+                    'family_pool_home',
+                    family_slug=spent.family.slug,
+                    pool_slug=home_pool.slug,
+                )
 
     form = JoinFamilyForm(initial={'code': invite_code})
     return render_invalid_invite(request, form, invite_code=invite_code, message=error)
