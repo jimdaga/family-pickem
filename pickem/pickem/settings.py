@@ -296,6 +296,12 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     # SECURE_SSL_REDIRECT is intentionally left off: the app runs on plain HTTP
     # behind the Cloudflare TLS edge, so an in-app redirect would loop.
+    # Trust the edge/ingress X-Forwarded-Proto so request.is_secure() (and thus
+    # request.build_absolute_uri) knows the original request was HTTPS — without
+    # it, generated absolute URLs (e.g. invite links in emails) come out as
+    # http://. Safe here because all traffic reaches the app through Cloudflare
+    # + the nginx ingress, which set this header.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 AWS_S3_ADDRESSING_STYLE = "virtual"
 

@@ -1,12 +1,14 @@
-{% autoescape off %}You're invited to join {{ family_name }} on Family Pick'em!
+{% autoescape off %}Come join {{ family_name }} on Family Pick'em!
 
-You've been invited to play in {{ pool_name }}. Pick game winners each week,
-climb the leaderboard, and settle who really knows football.
+Someone saved you a spot in their {{ pool_name }} league. Call each week's games,
+keep an eye on the standings, and find out who actually knows their football.
+Takes about two minutes to get in.
 
-Accept your invite:
+Join the league:
 {{ invite_link }}
 
-If you weren't expecting this, you can safely ignore this email.
+Not sure why you got this? Someone probably typo'd an email address — you can
+ignore it and nothing happens.
 
 — Family Pick'em
 {% endautoescape %}

@@ -243,9 +243,9 @@ class InviteEmailSendingTests(TestCase):
         self.assertNotIn('<script>x</script>', params['html'])
         self.assertIn('&lt;script&gt;', params['html'])
         # Branding: styled CTA, brand colour, and the wordmark are present.
-        self.assertIn('Accept your invite', params['html'])
+        self.assertIn('Join the league', params['html'])
         self.assertIn('#0B3D91', params['html'])
-        self.assertIn("Family Pick'em", params['html'])
+        self.assertIn('Family Pick', params['html'])  # wordmark (curly apostrophe)
         # Plain-text alternative carries the raw (unescaped) name and the link.
         self.assertIn('<script>x</script>Crew', params['text'])
         self.assertIn('https://family-pickem.com/invite/xyz789', params['text'])

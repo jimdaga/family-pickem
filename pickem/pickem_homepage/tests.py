@@ -6218,6 +6218,37 @@ class InviteFlowTests(TestCase):
         )
         self.assertEqual(invite.use_count, 0)
 
+    def test_link_click_wrong_account_shows_error_not_500(self):
+        # GET the email link while signed in as the wrong account: must render the
+        # graceful error page (200), not 500 on an unbound-form add_error().
+        self._invitation(raw_code="wrong-link", recipient_email="someoneelse@example.com")
+        self.client.force_login(self.joiner)
+
+        response = self.client.get(self._link_url("wrong-link"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "someoneelse@example.com")
+        self.assertFalse(
+            FamilyMembership.objects.filter(family=self.family, user=self.joiner).exists()
+        )
+
+    def test_link_click_reaccept_after_joining_redirects_home(self):
+        # Clicking a spent link after you've already joined shouldn't 500 or show
+        # "invalid"; send an existing member to their family home.
+        self._invitation(raw_code="reuse-link", recipient_email="joiner@example.com")
+        self.client.force_login(self.joiner)
+
+        first = self.client.get(self._link_url("reuse-link"))
+        self.assertEqual(first.status_code, 302)  # joined
+
+        second = self.client.get(self._link_url("reuse-link"))
+        self.assertRedirects(
+            second,
+            reverse("family_pool_home",
+                    kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug}),
+            fetch_redirect_response=False,
+        )
+
     def test_valid_invite_reactivates_inactive_same_family_membership(self):
         self._invitation(raw_code="reactivate-code")
         membership = FamilyMembership.objects.create(
