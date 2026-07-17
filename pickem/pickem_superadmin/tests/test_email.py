@@ -58,6 +58,18 @@ class EmailSettingsViewTests(TestCase):
         self.assertContains(response, 'Enable invite emails')
         self.assertContains(response, 'Weekly picks campaign')
 
+    def test_current_status_has_edit_button_and_never_exposes_key(self):
+        settings_obj = EmailProviderSettings.load()
+        settings_obj.set_api_key('re_super_secret_ABC123')
+        settings_obj.save()
+
+        response = self.client.get(reverse('superadmin:email_settings'))
+
+        self.assertContains(response, 'Edit provider settings')
+        # Status shows a masked key; the plaintext key is never rendered anywhere.
+        self.assertContains(response, settings_obj.masked_api_key)
+        self.assertNotContains(response, 're_super_secret_ABC123')
+
     def test_post_saves_encrypted_settings_and_audits_without_plaintext_key(self):
         response = self.client.post(
             reverse('superadmin:email_settings'),
