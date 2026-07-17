@@ -12,7 +12,7 @@ spec:
     # Updated automatically by GitHub Actions when a release is published
     - repoURL: https://jimdaga.github.io/family-pickem
       chart: family-pickem
-      targetRevision: "0.0.171"
+      targetRevision: "0.0.172"
       helm:
         valueFiles:
           - $values/infra/app/values-prd.yaml
