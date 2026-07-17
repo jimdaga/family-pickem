@@ -370,6 +370,7 @@ class FamilyAuditLog(models.Model):
         POOL_SETTINGS_UPDATED = 'pool_settings_updated', 'Pool settings updated'
         MANUAL_PICK_UPDATED = 'manual_pick_updated', 'Manual pick updated'
         WEEK_WINNER_UPDATED = 'week_winner_updated', 'Week winner updated'
+        FAMILY_STATUS_UPDATED = 'family_status_updated', 'Family status updated'
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT, related_name='audit_logs')
     pool = models.ForeignKey(
@@ -414,6 +415,7 @@ class FamilyAuditLog(models.Model):
                     'pool_settings_updated',
                     'manual_pick_updated',
                     'week_winner_updated',
+                    'family_status_updated',
                 ]),
                 name='family_audit_log_action_valid',
             ),

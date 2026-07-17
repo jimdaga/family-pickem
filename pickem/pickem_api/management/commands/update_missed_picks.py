@@ -28,6 +28,7 @@ from django.utils import timezone
 
 from pickem.utils import get_season
 from pickem_api.models import (
+    Family,
     FamilyMembership,
     GamePicks,
     GamesAndScores,
@@ -68,8 +69,13 @@ class Command(BaseCommand):
         now = timezone.now()
         User = get_user_model()
 
+        # Deactivated (soft-deleted) families must not keep accruing auto
+        # picks — their members can't play, so a generated pick would just
+        # poison the data for a later reactivation.
         pools = Pool.objects.filter(
-            status=Pool.Status.ACTIVE, season=season
+            status=Pool.Status.ACTIVE,
+            season=season,
+            family__status=Family.Status.ACTIVE,
         ).select_related("family")
 
         created_total = 0

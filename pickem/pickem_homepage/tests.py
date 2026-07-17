@@ -5810,24 +5810,56 @@ class CreateFamilyFlowTests(TestCase):
         self.assertContains(response, "This field is required.")
         self.assertEqual(Family.objects.count(), family_count)
 
-    def test_create_family_form_renders_invite_email_placeholder_copy(self):
+    @staticmethod
+    def _payload(**overrides):
+        """A complete create-family POST: the flow now requires explicit
+        rule choices (prefilled from PoolSettings defaults in the UI)."""
+        payload = {
+            "name": "Smith Family",
+            "picks_lock_at_kickoff": "on",
+            "allow_tiebreaker": "on",
+            "win_points": 1,
+            "tie_points": 0,
+            "weekly_winner_points": 2,
+            "primary_tiebreaker": PoolSettings.PrimaryTiebreaker.TOTAL_SCORE,
+            "secondary_tiebreaker": PoolSettings.SecondaryTiebreaker.COMBINED_YARDS,
+            "perfect_week_bonus_amount": 10,
+            "entry_fee_amount": 0,
+            "pick_type": PoolSettings.PickType.STRAIGHT_UP,
+            "missed_pick_policy": PoolSettings.MissedPickPolicy.ZERO_POINTS,
+            "late_join_policy": PoolSettings.LateJoinPolicy.OPEN,
+            "payout_structure": PoolSettings.PayoutStructure.WINNER_TAKES_ALL,
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_create_family_form_renders_rules_and_invite_rows(self):
         self.client.force_login(self.user)
 
         response = self.client.get(reverse("create_family"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Who do you plan to invite?")
-        self.assertContains(response, "Email invitations will be wired up separately.")
+        # The full rules form is inline, prefilled with the defaults.
+        self.assertContains(response, "Set your league rules")
+        self.assertContains(response, "Points per win")
+        self.assertContains(response, "Primary tiebreaker")
+        # Invites are one-email-per-row with a client-side add button.
+        self.assertContains(response, "Invite your members")
+        self.assertContains(response, 'name="invite_emails"')
+        self.assertContains(response, "Add another email")
 
     def test_valid_post_creates_family_default_pool_settings_owner_and_audit(self):
         self.client.force_login(self.user)
 
         response = self.client.post(
             reverse("create_family"),
-            {
-                "name": "Smith Family",
-                "invite_emails_placeholder": "cousin@example.com, aunt@example.com",
-            },
+            self._payload(
+                # Non-default rules prove the inline form actually persists.
+                win_points=3,
+                weekly_winner_points=5,
+                missed_pick_policy=PoolSettings.MissedPickPolicy.AUTO_HOME,
+                invite_emails=["cousin@example.com", "aunt@example.com"],
+            ),
         )
 
         family = Family.objects.get(name="Smith Family")
@@ -5844,9 +5876,9 @@ class CreateFamilyFlowTests(TestCase):
         )
         self.assertEqual(family.slug, "smith-family")
         self.assertEqual(family.status, Family.Status.ACTIVE)
-        season_raw = str(get_season()).zfill(4)
-        expected_pool_name = f"NFL Pick'em - 20{season_raw[:2]} - 20{season_raw[2:]}"
-        self.assertEqual(pool.name, expected_pool_name)
+        # No season in the default name — headers append display_season
+        # themselves, and the old seasoned default rendered it twice.
+        self.assertEqual(pool.name, "Pick'em Pool")
         self.assertEqual(pool.slug, "pickem-pool")
         self.assertEqual(pool.season, get_season())
         self.assertEqual(pool.competition, "nfl")
@@ -5890,12 +5922,77 @@ class CreateFamilyFlowTests(TestCase):
                 target_id=str(pool.id),
             ).exists()
         )
+        # The inline rules landed on PoolSettings, not silent defaults.
+        settings = PoolSettings.objects.get(pool=pool)
+        self.assertEqual(settings.win_points, 3)
+        self.assertEqual(settings.weekly_winner_points, 5)
+        self.assertEqual(
+            settings.missed_pick_policy, PoolSettings.MissedPickPolicy.AUTO_HOME
+        )
+        # Each email row became a targeted single-use invitation.
+        recipients = set(
+            FamilyInvitation.objects.filter(family=family).values_list(
+                "recipient_email", flat=True
+            )
+        )
+        self.assertEqual(recipients, {"cousin@example.com", "aunt@example.com"})
+
+    def test_invalid_invite_email_row_blocks_submission(self):
+        self.client.force_login(self.user)
+        family_count = Family.objects.count()
+
+        response = self.client.post(
+            reverse("create_family"),
+            self._payload(invite_emails=["cousin@example.com", "not-an-email"]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "don&#x27;t look right")
+        # The bad row is preserved for correction, nothing was created.
+        self.assertContains(response, 'value="not-an-email"')
+        self.assertEqual(Family.objects.count(), family_count)
+        self.assertFalse(FamilyInvitation.objects.exists())
+
+    def test_own_and_duplicate_invite_emails_are_skipped(self):
+        self.client.force_login(self.user)
+
+        self.client.post(
+            reverse("create_family"),
+            self._payload(
+                invite_emails=[
+                    "creator@example.com",   # the creator: never self-invite
+                    "cousin@example.com",
+                    "COUSIN@example.com",    # case-insensitive duplicate
+                ],
+            ),
+        )
+
+        family = Family.objects.get(name="Smith Family")
+        recipients = list(
+            FamilyInvitation.objects.filter(family=family).values_list(
+                "recipient_email", flat=True
+            )
+        )
+        self.assertEqual(recipients, ["cousin@example.com"])
+
+    def test_locked_pick_type_is_rejected_inline(self):
+        self.client.force_login(self.user)
+        family_count = Family.objects.count()
+
+        response = self.client.post(
+            reverse("create_family"),
+            self._payload(pick_type=PoolSettings.PickType.AGAINST_SPREAD),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "coming soon")
+        self.assertEqual(Family.objects.count(), family_count)
 
     def test_slug_collisions_receive_unique_family_slug(self):
         Family.objects.create(name="Smith Family", slug="smith-family")
         self.client.force_login(self.user)
 
-        response = self.client.post(reverse("create_family"), {"name": "Smith Family"})
+        response = self.client.post(reverse("create_family"), self._payload())
 
         family = Family.objects.get(slug="smith-family-2")
         pool = Pool.objects.get(family=family)
@@ -5919,20 +6016,20 @@ class CreateFamilyFlowTests(TestCase):
 
         self.client.post(
             reverse("create_family"),
-            {
-                "name": "Controlled Family",
-                "owner": self.other_user.id,
-                "user": self.other_user.id,
-                "user_id": self.other_user.id,
-                "role": FamilyMembership.Role.ADMIN,
-                "status": FamilyMembership.Status.INACTIVE,
-                "season": 1999,
-                "family": attacker_family.id,
-                "family_id": attacker_family.id,
-                "pool": attacker_pool.id,
-                "pool_id": attacker_pool.id,
-                "is_default": "false",
-            },
+            self._payload(
+                name="Controlled Family",
+                owner=self.other_user.id,
+                user=self.other_user.id,
+                user_id=self.other_user.id,
+                role=FamilyMembership.Role.ADMIN,
+                status=FamilyMembership.Status.INACTIVE,
+                season=1999,
+                family=attacker_family.id,
+                family_id=attacker_family.id,
+                pool=attacker_pool.id,
+                pool_id=attacker_pool.id,
+                is_default="false",
+            ),
         )
 
         family = Family.objects.get(name="Controlled Family")
@@ -5961,6 +6058,157 @@ class CreateFamilyFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertFalse(Family.objects.filter(name="Smith Family").exists())
+
+
+class FamilyDeactivationTests(TestCase):
+    """Commissioner soft-delete: type-the-name confirm, data preserved,
+    tenant pages go dark, and only the owner can pull the trigger."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user(
+            "deactivate-owner", email="deactivate-owner@example.com", password="pass"
+        )
+        self.admin_user = User.objects.create_user(
+            "deactivate-admin", email="deactivate-admin@example.com", password="pass"
+        )
+        self.family = Family.objects.create(name="Sunset Family", slug="sunset")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Pick'em Pool",
+            slug="pickem-pool",
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        PoolSettings.objects.create(pool=self.pool)
+        FamilyMembership.objects.create(
+            family=self.family, user=self.owner, role=FamilyMembership.Role.OWNER
+        )
+        FamilyMembership.objects.create(
+            family=self.family, user=self.admin_user, role=FamilyMembership.Role.ADMIN
+        )
+        self.delete_url = reverse(
+            "family_pool_admin_delete_family",
+            kwargs={"family_slug": "sunset", "pool_slug": "pickem-pool"},
+        )
+
+    def test_owner_deactivates_with_exact_name_and_data_survives(self):
+        pick = GamePicks.objects.create(
+            id=f"{self.pool.id}-{self.owner.id}-1",
+            pool=self.pool,
+            userID=str(self.owner.id),
+            pick_game_id=1,
+            gameseason=2526,
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.delete_url, {"confirm_name": "Sunset Family"}
+        )
+
+        self.assertRedirects(
+            response, reverse("family_picker"), fetch_redirect_response=False
+        )
+        self.family.refresh_from_db()
+        self.assertEqual(self.family.status, Family.Status.INACTIVE)
+        self.assertTrue(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                actor=self.owner,
+                action=FamilyAuditLog.Action.FAMILY_STATUS_UPDATED,
+            ).exists()
+        )
+        # Soft delete: every row survives.
+        self.assertTrue(GamePicks.objects.filter(id=pick.id).exists())
+        self.assertTrue(
+            FamilyMembership.objects.filter(family=self.family).count() == 2
+        )
+        # The tenant pages are gone for members now.
+        lobby = self.client.get(
+            reverse(
+                "family_pool_home",
+                kwargs={"family_slug": "sunset", "pool_slug": "pickem-pool"},
+            )
+        )
+        self.assertEqual(lobby.status_code, 404)
+
+    def test_wrong_confirm_name_deactivates_nothing(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.delete_url, {"confirm_name": "sunset family"}
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "family_pool_admin_settings",
+                kwargs={"family_slug": "sunset", "pool_slug": "pickem-pool"},
+            ),
+            fetch_redirect_response=False,
+        )
+        self.family.refresh_from_db()
+        self.assertEqual(self.family.status, Family.Status.ACTIVE)
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                action=FamilyAuditLog.Action.FAMILY_STATUS_UPDATED
+            ).exists()
+        )
+
+    def test_admin_cannot_deactivate_family(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            self.delete_url, {"confirm_name": "Sunset Family"}
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.family.refresh_from_db()
+        self.assertEqual(self.family.status, Family.Status.ACTIVE)
+
+    def test_get_is_not_allowed(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.delete_url)
+
+        self.assertEqual(response.status_code, 405)
+        self.family.refresh_from_db()
+        self.assertEqual(self.family.status, Family.Status.ACTIVE)
+
+    def test_danger_zone_renders_for_owner_only(self):
+        settings_url = reverse(
+            "family_pool_admin_settings",
+            kwargs={"family_slug": "sunset", "pool_slug": "pickem-pool"},
+        )
+
+        self.client.force_login(self.owner)
+        owner_view = self.client.get(settings_url)
+        self.assertContains(owner_view, "Danger Zone")
+        self.assertContains(owner_view, "Deactivate family")
+
+        self.client.force_login(self.admin_user)
+        admin_view = self.client.get(settings_url)
+        self.assertEqual(admin_view.status_code, 200)
+        self.assertNotContains(admin_view, "Danger Zone")
+
+    def test_deactivated_family_leaves_picker_and_switcher(self):
+        self.client.force_login(self.owner)
+        self.client.post(self.delete_url, {"confirm_name": "Sunset Family"})
+
+        # No other family: the picker redirects to onboarding.
+        response = self.client.get(reverse("family_picker"))
+        self.assertRedirects(
+            response, reverse("onboarding"), fetch_redirect_response=False
+        )
 
 
 class InviteFlowTests(TestCase):

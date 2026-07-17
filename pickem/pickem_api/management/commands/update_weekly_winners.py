@@ -11,7 +11,7 @@ import logging
 from django.core.management.base import BaseCommand
 
 from pickem.utils import get_season
-from pickem_api.models import Pool
+from pickem_api.models import Family, Pool
 from pickem_api.weekly_winners import (
     EspnGameStatsProvider,
     award_weekly_winners,
@@ -52,7 +52,11 @@ class Command(BaseCommand):
 
         stats_provider = EspnGameStatsProvider()
         awarded = 0
-        for pool in Pool.objects.filter(status=Pool.Status.ACTIVE):
+        # Skip pools of deactivated (soft-deleted) families — no bonuses are
+        # awarded while a family is inactive.
+        for pool in Pool.objects.filter(
+            status=Pool.Status.ACTIVE, family__status=Family.Status.ACTIVE
+        ):
             try:
                 result = award_weekly_winners(
                     pool, season, week,

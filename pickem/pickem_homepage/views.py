@@ -301,22 +301,12 @@ def get_default_active_pool_for_family(family):
     )
 
 
-def format_display_season_range(season):
-    season_str = str(season or "").zfill(4)
-    if len(season_str) == 4 and season_str.isdigit():
-        return f"20{season_str[:2]} - 20{season_str[2:]}"
-    return str(season or "")
-
-
-def default_pool_name(*, season, competition='nfl'):
-    competition_labels = {
-        'nfl': "NFL Pick'em",
-    }
-    competition_label = competition_labels.get(
-        (competition or '').lower(),
-        (competition or 'Pool').upper(),
-    )
-    return f"{competition_label} - {format_display_season_range(season)}"
+def default_pool_name(*, season=None, competition='nfl'):
+    # No season or competition in the name: every page that shows a pool
+    # name already appends display_season + competition, so baking them in
+    # here rendered doubled headers like
+    # "NFL Pick'em - 2026 - 2027 - 2026-2027 NFL".
+    return "Pick'em Pool"
 
 
 def has_real_family_membership(membership):
@@ -746,9 +736,22 @@ def onboarding(request):
 
 @login_required
 def create_family(request):
-    form = CreateFamilyForm(request.POST or None)
+    # New commissioners choose every rule up front instead of inheriting
+    # silent defaults — the form starts from the PoolSettings model defaults.
+    rules_initial = {
+        field: getattr(PoolSettings(), field)
+        for field in ADMIN_POOL_SETTINGS_FIELDS
+    }
+    form = CreateFamilyForm(request.POST or None, initial=rules_initial)
 
     if request.method == 'POST' and form.is_valid():
+        # Never invite yourself: redeeming your own invite would overwrite
+        # your commissioner role with the invite's member role.
+        user_email = (request.user.email or '').strip().lower()
+        invite_emails = [
+            email for email in form.cleaned_data['invite_emails']
+            if email.lower() != user_email
+        ]
         with transaction.atomic():
             family = Family.objects.create(
                 name=form.cleaned_data['name'],
@@ -768,7 +771,11 @@ def create_family(request):
                 status=Pool.Status.ACTIVE,
                 is_default=True,
             )
-            PoolSettings.objects.create(pool=pool)
+            settings_values = {
+                field: form.cleaned_data[field]
+                for field in ADMIN_POOL_SETTINGS_FIELDS
+            }
+            PoolSettings.objects.create(pool=pool, **settings_values)
             membership = FamilyMembership.objects.create(
                 family=family,
                 user=request.user,
@@ -806,11 +813,56 @@ def create_family(request):
                     'season': pool.season,
                     'competition': pool.competition,
                     'is_default': pool.is_default,
+                    'settings': {
+                        field: str(value)
+                        for field, value in settings_values.items()
+                    },
                 },
                 **audit_context,
             )
 
+            email_configured = resend_invite_email_is_configured()
+            for email in invite_emails:
+                invitation, raw_code = create_admin_invitation(
+                    family=family,
+                    pool=pool,
+                    actor=request.user,
+                    role=FamilyMembership.Role.MEMBER,
+                    recipient_email=email,
+                    expires_in_days=14,
+                    request=request,
+                    source='create_family',
+                )
+                if email_configured:
+                    invite_link = request.build_absolute_uri(
+                        reverse(
+                            'accept_invite_link',
+                            kwargs={'invite_code': raw_code},
+                        )
+                    )
+                    transaction.on_commit(
+                        lambda inv=invitation, link=invite_link, code=raw_code: (
+                            send_family_invitation_email(
+                                invitation=inv,
+                                invite_link=link,
+                                invite_code=code,
+                            )
+                        )
+                    )
+
             messages.success(request, f"{family.name} is ready.")
+            if invite_emails and email_configured:
+                messages.success(
+                    request,
+                    f"Invite emails are on their way to {len(invite_emails)} "
+                    f"{'person' if len(invite_emails) == 1 else 'people'}.",
+                )
+            elif invite_emails:
+                messages.warning(
+                    request,
+                    f"{len(invite_emails)} invite(s) saved, but email sending isn't "
+                    "configured yet — share the invite links from Admin → Invites.",
+                )
         return redirect(
             'family_pool_home',
             family_slug=family.slug,
@@ -820,6 +872,16 @@ def create_family(request):
     context = {
         'form': form,
         'gameseason': get_season(),
+        'scoring_point_fields': [
+            form['win_points'], form['tie_points'], form['weekly_winner_points'],
+        ],
+        'tiebreaker_fields': [
+            form['primary_tiebreaker'], form['secondary_tiebreaker'],
+        ],
+        'rule_choice_fields': [
+            form['pick_type'], form['missed_pick_policy'],
+            form['late_join_policy'], form['payout_structure'],
+        ],
     }
     return render(request, 'pickem/create_family.html', context)
 
@@ -1334,6 +1396,63 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
         ],
     }
     return render(request, 'pickem/family_admin_settings.html', context)
+
+
+@require_http_methods(["POST"])
+@family_member_required(minimum_role=FamilyMembership.Role.OWNER)
+def family_pool_admin_delete_family(request, family_slug, pool_slug):
+    """Soft-delete (deactivate) a family — commissioner only.
+
+    Never destroys data: members, picks, standings, and message history all
+    stay in the database. Setting Family.status=INACTIVE makes every tenant
+    page 404 (authz.resolve_family only resolves active families), drops the
+    family from switchers/pickers, invalidates its invites, and stops the
+    update pipeline from generating auto picks for it. A site admin can
+    reactivate from the superadmin Families page.
+    """
+    tenant_context = request.tenant_context
+    family = tenant_context.family
+    confirmed_name = (request.POST.get('confirm_name') or '').strip()
+    if confirmed_name != family.name:
+        messages.error(
+            request,
+            "The name you typed doesn't exactly match the family name, so "
+            "nothing was deactivated.",
+        )
+        return redirect(
+            'family_pool_admin_settings',
+            family_slug=family.slug,
+            pool_slug=tenant_context.pool.slug,
+        )
+
+    with transaction.atomic():
+        locked_family = Family.objects.select_for_update().get(id=family.id)
+        previous_status = locked_family.status
+        if previous_status == Family.Status.ACTIVE:
+            locked_family.status = Family.Status.INACTIVE
+            locked_family.save(update_fields=['status', 'updated_at'])
+            FamilyAuditLog.objects.create(
+                family=locked_family,
+                pool=tenant_context.pool,
+                actor=request.user,
+                action=FamilyAuditLog.Action.FAMILY_STATUS_UPDATED,
+                target_type='Family',
+                target_id=str(locked_family.id),
+                metadata={
+                    'source': 'family_admin_delete',
+                    'previous_status': previous_status,
+                    'status': locked_family.status,
+                },
+                **get_invite_audit_context(request),
+            )
+
+    messages.success(
+        request,
+        f"{family.name} has been deactivated. Nothing was deleted — members, "
+        "picks, and standings are all preserved. Contact the site admin if "
+        "you need it reactivated.",
+    )
+    return redirect('family_picker')
 
 
 @family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
@@ -2027,6 +2146,7 @@ def create_admin_invitation(
     expires_in_days,
     request,
     replacement_for=None,
+    source='admin_invite_management',
 ):
     raw_code = generate_invite_code()
     invitation = FamilyInvitation.objects.create(
@@ -2048,7 +2168,7 @@ def create_admin_invitation(
         target_id=str(invitation.id),
         metadata=build_invite_audit_metadata(
             invitation,
-            source='admin_invite_management',
+            source=source,
             replacement_for=replacement_for,
         ),
         **get_invite_audit_context(request),

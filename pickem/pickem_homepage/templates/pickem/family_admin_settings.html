@@ -213,6 +213,60 @@
                 </button>
             </div>
         </form>
+
+        {% if membership.role == "owner" %}
+        <section class="rounded-lg border border-red-300 dark:border-red-500/40 bg-white dark:bg-surface shadow-sm overflow-hidden">
+            <div class="border-b border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-5 py-4">
+                <h2 class="text-xl font-bold text-red-700 dark:text-red-300">
+                    <i class="fas fa-triangle-exclamation mr-2"></i>Danger Zone
+                </h2>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <h3 class="font-bold text-text-dark dark:text-white">Deactivate this family</h3>
+                    <p class="mt-2 text-sm text-text-secondary-light dark:text-text-secondary">
+                        Deactivating <strong>{{ family.name }}</strong> takes it offline for everyone:
+                        members can no longer open the lobby, submit picks, or join with an invite,
+                        and the family disappears from everyone's family list.
+                    </p>
+                    <p class="mt-2 text-sm text-text-secondary-light dark:text-text-secondary">
+                        <strong>Nothing is deleted.</strong> All members, picks, standings, and message
+                        history are preserved, and a site admin can reactivate the family later.
+                        This is not something you can undo yourself.
+                    </p>
+                </div>
+                <form method="post" action="{% url 'family_pool_admin_delete_family' family.slug pool.slug %}" class="space-y-3">
+                    {% csrf_token %}
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="confirm-family-name">
+                        Type <span class="font-mono text-red-700 dark:text-red-300">{{ family.name }}</span> to confirm
+                    </label>
+                    <input type="text" id="confirm-family-name" name="confirm_name" autocomplete="off"
+                           class="w-full max-w-md rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary placeholder-slate-500 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                           placeholder="{{ family.name }}">
+                    <button type="submit" id="deactivate-family-button" disabled
+                            class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-3 text-sm font-bold text-white transition-colors enabled:hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">
+                        <i class="fas fa-power-off"></i>
+                        Deactivate family
+                    </button>
+                </form>
+            </div>
+        </section>
+        {{ family.name|json_script:"deactivate-family-name" }}
+        <script>
+        (function () {
+            var input = document.getElementById('confirm-family-name');
+            var button = document.getElementById('deactivate-family-button');
+            var nameNode = document.getElementById('deactivate-family-name');
+            if (!input || !button || !nameNode) {
+                return;
+            }
+            var expected = JSON.parse(nameNode.textContent);
+            input.addEventListener('input', function () {
+                button.disabled = input.value.trim() !== expected;
+            });
+        })();
+        </script>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
