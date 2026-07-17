@@ -2,8 +2,23 @@ apiVersion: v1
 entries:
   family-pickem:
   - apiVersion: v2
+    appVersion: 0.0.168
+    created: "2026-07-17T02:16:56.037175475Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 12.5.6
+    description: A Helm chart to install the family pickem django app
+    digest: 60a66747e8259fc36fb9937bce52749ea59b30af45e063e584d67696f9f6c61d
+    name: family-pickem
+    type: application
+    urls:
+    - https://jimdaga.github.io/family-pickem/family-pickem-0.0.168.tgz
+    version: 0.0.168
+  - apiVersion: v2
     appVersion: 0.0.168-latest
-    created: "2026-07-17T02:16:33.884619497Z"
+    created: "2026-07-17T02:16:56.032774058Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -18,7 +33,7 @@ entries:
     version: 0.0.168-latest
   - apiVersion: v2
     appVersion: 0.0.167
-    created: "2026-07-17T02:16:33.880863813Z"
+    created: "2026-07-17T02:16:56.02885411Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -33,7 +48,7 @@ entries:
     version: 0.0.167
   - apiVersion: v2
     appVersion: 0.0.167-latest
-    created: "2026-07-17T02:16:33.876154559Z"
+    created: "2026-07-17T02:16:56.023793638Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -48,7 +63,7 @@ entries:
     version: 0.0.167-latest
   - apiVersion: v2
     appVersion: 0.0.166
-    created: "2026-07-17T02:16:33.872296603Z"
+    created: "2026-07-17T02:16:56.019917473Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -63,7 +78,7 @@ entries:
     version: 0.0.166
   - apiVersion: v2
     appVersion: 0.0.166-latest
-    created: "2026-07-17T02:16:33.867582798Z"
+    created: "2026-07-17T02:16:56.015177302Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -78,7 +93,7 @@ entries:
     version: 0.0.166-latest
   - apiVersion: v2
     appVersion: 0.0.165
-    created: "2026-07-17T02:16:33.863887167Z"
+    created: "2026-07-17T02:16:56.009007248Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -93,7 +108,7 @@ entries:
     version: 0.0.165
   - apiVersion: v2
     appVersion: 0.0.165-latest
-    created: "2026-07-17T02:16:33.860037827Z"
+    created: "2026-07-17T02:16:56.005079476Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -108,7 +123,7 @@ entries:
     version: 0.0.165-latest
   - apiVersion: v2
     appVersion: 0.0.164
-    created: "2026-07-17T02:16:33.855271495Z"
+    created: "2026-07-17T02:16:56.000584785Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -123,7 +138,7 @@ entries:
     version: 0.0.164
   - apiVersion: v2
     appVersion: 0.0.164-latest
-    created: "2026-07-17T02:16:33.851385987Z"
+    created: "2026-07-17T02:16:55.996826259Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -138,7 +153,7 @@ entries:
     version: 0.0.164-latest
   - apiVersion: v2
     appVersion: 0.0.163
-    created: "2026-07-17T02:16:33.846518969Z"
+    created: "2026-07-17T02:16:55.991853166Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -153,7 +168,7 @@ entries:
     version: 0.0.163
   - apiVersion: v2
     appVersion: 0.0.163-latest
-    created: "2026-07-17T02:16:33.842710015Z"
+    created: "2026-07-17T02:16:55.987988231Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -168,7 +183,7 @@ entries:
     version: 0.0.163-latest
   - apiVersion: v2
     appVersion: 0.0.162
-    created: "2026-07-17T02:16:33.838029571Z"
+    created: "2026-07-17T02:16:55.983075232Z"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -2846,4 +2861,4 @@ entries:
     urls:
     - https://github.com/jimdaga/family-pickem/releases/download/family-pickem-0.0.3/family-pickem-0.0.3.tgz
     version: 0.0.3
-generated: "2026-07-17T02:16:33.833786172Z"
+generated: "2026-07-17T02:16:55.978782839Z"
