@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from pickem.utils import get_season
+from pickem_api.authz import LEGACY_FAMILY_SLUG
 from pickem_api.models import FamilyMembership, GameWeeks, GamesAndScores, Pool, Teams, UserProfile
 from pickem_superadmin.models import EmailNotificationCampaign
 from pickem_superadmin.models import EmailProviderSettings
@@ -21,6 +22,12 @@ except ImportError:  # pragma: no cover - dependency is installed in real envs
 
 logger = logging.getLogger(__name__)
 
+EMAIL_LINK_ROLE_ORDER = {
+    FamilyMembership.Role.MEMBER: 10,
+    FamilyMembership.Role.ADMIN: 20,
+    FamilyMembership.Role.OWNER: 30,
+}
+
 
 def _email_provider_config():
     config = EmailProviderSettings.current()
@@ -31,8 +38,18 @@ def _email_provider_config():
                 'provider': config.provider,
                 'api_key': api_key,
                 'from_email': config.from_email,
-            'reply_to': config.reply_to_email,
-            'source': 'database',
+                'reply_to': config.reply_to_email,
+                'source': 'database',
+            }
+        return None
+
+    if settings.RESEND_API_KEY and settings.RESEND_FROM_EMAIL:
+        return {
+            'provider': EmailProviderSettings.Provider.RESEND,
+            'api_key': settings.RESEND_API_KEY,
+            'from_email': settings.RESEND_FROM_EMAIL,
+            'reply_to': settings.RESEND_INVITE_REPLY_TO,
+            'source': 'environment',
         }
     return None
 
@@ -70,6 +87,10 @@ def _absolute_url(path):
 
 def _absolute_static_url(path):
     return _absolute_url(path)
+
+
+def _weekly_picks_email_logo_url():
+    return (getattr(settings, 'WEEKLY_PICKS_EMAIL_LOGO_URL', '') or '').strip()
 
 
 def _team_logo_map(slugs):
@@ -133,27 +154,44 @@ def _get_week_games(*, season, week, competition):
     return games
 
 
-def _default_active_pool_for_family(family):
+def _pool_queryset_for_family(family, *, season=None, competition=None):
+    queryset = Pool.objects.filter(
+        family=family,
+        status=Pool.Status.ACTIVE,
+    )
+    if season is not None:
+        queryset = queryset.filter(season=season)
+    if competition:
+        queryset = queryset.filter(competition=competition)
+    return queryset
+
+
+def _default_active_pool_for_family(family, *, season=None, competition=None):
     pool = (
-        Pool.objects.filter(
-            family=family,
-            status=Pool.Status.ACTIVE,
-            is_default=True,
+        _pool_queryset_for_family(
+            family,
+            season=season,
+            competition=competition,
         )
+        .filter(is_default=True)
         .order_by('-season', 'slug')
         .first()
     )
     if pool:
         return pool
     return (
-        Pool.objects.filter(family=family, status=Pool.Status.ACTIVE)
+        _pool_queryset_for_family(
+            family,
+            season=season,
+            competition=competition,
+        )
         .order_by('-season', 'slug')
         .first()
     )
 
 
-def _pick_link_membership(user):
-    memberships = (
+def _pick_link_membership(user, *, season=None, competition=None):
+    memberships = list(
         FamilyMembership.objects.select_related('family')
         .filter(
             user=user,
@@ -162,15 +200,33 @@ def _pick_link_membership(user):
         )
         .order_by('created_at', 'id')
     )
-    for membership in memberships:
-        pool = _default_active_pool_for_family(membership.family)
+
+    ordered_memberships = sorted(
+        memberships,
+        key=lambda membership: (
+            membership.family.slug == LEGACY_FAMILY_SLUG,
+            -EMAIL_LINK_ROLE_ORDER.get(membership.role, 0),
+            -(membership.created_at.timestamp() if membership.created_at else 0),
+            membership.id,
+        ),
+    )
+    for membership in ordered_memberships:
+        pool = _default_active_pool_for_family(
+            membership.family,
+            season=season,
+            competition=competition,
+        )
         if pool is not None:
             return membership, pool
     return None, None
 
 
-def _build_picks_link(user):
-    membership, pool = _pick_link_membership(user)
+def _build_picks_link(user, *, season=None, competition=None):
+    membership, pool = _pick_link_membership(
+        user,
+        season=season,
+        competition=competition,
+    )
     if membership is None or pool is None:
         return '', None, None
     return _absolute_url(
@@ -217,7 +273,7 @@ def _eligible_weekly_picks_users(campaign):
             if email_value not in safety_allowlist:
                 continue
         link, family, pool = _build_picks_link(user)
-        if not link or family is None or pool is None:
+        if not link:
             continue
         user._weekly_picks_link = link
         user._weekly_picks_family = family
@@ -281,10 +337,15 @@ def _weekly_picks_context(*, user, target, preview=False):
     if not games:
         return None
     picks_link = getattr(user, '_weekly_picks_link', '')
-    family = getattr(user, '_weekly_picks_family', None)
-    pool = getattr(user, '_weekly_picks_pool', None)
-    if not picks_link or family is None or pool is None:
-        picks_link, family, pool = _build_picks_link(user)
+    if not picks_link:
+        picks_link, family, pool = _build_picks_link(
+            user,
+            season=target['season'],
+            competition=target['competition'],
+        )
+    else:
+        family = getattr(user, '_weekly_picks_family', None)
+        pool = getattr(user, '_weekly_picks_pool', None)
     return {
         'user': user,
         'family': family,
@@ -294,7 +355,7 @@ def _weekly_picks_context(*, user, target, preview=False):
         'season': target['season'],
         'picks_link': picks_link,
         'site_url': _site_base_url(),
-        'logo_url': _absolute_static_url('/static/images/logo.png'),
+        'logo_url': _weekly_picks_email_logo_url(),
         'preview': preview,
     }
 
@@ -406,17 +467,6 @@ def send_due_email_campaigns(*, now=None, force_weekly_picks=False):
             'skipped': skipped,
         }],
     }
-
-    if settings.RESEND_API_KEY and settings.RESEND_FROM_EMAIL:
-        return {
-            'provider': EmailProviderSettings.Provider.RESEND,
-            'api_key': settings.RESEND_API_KEY,
-            'from_email': settings.RESEND_FROM_EMAIL,
-            'reply_to': settings.RESEND_INVITE_REPLY_TO,
-            'source': 'environment',
-        }
-    return None
-
 
 def resend_invite_email_is_configured():
     config = _invite_email_config()
