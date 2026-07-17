@@ -245,6 +245,10 @@ EMAIL_NOTIFICATION_SAFE_ALLOWLIST = [
 # falls back to a styled text wordmark when this is empty. Point it at a stable
 # public logo URL to show the image.
 INVITE_EMAIL_LOGO_URL = os.environ.get('INVITE_EMAIL_LOGO_URL', '').strip()
+WEEKLY_PICKS_EMAIL_LOGO_URL = os.environ.get(
+    'WEEKLY_PICKS_EMAIL_LOGO_URL',
+    INVITE_EMAIL_LOGO_URL,
+).strip()
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/

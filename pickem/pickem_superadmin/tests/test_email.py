@@ -309,6 +309,7 @@ class InviteEmailSendingTests(TestCase):
     SITE_BASE_URL='https://family-pickem.test',
     EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY=True,
     EMAIL_NOTIFICATION_SAFE_ALLOWLIST=['jdagostino2@gmail.com'],
+    WEEKLY_PICKS_EMAIL_LOGO_URL='https://cdn.example.test/fp-logo.png',
 )
 class WeeklyPicksCampaignTests(TestCase):
     def setUp(self):
@@ -433,7 +434,7 @@ class WeeklyPicksCampaignTests(TestCase):
         self.assertIn('Picks for Week 1 are available', params['subject'])
         self.assertIn('https://cdn.example.test/bears.png', params['html'])
         self.assertIn('https://cdn.example.test/packers.png', params['html'])
-        self.assertIn('https://family-pickem.test/static/images/logo.png', params['html'])
+        self.assertIn('https://cdn.example.test/fp-logo.png', params['html'])
         self.assertIn(
             'https://family-pickem.test/families/dagostino/pools/main-pool/picks/',
             params['html'],
@@ -442,6 +443,52 @@ class WeeklyPicksCampaignTests(TestCase):
         self.assertEqual(self.campaign.last_sent_season, 2627)
         self.assertEqual(self.campaign.last_sent_week, 1)
         self.assertEqual(self.campaign.last_sent_count, 1)
+
+    def test_campaign_prefers_non_legacy_commissioner_family_for_multi_family_user(self):
+        legacy_family, _ = Family.objects.get_or_create(
+            slug='legacy-family-league',
+            defaults={'name': 'Legacy'},
+        )
+        Pool.objects.create(
+            family=legacy_family,
+            name='Legacy Pool',
+            slug='legacy-pool',
+            season=2627,
+            competition='nfl',
+            is_default=True,
+        )
+        FamilyMembership.objects.create(
+            family=legacy_family,
+            user=self.allowed_user,
+            role=FamilyMembership.Role.MEMBER,
+        )
+        test_family = Family.objects.create(name='Test Family', slug='test')
+        Pool.objects.create(
+            family=test_family,
+            name='Test Pool',
+            slug='pickem-pool',
+            season=2627,
+            competition='nfl',
+            is_default=True,
+        )
+        FamilyMembership.objects.create(
+            family=test_family,
+            user=self.allowed_user,
+            role=FamilyMembership.Role.OWNER,
+        )
+        self._seed_week_one()
+        september_9_2026 = timezone.make_aware(datetime(2026, 9, 9, 13, 5))
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'weekly_email_2'}
+
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            send_due_email_campaigns(now=september_9_2026)
+
+        params = resend_mock.Emails.send.call_args.args[0]
+        self.assertIn(
+            'https://family-pickem.test/families/test/pools/pickem-pool/picks/',
+            params['html'],
+        )
 
 
 class EmailEnvironmentFallbackTests(TestCase):

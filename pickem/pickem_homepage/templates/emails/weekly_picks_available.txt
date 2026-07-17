@@ -2,9 +2,9 @@ Family Pick'em
 
 Picks for Week {{ week }} are available.
 
-{% if family %}Family: {{ family.name }}{% endif %}
-{% if pool %}Pool: {{ pool.name }}{% endif %}
 Picks page: {{ picks_link }}
+{% if pool %}Pool: {{ pool.name }}{% endif %}
+Open your Week {{ week }} picks page directly.
 
 Games:
 {% for game in games %}
