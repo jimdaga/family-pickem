@@ -1,0 +1,63 @@
+name: Grading Integration Tests
+
+# End-to-end tests of the grading pipeline (grading_tests/) against
+# PostgreSQL — the production database engine. The regular PR job runs the
+# whole suite on SQLite; this one pins grading correctness (and the full
+# migration chain) on Postgres, and fails the PR on any regression.
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  grading_integration:
+    name: Grading pipeline on PostgreSQL
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pickem_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_HOST: localhost
+      DATABASE_PORT: '5432'
+      DATABASE_NAME: pickem_test
+      DATABASE_USER: postgres
+      DATABASE_PASS: postgres
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r pickem/requirements.txt
+
+      - name: Run migrations against PostgreSQL
+        # Validates the full migration chain on the production engine; the
+        # test runner below migrates its own test_* database independently.
+        run: cd pickem && python manage.py migrate --settings=pickem.test_settings_postgres
+
+      - name: Run grading integration tests
+        run: cd pickem && python manage.py test grading_tests --settings=pickem.test_settings_postgres --verbosity=2
