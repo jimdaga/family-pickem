@@ -1,7 +1,18 @@
-# Grafana Cloud Monitoring (Phase 1: Infra + Logs) — Design
+# Grafana Cloud Monitoring — Design
 
 **Date**: 2026-07-17
-**Status**: Approved (pending endpoint values)
+**Status**: Implemented on branch `feat/grafana-cloud-monitoring`
+
+> **Scope revised after portal config (2026-07-17):** the user supplied the
+> portal-generated ArgoCD spec with real endpoints and chose the **full
+> observability stack** rather than the phase-1-lean subset originally drafted
+> below. Final config enables metrics, host metrics, cost/OpenCost, events, pod
+> logs, OTLP traces receiver, and Pyroscope/eBPF profiles — all adapted to the
+> GitOps rules (ESO creds not inline, chart pinned to 4.3.0, Fleet Management
+> remoteConfig dropped, `windows-exporter` off, cluster name `databuntu`).
+> The "Telemetry scope" and per-feature notes below reflect the original lean
+> draft; see `infra/grafana-k8s-monitoring/` and the implementation plan for the
+> authoritative final config.
 
 ## Goal
 

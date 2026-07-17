@@ -8,6 +8,19 @@
 
 **Tech Stack:** ArgoCD (app-of-apps), Helm (`grafana/k8s-monitoring` 4.3.0, Alloy Operator + Grafana Alloy collectors), External Secrets Operator v0.19.2, AWS Secrets Manager.
 
+> **Scope note (post-portal, 2026-07-17):** the user supplied the portal-generated
+> spec and chose the **full observability stack**. Tasks 1–3 are implemented and
+> committed; the authoritative config lives in `infra/grafana-k8s-monitoring/`
+> (four destinations — prometheus/loki/otlp/pyroscope; features clusterMetrics,
+> hostMetrics, costMetrics, clusterEvents, podLogsViaLoki, applicationObservability,
+> autoInstrumentation, profiling; five collectors; OpenCost + kepler on,
+> windows-exporter off; cluster name `databuntu`). The lean per-task snippets
+> below were the original draft — the committed files supersede them. The AWS SM
+> secret (Task 4) now carries five keys: `prometheus-username`, `loki-username`,
+> `otlp-username`, `profiles-username`, `access-token`. Render verified with
+> `helm template … --version 4.3.0`: no token leaks into rendered output, no
+> fleet-management, all five collectors present.
+
 ## Global Constraints
 
 - **Chart version pinned** to `4.3.0` — never `main`/`latest`/`>=`. Upstream drift is a known hazard (cf. ESO 0.19.2 pin for k8s 1.28 compat).

@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-k8s-monitoring
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # Grafana k8s-monitoring chart (pinned)
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: k8s-monitoring
+      targetRevision: "4.3.0"
+      helm:
+        releaseName: grafana-k8s-monitoring
+        valueFiles:
+          - $values/infra/grafana-k8s-monitoring/values.yaml
+    # Git repo: provides $values AND the raw ExternalSecret manifest
+    - repoURL: git@github.com:jimdaga/family-pickem.git
+      targetRevision: main
+      ref: values
+    - repoURL: git@github.com:jimdaga/family-pickem.git
+      targetRevision: main
+      path: infra/grafana-k8s-monitoring/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
