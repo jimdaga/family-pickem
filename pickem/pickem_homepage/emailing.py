@@ -1,8 +1,16 @@
 import logging
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils import timezone
 
+from pickem.utils import get_season
+from pickem_api.models import FamilyMembership, GameWeeks, GamesAndScores, Pool, Teams, UserProfile
+from pickem_superadmin.models import EmailNotificationCampaign
 from pickem_superadmin.models import EmailProviderSettings
 
 try:
@@ -14,7 +22,7 @@ except ImportError:  # pragma: no cover - dependency is installed in real envs
 logger = logging.getLogger(__name__)
 
 
-def _invite_email_config():
+def _email_provider_config():
     config = EmailProviderSettings.current()
     if config is not None:
         api_key = config.get_api_key()
@@ -23,10 +31,381 @@ def _invite_email_config():
                 'provider': config.provider,
                 'api_key': api_key,
                 'from_email': config.from_email,
-                'reply_to': config.reply_to_email,
-                'source': 'database',
-            }
+            'reply_to': config.reply_to_email,
+            'source': 'database',
+        }
+    return None
+
+
+def _invite_email_config():
+    return _email_provider_config()
+
+
+def _notification_email_config():
+    config = _email_provider_config()
+    if not config:
         return None
+    return config
+
+
+def _send_via_resend(params):
+    resend.api_key = params.pop('api_key')
+    return resend.Emails.send(params)
+
+
+def _site_base_url():
+    return getattr(settings, 'SITE_BASE_URL', 'http://localhost:8000').rstrip('/')
+
+
+def _absolute_url(path):
+    if not path:
+        return ''
+    if path.startswith(('http://', 'https://')):
+        return path
+    base = _site_base_url()
+    if not path.startswith('/'):
+        path = f'/{path}'
+    return f'{base}{path}'
+
+
+def _absolute_static_url(path):
+    return _absolute_url(path)
+
+
+def _team_logo_map(slugs):
+    rows = (
+        Teams.objects.filter(teamNameSlug__in=slugs)
+        .order_by('teamNameSlug', '-id')
+        .values_list('teamNameSlug', 'teamLogo')
+    )
+    logos = {}
+    for slug, logo in rows:
+        logos.setdefault(slug, logo or '/static/images/nfl.svg')
+    return logos
+
+
+def _get_weekly_target(now=None):
+    now = now or timezone.now()
+    next_game = (
+        GamesAndScores.objects.filter(startTimestamp__gte=now)
+        .order_by('startTimestamp', 'id')
+        .first()
+    )
+    if next_game is None:
+        return None
+
+    week = int(next_game.gameWeek)
+    season = next_game.gameseason or get_season()
+    week_dates = list(
+        GameWeeks.objects.filter(season=season, weekNumber=week, competition=next_game.competition)
+        .order_by('date')
+        .values_list('date', flat=True)
+    )
+    first_game_date = week_dates[0] if week_dates else timezone.localdate(next_game.startTimestamp)
+    return {
+        'season': season,
+        'week': week,
+        'competition': next_game.competition,
+        'first_game_date': first_game_date,
+        'next_game': next_game,
+    }
+
+
+def _get_week_games(*, season, week, competition):
+    games = list(
+        GamesAndScores.objects.filter(
+            gameseason=season,
+            competition=competition,
+            gameWeek=str(week),
+        ).order_by('startTimestamp', 'id')
+    )
+    logos = _team_logo_map(
+        {
+            slug
+            for game in games
+            for slug in (game.homeTeamSlug, game.awayTeamSlug)
+            if slug
+        }
+    )
+    for game in games:
+        game.home_logo = _absolute_url(logos.get(game.homeTeamSlug, '/static/images/nfl.svg'))
+        game.away_logo = _absolute_url(logos.get(game.awayTeamSlug, '/static/images/nfl.svg'))
+    return games
+
+
+def _default_active_pool_for_family(family):
+    pool = (
+        Pool.objects.filter(
+            family=family,
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        .order_by('-season', 'slug')
+        .first()
+    )
+    if pool:
+        return pool
+    return (
+        Pool.objects.filter(family=family, status=Pool.Status.ACTIVE)
+        .order_by('-season', 'slug')
+        .first()
+    )
+
+
+def _pick_link_membership(user):
+    memberships = (
+        FamilyMembership.objects.select_related('family')
+        .filter(
+            user=user,
+            status=FamilyMembership.Status.ACTIVE,
+            family__status='active',
+        )
+        .order_by('created_at', 'id')
+    )
+    for membership in memberships:
+        pool = _default_active_pool_for_family(membership.family)
+        if pool is not None:
+            return membership, pool
+    return None, None
+
+
+def _build_picks_link(user):
+    membership, pool = _pick_link_membership(user)
+    if membership is None or pool is None:
+        return '', None, None
+    return _absolute_url(
+        reverse(
+            'family_pool_game_picks',
+            kwargs={'family_slug': membership.family.slug, 'pool_slug': pool.slug},
+        )
+    ), membership.family, pool
+
+
+def _campaign_safety_allowlist():
+    return {
+        email.strip().lower()
+        for email in getattr(settings, 'EMAIL_NOTIFICATION_SAFE_ALLOWLIST', [])
+        if email.strip()
+    }
+
+
+def _eligible_weekly_picks_users(campaign):
+    base_qs = (
+        User.objects.select_related('profile')
+        .filter(
+            is_active=True,
+            email__isnull=False,
+        )
+        .exclude(email='')
+    )
+    users = []
+    safety_allowlist = _campaign_safety_allowlist()
+    campaign_allowlist = set(campaign.allowlist)
+    for user in base_qs:
+        profile = getattr(user, 'profile', None)
+        if profile is None:
+            profile = UserProfile.objects.create(user=user)
+        if not profile.email_notifications:
+            continue
+        if profile.blocked_at is not None:
+            continue
+        email_value = (user.email or '').strip().lower()
+        if campaign.rollout_mode == EmailNotificationCampaign.RolloutMode.ALLOWLIST:
+            if email_value not in campaign_allowlist:
+                continue
+        if getattr(settings, 'EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY', True):
+            if email_value not in safety_allowlist:
+                continue
+        link, family, pool = _build_picks_link(user)
+        if not link or family is None or pool is None:
+            continue
+        user._weekly_picks_link = link
+        user._weekly_picks_family = family
+        user._weekly_picks_pool = pool
+        users.append(user)
+    return users
+
+
+def _week_window(target, campaign):
+    zone = ZoneInfo(campaign.timezone_name or settings.TIME_ZONE)
+    first_game_date = target['first_game_date']
+    days_back = (first_game_date.weekday() - campaign.weekday) % 7
+    scheduled_date = first_game_date - timedelta(days=days_back)
+    scheduled_at = timezone.make_aware(
+        datetime.combine(scheduled_date, time(campaign.hour, campaign.minute)),
+        zone,
+    )
+    week_games = _get_week_games(
+        season=target['season'],
+        week=target['week'],
+        competition=target['competition'],
+    )
+    if not week_games:
+        return None
+    last_game_local = timezone.localtime(week_games[-1].startTimestamp, zone)
+    closes_at = last_game_local + timedelta(days=1)
+    return scheduled_at, closes_at
+
+
+def _weekly_picks_due(campaign, *, now=None, ignore_clock=False):
+    now = now or timezone.now()
+    target = _get_weekly_target(now=now)
+    if target is None:
+        return None
+
+    zone = ZoneInfo(campaign.timezone_name or settings.TIME_ZONE)
+    now_local = timezone.localtime(now, zone)
+    window = _week_window(target, campaign)
+    if window is None:
+        return None
+    scheduled_at, closes_at = window
+    if not ignore_clock and now_local < scheduled_at:
+        return None
+    if now_local > closes_at:
+        return None
+    if (
+        campaign.last_sent_season == target['season']
+        and campaign.last_sent_week == target['week']
+    ):
+        return None
+    target['scheduled_at'] = scheduled_at
+    return target
+
+
+def _weekly_picks_context(*, user, target, preview=False):
+    games = _get_week_games(
+        season=target['season'],
+        week=target['week'],
+        competition=target['competition'],
+    )
+    if not games:
+        return None
+    picks_link = getattr(user, '_weekly_picks_link', '')
+    family = getattr(user, '_weekly_picks_family', None)
+    pool = getattr(user, '_weekly_picks_pool', None)
+    if not picks_link or family is None or pool is None:
+        picks_link, family, pool = _build_picks_link(user)
+    return {
+        'user': user,
+        'family': family,
+        'pool': pool,
+        'games': games,
+        'week': target['week'],
+        'season': target['season'],
+        'picks_link': picks_link,
+        'site_url': _site_base_url(),
+        'logo_url': _absolute_static_url('/static/images/logo.png'),
+        'preview': preview,
+    }
+
+
+def send_weekly_picks_preview_email(*, to_email, sample_user_email='', now=None):
+    sample_user = None
+    if sample_user_email:
+        sample_user = User.objects.filter(email__iexact=sample_user_email.strip()).first()
+    if sample_user is None:
+        campaign = EmailNotificationCampaign.load_weekly_picks()
+        eligible = _eligible_weekly_picks_users(campaign)
+        sample_user = eligible[0] if eligible else None
+    if sample_user is None:
+        return {'status': 'skipped', 'reason': 'no_sample_user'}
+    target = _get_weekly_target(now=now or timezone.now())
+    if target is None:
+        return {'status': 'skipped', 'reason': 'no_upcoming_week'}
+    return _send_weekly_picks_email(
+        user=sample_user,
+        recipient_email=to_email,
+        target=target,
+        preview=True,
+    )
+
+
+def _send_weekly_picks_email(*, user, recipient_email, target, preview=False):
+    config = _notification_email_config()
+    if not resend or not config or config['provider'] != EmailProviderSettings.Provider.RESEND:
+        return {'status': 'skipped', 'reason': 'not_configured'}
+
+    context = _weekly_picks_context(user=user, target=target, preview=preview)
+    if context is None:
+        return {'status': 'skipped', 'reason': 'no_games'}
+
+    params = {
+        'api_key': config['api_key'],
+        'from': config['from_email'],
+        'to': [recipient_email],
+        'subject': f"Picks for Week {target['week']} are available",
+        'html': render_to_string('emails/weekly_picks_available.html', context),
+        'text': render_to_string('emails/weekly_picks_available.txt', context),
+    }
+    if config['reply_to']:
+        params['reply_to'] = config['reply_to']
+    try:
+        response = _send_via_resend(params)
+    except Exception:
+        logger.exception(
+            'Failed to send weekly picks email.',
+            extra={'to_email': recipient_email, 'user_id': user.id, 'week': target['week']},
+        )
+        return {'status': 'error', 'reason': 'send_failed'}
+    return {'status': 'sent', 'response': response}
+
+
+def send_due_email_campaigns(*, now=None, force_weekly_picks=False):
+    now = now or timezone.now()
+    campaign = EmailNotificationCampaign.load_weekly_picks()
+    if not campaign.enabled and not force_weekly_picks:
+        return {'campaigns': []}
+
+    target = _weekly_picks_due(
+        campaign,
+        now=now,
+        ignore_clock=force_weekly_picks,
+    )
+    if target is None:
+        return {'campaigns': []}
+
+    recipients = _eligible_weekly_picks_users(campaign)
+    sent = 0
+    skipped = []
+    for user in recipients:
+        result = _send_weekly_picks_email(
+            user=user,
+            recipient_email=user.email,
+            target=target,
+        )
+        if result['status'] == 'sent':
+            sent += 1
+        else:
+            skipped.append({'email': user.email, 'reason': result.get('reason', 'unknown')})
+
+    campaign.last_sent_season = target['season']
+    campaign.last_sent_week = target['week']
+    campaign.last_sent_at = now
+    campaign.last_sent_count = sent
+    campaign.save(update_fields=[
+        'last_sent_season', 'last_sent_week', 'last_sent_at', 'last_sent_count', 'updated_at',
+    ])
+
+    logger.info(
+        'Weekly picks campaign evaluated.',
+        extra={
+            'campaign_key': campaign.campaign_key,
+            'season': target['season'],
+            'week': target['week'],
+            'sent_count': sent,
+            'skipped': skipped,
+            'forced': force_weekly_picks,
+        },
+    )
+    return {
+        'campaigns': [{
+            'campaign_key': campaign.campaign_key,
+            'season': target['season'],
+            'week': target['week'],
+            'sent_count': sent,
+            'skipped': skipped,
+        }],
+    }
 
     if settings.RESEND_API_KEY and settings.RESEND_FROM_EMAIL:
         return {
@@ -62,7 +441,6 @@ def send_family_invitation_email(*, invitation, invite_link, invite_code):
         )
         return {'status': 'skipped', 'reason': 'not_configured'}
 
-    resend.api_key = config['api_key']
     pool_name = invitation.pool.name if invitation.pool else "Family Pick'em"
     # Render from templates: Django auto-escapes the HTML context (family/pool
     # names are user-controlled, so building the HTML by hand would be an
@@ -84,7 +462,8 @@ def send_family_invitation_email(*, invitation, invite_link, invite_code):
         params['reply_to'] = config['reply_to']
 
     try:
-        response = resend.Emails.send(params)
+        params['api_key'] = config['api_key']
+        response = _send_via_resend(params)
     except Exception:
         logger.exception(
             'Failed to send family invitation email via Resend.',
@@ -115,8 +494,8 @@ def send_test_email(*, to_email):
     if not resend or not config or config['provider'] != EmailProviderSettings.Provider.RESEND:
         return {'status': 'skipped', 'reason': 'not_configured'}
 
-    resend.api_key = config['api_key']
     params = {
+        'api_key': config['api_key'],
         'from': config['from_email'],
         'to': [to_email],
         'subject': "Family Pick'em email configuration test",
@@ -134,7 +513,7 @@ def send_test_email(*, to_email):
         params['reply_to'] = config['reply_to']
 
     try:
-        response = resend.Emails.send(params)
+        response = _send_via_resend(params)
     except Exception:
         logger.exception('Failed to send test email via Resend.', extra={'to_email': to_email})
         return {'status': 'error', 'reason': 'send_failed'}

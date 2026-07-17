@@ -227,6 +227,18 @@ LOGOUT_REDIRECT_URL = '/'
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip()
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', '').strip()
 RESEND_INVITE_REPLY_TO = os.environ.get('RESEND_INVITE_REPLY_TO', '').strip()
+SITE_BASE_URL = os.environ.get('SITE_BASE_URL', 'http://localhost:8000').strip().rstrip('/')
+EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY = (
+    os.getenv('EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY', 'True').lower() == 'true'
+)
+EMAIL_NOTIFICATION_SAFE_ALLOWLIST = [
+    email.strip().lower()
+    for email in os.environ.get(
+        'EMAIL_NOTIFICATION_SAFE_ALLOWLIST',
+        'jdagostino2@gmail.com',
+    ).split(',')
+    if email.strip()
+]
 # Absolute, publicly-reachable URL to the logo shown in invite emails. Left blank
 # by default because production static is served from S3 (URLs can be signed and
 # expire, which would break the image in delivered mail); the invite template

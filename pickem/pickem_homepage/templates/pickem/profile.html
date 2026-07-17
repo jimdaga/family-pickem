@@ -200,21 +200,21 @@
                         </label>
                     </div>
 
-                    <!-- Email Notifications Toggle (Disabled) -->
-                    <div class="flex items-center justify-between gap-4 opacity-50">
+                    <!-- Email Notifications Toggle -->
+                    <div class="flex items-center justify-between gap-4">
                         <div class="flex-1">
                             <div class="flex items-center gap-2 mb-1">
                                 <i class="fas fa-bell text-text-dark dark:text-white"></i>
                                 <span class="font-semibold text-text-dark dark:text-white">Email Notifications</span>
                             </div>
-                            <div class="text-sm text-text-secondary-light dark:text-text-secondary">This feature is coming soon</div>
+                            <div class="text-sm text-text-secondary-light dark:text-text-secondary">Receive weekly pick reminders when your account is eligible</div>
                         </div>
-                        <label class="relative inline-flex items-center cursor-not-allowed">
-                            <input type="checkbox" class="sr-only peer setting-toggle" disabled
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer setting-toggle"
                                    id="emailNotifications" data-setting="email_notifications"
                                    {% if user_profile.email_notifications %}checked{% endif %}>
-                            <div class="w-14 h-7 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                            <div class="absolute top-0.5 left-0.5 bg-white w-6 h-6 rounded-full pointer-events-none"></div>
+                            <div class="w-14 h-7 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer-checked:bg-primary transition-colors duration-300"></div>
+                            <div class="absolute top-0.5 left-0.5 bg-white w-6 h-6 rounded-full transition-transform duration-300 peer-checked:translate-x-7 pointer-events-none"></div>
                         </label>
                     </div>
                 </div>

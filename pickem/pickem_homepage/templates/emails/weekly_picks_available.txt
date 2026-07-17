@@ -1,0 +1,15 @@
+Family Pick'em
+
+Picks for Week {{ week }} are available.
+
+{% if family %}Family: {{ family.name }}{% endif %}
+{% if pool %}Pool: {{ pool.name }}{% endif %}
+Picks page: {{ picks_link }}
+
+Games:
+{% for game in games %}
+- {{ game.startTimestamp|date:"D, M j g:i A T" }}: {{ game.awayTeamName }} at {{ game.homeTeamName }}{% if game.broadcast %} | TV: {{ game.broadcast }}{% endif %}{% if game.spread is not None %} | Spread: {{ game.spread }}{% endif %}{% if game.overUnder is not None %} | O/U: {{ game.overUnder }}{% endif %}{% if game.weatherCondition %} | Weather: {{ game.weatherCondition }}{% if game.temperature %}, {{ game.temperature }}F{% endif %}{% endif %}
+{% endfor %}
+
+You are receiving this because email notifications are enabled on your profile and your account is active.
+{% if preview %}This is a preview email generated from the superadmin console.{% endif %}

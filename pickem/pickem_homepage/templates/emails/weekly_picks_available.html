@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<body style="margin:0; padding:0; background:#f3f6fb; font-family:'Segoe UI',Helvetica,Arial,sans-serif; color:#111827;">
+  <div style="max-width:700px; margin:0 auto; padding:24px 16px;">
+    <div style="background:linear-gradient(135deg,#0b3d91,#1d4ed8); border-radius:20px 20px 0 0; padding:28px 28px 20px; color:#ffffff;">
+      <img src="{{ logo_url }}" alt="Family Pick'em" style="height:48px; width:auto; display:block; margin:0 0 16px;">
+      <div style="font-size:13px; letter-spacing:0.08em; text-transform:uppercase; opacity:0.8;">Family Pick'em</div>
+      <h1 style="margin:8px 0 10px; font-size:30px; line-height:1.15;">Picks for Week {{ week }} are available</h1>
+      <p style="margin:0; font-size:16px; line-height:1.6; color:rgba(255,255,255,0.88);">
+        {% if family %}{{ family.name }}{% else %}Your league{% endif %} is ready for Week {{ week }}. Lock in your picks before kickoff.
+      </p>
+    </div>
+
+    <div style="background:#ffffff; border:1px solid #dbe4f0; border-top:0; border-radius:0 0 20px 20px; padding:24px 28px 28px;">
+      <div style="margin-bottom:22px; padding:18px 20px; border-radius:16px; background:#eff6ff; border:1px solid #bfdbfe;">
+        <div style="font-size:14px; color:#1d4ed8; font-weight:700; margin-bottom:6px;">Quick link</div>
+        <div style="font-size:15px; color:#334155; line-height:1.6; margin-bottom:14px;">
+          {% if pool %}Pool: {{ pool.name }}<br>{% endif %}
+          Picks are opened from your earliest joined active family.
+        </div>
+        <a href="{{ picks_link }}" style="display:inline-block; background:#0b3d91; color:#ffffff; text-decoration:none; font-weight:700; padding:12px 18px; border-radius:999px;">Open picks page</a>
+      </div>
+
+      <div style="font-size:18px; font-weight:800; color:#0f172a; margin-bottom:14px;">This week's games</div>
+      {% for game in games %}
+      <div style="border:1px solid #e5e7eb; border-radius:18px; padding:16px 18px; margin-bottom:14px;">
+        <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:#64748b; margin-bottom:10px;">
+          {{ game.startTimestamp|date:"D, M j · g:i A T" }}
+        </div>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+          <tr>
+            <td style="width:42%; vertical-align:middle;">
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="padding-right:10px;"><img src="{{ game.away_logo }}" alt="{{ game.awayTeamName }} logo" style="width:38px; height:38px; object-fit:contain;"></td>
+                  <td style="font-size:16px; font-weight:700; color:#0f172a;">{{ game.awayTeamName }}</td>
+                </tr>
+              </table>
+            </td>
+            <td style="width:16%; text-align:center; font-size:12px; font-weight:800; color:#94a3b8;">AT</td>
+            <td style="width:42%; vertical-align:middle;">
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin-left:auto;">
+                <tr>
+                  <td style="font-size:16px; font-weight:700; color:#0f172a; text-align:right;">{{ game.homeTeamName }}</td>
+                  <td style="padding-left:10px;"><img src="{{ game.home_logo }}" alt="{{ game.homeTeamName }} logo" style="width:38px; height:38px; object-fit:contain;"></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <div style="margin-top:12px; font-size:13px; line-height:1.7; color:#475569;">
+          {% if game.broadcast %}<strong>TV:</strong> {{ game.broadcast }}{% endif %}
+          {% if game.spread is not None %}{% if game.broadcast %} &nbsp;•&nbsp; {% endif %}<strong>Spread:</strong> {{ game.spread }}{% endif %}
+          {% if game.overUnder is not None %} &nbsp;•&nbsp; <strong>O/U:</strong> {{ game.overUnder }}{% endif %}
+          {% if game.weatherCondition %}<br><strong>Weather:</strong> {{ game.weatherCondition }}{% if game.temperature %}, {{ game.temperature }}&deg;F{% endif %}{% endif %}
+          {% if game.venueIndoor %}<br><strong>Venue:</strong> Indoors{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div style="margin-top:22px; font-size:13px; line-height:1.7; color:#64748b;">
+        You are receiving this because email notifications are enabled on your profile and your account is active.
+        {% if preview %}This is a preview email generated from the superadmin console.{% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
