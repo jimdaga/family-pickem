@@ -3089,6 +3089,22 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.smith_member.profile.refresh_from_db()
         self.assertFalse(self.smith_member.profile.private_profile)
 
+    def test_profile_page_exposes_live_email_notifications_toggle(self):
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(reverse("profile"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="emailNotifications"')
+        self.assertNotContains(
+            response,
+            'id="emailNotifications" data-setting="email_notifications" disabled',
+        )
+        self.assertContains(
+            response,
+            'Receive weekly pick reminders when your account is eligible',
+        )
+
     def test_profile_ajax_settings_reject_invalid_boolean_values_without_raw_errors(self):
         self.client.force_login(self.smith_member)
 

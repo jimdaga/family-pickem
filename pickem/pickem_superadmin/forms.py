@@ -1,7 +1,7 @@
 from django import forms
 
 from pickem_api.models import Family, PoolSettings, ScheduledJobConfig, Teams
-from pickem_superadmin.models import EmailProviderSettings
+from pickem_superadmin.models import EmailNotificationCampaign, EmailProviderSettings
 
 CELL = 'sa-select w-full !py-1'
 NUM_CELL = 'sa-input w-16 !px-2 !py-1 sa-num text-center'
@@ -123,4 +123,72 @@ class EmailTestSendForm(forms.Form):
     to_email = forms.EmailField(
         widget=forms.EmailInput(attrs={'class': 'sa-input w-full'}),
         help_text='Sends a one-off verification email using the currently saved provider settings.',
+    )
+
+
+class EmailNotificationCampaignForm(forms.ModelForm):
+    class Meta:
+        model = EmailNotificationCampaign
+        fields = (
+            'enabled',
+            'weekday',
+            'hour',
+            'minute',
+            'timezone_name',
+            'rollout_mode',
+            'allowlist_emails',
+            'family_link_strategy',
+        )
+        widgets = {
+            'timezone_name': forms.TextInput(attrs={'class': 'sa-input w-full'}),
+            'rollout_mode': forms.Select(attrs={'class': 'sa-select w-full'}),
+            'family_link_strategy': forms.Select(attrs={'class': 'sa-select w-full'}),
+            'allowlist_emails': forms.Textarea(attrs={'class': 'sa-textarea w-full', 'rows': 3}),
+        }
+
+    WEEKDAY_CHOICES = (
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday'),
+    )
+
+    weekday = forms.TypedChoiceField(
+        choices=WEEKDAY_CHOICES,
+        coerce=int,
+        widget=forms.Select(attrs={'class': 'sa-select w-full'}),
+    )
+    hour = forms.IntegerField(
+        min_value=0,
+        max_value=23,
+        widget=forms.NumberInput(attrs={'class': 'sa-input w-full', 'min': 0, 'max': 23}),
+        help_text='24-hour clock in the configured timezone.',
+    )
+    minute = forms.IntegerField(
+        min_value=0,
+        max_value=59,
+        widget=forms.NumberInput(attrs={'class': 'sa-input w-full', 'min': 0, 'max': 59}),
+    )
+
+    def clean_allowlist_emails(self):
+        cleaned = [
+            email.strip().lower()
+            for email in (self.cleaned_data.get('allowlist_emails') or '').replace('\n', ',').split(',')
+            if email.strip()
+        ]
+        return ', '.join(cleaned)
+
+
+class WeeklyPicksPreviewForm(forms.Form):
+    to_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={'class': 'sa-input w-full'}),
+        help_text='Where to send the preview email.',
+    )
+    sample_user_email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'sa-input w-full'}),
+        help_text='Optional: render the email as this user. Defaults to the first eligible member.',
     )

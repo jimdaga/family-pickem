@@ -35,6 +35,9 @@ class SuperAdminAuditLog(models.Model):
         SCHEDULE_UPDATED = 'schedule_updated', 'Job schedule updated'
         EMAIL_SETTINGS_UPDATED = 'email_settings_updated', 'Email settings updated'
         EMAIL_TEST_SENT = 'email_test_sent', 'Email test sent'
+        EMAIL_CAMPAIGN_UPDATED = 'email_campaign_updated', 'Email campaign updated'
+        EMAIL_CAMPAIGN_SENT = 'email_campaign_sent', 'Email campaign sent'
+        EMAIL_PREVIEW_SENT = 'email_preview_sent', 'Email preview sent'
 
     actor = models.ForeignKey(
         User, on_delete=models.SET_NULL, related_name='superadmin_audit_logs',
@@ -160,3 +163,83 @@ class EmailProviderSettings(models.Model):
         if len(raw) <= 8:
             return '•' * len(raw)
         return f"{raw[:4]}{'•' * max(len(raw) - 8, 4)}{raw[-4:]}"
+
+
+class EmailNotificationCampaign(models.Model):
+    WEEKDAY_LABELS = {
+        0: 'Monday',
+        1: 'Tuesday',
+        2: 'Wednesday',
+        3: 'Thursday',
+        4: 'Friday',
+        5: 'Saturday',
+        6: 'Sunday',
+    }
+    class CampaignKey(models.TextChoices):
+        WEEKLY_PICKS_AVAILABLE = 'weekly_picks_available', 'Weekly picks available'
+
+    class RolloutMode(models.TextChoices):
+        ALLOWLIST = 'allowlist', 'Allowlist only'
+        ALL_ENABLED_USERS = 'all_enabled_users', 'All eligible users'
+
+    class FamilyLinkStrategy(models.TextChoices):
+        EARLIEST_MEMBERSHIP = 'earliest_membership', 'Earliest joined family'
+
+    campaign_key = models.CharField(
+        max_length=50,
+        unique=True,
+        choices=CampaignKey.choices,
+    )
+    enabled = models.BooleanField(default=False)
+    weekday = models.PositiveSmallIntegerField(default=2)
+    hour = models.PositiveSmallIntegerField(default=9)
+    minute = models.PositiveSmallIntegerField(default=0)
+    timezone_name = models.CharField(max_length=64, default='America/New_York')
+    rollout_mode = models.CharField(
+        max_length=50,
+        choices=RolloutMode.choices,
+        default=RolloutMode.ALLOWLIST,
+    )
+    allowlist_emails = models.TextField(
+        blank=True,
+        default='jdagostino2@gmail.com',
+        help_text='Comma-separated email allowlist for safe rollout and testing.',
+    )
+    family_link_strategy = models.CharField(
+        max_length=50,
+        choices=FamilyLinkStrategy.choices,
+        default=FamilyLinkStrategy.EARLIEST_MEMBERSHIP,
+    )
+    last_sent_season = models.IntegerField(blank=True, null=True)
+    last_sent_week = models.PositiveSmallIntegerField(blank=True, null=True)
+    last_sent_at = models.DateTimeField(blank=True, null=True)
+    last_sent_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['campaign_key']
+        verbose_name = 'Email notification campaign'
+        verbose_name_plural = 'Email notification campaigns'
+
+    def __str__(self):
+        return self.get_campaign_key_display()
+
+    @classmethod
+    def load_weekly_picks(cls):
+        obj, _created = cls.objects.get_or_create(
+            campaign_key=cls.CampaignKey.WEEKLY_PICKS_AVAILABLE,
+        )
+        return obj
+
+    @property
+    def allowlist(self):
+        return [
+            email.strip().lower()
+            for email in (self.allowlist_emails or '').split(',')
+            if email.strip()
+        ]
+
+    @property
+    def weekday_label(self):
+        return self.WEEKDAY_LABELS.get(self.weekday, str(self.weekday))

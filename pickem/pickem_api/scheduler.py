@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 # How often to run the pipeline, in minutes (matches the old */1 K8s CronJob).
 UPDATE_INTERVAL_MINUTES = 1
 RECORDS_INTERVAL_MINUTES = 30
+EMAIL_CAMPAIGN_INTERVAL_MINUTES = 15
 
 # A marker older than this is treated as a crash between submit and finish, so
 # the UI never gets stuck showing "running" forever.
@@ -93,6 +94,13 @@ def run_prune_logs():
     call_command('prune_superadmin_logs')
 
 
+def run_scheduled_email_campaigns():
+    """Job target: evaluate and send due email campaigns."""
+    from pickem_homepage.emailing import send_due_email_campaigns
+
+    send_due_email_campaigns()
+
+
 # The recurring jobs whose cadence is editable from the superadmin console.
 # The console reads this to know which jobs exist and their seed defaults;
 # start() and reschedule_live() read it to (re)register those jobs. Keep this
@@ -109,6 +117,11 @@ JOB_REGISTRY = {
         'func': run_update_records,
         'name': 'Run team records refresh',
         'default_minutes': RECORDS_INTERVAL_MINUTES,
+    },
+    'send_scheduled_email_campaigns': {
+        'func': run_scheduled_email_campaigns,
+        'name': 'Evaluate scheduled email campaigns',
+        'default_minutes': EMAIL_CAMPAIGN_INTERVAL_MINUTES,
     },
 }
 
