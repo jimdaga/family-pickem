@@ -7626,3 +7626,143 @@ class TeamBrandPresentationFilterTests(TestCase):
         self.assertTrue(presentation["show_white_burst"])
         self.assertIn("drop-shadow", presentation["logo_style"])
         self.assertIn("rgba(255, 255, 255", presentation["logo_style"])
+
+
+class PicksLockForPoolModeTests(TestCase):
+    def _future_game(self):
+        return GamesAndScores.objects.create(
+            id=990001,
+            slug="aaa-bbb-2425-week-1",
+            gameseason=2425,
+            gameWeek='1',
+            gameyear="2024",
+            competition='nfl',
+            statusType='notstarted',
+            statusTitle='Scheduled',
+            startTimestamp=timezone.now() + timedelta(days=2),
+            awayTeamSlug='aaa',
+            awayTeamId=1,
+            awayTeamName='Aaa Team',
+            homeTeamSlug='bbb',
+            homeTeamId=2,
+            homeTeamName='Bbb Team',
+        )
+
+    def test_sunday_1pm_mode_uses_week_rule(self):
+        from pickem.utils import is_pick_locked_for_pool
+        fam = Family.objects.create(name="M", slug="m")
+        pool = Pool.objects.create(family=fam, name="p", slug="p", season=2425)
+        PoolSettings.objects.create(pool=pool, picks_lock_mode=PoolSettings.PicksLockMode.SUNDAY_1PM)
+        game = self._future_game()
+        locked, _reason = is_pick_locked_for_pool(game, pool)
+        self.assertFalse(locked)  # future game, before any cutoff
+
+    def test_kickoff_mode_future_game_unlocked(self):
+        from pickem.utils import is_pick_locked_for_pool
+        fam = Family.objects.create(name="K", slug="k")
+        pool = Pool.objects.create(family=fam, name="p", slug="p", season=2425)
+        PoolSettings.objects.create(pool=pool, picks_lock_mode=PoolSettings.PicksLockMode.KICKOFF)
+        game = self._future_game()
+        locked, _reason = is_pick_locked_for_pool(game, pool)
+        self.assertFalse(locked)
+
+    def test_sunday_1pm_mode_locks_late_game_before_its_own_kickoff(self):
+        """Discriminates the two modes: a "late" game (after the week's Sunday
+        1PM ET cutoff) that hasn't kicked off yet must be locked under
+        SUNDAY_1PM but would NOT be locked under KICKOFF (see test below).
+        """
+        from pickem.utils import is_pick_locked_for_pool
+        fam = Family.objects.create(name="S1", slug="s1")
+        pool = Pool.objects.create(family=fam, name="p", slug="p", season=2425)
+        PoolSettings.objects.create(pool=pool, picks_lock_mode=PoolSettings.PicksLockMode.SUNDAY_1PM)
+
+        # Anchor game fixes the week's Sunday 1PM ET cutoff safely in the past
+        # (2020-01-05 is a Sunday) so "now" is always past it.
+        anchor = GamesAndScores.objects.create(
+            id=990002,
+            slug="anchor-990002",
+            gameseason=2425,
+            gameWeek='1',
+            gameyear="2024",
+            competition='nfl',
+            statusType='finished',
+            statusTitle='Final',
+            startTimestamp=timezone.make_aware(timezone.datetime(2020, 1, 5, 12, 0)),
+            awayTeamSlug='ccc',
+            awayTeamId=3,
+            awayTeamName='Ccc Team',
+            homeTeamSlug='ddd',
+            homeTeamId=4,
+            homeTeamName='Ddd Team',
+        )
+        # Target "late" game: kickoff hasn't happened yet, but the week's
+        # Sunday 1PM ET cutoff (anchored above) has already passed.
+        late_game = GamesAndScores.objects.create(
+            id=990003,
+            slug="late-990003",
+            gameseason=2425,
+            gameWeek='1',
+            gameyear="2024",
+            competition='nfl',
+            statusType='notstarted',
+            statusTitle='Scheduled',
+            startTimestamp=timezone.now() + timedelta(hours=2),
+            awayTeamSlug='eee',
+            awayTeamId=5,
+            awayTeamName='Eee Team',
+            homeTeamSlug='fff',
+            homeTeamId=6,
+            homeTeamName='Fff Team',
+        )
+
+        locked, reason = is_pick_locked_for_pool(late_game, pool, week_games=[anchor, late_game])
+        self.assertTrue(locked)
+        self.assertIn("Sunday 1PM", reason)
+
+    def test_kickoff_mode_does_not_lock_late_game_before_its_own_kickoff(self):
+        """Same 'late game' shape as above, but under KICKOFF mode the game
+        must stay unlocked until its own kickoff, regardless of any weekly
+        cutoff — proving the branch genuinely reads picks_lock_mode."""
+        from pickem.utils import is_pick_locked_for_pool
+        fam = Family.objects.create(name="K1", slug="k1")
+        pool = Pool.objects.create(family=fam, name="p", slug="p", season=2425)
+        PoolSettings.objects.create(pool=pool, picks_lock_mode=PoolSettings.PicksLockMode.KICKOFF)
+
+        anchor = GamesAndScores.objects.create(
+            id=990004,
+            slug="anchor-990004",
+            gameseason=2425,
+            gameWeek='1',
+            gameyear="2024",
+            competition='nfl',
+            statusType='finished',
+            statusTitle='Final',
+            startTimestamp=timezone.make_aware(timezone.datetime(2020, 1, 5, 12, 0)),
+            awayTeamSlug='ggg',
+            awayTeamId=7,
+            awayTeamName='Ggg Team',
+            homeTeamSlug='hhh',
+            homeTeamId=8,
+            homeTeamName='Hhh Team',
+        )
+        late_game = GamesAndScores.objects.create(
+            id=990005,
+            slug="late-990005",
+            gameseason=2425,
+            gameWeek='1',
+            gameyear="2024",
+            competition='nfl',
+            statusType='notstarted',
+            statusTitle='Scheduled',
+            startTimestamp=timezone.now() + timedelta(hours=2),
+            awayTeamSlug='iii',
+            awayTeamId=9,
+            awayTeamName='Iii Team',
+            homeTeamSlug='jjj',
+            homeTeamId=10,
+            homeTeamName='Jjj Team',
+        )
+
+        locked, reason = is_pick_locked_for_pool(late_game, pool, week_games=[anchor, late_game])
+        self.assertFalse(locked)
+        self.assertEqual(reason, "Game not started yet")
