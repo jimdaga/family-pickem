@@ -1392,7 +1392,7 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
         ],
         'rule_choice_fields': [
             form['pick_type'], form['missed_pick_policy'],
-            form['late_join_policy'], form['payout_structure'],
+            form['late_join_policy'],
         ],
     }
     return render(request, 'pickem/family_admin_settings.html', context)

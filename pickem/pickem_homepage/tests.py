@@ -7909,3 +7909,21 @@ class PicksPageLockFilterTests(TestCase):
         self.assertIn('is_game_locked_for_pool:pool', tpl)
         # The old kickoff-only gate must be gone from the team-option cards.
         self.assertNotIn("game.statusType != 'notstarted' or auth_required", tpl)
+
+
+class PayoutGroupingTests(TestCase):
+    def test_payout_not_in_generic_choice_loop(self):
+        import pathlib
+        tpl = pathlib.Path('pickem_homepage/templates/pickem/family_admin_settings.html').read_text()
+        # payout_structure must render inside the entry-fee card, keyed by name.
+        self.assertIn('form.payout_structure', tpl)
+        # And the entry-fee card must contain the payout wrapper marker.
+        self.assertIn('data-payout-group', tpl)
+
+        from pickem_homepage import views
+        # The generic rule_choice_fields loop (rendered for family_admin_settings.html)
+        # must no longer include payout_structure — it's grouped under Entry Fee instead.
+        source = pathlib.Path(views.__file__).read_text()
+        settings_view_block = source.split("def family_pool_admin_settings(")[1]
+        rule_choice_fields_snippet = settings_view_block.split("'rule_choice_fields':")[1][:200]
+        self.assertNotIn("payout_structure", rule_choice_fields_snippet)
