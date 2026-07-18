@@ -1982,3 +1982,17 @@ class ApiEndpointAuthorizationTests(TestCase):
                     self.client.get(path), "victim@example.com",
                     status_code=403,
                 )
+
+
+class PicksLockModeTests(TestCase):
+    def test_default_mode_is_kickoff(self):
+        from pickem_api.models import Family, Pool, PoolSettings
+        fam = Family.objects.create(name="LockFam", slug="lockfam")
+        pool = Pool.objects.create(family=fam, name="P", slug="p", season=2425)
+        settings = PoolSettings.objects.create(pool=pool)
+        self.assertEqual(settings.picks_lock_mode, PoolSettings.PicksLockMode.KICKOFF)
+
+    def test_mode_choices(self):
+        from pickem_api.models import PoolSettings
+        values = {c[0] for c in PoolSettings.PicksLockMode.choices}
+        self.assertEqual(values, {"kickoff", "sunday_1pm"})
