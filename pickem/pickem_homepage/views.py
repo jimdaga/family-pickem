@@ -2246,19 +2246,22 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
                 seen.add(e)
                 emails.append(e)
 
+        if not emails:
+            messages.error(request, "Enter at least one email address to invite.")
+            return render_family_admin_invites(request, tenant_context, form, status=400)
+
         role = form.cleaned_data['role']
         expires_in_days = form.cleaned_data['expires_in_days']
 
         created = []
         skipped_invalid = []
         with transaction.atomic():
-            for email in (emails or ['']):  # '' preserves the no-recipient single-invite path
-                if email:
-                    try:
-                        validate_email(email)
-                    except DjangoValidationError:
-                        skipped_invalid.append(email)
-                        continue
+            for email in emails:
+                try:
+                    validate_email(email)
+                except DjangoValidationError:
+                    skipped_invalid.append(email)
+                    continue
                 invitation, raw_code = create_admin_invitation(
                     family=tenant_context.family,
                     pool=tenant_context.pool,

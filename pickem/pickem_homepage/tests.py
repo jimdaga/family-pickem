@@ -5891,6 +5891,34 @@ class BatchInviteTests(TestCase):
         self.assertContains(response, "Skipped")
         self.assertContains(response, "not-an-email")
 
+    def test_all_blank_emails_creates_no_invite_and_400s(self):
+        before_count = FamilyInvitation.objects.filter(family=self.family).count()
+
+        response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.MEMBER,
+                "recipient_email": ["", "   "],
+                "expires_in_days": "14",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            FamilyInvitation.objects.filter(family=self.family).count(),
+            before_count,
+        )
+        self.assertContains(
+            response,
+            "Enter at least one email address to invite.",
+            status_code=400,
+        )
+        # No blank-recipient invite should have been created, so the
+        # per-invite email feedback message (which would otherwise render
+        # "Invite email will be sent to None.") must never appear.
+        self.assertNotContains(response, "sent to None", status_code=400)
+        self.assertNotContains(response, "saved for None", status_code=400)
+
 
 class CreateFamilyFlowTests(TestCase):
     @classmethod
