@@ -3,6 +3,7 @@ from io import BytesIO, StringIO
 from importlib import import_module
 import json
 import tempfile
+from types import SimpleNamespace
 from unittest.mock import ANY, patch
 
 from django.contrib import admin
@@ -12,6 +13,7 @@ from django.contrib.sites.models import Site
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.storage import FileSystemStorage
+from django.core.files.uploadhandler import StopUpload
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.http import Http404, HttpResponse
@@ -6639,6 +6641,23 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         data = BytesIO()
         Image.new('RGB', (24, 12), 'red').save(data, format='PNG')
         return SimpleUploadedFile('untrusted-name.png', data.getvalue(), content_type='image/png')
+
+    def test_streaming_handler_marks_and_aborts_only_after_exact_five_mib(self):
+        from pickem_homepage.upload_handlers import (
+            FamilyLogoUploadSizeLimitHandler,
+            MAX_FAMILY_LOGO_UPLOAD_BYTES,
+        )
+
+        request = SimpleNamespace()
+        handler = FamilyLogoUploadSizeLimitHandler(request)
+        handler.new_file('logo', 'untrusted.png', 'image/png', None)
+        self.assertEqual(
+            handler.receive_data_chunk(b'x' * MAX_FAMILY_LOGO_UPLOAD_BYTES, 0),
+            b'x' * MAX_FAMILY_LOGO_UPLOAD_BYTES,
+        )
+        with self.assertRaises(StopUpload):
+            handler.receive_data_chunk(b'x', MAX_FAMILY_LOGO_UPLOAD_BYTES)
+        self.assertEqual(request._family_logo_upload_error, 'file_too_large')
 
     def test_admin_uploads_only_canonical_logo_and_settings_template_is_multipart(self):
         self.client.force_login(self.admin_user)
