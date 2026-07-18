@@ -21,7 +21,7 @@
 
 ### Private Storage And Deployment
 
-- [ ] **S3-01**: Processed logos are stored under a server-derived `family-logos/` prefix in the existing private `family-pickem` S3 bucket in `us-east-1`.
+- [x] **S3-01**: Processed logos are stored under a server-derived `family-logos/` prefix in the existing private `family-pickem` S3 bucket in `us-east-1`.
 - [ ] **S3-02**: Application S3 permissions are least-privilege and prefix-limited; public ACL/policy access and object ownership bypasses are not introduced.
 - [ ] **S3-03**: The application receives S3 configuration and credentials through AWS Secrets Manager and the existing External Secrets Operator/Kubernetes flow, with no credentials committed to Git or manually managed Kubernetes Secrets.
 - [ ] **S3-04**: The application delivers only controlled, correctly typed processed assets; uploaded originals are neither retained nor served from the application origin.
@@ -62,7 +62,7 @@
 | IMG-02 | Phase 6 | Complete |
 | IMG-03 | Phase 6 | Complete |
 | IMG-04 | Phase 6 | Pending |
-| S3-01 | Phase 6 | Pending |
+| S3-01 | Phase 6 | Complete |
 | S3-02 | Phase 8 | Pending |
 | S3-03 | Phase 8 | Pending |
 | S3-04 | Phase 7 | Pending |
