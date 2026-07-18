@@ -21,15 +21,21 @@
 
 ---
 
-### Task 1: Picks-lock mode — model field + data migration
+### Task 1: Picks-lock mode — model field + data migration (EXPAND phase)
+
+> **Expand/contract:** This task ADDS `picks_lock_mode` and backfills it, but
+> KEEPS `picks_lock_at_kickoff`. A field rename is atomic — removing the boolean
+> here breaks `PoolSettingsRowForm`/`admin.py` at import time and crashes the
+> whole suite. Tasks 2–5 migrate every consumer to the new field; **Task 18
+> (contract)** removes the boolean once nothing references it.
 
 **Files:**
-- Modify: `pickem/pickem_api/models.py:200-223` (add `PicksLockMode`, replace `picks_lock_at_kickoff`)
-- Create: `pickem/pickem_api/migrations/00NN_picks_lock_mode.py` (schema + data)
+- Modify: `pickem/pickem_api/models.py:200-223` (add `PicksLockMode` + `picks_lock_mode`; keep `picks_lock_at_kickoff`)
+- Create: `pickem/pickem_api/migrations/00NN_picks_lock_mode.py` (AddField + data backfill; NO RemoveField)
 - Test: `pickem/pickem_api/tests.py` (append)
 
 **Interfaces:**
-- Produces: `PoolSettings.PicksLockMode` (`.KICKOFF = 'kickoff'`, `.SUNDAY_1PM = 'sunday_1pm'`); `PoolSettings.picks_lock_mode` CharField (default `KICKOFF`). Removes `PoolSettings.picks_lock_at_kickoff`.
+- Produces: `PoolSettings.PicksLockMode` (`.KICKOFF = 'kickoff'`, `.SUNDAY_1PM = 'sunday_1pm'`); `PoolSettings.picks_lock_mode` CharField (default `KICKOFF`), backfilled from `picks_lock_at_kickoff` (`True→kickoff`, `False→sunday_1pm`). `picks_lock_at_kickoff` REMAINS on the model until Task 18.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -62,7 +68,8 @@ In `pickem/pickem_api/models.py`, add the enum near the other choice classes (af
         KICKOFF = 'kickoff', 'Lock each game at kickoff'
         SUNDAY_1PM = 'sunday_1pm', 'Weekly cutoff — Sunday 1PM ET'
 ```
-Replace the `picks_lock_at_kickoff` field (lines 220-223) with:
+Add the new field right after the existing `picks_lock_at_kickoff` field (keep
+the boolean in place — do NOT delete it):
 ```python
     picks_lock_mode = models.CharField(
         max_length=16,
@@ -75,7 +82,7 @@ Replace the `picks_lock_at_kickoff` field (lines 220-223) with:
 - [ ] **Step 4: Create the migration**
 
 Run: `python manage.py makemigrations pickem_api --name picks_lock_mode`
-Then edit the generated migration to add a data-migration step BEFORE the `RemoveField`. The operations list must be: `AddField(picks_lock_mode)`, then `RunPython(backfill, reverse)`, then `RemoveField(picks_lock_at_kickoff)`. Insert:
+Then edit the generated migration so the operations are exactly: `AddField(picks_lock_mode)`, then `RunPython(backfill, reverse)`. **Do NOT add a `RemoveField` — the boolean stays.** Insert:
 ```python
 def backfill_lock_mode(apps, schema_editor):
     PoolSettings = apps.get_model('pickem_api', 'PoolSettings')
@@ -87,7 +94,7 @@ def reverse_lock_mode(apps, schema_editor):
     PoolSettings.objects.filter(picks_lock_mode='sunday_1pm').update(picks_lock_at_kickoff=False)
     PoolSettings.objects.filter(picks_lock_mode='kickoff').update(picks_lock_at_kickoff=True)
 ```
-Wire it as `migrations.RunPython(backfill_lock_mode, reverse_lock_mode)` positioned between the add and remove operations. (If `makemigrations` splits add/remove, keep them in one file in that order.)
+Wire it as `migrations.RunPython(backfill_lock_mode, reverse_lock_mode)` positioned right after the `AddField`. There is no remove operation in this migration.
 
 - [ ] **Step 5: Run migrations + test to verify pass**
 
@@ -251,6 +258,13 @@ In `pickem/pickem_homepage/forms.py`, replace the `picks_lock_at_kickoff` Boolea
 
 In `pickem/pickem_homepage/views.py`, change the first entry of `ADMIN_POOL_SETTINGS_FIELDS` from `'picks_lock_at_kickoff',` to `'picks_lock_mode',`.
 
+**Also update existing tests broken by the form swap.** Run
+`grep -rn picks_lock_at_kickoff pickem_homepage/tests.py`. For any test that
+submits or asserts on the `picks_lock_at_kickoff` **form field** (settings POST
+or create-family POST), switch it to submit `picks_lock_mode` with a valid choice
+(`'kickoff'` or `'sunday_1pm'`). Leave alone any test that only sets the MODEL
+field `picks_lock_at_kickoff=...` — that field still exists until Task 18.
+
 - [ ] **Step 5: Edit the settings template**
 
 In `family_admin_settings.html`, replace the block that renders `{{ form.picks_lock_at_kickoff }}` (around line 74-84) with a labeled select. Replace the checkbox `<label>` wrapper for pick locking with:
@@ -375,6 +389,13 @@ In `pickem/pickem_superadmin/forms.py`, in `PoolSettingsRowForm.Meta.fields`, re
 ```python
             'picks_lock_mode': forms.Select(attrs={'class': CELL}),
 ```
+
+**Also update existing superadmin tests broken by the form swap.** Run
+`grep -rn picks_lock_at_kickoff pickem_superadmin/tests/`. In
+`tests/test_pools.py` and `tests/test_matrix.py`, any test that posts the
+`picks_lock_at_kickoff` **form field** (prefixed matrix POST) must switch to
+`picks_lock_mode` with a valid choice value. The model field still exists until
+Task 18, so only the form-field references need changing.
 
 - [ ] **Step 4: Edit pools.html**
 
@@ -1182,6 +1203,51 @@ In the browser, exercise: settings pick-locking dropdown, picks page lock behavi
 - [ ] **Step 3: Final commit if any touch-ups**
 ```bash
 git add -A && git commit -m "chore: final verification touch-ups for nits batch
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 18: Contract — remove legacy `picks_lock_at_kickoff`
+
+> Run this **after Task 5** (all runtime consumers migrated to `picks_lock_mode`).
+> By now only the model field, `admin.py`, and a few tests still name the boolean.
+
+**Files:**
+- Modify: `pickem/pickem_api/models.py` (remove `picks_lock_at_kickoff` field)
+- Modify: `pickem/pickem_api/admin.py:71-72` (remove from `PoolSettingsAdmin.list_display` / `list_filter`, add `picks_lock_mode` if desired)
+- Create: `pickem/pickem_api/migrations/00NN_remove_picks_lock_at_kickoff.py`
+- Modify: any test still constructing the model with `picks_lock_at_kickoff=...`
+
+- [ ] **Step 1: Confirm no runtime consumers remain**
+
+Run: `grep -rn "picks_lock_at_kickoff" pickem/pickem_api pickem/pickem_homepage pickem/pickem_superadmin pickem/pickem`
+Expected remaining hits ONLY in: `models.py` (the field), `admin.py` (list_display/list_filter), the backfill migration `0090` (its RunPython references — leave those, historical), and test files that set the model attr. If any runtime `.py` (views/forms/utils/templates) still reads it, STOP — that consumer's task didn't land; report it.
+
+- [ ] **Step 2: Remove the field + fix admin**
+
+Delete the `picks_lock_at_kickoff` field from `PoolSettings`. In `pickem_api/admin.py`, remove `'picks_lock_at_kickoff'` from `PoolSettingsAdmin.list_display` and `list_filter` (replace with `'picks_lock_mode'` in both).
+
+- [ ] **Step 3: Update remaining tests**
+
+Run: `grep -rn "picks_lock_at_kickoff" pickem/pickem_homepage/tests.py pickem/pickem_api/tests.py pickem/pickem_superadmin/tests/`
+For any test that sets the model attr `picks_lock_at_kickoff=...`, switch to `picks_lock_mode=PoolSettings.PicksLockMode.KICKOFF` (or `SUNDAY_1PM` where the test intended the non-kickoff behavior — `True` → `KICKOFF`, `False` → `SUNDAY_1PM`).
+
+- [ ] **Step 4: Make the migration**
+
+Run: `python manage.py makemigrations pickem_api --name remove_picks_lock_at_kickoff`
+Confirm it contains a single `RemoveField(model_name='poolsettings', name='picks_lock_at_kickoff')`.
+
+- [ ] **Step 5: Migrate + full suite**
+
+Run: `python manage.py migrate --settings=pickem.test_settings && python manage.py test --settings=pickem.test_settings`
+Expected: PASS, no `picks_lock_at_kickoff` references left in runtime code.
+
+- [ ] **Step 6: Commit**
+```bash
+git add pickem/pickem_api/models.py pickem/pickem_api/admin.py pickem/pickem_api/migrations/ pickem/pickem_homepage/tests.py pickem/pickem_api/tests.py pickem/pickem_superadmin/tests/
+git commit -m "refactor(picks): remove legacy picks_lock_at_kickoff (contract phase)
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
