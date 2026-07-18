@@ -5260,6 +5260,32 @@ class FamilyAdminExperienceTests(TestCase):
         invite.refresh_from_db()
         self.assertFalse(invite.is_revoked)
 
+    def test_create_invite_rejected_when_entries_locked(self):
+        settings = self.pool.settings
+        settings.late_join_policy = PoolSettings.LateJoinPolicy.LOCK_AFTER_WEEK_1
+        settings.save(update_fields=["late_join_policy"])
+        self.client.force_login(self.owner)
+        before_count = FamilyInvitation.objects.count()
+
+        with patch("pickem_api.weekly_winners.week_is_complete", return_value=True):
+            response = self.client.post(
+                self._invites_url(),
+                {
+                    "role": FamilyMembership.Role.MEMBER,
+                    "recipient_email": "blocked@example.com",
+                    "expires_in_days": "14",
+                },
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTemplateUsed(response, "pickem/family_admin_invites.html")
+        self.assertEqual(FamilyInvitation.objects.count(), before_count)
+        self.assertContains(
+            response,
+            "Entries are locked for this pool, so new invites can&#x27;t be created.",
+            status_code=400,
+        )
+
     def test_manual_pick_page_lists_current_family_users_and_current_pool_games(self):
         current_game = self._admin_game(game_id=9601, week="1")
         other_week_game = self._admin_game(game_id=9602, week="2", home="mia", away="buf")

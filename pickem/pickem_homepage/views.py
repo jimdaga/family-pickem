@@ -2216,6 +2216,13 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
     )
 
     if request.method == 'POST':
+        if pool_entries_locked(tenant_context.pool):
+            messages.error(
+                request,
+                "Entries are locked for this pool, so new invites can't be created.",
+            )
+            return render_family_admin_invites(request, tenant_context, form, status=400)
+
         if not form.is_valid():
             return render_family_admin_invites(
                 request,

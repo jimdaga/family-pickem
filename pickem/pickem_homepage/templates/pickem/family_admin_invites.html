@@ -31,7 +31,7 @@
                 <i class="fas fa-lock mr-2"></i>Entries are locked
             </p>
             <p class="mt-1 text-sm text-amber-700 dark:text-amber-200/80">
-                This pool locks entries after Week 1, which is now complete. Invites can still be created for existing members, but new members won't be able to join. You can change this under Settings &rarr; Late join policy.
+                This pool locks entries after Week 1, which is now complete. New invites can no longer be created. You can change this under Settings &rarr; Late join policy.
             </p>
         </section>
         {% endif %}
@@ -52,6 +52,7 @@
         </section>
         {% endif %}
 
+        {% if not entries_locked %}
         <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm">
             <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
                 <h2 class="text-xl font-bold text-text-dark dark:text-white">Create Invite</h2>
@@ -91,6 +92,7 @@
                 </div>
             </form>
         </section>
+        {% endif %}
 
         <section class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden" data-testid="family-admin-invites">
             <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
