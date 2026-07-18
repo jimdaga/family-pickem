@@ -17,7 +17,7 @@
 - [x] **IMG-01**: The server accepts only decoder-verified JPEG, PNG, or WebP raster images; it rejects SVG, GIF, HTML, executables, unsupported formats, and spoofed extension/MIME claims.
 - [x] **IMG-02**: The server rejects uploads exceeding configured byte and pixel limits, including decompression-bomb inputs, before resource exhaustion can affect the application.
 - [x] **IMG-03**: The server validates crop inputs, removes original metadata/content by re-encoding, and persists only a generated fixed-size image asset with an application-generated name.
-- [ ] **IMG-04**: Logo mutations require the existing tenant-aware commissioner authorization and CSRF protection; user-supplied family IDs, object keys, URLs, and filenames cannot control storage or tenancy.
+- [x] **IMG-04**: Logo mutations require the existing tenant-aware commissioner authorization and CSRF protection; user-supplied family IDs, object keys, URLs, and filenames cannot control storage or tenancy.
 
 ### Private Storage And Deployment
 
@@ -61,7 +61,7 @@
 | IMG-01 | Phase 6 | Complete |
 | IMG-02 | Phase 6 | Complete |
 | IMG-03 | Phase 6 | Complete |
-| IMG-04 | Phase 6 | Pending |
+| IMG-04 | Phase 6 | Complete |
 | S3-01 | Phase 6 | Complete |
 | S3-02 | Phase 8 | Pending |
 | S3-03 | Phase 8 | Pending |
