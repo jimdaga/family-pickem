@@ -5,15 +5,15 @@ milestone_name: Family Logo Uploads
 current_phase: 06
 current_phase_name: secure-logo-foundation
 status: executing
-stopped_at: Phase 6 UI-SPEC approved
-last_updated: "2026-07-18T21:17:57.905Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-07-18T21:21:47.111Z"
 last_activity: 2026-07-18
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -221,6 +221,7 @@ See: `.planning/PROJECT.md`
 - [Phase 05-family-admin-experience]: 05-06: Week-winner admin uses explicit tenant admin URLs and family_member_required(admin) for browser access.
 - [Phase 05-family-admin-experience]: 05-06: Week numbers are validated as integers in 1..18 before constructing dynamic winner and bonus fields.
 - [Phase 05-family-admin-experience]: 05-06: Legacy commissioner page and JSON handlers deny globally instead of rendering or mutating global tools.
+- [Phase 06]: Image uploads use restricted decoder verification and fresh WebP canonicalization.
 
 ## Verification
 
@@ -294,9 +295,9 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 
 ## Session
 
-**Last session:** 2026-07-18T19:44:23.405Z
-**Stopped at:** Phase 6 UI-SPEC approved
-**Resume file:** .planning/phases/06-secure-logo-foundation/06-UI-SPEC.md
+**Last session:** 2026-07-18T21:21:43.278Z
+**Stopped at:** Completed 06-01-PLAN.md
+**Resume file:** None
 
 ## Performance Metrics
 
@@ -319,10 +320,11 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 | Phase 05-family-admin-experience P04 | 6min | 3 tasks | 6 files |
 | Phase 05-family-admin-experience P05 | 6min | 3 tasks | 5 files |
 | Phase 05-family-admin-experience P06 | 18min | 3 tasks | 7 files |
+| Phase 06 P01 | 7 min | 2 tasks | 4 files |
 
 ## Current Position
 
 Phase: 06 (secure-logo-foundation) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 06
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-07-18 — Phase 06 execution started
