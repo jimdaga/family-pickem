@@ -222,6 +222,15 @@ class PoolRulesForm(forms.Form):
 
 
 class FamilyAdminSettingsForm(PoolRulesForm):
+    logo = forms.FileField(
+        label="Family logo",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'accept': 'image/jpeg,image/png,image/webp',
+            'aria-describedby': 'family-logo-help family-logo-error',
+        }),
+    )
     family_name = forms.CharField(
         label="Family display name",
         max_length=200,
