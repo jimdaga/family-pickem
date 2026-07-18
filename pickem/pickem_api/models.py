@@ -221,10 +221,6 @@ class PoolSettings(models.Model):
         SECOND_GETS_FEE_BACK = 'second_gets_fee_back', '1st takes the pool, 2nd gets their entry fee back'
 
     pool = models.OneToOneField(Pool, on_delete=models.PROTECT, related_name='settings')
-    picks_lock_at_kickoff = models.BooleanField(
-        default=True,
-        help_text="Lock picks when each game starts",
-    )
     picks_lock_mode = models.CharField(
         max_length=16,
         choices=PicksLockMode.choices,

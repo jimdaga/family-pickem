@@ -1902,12 +1902,12 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self._active_membership(self.jones_player, self.jones_family)
         PoolSettings.objects.create(
             pool=self.smith_pool,
-            picks_lock_at_kickoff=False,
+            picks_lock_mode=PoolSettings.PicksLockMode.SUNDAY_1PM,
             allow_tiebreaker=True,
         )
         PoolSettings.objects.create(
             pool=self.jones_pool,
-            picks_lock_at_kickoff=True,
+            picks_lock_mode=PoolSettings.PicksLockMode.KICKOFF,
             allow_tiebreaker=False,
         )
 
@@ -2252,7 +2252,7 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertTemplateUsed(response, "pickem/rules.html")
         self.assertContains(response, "Smith Family")
         self.assertContains(response, "Main Pickem")
-        self.assertContains(response, "Locking: Off")
+        self.assertContains(response, "Locking: Weekly cutoff — Sunday 1PM ET")
         self.assertContains(response, "Tiebreakers: On")
         # No settings-editing form for non-admins. (The base nav includes a
         # logout POST form, so check for editing controls specifically.)
@@ -2323,9 +2323,9 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
 
         self.assertContains(standings_response, "smith-score-player")
         self.assertNotContains(standings_response, "jones-score-player")
-        self.assertContains(rules_response, "Locking: Off")
+        self.assertContains(rules_response, "Locking: Weekly cutoff — Sunday 1PM ET")
         self.assertContains(rules_response, "Tiebreakers: On")
-        self.assertNotContains(rules_response, "Locking: On")
+        self.assertNotContains(rules_response, "Locking: Lock each game at kickoff")
         self.assertNotContains(rules_response, "Tiebreakers: Off")
 
     def test_final_slug_query_and_overlay_tampering_do_not_cross_family_scores_standings_or_rules(self):
@@ -2358,9 +2358,9 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
             self.assertContains(response, "smith-score-player")
             self.assertNotContains(response, "jones-score-player")
         self.assertContains(rules_response, "Smith Family")
-        self.assertContains(rules_response, "Locking: Off")
+        self.assertContains(rules_response, "Locking: Weekly cutoff — Sunday 1PM ET")
         self.assertNotContains(rules_response, "Jones Family")
-        self.assertNotContains(rules_response, "Locking: On")
+        self.assertNotContains(rules_response, "Locking: Lock each game at kickoff")
 
 
 class Phase4SharedContextScopeTests(TestCase):

@@ -44,7 +44,7 @@
             <div class="admin-compact-stat rounded-xl border border-border-light dark:border-border-subtle bg-white/80 dark:bg-surface/80 px-4 py-3 shadow-sm">
                 <div class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Pick Locking</div>
                 <div class="mt-1 text-2xl font-black text-text-dark dark:text-white">
-                    {% if pool_settings and pool_settings.picks_lock_at_kickoff %}On{% else %}Off{% endif %}
+                    {% if pool_settings %}{{ pool_settings.get_picks_lock_mode_display }}{% else %}&mdash;{% endif %}
                 </div>
             </div>
         </section>
