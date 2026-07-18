@@ -138,6 +138,17 @@ class OverviewTests(TestCase):
         banner = SiteBanner.objects.get()
         self.assertEqual(banner.icon, 'fas fa-bullhorn')
 
+    def test_publishing_a_site_wide_banner_rejects_an_unlisted_icon(self):
+        """A POST that bypasses the <select> must not smuggle an arbitrary
+        class string onto SiteBanner.icon — only BANNER_ICON_CHOICES values
+        (or the default) may be persisted."""
+        self.client.post(
+            reverse('superadmin:banner_publish'),
+            {'title': 'Sketchy icon', 'banner_type': 'info', 'icon': 'fas fa-not-a-real-icon'},
+        )
+        banner = SiteBanner.objects.get()
+        self.assertEqual(banner.icon, 'fas fa-bullhorn')
+
     def test_publishing_a_banner_requires_a_title(self):
         self.client.post(reverse('superadmin:banner_publish'), {'title': ''})
         self.assertEqual(SiteBanner.objects.count(), 0)

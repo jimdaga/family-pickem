@@ -166,7 +166,10 @@ def banner_publish(request):
         messages.error(request, 'A banner needs a title.')
         return redirect('superadmin:overview')
 
-    icon = request.POST.get('icon', '').strip() or 'fas fa-bullhorn'
+    valid_icons = {value for value, _label in BANNER_ICON_CHOICES}
+    icon = request.POST.get('icon', '').strip()
+    if icon not in valid_icons:
+        icon = 'fas fa-bullhorn'
 
     banner = SiteBanner.objects.create(
         title=title,
