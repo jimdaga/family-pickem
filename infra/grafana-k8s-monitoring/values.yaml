@@ -83,8 +83,12 @@ hostMetrics:
   energyMetrics:
     enabled: true
 
+# Cost metrics disabled: OpenCost queries Grafana Cloud Prometheus to compute
+# allocation, which needs a token with metrics:read. The current access policy
+# is write-only, so re-enable this (and opencost.deploy below) once the token
+# has the read scope.
 costMetrics:
-  enabled: true
+  enabled: false
   collector: alloy-metrics
 
 clusterEvents:
@@ -156,7 +160,8 @@ telemetryServices:
   kepler:
     deploy: true
   opencost:
-    deploy: true
+    # Disabled until the access token gains metrics:read (see costMetrics above).
+    deploy: false
     metricsSource: grafana-cloud-metrics
     opencost:
       exporter:
