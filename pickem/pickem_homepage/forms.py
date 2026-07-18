@@ -69,12 +69,11 @@ class PoolRulesForm(forms.Form):
     and the create-family flow so both enforce identical validation
     (locked pick types, tiebreaker-chain sanity, bonus/fee amounts)."""
 
-    picks_lock_at_kickoff = forms.BooleanField(
-        label="Pick Locking",
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
-        }),
+    picks_lock_mode = forms.ChoiceField(
+        label="Pick locking",
+        choices=PoolSettings.PicksLockMode.choices,
+        help_text="Choose when picks lock each week.",
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
     )
     allow_tiebreaker = forms.BooleanField(
         label="Tiebreakers",

@@ -1252,7 +1252,7 @@ def family_pool_admin(request, family_slug, pool_slug):
 # initial values, audit metadata, and save path all iterate this list, so a
 # new rule only needs a model field + form field + template input.
 ADMIN_POOL_SETTINGS_FIELDS = [
-    'picks_lock_at_kickoff',
+    'picks_lock_mode',
     'allow_tiebreaker',
     'win_points',
     'tie_points',

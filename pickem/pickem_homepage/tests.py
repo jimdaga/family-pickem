@@ -2256,7 +2256,7 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertContains(response, "Tiebreakers: On")
         # No settings-editing form for non-admins. (The base nav includes a
         # logout POST form, so check for editing controls specifically.)
-        self.assertNotContains(response, 'name="picks_lock_at_kickoff"')
+        self.assertNotContains(response, 'name="picks_lock_mode"')
         self.assertNotContains(response, "Save settings")
         self.assertEqual(response.context["pool_settings"], self.smith_pool.settings)
 
@@ -3995,7 +3995,7 @@ class FamilyAdminExperienceTests(TestCase):
             {
                 "family_name": self.family.name,
                 "pool_name": self.pool.name,
-                "picks_lock_at_kickoff": "on",
+                "picks_lock_mode": PoolSettings.PicksLockMode.KICKOFF,
                 "allow_tiebreaker": "on",
                 **self._default_scoring_fields(
                     win_points=2,
@@ -4082,6 +4082,7 @@ class FamilyAdminExperienceTests(TestCase):
                         "family_name": self.family.name,
                         "pool_name": self.pool.name,
                         "logo_url": logo_url,
+                        "picks_lock_mode": PoolSettings.PicksLockMode.KICKOFF,
                         "allow_tiebreaker": "on",
                         **self._default_scoring_fields(),
                     },
@@ -4131,6 +4132,7 @@ class FamilyAdminExperienceTests(TestCase):
                 "family_name": self.family.name,
                 "pool_name": self.pool.name,
                 "logo_url": "",
+                "picks_lock_mode": PoolSettings.PicksLockMode.KICKOFF,
                 "allow_tiebreaker": "on",
                 **self._default_scoring_fields(),
             },
@@ -4464,7 +4466,7 @@ class FamilyAdminExperienceTests(TestCase):
                 self.assertTemplateUsed(response, "pickem/family_admin_settings.html")
                 self.assertContains(response, "Smith Family")
                 self.assertContains(response, "Main Pickem")
-                self.assertContains(response, "Pick Locking")
+                self.assertContains(response, "Pick locking")
                 self.assertContains(response, "Tiebreakers")
                 self.assertContains(response, self._banners_url())
                 self.assertNotContains(response, "Recent banners")
@@ -4548,7 +4550,7 @@ class FamilyAdminExperienceTests(TestCase):
             {
                 "family_name": "Updated Smith Family",
                 "pool_name": "Updated Main Pickem",
-                "picks_lock_at_kickoff": "",
+                "picks_lock_mode": PoolSettings.PicksLockMode.SUNDAY_1PM,
                 "allow_tiebreaker": "on",
                 **self._default_scoring_fields(),
                 "family_id": self.other_family.id,
@@ -4574,11 +4576,15 @@ class FamilyAdminExperienceTests(TestCase):
 
         self.assertEqual(self.family.name, "Updated Smith Family")
         self.assertEqual(self.pool.name, "Updated Main Pickem")
-        self.assertFalse(self.pool.settings.picks_lock_at_kickoff)
+        self.assertEqual(
+            self.pool.settings.picks_lock_mode, PoolSettings.PicksLockMode.SUNDAY_1PM
+        )
         self.assertTrue(self.pool.settings.allow_tiebreaker)
         self.assertEqual(self.other_family.name, "Jones Family")
         self.assertEqual(self.other_pool.name, "Main Pickem")
-        self.assertTrue(other_settings.picks_lock_at_kickoff)
+        self.assertEqual(
+            other_settings.picks_lock_mode, PoolSettings.PicksLockMode.KICKOFF
+        )
         self.assertTrue(other_settings.allow_tiebreaker)
 
         audit = FamilyAuditLog.objects.get(
@@ -4594,7 +4600,7 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(audit.metadata["pool_id"], self.pool.id)
         self.assertIn("family.name", audit.metadata["changed_fields"])
         self.assertIn("pool.name", audit.metadata["changed_fields"])
-        self.assertIn("settings.picks_lock_at_kickoff", audit.metadata["changed_fields"])
+        self.assertIn("settings.picks_lock_mode", audit.metadata["changed_fields"])
         self.assertNotIn("secret", str(audit.metadata).lower())
         self.assertNotIn("csrf", str(audit.metadata).lower())
         self.assertFalse(
@@ -5816,7 +5822,7 @@ class CreateFamilyFlowTests(TestCase):
         rule choices (prefilled from PoolSettings defaults in the UI)."""
         payload = {
             "name": "Smith Family",
-            "picks_lock_at_kickoff": "on",
+            "picks_lock_mode": PoolSettings.PicksLockMode.KICKOFF,
             "allow_tiebreaker": "on",
             "win_points": 1,
             "tie_points": 0,
@@ -6705,6 +6711,7 @@ class FamilyAdminSettingsFormTests(TestCase):
             'family_name': 'Smith Family',
             'pool_name': 'Main Pickem',
             'logo_url': '',
+            'picks_lock_mode': PoolSettings.PicksLockMode.KICKOFF,
             'win_points': '1',
             'tie_points': '0',
             'weekly_winner_points': '2',
@@ -7766,3 +7773,16 @@ class PicksLockForPoolModeTests(TestCase):
         locked, reason = is_pick_locked_for_pool(late_game, pool, week_games=[anchor, late_game])
         self.assertFalse(locked)
         self.assertEqual(reason, "Game not started yet")
+
+
+class PicksLockFormFieldTests(TestCase):
+    def test_form_has_lock_mode_choice(self):
+        from pickem_homepage.forms import PoolRulesForm
+        form = PoolRulesForm()
+        self.assertIn('picks_lock_mode', form.fields)
+        self.assertNotIn('picks_lock_at_kickoff', form.fields)
+
+    def test_admin_settings_fields_list_updated(self):
+        from pickem_homepage.views import ADMIN_POOL_SETTINGS_FIELDS
+        self.assertIn('picks_lock_mode', ADMIN_POOL_SETTINGS_FIELDS)
+        self.assertNotIn('picks_lock_at_kickoff', ADMIN_POOL_SETTINGS_FIELDS)
