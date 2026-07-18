@@ -6729,6 +6729,92 @@ class InviteFlowTests(TestCase):
         )
 
 
+class StaleInviteRedemptionTests(TestCase):
+    """A previously-issued invite link is otherwise perfectly valid (unexpired,
+    unused, correct family/pool) but must still be rejected when redeemed by a
+    brand-new (non-member) user after the pool has locked entries following
+    Week 1. Exercises accept_invitation_for_user() directly rather than via
+    the join_family/accept_invite_link views."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            "stale-invite-owner", email="stale-owner@example.com", password="pass"
+        )
+        self.new_user = User.objects.create_user(
+            "stale-invite-newuser", email="stale-newuser@example.com", password="pass"
+        )
+        self.family = Family.objects.create(name="Stale Family", slug="stale-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="main",
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.owner,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        PoolSettings.objects.create(
+            pool=self.pool,
+            late_join_policy=PoolSettings.LateJoinPolicy.LOCK_AFTER_WEEK_1,
+        )
+
+    def test_prior_link_rejected_for_new_user_when_locked(self):
+        from pickem_homepage.views import (
+            accept_invitation_for_user,
+            create_admin_invitation,
+            ENTRIES_LOCKED_MESSAGE,
+        )
+
+        factory = RequestFactory()
+
+        # Invite issued earlier, while the pool was still open to new joiners.
+        creation_request = factory.post("/family/stale-family/main/invites/")
+        creation_request.user = self.owner
+        invitation, raw_code = create_admin_invitation(
+            family=self.family,
+            pool=self.pool,
+            actor=self.owner,
+            role=FamilyMembership.Role.MEMBER,
+            recipient_email='',
+            expires_in_days=14,
+            request=creation_request,
+        )
+
+        # Week 1 has since completed, locking the pool to new entries. A new
+        # (never-a-member) user now tries to redeem that still-valid link.
+        with patch("pickem_api.weekly_winners.week_is_complete", return_value=True):
+            redemption_request = factory.post("/invites/{}/".format(raw_code))
+            redemption_request.user = self.new_user
+            result_invitation, result_pool, membership, error = accept_invitation_for_user(
+                redemption_request, raw_code,
+            )
+
+        self.assertIsNone(result_invitation)
+        self.assertIsNone(result_pool)
+        self.assertIsNone(membership)
+        self.assertEqual(error, ENTRIES_LOCKED_MESSAGE)
+        self.assertFalse(
+            FamilyMembership.objects.filter(
+                family=self.family, user=self.new_user,
+            ).exists()
+        )
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.use_count, 0)
+
+
 class FamilyAdminSettingsFormTests(TestCase):
     """Server-side protections on the pool-admin settings form."""
 
