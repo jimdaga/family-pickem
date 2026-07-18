@@ -37,13 +37,13 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Family)
 class FamilyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'status', 'logo_url', 'created_at', 'updated_at')
+    list_display = ('name', 'slug', 'status', 'logo', 'created_at', 'updated_at')
     list_filter = ('status', 'created_at')
     search_fields = ('name', 'slug')
     date_hierarchy = 'created_at'
     ordering = ('name', 'slug')
     readonly_fields = ('created_at', 'updated_at')
-    fields = ('name', 'slug', 'logo_url', 'status', 'created_at', 'updated_at')
+    fields = ('name', 'slug', 'logo', 'status', 'created_at', 'updated_at')
 
 
 @admin.register(Pool)
