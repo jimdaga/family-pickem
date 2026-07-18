@@ -1222,12 +1222,21 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 - [ ] **Step 1: Confirm no runtime consumers remain**
 
-Run: `grep -rn "picks_lock_at_kickoff" pickem/pickem_api pickem/pickem_homepage pickem/pickem_superadmin pickem/pickem`
-Expected remaining hits ONLY in: `models.py` (the field), `admin.py` (list_display/list_filter), the backfill migration `0090` (its RunPython references — leave those, historical), and test files that set the model attr. If any runtime `.py` (views/forms/utils/templates) still reads it, STOP — that consumer's task didn't land; report it.
+Run: `grep -rn "picks_lock_at_kickoff" pickem_api pickem_homepage pickem_superadmin pickem` (from the `pickem/` dir)
+Expected remaining hits ONLY in: `models.py` (the field), `admin.py` (list_display/list_filter), the backfill migration `0090` + `0073` (historical — leave those), the three templates `rules.html`/`family_admin.html`/`create_family.html`, and test files that set the model attr. If any runtime **`.py`** view/form/util still READS `settings.picks_lock_at_kickoff`, STOP — that consumer's task didn't land; report it.
 
-- [ ] **Step 2: Remove the field + fix admin**
+- [ ] **Step 2: Remove the field + fix admin + fix display templates**
 
 Delete the `picks_lock_at_kickoff` field from `PoolSettings`. In `pickem_api/admin.py`, remove `'picks_lock_at_kickoff'` from `PoolSettingsAdmin.list_display` and `list_filter` (replace with `'picks_lock_mode'` in both).
+
+Also fix the two DISPLAY templates that read the model attribute (they'd render
+empty once the field is gone):
+- `pickem_homepage/templates/pickem/rules.html:37` — `Locking: {% if pool_settings.picks_lock_at_kickoff %}On{% else %}Off{% endif %}` → show the mode label, e.g. `Locking: {{ pool_settings.get_picks_lock_mode_display }}`.
+- `pickem_homepage/templates/pickem/rules.html:137` — a `{% if pool_settings.picks_lock_at_kickoff %}…{% else %}…{% endif %}` block explaining the rule; convert it to branch on `pool_settings.picks_lock_mode == 'kickoff'` and keep both explanatory texts (kickoff vs Sunday-1PM cutoff), matching the surrounding copy style.
+- `pickem_homepage/templates/pickem/family_admin.html:47` — `{% if pool_settings and pool_settings.picks_lock_at_kickoff %}On{% else %}Off{% endif %}` → `{% if pool_settings %}{{ pool_settings.get_picks_lock_mode_display }}{% else %}—{% endif %}` (or equivalent that reflects the mode).
+
+Do NOT touch `create_family.html:57` (`{{ form.picks_lock_at_kickoff }}`) — that
+is a form-field render already migrated separately in Task 16.
 
 - [ ] **Step 3: Update remaining tests**
 
