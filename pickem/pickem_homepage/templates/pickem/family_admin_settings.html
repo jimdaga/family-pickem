@@ -1,4 +1,5 @@
 {% extends "pickem/base.html" %}
+{% load static %}
 
 {% block title %}Admin Settings - {{ family.name }}{% endblock %}
 
@@ -29,7 +30,7 @@
             </div>
         </header>
 
-        <form method="post" class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden">
+        <form method="post" enctype="multipart/form-data" class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface shadow-sm overflow-hidden">
             {% csrf_token %}
             <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
                 <h2 class="text-xl font-bold text-text-dark dark:text-white">Basic Settings</h2>
@@ -57,6 +58,28 @@
                     {% for error in form.pool_name.errors %}
                     <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
                     {% endfor %}
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white" for="{{ form.logo.id_for_label }}">Family logo</label>
+                    <p id="family-logo-help" class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary">Choose a JPEG, PNG, or WebP image up to 5 MB. We’ll securely process it into a square logo when you save settings.</p>
+                    <div class="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center">
+                        <div class="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border-light bg-gray-50 dark:border-border-subtle dark:bg-bg-dark">
+                            {% if family.logo %}
+                            <img src="{{ family.logo.url }}" alt="{{ family.name }} logo" class="h-full w-full object-contain">
+                            {% else %}
+                            <img src="{% static 'images/familypickem.png' %}" alt="Family Pick'em default logo" class="h-full w-full object-contain">
+                            {% endif %}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            {{ form.logo.as_widget }}
+                            <p class="mt-2 text-xs text-text-secondary-light dark:text-text-secondary">Your image will be checked and prepared after you save settings.</p>
+                            {% for error in form.logo.errors %}
+                            <p id="family-logo-error" role="alert" class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% if not family.logo %}<p class="mt-2 text-xs text-text-secondary-light dark:text-text-secondary">Your family is using the default Family Pick'em logo.</p>{% endif %}
                 </div>
 
             </div>
