@@ -7786,3 +7786,14 @@ class PicksLockFormFieldTests(TestCase):
         from pickem_homepage.views import ADMIN_POOL_SETTINGS_FIELDS
         self.assertIn('picks_lock_mode', ADMIN_POOL_SETTINGS_FIELDS)
         self.assertNotIn('picks_lock_at_kickoff', ADMIN_POOL_SETTINGS_FIELDS)
+
+
+class PicksPageLockFilterTests(TestCase):
+    def test_template_uses_pool_aware_filter(self):
+        # Guard against regressing to statusType-only gating.
+        import pathlib
+        tpl = pathlib.Path('pickem_homepage/templates/pickem/picks.html').read_text()
+        # The interactive pick options must gate on the pool-aware filter.
+        self.assertIn('is_game_locked_for_pool:pool', tpl)
+        # The old kickoff-only gate must be gone from the team-option cards.
+        self.assertNotIn("game.statusType != 'notstarted' or auth_required", tpl)

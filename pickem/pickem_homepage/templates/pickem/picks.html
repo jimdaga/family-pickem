@@ -131,7 +131,7 @@
                                         </div>
                                         <div class="flex items-center gap-2 text-xs opacity-90">
                                             <span>{{ game|game_start_label }}</span>
-                                            {% if game.statusType != 'notstarted' %}
+                                            {% if game|is_game_locked_for_pool:pool %}
                                             <span class="px-2 py-0.5 bg-white/20 rounded font-bold">LOCKED</span>
                                             {% endif %}
                                         </div>
@@ -206,7 +206,7 @@
                                         {% for team in wins_losses %}
                                             {% if team.teamNameSlug == game.awayTeamSlug %}
                                         {% with team|team_brand_presentation as brand %}
-                                        <div class="team-option relative group rounded-xl border-2 border-border-light dark:border-slate-600 hover:border-primary dark:hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game.statusType != 'notstarted' or auth_required %}opacity-50 pointer-events-none{% endif %}"
+                                        <div class="team-option relative group rounded-xl border-2 border-border-light dark:border-slate-600 hover:border-primary dark:hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game|is_game_locked_for_pool:pool or auth_required %}opacity-50 pointer-events-none{% endif %}"
                                              data-team="{{ game.awayTeamSlug }}"
                                              data-team-name="{{ game.awayTeamName }}">
                                             <div class="relative h-[100px] flex items-center justify-center py-2"
@@ -247,7 +247,7 @@
                                         {% for team in wins_losses %}
                                             {% if team.teamNameSlug == game.homeTeamSlug %}
                                         {% with team|team_brand_presentation as brand %}
-                                        <div class="team-option relative group rounded-xl border-2 border-border-light dark:border-slate-600 hover:border-primary dark:hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game.statusType != 'notstarted' or auth_required %}opacity-50 pointer-events-none{% endif %}"
+                                        <div class="team-option relative group rounded-xl border-2 border-border-light dark:border-slate-600 hover:border-primary dark:hover:border-primary transition-all cursor-pointer overflow-hidden flex flex-col {% if game|is_game_locked_for_pool:pool or auth_required %}opacity-50 pointer-events-none{% endif %}"
                                              data-team="{{ game.homeTeamSlug }}"
                                              data-team-name="{{ game.homeTeamName }}">
                                             <div class="relative h-[100px] flex items-center justify-center py-2"
@@ -303,8 +303,8 @@
                                                        placeholder="e.g. 45"
                                                        min="0"
                                                        max="200"
-                                                       class="w-full px-3 py-2 bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-purple-500 dark:focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all {% if game.statusType != 'notstarted' %}opacity-50 cursor-not-allowed{% endif %}"
-                                                       {% if game.statusType != 'notstarted' %}disabled{% endif %}>
+                                                       class="w-full px-3 py-2 bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-purple-500 dark:focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all {% if game|is_game_locked_for_pool:pool %}opacity-50 cursor-not-allowed{% endif %}"
+                                                       {% if game|is_game_locked_for_pool:pool %}disabled{% endif %}>
                                             </div>
                                             <div class="space-y-1">
                                                 <label for="tiebreaker2-{{ game.id }}" class="block text-sm font-medium text-text-dark dark:text-white">
@@ -316,15 +316,15 @@
                                                        placeholder="e.g. 750"
                                                        min="0"
                                                        max="2000"
-                                                       class="w-full px-3 py-2 bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-purple-500 dark:focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all {% if game.statusType != 'notstarted' %}opacity-50 cursor-not-allowed{% endif %}"
-                                                       {% if game.statusType != 'notstarted' %}disabled{% endif %}>
+                                                       class="w-full px-3 py-2 bg-bg-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg text-text-dark dark:text-white placeholder-text-secondary-light dark:placeholder-text-secondary focus:border-purple-500 dark:focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all {% if game|is_game_locked_for_pool:pool %}opacity-50 cursor-not-allowed{% endif %}"
+                                                       {% if game|is_game_locked_for_pool:pool %}disabled{% endif %}>
                                             </div>
                                         </div>
                                     </div>
                                     {% endif %}
 
                                     <!-- Locked Game Message -->
-                                    {% if game.statusType != 'notstarted' %}
+                                    {% if game|is_game_locked_for_pool:pool %}
                                     <div class="flex items-center gap-2 px-4 py-3 bg-red-500/10 dark:bg-red-600/20 text-red-600 dark:text-red-400 rounded-xl border border-red-500/30 dark:border-red-500/40">
                                         <i class="fas fa-exclamation-triangle"></i>
                                         <strong>Pick Missed - Game already started!</strong>
