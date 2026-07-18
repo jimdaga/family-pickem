@@ -122,6 +122,22 @@ class OverviewTests(TestCase):
         entry = SuperAdminAuditLog.objects.get()
         self.assertEqual(entry.action, SuperAdminAuditLog.Action.BANNER_PUBLISHED)
 
+    def test_publishing_a_site_wide_banner_accepts_a_chosen_icon(self):
+        self.client.post(
+            reverse('superadmin:banner_publish'),
+            {'title': 'Playoffs!', 'banner_type': 'success', 'icon': 'fas fa-trophy'},
+        )
+        banner = SiteBanner.objects.get()
+        self.assertEqual(banner.icon, 'fas fa-trophy')
+
+    def test_publishing_a_site_wide_banner_defaults_icon_when_missing(self):
+        self.client.post(
+            reverse('superadmin:banner_publish'),
+            {'title': 'Scheduled maintenance', 'banner_type': 'warning'},
+        )
+        banner = SiteBanner.objects.get()
+        self.assertEqual(banner.icon, 'fas fa-bullhorn')
+
     def test_publishing_a_banner_requires_a_title(self):
         self.client.post(reverse('superadmin:banner_publish'), {'title': ''})
         self.assertEqual(SiteBanner.objects.count(), 0)

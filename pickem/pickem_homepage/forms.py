@@ -556,9 +556,28 @@ class WeekWinnerForm(forms.Form):
         )
 
 
+BANNER_ICON_CHOICES = [
+    ('fas fa-bullhorn', 'Announcement'),
+    ('fas fa-info-circle', 'Info'),
+    ('fas fa-exclamation-triangle', 'Warning'),
+    ('fas fa-check-circle', 'Success'),
+    ('fas fa-trophy', 'Trophy'),
+    ('fas fa-football-ball', 'Football'),
+    ('fas fa-star', 'Star'),
+    ('fas fa-fire', 'Hot'),
+    ('fas fa-gift', 'Gift'),
+    ('fas fa-bell', 'Bell'),
+    ('fas fa-clock', 'Reminder'),
+    ('fas fa-calendar', 'Calendar'),
+    ('fas fa-users', 'Members'),
+    ('fas fa-dollar-sign', 'Money'),
+    ('fas fa-wrench', 'Maintenance'),
+]
+
+
 class SiteBannerForm(forms.ModelForm):
     """Form for managing site banners"""
-    
+
     class Meta:
         model = SiteBanner
         fields = [
@@ -580,9 +599,8 @@ class SiteBannerForm(forms.ModelForm):
             'banner_type': forms.Select(attrs={
                 'class': 'form-select'
             }),
-            'icon': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'e.g., fas fa-trophy, fas fa-info-circle'
+            'icon': forms.Select(attrs={
+                'class': 'form-select'
             }),
             'start_date': forms.DateTimeInput(attrs={
                 'class': 'form-control',
@@ -625,6 +643,13 @@ class SiteBannerForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        choices = list(BANNER_ICON_CHOICES)
+        current = (self.instance.icon or '').strip()
+        if current and current not in dict(choices):
+            choices = [(current, f'{current} (current)')] + choices
+        self.fields['icon'].choices = choices
+        self.fields['icon'].widget.choices = choices
+
         # Set default values for new banners
         if not self.instance.pk:
             self.fields['priority'].initial = 1
@@ -660,10 +685,7 @@ class FamilyBannerForm(forms.ModelForm):
                 'placeholder': 'Optional details…',
             }),
             'banner_type': forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
-            'icon': forms.TextInput(attrs={
-                'class': ADMIN_TEXT_INPUT_CLASSES,
-                'placeholder': 'fas fa-bullhorn',
-            }),
+            'icon': forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
             'show_close_button': forms.CheckboxInput(attrs={
                 'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
             }),
@@ -673,6 +695,14 @@ class FamilyBannerForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['title'].required = True
         self.fields['description'].required = False
+
+        choices = list(BANNER_ICON_CHOICES)
+        current = (self.instance.icon or '').strip()
+        if current and current not in dict(choices):
+            choices = [(current, f'{current} (current)')] + choices
+        self.fields['icon'].choices = choices
+        self.fields['icon'].widget.choices = choices
+
         if not self.instance.pk:
             self.fields['icon'].initial = 'fas fa-bullhorn'
             self.fields['show_close_button'].initial = True

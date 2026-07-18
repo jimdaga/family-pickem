@@ -7927,3 +7927,21 @@ class PayoutGroupingTests(TestCase):
         settings_view_block = source.split("def family_pool_admin_settings(")[1]
         rule_choice_fields_snippet = settings_view_block.split("'rule_choice_fields':")[1][:200]
         self.assertNotIn("payout_structure", rule_choice_fields_snippet)
+
+
+class BannerIconChoicesTests(TestCase):
+    def test_both_forms_use_select(self):
+        from django import forms as djf
+        from pickem_homepage.forms import SiteBannerForm, FamilyBannerForm, BANNER_ICON_CHOICES
+        self.assertTrue(len(BANNER_ICON_CHOICES) >= 10)
+        for FormClass in (SiteBannerForm, FamilyBannerForm):
+            widget = FormClass().fields['icon'].widget
+            self.assertIsInstance(widget, djf.Select)
+
+    def test_unknown_existing_icon_stays_selectable(self):
+        from pickem_homepage.forms import FamilyBannerForm
+        from pickem_homepage.models import SiteBanner
+        b = SiteBanner(icon='fas fa-custom-thing', title='t', description='d')
+        form = FamilyBannerForm(instance=b)
+        rendered = str(form['icon'])
+        self.assertIn('fas fa-custom-thing', rendered)
