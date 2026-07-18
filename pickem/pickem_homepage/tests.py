@@ -5799,6 +5799,99 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertFalse(GamePicks.objects.filter(userID=str(self.owner.id), pick_game_id=legacy_pick_game.id).exists())
 
 
+class BatchInviteTests(TestCase):
+    """Task 10: submitting several `recipient_email` values at once creates
+    one invite per valid, distinct address instead of a single invite."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user(
+            "batch-owner", email="batch-owner@example.com", password="pass"
+        )
+        self.family = Family.objects.create(name="Batch Family", slug="batch-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="batch-main",
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        PoolSettings.objects.create(pool=self.pool)
+        FamilyMembership.objects.create(
+            family=self.family, user=self.owner, role=FamilyMembership.Role.OWNER
+        )
+        self.client.force_login(self.owner)
+
+    def _invites_url(self):
+        return reverse(
+            "family_pool_admin_invites",
+            kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
+        )
+
+    def test_multiple_emails_create_multiple_invites(self):
+        before_count = FamilyInvitation.objects.filter(family=self.family).count()
+
+        response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.MEMBER,
+                "recipient_email": ["a@x.com", "b@x.com"],
+                "expires_in_days": "14",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            FamilyInvitation.objects.filter(family=self.family).count(),
+            before_count + 2,
+        )
+        recipient_emails = set(
+            FamilyInvitation.objects.filter(family=self.family).values_list(
+                "recipient_email", flat=True
+            )
+        )
+        self.assertIn("a@x.com", recipient_emails)
+        self.assertIn("b@x.com", recipient_emails)
+        self.assertContains(response, "Sent 2 invite(s).")
+        # A multi-invite batch does not surface a one-time invite link.
+        self.assertIsNone(response.context.get("invite_link"))
+
+    def test_invalid_email_skipped_valid_still_created(self):
+        before_count = FamilyInvitation.objects.filter(family=self.family).count()
+
+        response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.MEMBER,
+                "recipient_email": ["good@x.com", "not-an-email"],
+                "expires_in_days": "14",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            FamilyInvitation.objects.filter(family=self.family).count(),
+            before_count + 1,
+        )
+        self.assertTrue(
+            FamilyInvitation.objects.filter(
+                family=self.family, recipient_email="good@x.com"
+            ).exists()
+        )
+        self.assertContains(response, "Sent 1 invite(s).")
+        self.assertContains(response, "Skipped")
+        self.assertContains(response, "not-an-email")
+
+
 class CreateFamilyFlowTests(TestCase):
     @classmethod
     def setUpTestData(cls):

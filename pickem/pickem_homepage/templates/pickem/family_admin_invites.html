@@ -70,12 +70,15 @@
                     {% endfor %}
                 </div>
                 <div class="md:col-span-2">
-                    <label for="{{ form.recipient_email.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white">Recipient Email</label>
-                    <div class="mt-2">{{ form.recipient_email }}</div>
-                    <p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary">{{ form.recipient_email.help_text }}</p>
-                    {% for error in form.recipient_email.errors %}
-                    <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ error }}</p>
-                    {% endfor %}
+                    <label class="block text-sm font-semibold text-text-dark dark:text-white">Recipient Email(s)</label>
+                    <div class="mt-2 space-y-2" data-email-rows>
+                        <div class="flex gap-2" data-email-row>
+                            <input type="email" name="recipient_email" class="w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" autocomplete="email" placeholder="invitee@example.com">
+                            <button type="button" class="px-3 text-sm font-bold text-red-600 dark:text-red-300" data-remove-row aria-label="Remove email">&times;</button>
+                        </div>
+                    </div>
+                    <button type="button" class="mt-2 text-sm font-semibold text-primary" data-add-row>+ Add another</button>
+                    <p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary">Each valid, distinct address gets its own one-time invite. Leave blank to create a single untargeted invite link.</p>
                 </div>
                 <div>
                     <label for="{{ form.expires_in_days.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white">Days</label>
@@ -91,6 +94,23 @@
                     </button>
                 </div>
             </form>
+            <script>
+            (function () {
+                const box = document.querySelector('[data-email-rows]');
+                const add = document.querySelector('[data-add-row]');
+                if (!box || !add) return;
+                add.addEventListener('click', function () {
+                    const row = box.querySelector('[data-email-row]').cloneNode(true);
+                    row.querySelector('input').value = '';
+                    box.appendChild(row);
+                });
+                box.addEventListener('click', function (e) {
+                    if (e.target.matches('[data-remove-row]') && box.querySelectorAll('[data-email-row]').length > 1) {
+                        e.target.closest('[data-email-row]').remove();
+                    }
+                });
+            })();
+            </script>
         </section>
         {% endif %}
 

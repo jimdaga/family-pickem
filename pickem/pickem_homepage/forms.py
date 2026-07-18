@@ -389,10 +389,18 @@ class FamilyWeekWinnerForm(forms.Form):
 
 
 class FamilyInviteCreateForm(forms.Form):
+    """Validates the batch-wide fields (role, expiry) for the invite create form.
+
+    Recipient email(s) are handled separately by the view since a single
+    submission can carry multiple `recipient_email` values (one invite is
+    created per valid, distinct address) - a plain EmailField can't represent
+    that, so this field is optional and unused for validation of the batch.
+    """
+
     role = forms.ChoiceField(required=True)
     recipient_email = forms.EmailField(
         label="Recipient email",
-        required=True,
+        required=False,
         widget=forms.EmailInput(attrs={
             'class': ADMIN_TEXT_INPUT_CLASSES,
             'autocomplete': 'email',

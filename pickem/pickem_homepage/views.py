@@ -1,5 +1,7 @@
 from django.http import Http404, HttpResponse, JsonResponse
 from django.template import loader
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from django import forms
@@ -2206,8 +2208,14 @@ def render_family_admin_invites(request, tenant_context, form, *, invite_code=No
 def family_pool_admin_invites(request, family_slug, pool_slug):
     tenant_context = request.tenant_context
     allowed_roles = get_invite_role_choices_for_membership(tenant_context.membership)
+    # recipient_email is handled separately below (a batch submits multiple
+    # values for that key), so it's excluded here and only role/expiry are
+    # validated through the form.
+    form_data = request.POST.copy() if request.POST else None
+    if form_data is not None:
+        form_data.pop('recipient_email', None)
     form = FamilyInviteCreateForm(
-        request.POST or None,
+        form_data,
         allowed_roles=allowed_roles,
         initial={
             'role': FamilyMembership.Role.MEMBER,
@@ -2231,31 +2239,74 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
                 status=400,
             )
 
+        raw_emails = [e.strip().lower() for e in request.POST.getlist('recipient_email')]
+        emails, seen = [], set()
+        for e in raw_emails:
+            if e and e not in seen:
+                seen.add(e)
+                emails.append(e)
+
+        role = form.cleaned_data['role']
+        expires_in_days = form.cleaned_data['expires_in_days']
+
+        created = []
+        skipped_invalid = []
         with transaction.atomic():
-            invitation, raw_code = create_admin_invitation(
-                family=tenant_context.family,
-                pool=tenant_context.pool,
-                actor=request.user,
-                role=form.cleaned_data['role'],
-                recipient_email=form.cleaned_data['recipient_email'],
-                expires_in_days=form.cleaned_data['expires_in_days'],
-                request=request,
+            for email in (emails or ['']):  # '' preserves the no-recipient single-invite path
+                if email:
+                    try:
+                        validate_email(email)
+                    except DjangoValidationError:
+                        skipped_invalid.append(email)
+                        continue
+                invitation, raw_code = create_admin_invitation(
+                    family=tenant_context.family,
+                    pool=tenant_context.pool,
+                    actor=request.user,
+                    role=role,
+                    recipient_email=email,
+                    expires_in_days=expires_in_days,
+                    request=request,
+                )
+                created.append((invitation, raw_code))
+
+        for invitation, raw_code in created:
+            handle_targeted_invite_email_feedback(
+                request,
+                invitation=invitation,
+                raw_code=raw_code,
             )
 
-        messages.success(request, "Invite created. Share the invite link now; it will not be shown again.")
-        handle_targeted_invite_email_feedback(
-            request,
-            invitation=invitation,
-            raw_code=raw_code,
-        )
-        return render_family_admin_invites(
-            request,
-            tenant_context,
-            form,
-            invite_link=request.build_absolute_uri(
-                reverse('accept_invite_link', kwargs={'invite_code': raw_code})
-            ),
-        )
+        if not created:
+            messages.error(
+                request,
+                (
+                    "No invites created. Skipped invalid address(es): "
+                    f"{', '.join(skipped_invalid)}."
+                ),
+            )
+            return render_family_admin_invites(request, tenant_context, form, status=400)
+
+        if len(created) == 1 and not skipped_invalid:
+            _invitation, raw_code = created[0]
+            messages.success(request, "Invite created. Share the invite link now; it will not be shown again.")
+            return render_family_admin_invites(
+                request,
+                tenant_context,
+                form,
+                invite_link=request.build_absolute_uri(
+                    reverse('accept_invite_link', kwargs={'invite_code': raw_code})
+                ),
+            )
+
+        summary = f"Sent {len(created)} invite(s)."
+        if skipped_invalid:
+            summary += (
+                f" Skipped {len(skipped_invalid)} invalid address(es): "
+                f"{', '.join(skipped_invalid)}."
+            )
+        messages.success(request, summary)
+        return render_family_admin_invites(request, tenant_context, form)
 
     return render_family_admin_invites(request, tenant_context, form)
 
