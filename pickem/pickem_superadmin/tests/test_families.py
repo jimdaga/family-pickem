@@ -25,7 +25,6 @@ class FamiliesPageTests(TestCase):
         payload = {
             f'{self.family.id}-name': 'Dagostino',
             f'{self.family.id}-slug': 'dagostino',
-            f'{self.family.id}-logo_url': '',
             f'{self.family.id}-status': Family.Status.ACTIVE,
             f'{self.family.id}-updated_at': self.family.updated_at.isoformat(),
         }
@@ -35,6 +34,8 @@ class FamiliesPageTests(TestCase):
     def test_page_lists_families_with_member_and_pool_counts(self):
         response = self.client.get(reverse('superadmin:families'))
         self.assertContains(response, 'dagostino')
+        self.assertContains(response, 'default')
+        self.assertNotContains(response, 'logo url')
 
     def test_deactivating_a_family_saves_and_audits(self):
         self.client.post(

@@ -11,7 +11,7 @@
           <tr>
             <th>name</th>
             <th>slug</th>
-            <th>logo url</th>
+            <th>logo</th>
             <th>status</th>
             <th>members</th>
             <th>pools</th>
@@ -26,7 +26,7 @@
                 {{ row.form.name }}
               </td>
               <td>{{ row.form.slug }}</td>
-              <td>{{ row.form.logo_url }}</td>
+              <td>{% if row.family.logo %}configured{% else %}default{% endif %}</td>
               <td>{{ row.form.status }}</td>
               <td class="sa-num">
                 <a href="{% url 'superadmin:users' %}" class="sa-link">{{ row.family.member_count }}</a>

@@ -55,11 +55,10 @@ class FamilyRowForm(forms.ModelForm):
 
     class Meta:
         model = Family
-        fields = ('name', 'slug', 'logo_url', 'status')
+        fields = ('name', 'slug', 'status')
         widgets = {
             'name': forms.TextInput(attrs={'class': CELL}),
             'slug': forms.TextInput(attrs={'class': CELL + ' font-mono'}),
-            'logo_url': forms.TextInput(attrs={'class': CELL}),
             'status': forms.Select(attrs={'class': CELL}),
         }
 

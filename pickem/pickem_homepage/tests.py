@@ -277,6 +277,7 @@ class PostLoginTenantRoutingTests(TestCase):
         self.assertContains(picker_response, "Smith Family")
         self.assertContains(picker_response, "Jones Family")
         self.assertContains(picker_response, "Add a family")
+        self.assertContains(picker_response, "images/logo.png")
         self.assertContains(picker_response, f'href="{reverse("create_family")}"')
         self.assertNotContains(picker_response, "Inactive Family")
 
@@ -4071,85 +4072,7 @@ class FamilyAdminExperienceTests(TestCase):
         settings.refresh_from_db()
         self.assertEqual(settings.pick_type, "straight_up")
 
-    def test_settings_post_accepts_absolute_and_static_relative_logo_urls(self):
-        self.client.force_login(self.admin_user)
-
-        for logo_url in ("https://example.com/logo.png", "/static/images/custom-logo.png"):
-            with self.subTest(logo_url=logo_url):
-                response = self.client.post(
-                    self._settings_url(),
-                    {
-                        "family_name": self.family.name,
-                        "pool_name": self.pool.name,
-                        "logo_url": logo_url,
-                        "allow_tiebreaker": "on",
-                        **self._default_scoring_fields(),
-                    },
-                )
-                self.assertRedirects(response, self._settings_url())
-                self.family.refresh_from_db()
-                self.assertEqual(self.family.logo_url, logo_url)
-
-    def test_settings_post_rejects_invalid_logo_url_without_mutation(self):
-        self.family.logo_url = "https://example.com/original.png"
-        self.family.save(update_fields=["logo_url"])
-        self.client.force_login(self.admin_user)
-
-        # "//host/..." is protocol-relative (an arbitrary external host) and
-        # browsers normalize "\" to "/", so "/\host/..." resolves the same way
-        # — neither may slip through the site-relative-path fast path.
-        for bad_value in (
-            "not a url",
-            "//evil.example/logo.png",
-            "/\\evil.example/logo.png",
-        ):
-            with self.subTest(logo_url=bad_value):
-                response = self.client.post(
-                    self._settings_url(),
-                    {
-                        "family_name": self.family.name,
-                        "pool_name": self.pool.name,
-                        "logo_url": bad_value,
-                        "allow_tiebreaker": "on",
-                        **self._default_scoring_fields(),
-                    },
-                )
-
-                self.assertEqual(response.status_code, 200)
-                self.assertContains(response, "Enter a full URL")
-                self.family.refresh_from_db()
-                self.assertEqual(self.family.logo_url, "https://example.com/original.png")
-
-    def test_settings_post_clears_logo_url_and_audits_change(self):
-        self.family.logo_url = "https://example.com/original.png"
-        self.family.save(update_fields=["logo_url"])
-        self.client.force_login(self.admin_user)
-
-        response = self.client.post(
-            self._settings_url(),
-            {
-                "family_name": self.family.name,
-                "pool_name": self.pool.name,
-                "logo_url": "",
-                "allow_tiebreaker": "on",
-                **self._default_scoring_fields(),
-            },
-        )
-
-        self.assertRedirects(response, self._settings_url())
-        self.family.refresh_from_db()
-        self.assertIsNone(self.family.logo_url)
-        audit = FamilyAuditLog.objects.get(
-            family=self.family,
-            actor=self.admin_user,
-            action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
-            target_type="AdminSettings",
-        )
-        self.assertIn("family.logo_url", audit.metadata["changed_fields"])
-
-    def test_lobby_falls_back_to_default_logo_when_family_logo_url_errors(self):
-        self.family.logo_url = "https://example.com/broken.png"
-        self.family.save(update_fields=["logo_url"])
+    def test_lobby_uses_static_default_logo_when_family_has_no_canonical_logo(self):
         self.client.force_login(self.member)
 
         response = self.client.get(
@@ -4160,8 +4083,6 @@ class FamilyAdminExperienceTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "https://example.com/broken.png")
-        self.assertContains(response, "onerror=")
         self.assertContains(response, "images/logo.png")
 
     def test_scoring_rules_validation_requires_value_when_bonus_enabled(self):
@@ -6704,7 +6625,6 @@ class FamilyAdminSettingsFormTests(TestCase):
         payload = {
             'family_name': 'Smith Family',
             'pool_name': 'Main Pickem',
-            'logo_url': '',
             'win_points': '1',
             'tie_points': '0',
             'weekly_winner_points': '2',

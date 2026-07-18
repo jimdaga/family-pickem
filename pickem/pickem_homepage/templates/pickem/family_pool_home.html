@@ -24,10 +24,9 @@
         <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div class="lobby-hero-copy">
                 <div class="mb-5 flex items-center gap-4">
-                    {% if family.logo_url %}
-                    <img src="{{ family.logo_url }}" alt="{{ family.name }} logo"
-                         class="h-16 w-16 object-contain drop-shadow-xl"
-                         onerror="this.onerror=null; this.src='{% static 'images/logo.png' %}';">
+                    {% if family.logo %}
+                    <img src="{{ family.logo.url }}" alt="{{ family.name }} logo"
+                         class="h-16 w-16 object-contain drop-shadow-xl">
                     {% else %}
                     <img src="{% static 'images/logo.png' %}" alt="Family Pick'em logo"
                          class="h-16 w-16 object-contain drop-shadow-xl">

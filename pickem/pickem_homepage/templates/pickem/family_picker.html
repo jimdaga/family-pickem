@@ -1,4 +1,5 @@
 {% extends 'pickem/base.html' %}
+{% load static %}
 
 {% block title %}Choose Family - Family Pick'em{% endblock %}
 
@@ -43,9 +44,7 @@
             </div>
             {% if choice.url %}
             <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
-                {% if choice.family.logo_url %}
-                <img src="{{ choice.family.logo_url }}" alt="{{ choice.family.name }} logo" class="h-7 w-7 rounded-full object-cover bg-white/20" onerror="this.remove()">
-                {% endif %}
+                <img src="{% if choice.family.logo %}{{ choice.family.logo.url }}{% else %}{% static 'images/logo.png' %}{% endif %}" alt="{{ choice.family.name }} logo" class="h-7 w-7 rounded-full object-cover bg-white/20">
                 <span>Enter pool</span>
                 <i class="fas fa-arrow-right"></i>
             </a>
@@ -87,9 +86,7 @@
             </div>
             {% if choice.url %}
             <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-yellow-400/40 bg-yellow-400/10 text-yellow-700 dark:text-yellow-200 font-semibold hover:bg-yellow-400/15 transition-colors">
-                {% if choice.family.logo_url %}
-                <img src="{{ choice.family.logo_url }}" alt="{{ choice.family.name }} logo" class="h-7 w-7 rounded-full object-cover bg-white/20" onerror="this.remove()">
-                {% endif %}
+                <img src="{% if choice.family.logo %}{{ choice.family.logo.url }}{% else %}{% static 'images/logo.png' %}{% endif %}" alt="{{ choice.family.name }} logo" class="h-7 w-7 rounded-full object-cover bg-white/20">
                 <span>Open family</span>
                 <i class="fas fa-arrow-right"></i>
             </a>

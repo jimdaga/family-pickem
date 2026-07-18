@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-from django.core.validators import URLValidator, validate_email
+from django.core.validators import validate_email
 from pickem_api.models import FamilyMembership, GamePicks, PoolSettings, userSeasonPoints
 from .models import MessageBoardPost, MessageBoardComment, SiteBanner
 
@@ -242,41 +242,6 @@ class FamilyAdminSettingsForm(PoolRulesForm):
             'autocomplete': 'off',
         }),
     )
-    logo_url = forms.CharField(
-        label="Family logo URL",
-        max_length=500,
-        required=False,
-        strip=True,
-        widget=forms.TextInput(attrs={
-            'class': ADMIN_TEXT_INPUT_CLASSES,
-            'placeholder': 'https://example.com/logo.png or /static/images/logo.png',
-            'autocomplete': 'off',
-        }),
-        help_text="Shown at the top of your family's lobby. Leave blank to use the default Pick'em logo.",
-    )
-
-    def clean_logo_url(self):
-        value = (self.cleaned_data.get('logo_url') or '').strip()
-        if not value:
-            return value
-        # Site-relative paths are fine, but '//' is protocol-relative (an
-        # arbitrary external host) and browsers normalize '\' to '/', so
-        # '/\evil.com/...' would resolve protocol-relative too — both must go
-        # through the URL validator instead of the fast path.
-        if (
-            value.startswith('/')
-            and not value.startswith('//')
-            and '\\' not in value
-        ):
-            return value
-        try:
-            URLValidator(schemes=['http', 'https'])(value)
-        except forms.ValidationError:
-            raise forms.ValidationError(
-                "Enter a full URL (https://...) or a site-relative path starting with /."
-            )
-        return value
-
     def clean_family_name(self):
         name = self.cleaned_data.get('family_name', '').strip()
         if not name:

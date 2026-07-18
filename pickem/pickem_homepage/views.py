@@ -1274,12 +1274,10 @@ ADMIN_POOL_SETTINGS_FIELDS = [
 def build_admin_settings_metadata(*, family, pool, settings, cleaned_data):
     before = {
         'family.name': family.name,
-        'family.logo_url': family.logo_url or '',
         'pool.name': pool.name,
     }
     after = {
         'family.name': cleaned_data['family_name'],
-        'family.logo_url': cleaned_data['logo_url'],
         'pool.name': cleaned_data['pool_name'],
     }
     for field in ADMIN_POOL_SETTINGS_FIELDS:
@@ -1309,7 +1307,6 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
     initial = {
         'family_name': family.name,
         'pool_name': pool.name,
-        'logo_url': family.logo_url or '',
     }
     for field in ADMIN_POOL_SETTINGS_FIELDS:
         initial[field] = getattr(pool_settings, field)
@@ -1341,9 +1338,6 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
                 if 'family.name' in changed_fields:
                     locked_family.name = form.cleaned_data['family_name']
                     family_fields.append('name')
-                if 'family.logo_url' in changed_fields:
-                    locked_family.logo_url = form.cleaned_data['logo_url'] or None
-                    family_fields.append('logo_url')
                 if family_fields:
                     locked_family.save(update_fields=family_fields + ['updated_at'])
                 if 'pool.name' in changed_fields:
