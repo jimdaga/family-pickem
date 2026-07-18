@@ -16,11 +16,11 @@ Families can run private pick'em pools with strict server-enforced data isolatio
 - ✓ Private families/pools, memberships, roles, invitations, onboarding, and family switching — v1.0 phases 1–5
 - ✓ Tenant-scoped gameplay/admin reads and writes with cross-family negative coverage — v1.0 phases 2–5
 - ✓ Family owners/admins can manage family settings, members, invites, and commissioner workflows — v1.0 phase 5
+- ✓ Authorized family-logo uploads accept only bounded JPEG/PNG/WebP sources and persist a fresh 256×256 WebP asset — v1.1 phase 6
+- ✓ Family-logo references are server-owned, private S3-backed objects; legacy arbitrary family-logo URLs are removed without remote fetches — v1.1 phase 6
 
 ### Active
 
-- [ ] Replace pasted family-logo URLs with an authorized, secure image-upload flow.
-- [ ] Process each accepted logo to a safe, bounded, fixed-size delivery asset and store it in S3.
 - [ ] Deliver S3/ESO configuration without exposing cloud credentials or allowing arbitrary upload content.
 - [ ] Make remaining background scoring, production migration, and hardening work separately planned follow-on milestones.
 
@@ -63,7 +63,7 @@ Critical current risks:
 | Use explicit family/pool URLs | Tenant context must be visible and not only session-derived. | — Pending |
 | Add schema foundation before route migration | Existing data needs a tenant key before views and APIs can be safely scoped. | — Pending |
 | Use default legacy family/pool migration | Preserves production data and gives existing users a safe continuity path. | — Pending |
-| Store family logos as server-processed S3 objects | Avoids external URL UX/security issues and bounds client delivery cost. | — Pending |
+| Store family logos as server-processed S3 objects | Avoids external URL UX/security issues and bounds client delivery cost. | Phase 6 foundation complete; delivery/IAM remains in phases 7–8. |
 
 ## Current Milestone: v1.1 Family Logo Uploads
 
@@ -93,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state.
 
 ---
-*Last updated: 2026-07-18 after starting v1.1 Family Logo Uploads*
+*Last updated: 2026-07-18 after completing v1.1 Phase 6 Secure Logo Foundation*
