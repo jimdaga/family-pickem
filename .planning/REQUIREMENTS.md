@@ -1,115 +1,81 @@
-# Requirements: Family Pickem Multi-Tenancy
+# Requirements: Family Pickem — Family Logo Uploads
 
-**Defined:** 2026-06-28  
+**Defined:** 2026-07-18  
 **Core Value:** Families can run private pick'em pools with strict server-enforced data isolation.
 
-## v1 Requirements
+## v1.1 Requirements
 
-### Tenant Domain
+### Logo Experience
 
-- [x] **TEN-01**: A signed-in user can create a family.
-- [x] **TEN-02**: A family has at least one pool for a season/competition.
-- [x] **TEN-03**: A signed-in user can belong to one or more families.
-- [x] **TEN-04**: A family membership has a role of owner, admin, or member.
-- [x] **TEN-05**: Existing global production data is assigned to a default legacy family and pool.
+- [ ] **LOGO-01**: An authorized family commissioner can select a local image from the family commissioner/settings page instead of entering a logo URL.
+- [ ] **LOGO-02**: Before saving, the commissioner can preview, zoom, reposition, and apply a fixed square crop to the selected logo.
+- [ ] **LOGO-03**: A commissioner can save a new logo, replace the current logo, or remove it and return the family to the default logo.
+- [ ] **LOGO-04**: Family surfaces render the saved processed logo at the intended bounded display size with an accessible fallback/alt text.
 
-### Authorization
+### Image Security And Processing
 
-- [x] **AUTHZ-01**: Every family/pool read path checks authenticated membership server-side.
-- [x] **AUTHZ-02**: Every family/pool write path checks authenticated membership server-side.
-- [x] **AUTHZ-03**: Owner/admin actions require least-privilege role checks.
-- [x] **AUTHZ-04**: Users outside a family cannot view or infer private family picks, standings, members, invitations, settings, dashboards, profiles, or message-board data.
-- [x] **AUTHZ-05**: Client-provided family, pool, user, season, week, and game identifiers are validated against server-resolved membership and allowed objects.
+- [ ] **IMG-01**: The server accepts only decoder-verified JPEG, PNG, or WebP raster images; it rejects SVG, GIF, HTML, executables, unsupported formats, and spoofed extension/MIME claims.
+- [ ] **IMG-02**: The server rejects uploads exceeding configured byte and pixel limits, including decompression-bomb inputs, before resource exhaustion can affect the application.
+- [ ] **IMG-03**: The server validates crop inputs, removes original metadata/content by re-encoding, and persists only a generated fixed-size image asset with an application-generated name.
+- [ ] **IMG-04**: Logo mutations require the existing tenant-aware commissioner authorization and CSRF protection; user-supplied family IDs, object keys, URLs, and filenames cannot control storage or tenancy.
 
-### Invitations And Onboarding
+### Private Storage And Deployment
 
-- [x] **INV-01**: Owners/admins can create invite links or codes.
-- [x] **INV-02**: Invite codes can expire, be revoked, and be regenerated.
-- [x] **INV-03**: A signed-in user with no family sees onboarding to create or join a family.
-- [x] **INV-04**: A signed-in user with multiple families can switch active family/pool context.
+- [ ] **S3-01**: Processed logos are stored under a server-derived `family-logos/` prefix in the existing private `family-pickem` S3 bucket in `us-east-1`.
+- [ ] **S3-02**: Application S3 permissions are least-privilege and prefix-limited; public ACL/policy access and object ownership bypasses are not introduced.
+- [ ] **S3-03**: The application receives S3 configuration and credentials through AWS Secrets Manager and the existing External Secrets Operator/Kubernetes flow, with no credentials committed to Git or manually managed Kubernetes Secrets.
+- [ ] **S3-04**: The application delivers only controlled, correctly typed processed assets; uploaded originals are neither retained nor served from the application origin.
 
-### Pool Gameplay
+### Verification And Audit
 
-- [x] **POOL-01**: Picks are scoped to a pool.
-- [x] **POOL-02**: Standings and weekly winners are scoped to a pool.
-- [x] **POOL-03**: Scores can use global NFL game data while showing only pool-scoped pick overlays.
-- [x] **POOL-04**: Rules/settings are visible and editable in the appropriate family/pool context.
-- [ ] **POOL-05**: Background scoring jobs update only the intended pool data.
+- [ ] **SAFE-01**: Automated tests cover allowed images; rejected types/headers/extensions; byte/pixel-limit failures; malformed crop data; and metadata-stripping re-encoding.
+- [ ] **SAFE-02**: Automated tests prove unauthenticated, ordinary-member, wrong-family, forged tenant/object-key, and missing-CSRF requests cannot mutate or infer another family’s logo.
+- [ ] **SAFE-03**: Create, replace, and remove actions are tenant-scoped, audit logged, and leave no referenced obsolete logo object.
 
-### Community And Profiles
+## Future Requirements
 
-- [x] **COMM-01**: Message-board posts, comments, and votes are scoped to a family or pool.
-- [x] **COMM-02**: Family members can see member/profile stats only within allowed family context.
-- [x] **COMM-03**: Site/family banners do not leak across families.
+### Media Enhancements
 
-### Audit And Hardening
-
-- [x] **SEC-01**: Security-sensitive admin actions are audit logged.
-- [ ] **SEC-02**: Session-authenticated JSON mutations use CSRF protection or a documented secure alternative.
-- [x] **SEC-03**: Cross-family isolation has automated negative tests.
-- [x] **SEC-04**: Cache keys and precomputed data are family/pool scoped.
-- [ ] **SEC-05**: Production migration has backup, rollback, and verification steps.
-
-## v2 Requirements
-
-### Advanced Pools
-
-- **ADV-01**: One family can run multiple active pools at the same time.
-- **ADV-02**: Pools can have custom scoring rules beyond current settings.
-- **ADV-03**: Families can archive old pools and browse historical pool dashboards.
-
-### Visibility
-
-- **VIS-01**: Families can optionally publish a read-only public leaderboard.
-- **VIS-02**: Family owners can configure whether member profiles are visible outside the family.
+- **MEDIA-01**: Commissioners can manage multiple responsive logo derivatives.
+- **MEDIA-02**: Direct browser-to-S3 uploads use scoped, expiring presigned POST policies.
+- **MEDIA-03**: Families can select animated or vector logos after a separately assessed security design.
 
 ## Out of Scope
 
 | Feature | Reason |
-|---------|--------|
-| Native mobile apps | Web migration is the current scope |
-| Payments/subscriptions | Not required for private family tenancy |
-| Custom NFL schedules | Global NFL reference data is sufficient for v1 |
-| Full standings normalization | Useful later, but tenant boundaries can be added before replacing denormalized weekly columns |
+|---|---|
+| Arbitrary external logo URLs | Replaced by managed uploads to remove broken UX and remote-content risk. |
+| Original-file retention/download | Only re-encoded assets may be stored or served. |
+| SVG, GIF, HEIC, and arbitrary file types | Not needed for a fixed logo and expands the active-content/parser attack surface. |
+| Public S3 objects or public bucket policy | Conflicts with the existing Block Public Access security posture. |
+| Direct browser S3 writes | Avoided for this bounded administrator flow; it adds policy/cleanup complexity. |
 
 ## Traceability
 
 | Requirement | Phase | Status |
-|-------------|-------|--------|
-| TEN-01 | Phase 3 | Complete |
-| TEN-02 | Phase 1 | Complete |
-| TEN-03 | Phase 1 | Complete |
-| TEN-04 | Phase 1 | Complete |
-| TEN-05 | Phase 1 | Complete |
-| AUTHZ-01 | Phase 2, Phase 4 | Complete |
-| AUTHZ-02 | Phase 2, Phase 4 | Complete |
-| AUTHZ-03 | Phase 2, Phase 5 | Complete |
-| AUTHZ-04 | Phase 2, Phase 4 | Complete |
-| AUTHZ-05 | Phase 2, Phase 4, Phase 5 | Complete |
-| INV-01 | Phase 3, Phase 5 | Complete |
-| INV-02 | Phase 3, Phase 5 | Complete |
-| INV-03 | Phase 3 | Complete |
-| INV-04 | Phase 3 | Complete |
-| POOL-01 | Phase 1, Phase 4 | Complete |
-| POOL-02 | Phase 1, Phase 4, Phase 6 | Complete |
-| POOL-03 | Phase 4 | Complete |
-| POOL-04 | Phase 4, Phase 5 | Complete |
-| POOL-05 | Phase 6 | Pending |
-| COMM-01 | Phase 1, Phase 4 | Complete |
-| COMM-02 | Phase 4 | Complete |
-| COMM-03 | Phase 1, Phase 5 | Complete |
-| SEC-01 | Phase 1, Phase 5 | Complete |
-| SEC-02 | Phase 6 | Pending |
-| SEC-03 | Phase 2, Phase 4, Phase 7 | Complete |
-| SEC-04 | Phase 4, Phase 6 | Complete |
-| SEC-05 | Phase 6 | Pending |
+|---|---:|---|
+| LOGO-01 | Phase 7 | Pending |
+| LOGO-02 | Phase 7 | Pending |
+| LOGO-03 | Phase 7 | Pending |
+| LOGO-04 | Phase 7 | Pending |
+| IMG-01 | Phase 6 | Pending |
+| IMG-02 | Phase 6 | Pending |
+| IMG-03 | Phase 6 | Pending |
+| IMG-04 | Phase 6 | Pending |
+| S3-01 | Phase 6 | Pending |
+| S3-02 | Phase 8 | Pending |
+| S3-03 | Phase 8 | Pending |
+| S3-04 | Phase 7 | Pending |
+| SAFE-01 | Phase 6 | Pending |
+| SAFE-02 | Phase 8 | Pending |
+| SAFE-03 | Phase 8 | Pending |
 
 **Coverage:**
 
-- v1 requirements: 27 total
-- Mapped to phases: 27
+- v1.1 requirements: 15 total
+- Mapped to phases: 15
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-06-28*
-*Last updated: 2026-06-28 after Phase 1 Plan 03 execution*
+*Requirements defined: 2026-07-18*  
+*Last updated: 2026-07-18 after v1.1 scope confirmation*
