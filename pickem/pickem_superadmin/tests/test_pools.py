@@ -22,16 +22,16 @@ class PoolsMatrixTests(TestCase):
         """A full matrix row post payload for self.pool.
 
         Values match PoolSettings' actual field defaults (tie_points=0,
-        perfect_week_bonus_amount=10, picks_lock_at_kickoff/allow_tiebreaker
-        checked) so that posting this payload unmodified is a true no-op diff
-        — required for the "unchanged row" and "only the touched field is in
-        the audit diff" tests below to mean what they say.
+        perfect_week_bonus_amount=10, picks_lock_mode=kickoff,
+        allow_tiebreaker checked) so that posting this payload unmodified is a
+        true no-op diff — required for the "unchanged row" and "only the
+        touched field is in the audit diff" tests below to mean what they say.
         """
         payload = {
             f'{self.pool.id}-win_points': '1',
             f'{self.pool.id}-tie_points': '0',
             f'{self.pool.id}-weekly_winner_points': '2',
-            f'{self.pool.id}-picks_lock_at_kickoff': 'on',
+            f'{self.pool.id}-picks_lock_mode': PoolSettings.PicksLockMode.KICKOFF,
             f'{self.pool.id}-allow_tiebreaker': 'on',
             f'{self.pool.id}-primary_tiebreaker': PoolSettings.PrimaryTiebreaker.TOTAL_SCORE,
             f'{self.pool.id}-secondary_tiebreaker': PoolSettings.SecondaryTiebreaker.COMBINED_YARDS,
@@ -98,6 +98,13 @@ class PoolsMatrixTests(TestCase):
         self.assertEqual(self.settings.win_points, 3)
         self.assertContains(response, 'changed since you loaded it')
 
+    def test_pools_row_form_has_lock_mode(self):
+        from pickem_superadmin.forms import PoolSettingsRowForm
+
+        form = PoolSettingsRowForm()
+        self.assertIn('picks_lock_mode', form.fields)
+        self.assertNotIn('picks_lock_at_kickoff', form.fields)
+
     def test_invalid_cell_does_not_discard_the_valid_edits(self):
         other_pool = Pool.objects.create(
             family=self.family, name='Second', slug='second', season=2627,
@@ -109,7 +116,7 @@ class PoolsMatrixTests(TestCase):
             f'{other_pool.id}-win_points': '5',
             f'{other_pool.id}-tie_points': '0',
             f'{other_pool.id}-weekly_winner_points': '2',
-            f'{other_pool.id}-picks_lock_at_kickoff': 'on',
+            f'{other_pool.id}-picks_lock_mode': PoolSettings.PicksLockMode.KICKOFF,
             f'{other_pool.id}-allow_tiebreaker': 'on',
             f'{other_pool.id}-primary_tiebreaker': PoolSettings.PrimaryTiebreaker.TOTAL_SCORE,
             f'{other_pool.id}-secondary_tiebreaker': PoolSettings.SecondaryTiebreaker.COMBINED_YARDS,

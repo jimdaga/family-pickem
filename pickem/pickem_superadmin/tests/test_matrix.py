@@ -39,6 +39,7 @@ class SaveMatrixTests(TestCase):
             f'{pk}-win_points': str(obj.win_points),
             f'{pk}-tie_points': str(obj.tie_points),
             f'{pk}-weekly_winner_points': str(obj.weekly_winner_points),
+            f'{pk}-picks_lock_mode': obj.picks_lock_mode,
             f'{pk}-primary_tiebreaker': obj.primary_tiebreaker,
             f'{pk}-secondary_tiebreaker': obj.secondary_tiebreaker,
             f'{pk}-perfect_week_bonus_amount': str(obj.perfect_week_bonus_amount),
@@ -48,8 +49,6 @@ class SaveMatrixTests(TestCase):
             f'{pk}-payout_structure': obj.payout_structure,
             f'{pk}-updated_at': obj.updated_at.isoformat(),
         }
-        if obj.picks_lock_at_kickoff:
-            payload[f'{pk}-picks_lock_at_kickoff'] = 'on'
         if obj.allow_tiebreaker:
             payload[f'{pk}-allow_tiebreaker'] = 'on'
         if obj.perfect_week_bonus_enabled:
