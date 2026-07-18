@@ -1,7 +1,8 @@
 from datetime import date, timedelta
-from io import StringIO
+from io import BytesIO, StringIO
 from importlib import import_module
 import json
+import tempfile
 from unittest.mock import ANY, patch
 
 from django.contrib import admin
@@ -9,6 +10,8 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.core.management import call_command
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.storage import FileSystemStorage
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.http import Http404, HttpResponse
@@ -43,6 +46,7 @@ from pickem_homepage.models import (
     SiteBanner,
 )
 from pickem_homepage.views import is_commissioner
+from PIL import Image
 
 
 class ViewSmokeTests(TestCase):
@@ -6616,6 +6620,59 @@ class InviteFlowTests(TestCase):
                 status=FamilyMembership.Status.ACTIVE,
             ).exists()
         )
+
+
+class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
+    def setUp(self):
+        super().setUp()
+        self._logo_storage_tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._logo_storage_tmp.cleanup)
+        field = Family._meta.get_field('logo')
+        self._previous_logo_storage = field.storage
+        field.storage = FileSystemStorage(location=self._logo_storage_tmp.name)
+        self.addCleanup(setattr, field, 'storage', self._previous_logo_storage)
+        # The fixture accessed ``family.logo`` before this override, so its
+        # cached FieldFile keeps the original storage instance.
+        self.family.logo.storage = field.storage
+
+    def _logo_upload(self):
+        data = BytesIO()
+        Image.new('RGB', (24, 12), 'red').save(data, format='PNG')
+        return SimpleUploadedFile('untrusted-name.png', data.getvalue(), content_type='image/png')
+
+    def test_admin_uploads_only_canonical_logo_and_settings_template_is_multipart(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            self._settings_url(),
+            {
+                'family_name': self.family.name,
+                'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'logo': self._logo_upload(),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertTrue(self.family.logo.name.endswith('.webp'))
+        rendered = self.client.get(self._settings_url())
+        self.assertContains(rendered, 'enctype="multipart/form-data"')
+        self.assertContains(rendered, 'accept="image/jpeg,image/png,image/webp"')
+        self.assertContains(rendered, 'Choose a JPEG, PNG, or WebP image up to 5 MB.')
+        self.assertNotContains(rendered, 'logo_url')
+
+    def test_invalid_logo_preserves_existing_reference(self):
+        self.family.logo.save('already.webp', SimpleUploadedFile('already.webp', b'canonical'), save=True)
+        original = self.family.logo.name
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            self._settings_url(),
+            {'family_name': self.family.name, 'pool_name': self.pool.name, **self._default_scoring_fields(),
+             'logo': SimpleUploadedFile('bad.png', b'not-an-image', content_type='image/png')},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.family.refresh_from_db()
+        self.assertEqual(self.family.logo.name, original)
+        self.assertContains(response, "safely read")
 
 
 class FamilyAdminSettingsFormTests(TestCase):
