@@ -703,7 +703,8 @@ class FamilyBannerForm(forms.ModelForm):
                 'placeholder': 'Optional details…',
             }),
             'banner_type': forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
-            'icon': forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
+            # pl-10 leaves room for the live icon preview overlaid on the left.
+            'icon': forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES + ' pl-10'}),
             'show_close_button': forms.CheckboxInput(attrs={
                 'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
             }),
