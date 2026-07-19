@@ -8437,10 +8437,15 @@ class PayoutGroupingTests(TestCase):
     def test_payout_not_in_generic_choice_loop(self):
         import pathlib
         tpl = pathlib.Path('pickem_homepage/templates/pickem/family_admin_settings.html').read_text()
-        # payout_structure must render inside the entry-fee card, keyed by name.
+        # payout_structure renders inside the entry-fee card (after the amount
+        # field), not in the generic rule-choice loop. It's always visible now —
+        # the card boundary makes the grouping clear, no show/hide JS needed.
         self.assertIn('form.payout_structure', tpl)
-        # And the entry-fee card must contain the payout wrapper marker.
-        self.assertIn('data-payout-group', tpl)
+        self.assertLess(
+            tpl.index('form.entry_fee_amount'),
+            tpl.index('form.payout_structure'),
+            "payout_structure should render after the entry-fee amount (inside the Entry Fee card)",
+        )
 
         from pickem_homepage import views
         # The generic rule_choice_fields loop (rendered for family_admin_settings.html)
