@@ -8099,3 +8099,24 @@ class BannerIconChoicesTests(TestCase):
         form = FamilyBannerForm(instance=b)
         rendered = str(form['icon'])
         self.assertIn('fas fa-custom-thing', rendered)
+
+
+class CreateFamilyRenderTests(TestCase):
+    """Regression guard for the create-family page: it must render every
+    CreateFamilyForm field it's supposed to, including picks_lock_mode.
+
+    NOTE: the CreateFamilyForm field for the family's display name is
+    ``name`` (rendered as ``name="name"``) — there is no ``family_name`` or
+    ``pool_name`` field on this form (those belong to FamilyAdminSettingsForm
+    on the separate family-admin-settings page; the pool name here is
+    auto-generated in the view). This test checks the fields that actually
+    exist on CreateFamilyForm.
+    """
+
+    def test_form_fields_still_present(self):
+        u = User.objects.create_user('cf', 'cf@x.com', 'pw')
+        c = Client()
+        c.force_login(u)
+        html = c.get('/families/create/').content.decode()
+        for needed in ('name="name"', 'picks_lock_mode', 'name="entry_fee_amount"'):
+            self.assertIn(needed, html)
