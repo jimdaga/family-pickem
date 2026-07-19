@@ -6831,6 +6831,51 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.assertContains(saved_response, canonical_url)
         self.assertNotContains(saved_response, 'blob:')
 
+    def test_uploaded_and_removed_logo_render_only_persisted_canonical_or_default_sources(self):
+        self.client.force_login(self.admin_user)
+        settings_url = self._settings_url()
+        picker_url = reverse('family_picker')
+        lobby_url = reverse(
+            'family_pool_home',
+            kwargs={'family_slug': self.family.slug, 'pool_slug': self.pool.slug},
+        )
+        upload_response = self.client.post(settings_url, {
+            'family_name': self.family.name,
+            'pool_name': self.pool.name,
+            **self._default_scoring_fields(),
+            'logo': self._logo_upload(),
+        })
+        self.assertEqual(upload_response.status_code, 302)
+        self.family.refresh_from_db()
+        canonical_url = self.family.logo.url
+        self.assertTrue(self.family.logo.name.endswith('.webp'))
+
+        for url in (settings_url, picker_url, lobby_url):
+            with self.subTest(saved_surface=url):
+                response = self.client.get(url)
+                self.assertContains(response, canonical_url)
+                self.assertNotContains(response, 'blob:')
+                self.assertNotContains(response, 'logo_url')
+                self.assertNotContains(response, 'untrusted-name.png')
+
+        remove_response = self.client.post(settings_url, {
+            'family_name': self.family.name,
+            'pool_name': self.pool.name,
+            **self._default_scoring_fields(),
+            'remove_logo': 'true',
+        })
+        self.assertEqual(remove_response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertFalse(self.family.logo.name)
+
+        for url in (settings_url, picker_url, lobby_url):
+            with self.subTest(default_surface=url):
+                response = self.client.get(url)
+                self.assertContains(response, 'images/familypickem.png')
+                self.assertNotContains(response, canonical_url)
+                self.assertNotContains(response, 'blob:')
+                self.assertNotContains(response, 'logo_url')
+
 
 class FamilyAdminSettingsFormTests(TestCase):
     """Server-side protections on the pool-admin settings form."""
