@@ -12,6 +12,7 @@ from .forms import (
     FamilyInviteCreateForm,
     FamilyAdminSettingsForm,
     FamilyBannerForm,
+    FamilyPublicationForm,
     FamilyManualPickForm,
     FamilyWeekWinnerForm,
     FamilyMembershipUpdateForm,
@@ -22,7 +23,7 @@ from .forms import (
     PickSubmissionForm,
     QuickCommentForm,
 )
-from .models import MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner
+from .models import FamilyPublication, MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db import IntegrityError, transaction
@@ -425,6 +426,13 @@ def build_family_admin_sections(family, pool, user=None):
             'icon': 'fas fa-bullhorn',
             'url': reverse('family_pool_admin_banners', kwargs=route_kwargs),
             'status': 'Manage banners',
+        },
+        {
+            'label': 'Lobby Messages',
+            'description': 'Publish longer commissioner updates for this pool lobby.',
+            'icon': 'fas fa-newspaper',
+            'url': reverse('family_pool_admin_publications', kwargs=route_kwargs),
+            'status': 'Manage messages',
         },
         {
             'label': 'Members',
@@ -1192,6 +1200,11 @@ def family_pool_home(request, family_slug, pool_slug):
         .select_related('user')
         .order_by('user__username')[:10]
     )
+    publications = (
+        FamilyPublication.objects.filter(
+            family=family, pool=pool, is_published=True
+        ).select_related('author')[:5]
+    )
 
     # The viewer's favorite-team logo for the lobby welcome badge.
     viewer_favorite_team = None
@@ -1221,6 +1234,7 @@ def family_pool_home(request, family_slug, pool_slug):
         'user_picks_count': user_picks_count,
         'user_pick_status': user_pick_status,
         'active_members': active_members,
+        'publications': publications,
     }
     return render(request, 'pickem/family_pool_home.html', context)
 
@@ -1547,6 +1561,104 @@ def family_pool_admin_delete_family(request, family_slug, pool_slug):
         "you need it reactivated.",
     )
     return redirect('family_picker')
+
+
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_publications(request, family_slug, pool_slug):
+    """Create, edit, publish, unpublish, and remove this pool's messages."""
+    from django.core.paginator import Paginator
+
+    tenant_context = request.tenant_context
+    family, pool = tenant_context.family, tenant_context.pool
+    publication_id = request.POST.get('publication_id') if request.method == 'POST' else None
+
+    def get_publication():
+        try:
+            publication_pk = int(publication_id)
+        except (TypeError, ValueError):
+            return None
+        if not 0 < publication_pk <= 2**31 - 1:
+            return None
+        return FamilyPublication.objects.filter(
+            id=publication_pk, family=family, pool=pool
+        ).first()
+
+    action = request.POST.get('action') if request.method == 'POST' else None
+    form = FamilyPublicationForm()
+    if action in {'create', 'create_publish', 'edit'}:
+        publication = get_publication() if action == 'edit' else None
+        if action == 'edit' and publication is None:
+            messages.error(request, 'That lobby message could not be found.')
+        else:
+            form = FamilyPublicationForm(request.POST, instance=publication)
+            if form.is_valid():
+                message = form.save(commit=False)
+                if publication is None:
+                    message.family, message.pool = family, pool
+                    message.author = request.user
+                    message.source = FamilyPublication.Source.COMMISSIONER
+                    if action == 'create_publish':
+                        FamilyPublication.objects.filter(
+                            family=family, pool=pool, is_published=True
+                        ).update(is_published=False, published_at=None)
+                        message.is_published = True
+                        message.published_at = timezone.now()
+                message.save()
+                FamilyAuditLog.objects.create(
+                    family=family, pool=pool, actor=request.user,
+                    action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                    target_type='FamilyPublication', target_id=str(message.id),
+                    metadata={'summary': f"Lobby message {'updated' if publication else ('published' if message.is_published else 'created')}: {message.title}"},
+                    **get_invite_audit_context(request),
+                )
+                messages.success(request, 'Lobby message published.' if action == 'create_publish' else 'Lobby message saved.')
+                return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)
+    elif action in {'publish', 'unpublish', 'delete'}:
+        publication = get_publication()
+        if publication is None:
+            messages.error(request, 'That lobby message could not be found.')
+        elif action == 'delete':
+            title, publication_id = publication.title, publication.id
+            publication.delete()
+            messages.success(request, 'Lobby message removed.')
+            FamilyAuditLog.objects.create(
+                family=family, pool=pool, actor=request.user,
+                action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                target_type='FamilyPublication', target_id=str(publication_id),
+                metadata={'summary': f'Lobby message removed: {title}'},
+                **get_invite_audit_context(request),
+            )
+        else:
+            if action == 'publish':
+                FamilyPublication.objects.filter(
+                    family=family, pool=pool, is_published=True
+                ).exclude(id=publication.id).update(is_published=False, published_at=None)
+            publication.is_published = action == 'publish'
+            publication.published_at = timezone.now() if publication.is_published else None
+            publication.save(update_fields=['is_published', 'published_at', 'updated_at'])
+            messages.success(request, f"Lobby message {'published' if publication.is_published else 'unpublished'}.")
+            FamilyAuditLog.objects.create(
+                family=family, pool=pool, actor=request.user,
+                action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                target_type='FamilyPublication', target_id=str(publication.id),
+                metadata={'summary': f"Lobby message {'published' if publication.is_published else 'unpublished'}: {publication.title}"},
+                **get_invite_audit_context(request),
+            )
+        return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)
+
+    publications = FamilyPublication.objects.filter(
+        family=family, pool=pool
+    ).select_related('author').order_by('-created_at')
+
+    return render(request, 'pickem/family_admin_publications.html', {
+        'family': family, 'pool': pool, 'membership': tenant_context.membership,
+        'gameseason': pool.season or get_season(),
+        'publication_form': form,
+        'publications': Paginator(publications, 10).get_page(request.GET.get('page')),
+        'active_publication': FamilyPublication.objects.filter(
+            family=family, pool=pool, is_published=True
+        ).first(),
+    })
 
 
 @family_member_required(minimum_role=FamilyMembership.Role.ADMIN)

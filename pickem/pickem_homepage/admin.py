@@ -1,7 +1,15 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
-from .models import SiteBanner, MessageBoardPost, MessageBoardComment, MessageBoardVote
+from .models import FamilyPublication, SiteBanner, MessageBoardPost, MessageBoardComment, MessageBoardVote
+
+
+@admin.register(FamilyPublication)
+class FamilyPublicationAdmin(admin.ModelAdmin):
+    list_display = ['title', 'family', 'pool', 'source', 'author', 'is_published', 'published_at', 'updated_at']
+    list_filter = ['family', 'pool', 'source', 'is_published']
+    search_fields = ['title', 'body', 'generation_reference']
+    readonly_fields = ['created_at', 'updated_at']
 
 @admin.register(SiteBanner)
 class SiteBannerAdmin(admin.ModelAdmin):

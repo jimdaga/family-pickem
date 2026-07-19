@@ -1,0 +1,62 @@
+{% extends "pickem/base.html" %}
+{% load pickem_homepage_extras %}
+{% block title %}Lobby Messages - {{ family.name }}{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-bg-dark" data-active-publication-title="{% if active_publication %}{{ active_publication.title }}{% endif %}"><div class="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
+  <header class="flex flex-wrap items-end justify-between gap-4"><div class="flex items-start gap-3"><span class="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/20"><i class="fas fa-newspaper text-lg"></i></span><div><div class="text-sm font-semibold uppercase tracking-wide text-primary">Family Admin · {{ pool.name }}</div><h1 class="mt-1 text-3xl font-bold tracking-tight text-text-dark dark:text-white">Lobby Messages</h1><p class="mt-2 max-w-2xl text-text-secondary-light dark:text-text-secondary">Longer updates shown only in this pool’s lobby. Banners remain separate for brief family alerts.</p></div></div><a href="{% url 'family_pool_admin' family.slug pool.slug %}" class="inline-flex items-center rounded-lg border border-border-light px-4 py-2 text-sm font-semibold text-text-dark transition-colors hover:bg-white dark:border-border-subtle dark:text-white dark:hover:bg-surface"><i class="fas fa-arrow-left mr-2"></i>Admin Hub</a></header>
+  <section class="rounded-xl border border-border-light bg-white p-5 shadow-sm dark:border-border-subtle dark:bg-surface"><h2 class="text-xl font-bold text-text-dark dark:text-white">New lobby message</h2><form method="post" class="mt-5 space-y-4">{% csrf_token %}<div><label class="text-sm font-semibold text-text-dark dark:text-white">Title</label><div class="mt-1">{{ publication_form.title }}</div>{% for error in publication_form.title.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}</div><div data-markdown-editor><label class="text-sm font-semibold text-text-dark dark:text-white">Message</label><p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary">Use the buttons to style your update. Raw HTML is always displayed as text.</p><div class="mt-2 flex flex-wrap items-center gap-1 rounded-t-lg border border-b-0 border-border-light bg-gray-50 p-2 dark:border-border-subtle dark:bg-bg-dark" role="toolbar" aria-label="Message formatting"><select data-md-heading class="rounded border border-border-light bg-white px-2 py-1 text-sm dark:border-border-subtle dark:bg-surface dark:text-white" aria-label="Heading size"><option value="">Normal text</option><option value="## ">Heading</option><option value="### ">Small heading</option></select><span class="mx-1 h-6 border-l border-border-light dark:border-border-subtle"></span><button type="button" data-md-action="bold" class="rounded px-2.5 py-1 text-sm font-bold hover:bg-white dark:hover:bg-surface" aria-label="Bold">B</button><button type="button" data-md-action="italic" class="rounded px-2.5 py-1 text-sm italic hover:bg-white dark:hover:bg-surface" aria-label="Italic">I</button><span class="mx-1 h-6 border-l border-border-light dark:border-border-subtle"></span><button type="button" data-md-action="bullets" class="rounded px-2.5 py-1 text-sm hover:bg-white dark:hover:bg-surface" aria-label="Bulleted list"><i class="fas fa-list-ul"></i></button><button type="button" data-md-action="numbers" class="rounded px-2.5 py-1 text-sm hover:bg-white dark:hover:bg-surface" aria-label="Numbered list"><i class="fas fa-list-ol"></i></button><button type="button" data-md-action="link" class="rounded px-2.5 py-1 text-sm hover:bg-white dark:hover:bg-surface" aria-label="Add link"><i class="fas fa-link"></i></button><span class="mx-1 h-6 border-l border-border-light dark:border-border-subtle"></span><button type="button" data-md-action="preview" class="rounded px-2.5 py-1 text-sm font-semibold text-primary hover:bg-white dark:hover:bg-surface">Preview</button></div><div class="mt-0">{{ publication_form.body }}</div><div data-md-preview class="hidden rounded-b-lg border border-border-light bg-white p-4 text-sm text-text-dark dark:border-border-subtle dark:bg-surface dark:text-white" aria-live="polite"></div>{% for error in publication_form.body.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}</div><div class="flex flex-wrap gap-3"><button name="action" value="create" class="rounded-lg border border-border-light px-5 py-2.5 text-sm font-bold text-text-dark hover:bg-gray-50 dark:border-border-subtle dark:text-white dark:hover:bg-bg-dark">Save draft</button><button name="action" value="create_publish" class="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary/90"><i class="fas fa-paper-plane mr-2"></i>Publish</button></div></form></section>
+  <section class="overflow-hidden rounded-xl border border-border-light bg-white shadow-sm dark:border-border-subtle dark:bg-surface"><div class="border-b border-border-light px-5 py-4 dark:border-border-subtle"><h2 class="font-bold text-text-dark dark:text-white">Messages</h2></div>{% for publication in publications %}<article class="border-b border-border-light p-5 last:border-0 dark:border-border-subtle"><div class="flex flex-wrap items-start justify-between gap-3"><div><h3 class="text-lg font-bold text-text-dark dark:text-white">{{ publication.title }}</h3><p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary">{{ publication.get_source_display }}{% if publication.author %} by {{ publication.author|display_name }}{% endif %} · Updated {{ publication.updated_at|date:"M j, Y, P" }}</p></div><div class="flex items-center gap-2">{% if publication.is_published %}<span class="rounded bg-green-500/10 px-2 py-1 text-xs font-bold text-green-700 dark:text-green-300">Published</span>{% else %}<span class="rounded bg-gray-500/10 px-2 py-1 text-xs font-bold text-text-secondary-light">Draft</span>{% endif %}<form method="post">{% csrf_token %}<input type="hidden" name="publication_id" value="{{ publication.id }}"><input type="hidden" name="action" value="{% if publication.is_published %}unpublish{% else %}publish{% endif %}"><button class="rounded border border-border-light px-3 py-1 text-xs font-semibold text-text-dark dark:border-border-subtle dark:text-white">{% if publication.is_published %}Unpublish{% else %}Publish{% endif %}</button></form><form method="post">{% csrf_token %}<input type="hidden" name="publication_id" value="{{ publication.id }}"><input type="hidden" name="action" value="delete"><button class="rounded border border-red-300 px-3 py-1 text-xs font-semibold text-red-600">Remove</button></form></div></div><div class="mt-3 text-sm text-text-dark dark:text-white/90">{{ publication.body|safe_markdown }}</div><details class="mt-4"><summary class="cursor-pointer text-sm font-semibold text-primary">Edit message</summary><form method="post" class="mt-3 space-y-3">{% csrf_token %}<input type="hidden" name="action" value="edit"><input type="hidden" name="publication_id" value="{{ publication.id }}"><input name="title" maxlength="200" value="{{ publication.title }}" class="w-full rounded-lg border border-border-light px-3 py-2 dark:border-border-subtle dark:bg-bg-dark dark:text-white"><textarea name="body" rows="7" class="w-full rounded-lg border border-border-light px-3 py-2 dark:border-border-subtle dark:bg-bg-dark dark:text-white">{{ publication.body }}</textarea><button class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white">Save changes</button></form></details></article>{% empty %}<p class="p-8 text-center text-text-secondary-light dark:text-text-secondary">No lobby messages yet.</p>{% endfor %}</section>
+{% if publications.paginator.num_pages > 1 %}
+  <nav class="flex items-center justify-between gap-3" aria-label="Message pages">
+    <p class="text-sm text-text-secondary-light dark:text-text-secondary">Page {{ publications.number }} of {{ publications.paginator.num_pages }}</p>
+    <div class="flex gap-2">
+      {% if publications.has_previous %}<a href="?page={{ publications.previous_page_number }}" class="rounded-lg border border-border-light px-3 py-2 text-sm font-semibold text-text-dark hover:bg-white dark:border-border-subtle dark:text-white dark:hover:bg-surface"><i class="fas fa-arrow-left mr-1"></i> Newer</a>{% endif %}
+      {% if publications.has_next %}<a href="?page={{ publications.next_page_number }}" class="rounded-lg border border-border-light px-3 py-2 text-sm font-semibold text-text-dark hover:bg-white dark:border-border-subtle dark:text-white dark:hover:bg-surface">Older <i class="fas fa-arrow-right ml-1"></i></a>{% endif %}
+    </div>
+  </nav>
+{% endif %}
+</div></div>
+<script>
+(() => {
+  const editor = document.querySelector('[data-markdown-editor]');
+  if (!editor) return;
+  const textarea = editor.querySelector('textarea');
+  const preview = editor.querySelector('[data-md-preview]');
+  const heading = editor.querySelector('[data-md-heading]');
+  textarea.classList.add('rounded-t-none');
+
+  const selection = () => ({ start: textarea.selectionStart, end: textarea.selectionEnd, text: textarea.value.slice(textarea.selectionStart, textarea.selectionEnd) || 'text' });
+  const replace = (value, start, end) => { textarea.setRangeText(value, start, end, 'end'); textarea.focus(); };
+  const selectedLines = (prefix) => { const {start, end} = selection(); const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1; const lineEnd = textarea.value.indexOf('\n', end); const finish = lineEnd < 0 ? textarea.value.length : lineEnd; replace(textarea.value.slice(lineStart, finish).split('\n').map((line, i) => prefix === '1. ' ? `${i + 1}. ${line}` : `${prefix}${line}`).join('\n'), lineStart, finish); };
+  const render = () => {
+    let html = textarea.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+    html = html.replace(/^### (.+)$/gm, '<h3 class="mt-3 font-bold">$1</h3>').replace(/^## (.+)$/gm, '<h2 class="mt-3 text-lg font-bold">$1</h2>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/(?<!\*)\*(.+?)\*(?!\*)/g, '<em>$1</em>');
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a class="text-primary underline" href="$2">$1</a>');
+    preview.innerHTML = html.replace(/\n/g, '<br>');
+  };
+  editor.querySelectorAll('[data-md-action]').forEach(button => button.addEventListener('click', () => {
+    const action = button.dataset.mdAction;
+    if (action === 'preview') { preview.classList.toggle('hidden'); if (!preview.classList.contains('hidden')) render(); return; }
+    const {start, end, text} = selection();
+    if (action === 'bold') replace(`**${text}**`, start, end);
+    if (action === 'italic') replace(`*${text}*`, start, end);
+    if (action === 'bullets') selectedLines('- ');
+    if (action === 'numbers') selectedLines('1. ');
+    if (action === 'link') { const url = window.prompt('Paste a web link (https://...)'); if (url) replace(`[${text}](${url})`, start, end); }
+    render();
+  }));
+  heading.addEventListener('change', () => { if (!heading.value) return; const {start} = selection(); const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1; replace(heading.value, lineStart, lineStart); heading.value = ''; render(); });
+  textarea.addEventListener('input', render);
+  const activeTitle = document.querySelector('[data-active-publication-title]').dataset.activePublicationTitle;
+  if (activeTitle) {
+    document.querySelectorAll('form').forEach(form => form.addEventListener('submit', event => {
+      const clicked = event.submitter;
+      const hiddenAction = form.querySelector('input[name="action"]');
+      const action = clicked ? clicked.value : (hiddenAction && hiddenAction.value);
+      if ((action === 'create_publish' || action === 'publish') && !window.confirm(`Publishing this message will unpublish “${activeTitle}”. Continue?`)) event.preventDefault();
+    }));
+  }
+})();
+</script>
+{% endblock %}
