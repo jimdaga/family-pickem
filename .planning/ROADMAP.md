@@ -36,13 +36,13 @@
 
 **Requirements:** S3-02, S3-03, SAFE-02, SAFE-03
 
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 08-01-PLAN.md — Dedicated logo storage configuration, adversarial request coverage, and post-commit cleanup.
-- [ ] 08-02-PLAN.md — Prefix-limited IAM provisioning and Secrets Manager/ESO/Helm delivery isolation.
+- [x] 08-01-PLAN.md — Dedicated logo storage configuration, adversarial request coverage, and post-commit cleanup.
+- [x] 08-02-PLAN.md — Prefix-limited IAM provisioning and Secrets Manager/ESO/Helm delivery isolation.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
