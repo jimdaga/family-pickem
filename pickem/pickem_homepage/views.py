@@ -1897,6 +1897,7 @@ def render_family_admin_winners(request, tenant_context, form=None, *, status=20
         'form': form,
         'pool_settings': pool_settings,
         'perfect_week_members': get_perfect_week_members(family, pool, selected_week),
+        'can_override': tenant_context.membership.role == FamilyMembership.Role.OWNER,
     }
     return render(request, 'pickem/family_admin_winners.html', context, status=status)
 

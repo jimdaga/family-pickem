@@ -5743,6 +5743,19 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(csrf_response.status_code, 403)
         self.assertFalse(userSeasonPoints.objects.filter(pool=self.pool, week_5_winner=True).exists())
 
+    def test_winner_override_visible_to_owner_only(self):
+        self._season_points(self.member, week=1, points=2)
+
+        self.client.force_login(self.owner)
+        owner_response = self.client.get(self._winners_url())
+        self.assertEqual(owner_response.status_code, 200)
+        self.assertIn(b"Correct this", owner_response.content)
+
+        self.client.force_login(self.admin_user)
+        admin_response = self.client.get(self._winners_url())
+        self.assertEqual(admin_response.status_code, 200)
+        self.assertNotIn(b"Correct this", admin_response.content)
+
     def test_legacy_commissioner_routes_are_disabled_without_login_html_or_global_mutation(self):
         UserProfile.objects.create(user=self.owner, is_commissioner=True)
         legacy_pick_game = self._admin_game(game_id=9730, week="6")
