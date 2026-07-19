@@ -80,12 +80,12 @@ status: complete
 1. **Task 1: Render the accessible no-JS editor baseline and test its server contract** — `2f7985c`
 2. **Task 2: Implement the local-only Cropper.js controller with orientation-safe fallback** — `0f35ed5`
 
-## Verification
+## Automated checks
 
-- `node --check pickem/pickem_homepage/static/js/family-logo-editor.js` — passed.
-- `cd pickem && ../venv/bin/python manage.py test pickem_homepage.tests --settings=pickem.test_settings --verbosity=1` — passed (325 tests).
-- `npm run build:logo-editor-assets` — passed; both local Cropper assets are non-empty.
-- `manage.py check` and `makemigrations --check --dry-run` under test settings — passed.
+- node --check on the logo editor script — passed.
+- Focused homepage Django suite under test settings — passed (325 tests).
+- npm build:logo-editor-assets — passed; both local Cropper assets are non-empty.
+- Django check and migration dry-run under test settings — passed.
 - Template safety assertion confirmed no legacy URL field, remote Cropper CDN, or circular avatar class in the settings template.
 - `curl -I http://localhost:8000` — local Django server responded 200.
 
