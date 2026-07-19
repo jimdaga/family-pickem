@@ -6,7 +6,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 Family Pickem is a Django-based NFL pick'em league web application where users predict game winners and compete on a leaderboard. The app features Google OAuth authentication, real-time game updates, comprehensive statistics tracking, and a message board for league discussion.
 
-**Current Status**: Undergoing migration from Bootstrap 5 to Tailwind CSS
+**Current Status**: Migrated from Bootstrap 5 to Tailwind CSS
 
 ## Development Environment
 
@@ -267,13 +267,13 @@ Key packages:
 
 See `requirements.txt` for complete list.
 
-## Tailwind CSS Migration
+## Tailwind CSS
 
-The project is actively migrating from Bootstrap 5 to Tailwind CSS (migration
-phases, component conversion patterns, color/typography tokens, and the dark-mode
-strategy).
-
-**Current state**: Tailwind is installed and configured, base infrastructure is ready, templates are being converted incrementally.
+The project uses Tailwind CSS (migrated from Bootstrap 5). Tailwind is installed
+and configured with the project's color/typography tokens and dark-mode strategy;
+build the stylesheet with `npm run build:css` (watch) or `npm run build:prod`
+(minified). The compiled `tailwind.css` is committed and served, so new utility
+classes require a rebuild before commit.
 
 ## URL Patterns
 
