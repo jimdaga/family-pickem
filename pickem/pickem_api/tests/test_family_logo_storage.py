@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.core.files.base import ContentFile
+from django.test import TestCase, override_settings
 
 from pickem_api.models import Family, family_logo_upload_to
 from pickem_api.storage import FamilyLogoStorage
@@ -32,3 +33,12 @@ class FamilyLogoStorageTests(TestCase):
             "ContentType": "image/webp",
             "CacheControl": "private, max-age=31536000, immutable",
         })
+
+    @override_settings(AWS_STORAGE_BUCKET_NAME="", MEDIA_ROOT="/tmp/family-pickem-logo-test-media")
+    def test_without_a_bucket_storage_uses_local_media_urls(self):
+        storage = FamilyLogoStorage()
+        name = storage.save("test-logo.webp", ContentFile(b"webp"))
+        self.addCleanup(storage.delete, name)
+
+        self.assertTrue(storage.exists(name))
+        self.assertEqual(storage.url(name), "/media/family-logos/test-logo.webp")

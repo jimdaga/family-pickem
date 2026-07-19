@@ -268,11 +268,16 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
-# STATICFILES_DIRS = [os.path.join(BASE_DIR,'pickem_api/static/'),]
+# The homepage app owns the current brand assets.  Keep it first in the local
+# static-file lookup path so the old project-level copies cannot shadow them
+# during development.
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'pickem_homepage', 'static')]
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(PROJECT_ROOT, 'static')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Cache-buster appended to static asset URLs (?v=...). Stable for the life of
 # the process so browsers can cache assets, but changes on redeploy/restart.

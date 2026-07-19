@@ -66,7 +66,6 @@
         var editorHost = document.querySelector('[data-family-logo-editor]');
         var serverPreview = document.querySelector('[data-family-logo-server-preview]');
         var actions = document.querySelector('[data-family-logo-actions]');
-        var zoom = document.querySelector('[data-family-logo-zoom]');
         var reset = document.querySelector('[data-family-logo-reset]');
         var clear = document.querySelector('[data-family-logo-clear]');
         var remove = document.querySelector('[data-family-logo-remove]');
@@ -74,7 +73,7 @@
             return document.getElementById('id_' + name);
         });
         var removeField = document.getElementById('id_remove_logo');
-        if (!form || !input || !editorHost || !serverPreview || !actions || !zoom || !reset || !clear || !removeField || !window.URL || !window.customElements || !window.customElements.get('cropper-canvas')) {
+        if (!form || !input || !editorHost || !serverPreview || !actions || !reset || !clear || !removeField || !window.URL || !window.customElements || !window.customElements.get('cropper-canvas')) {
             return;
         }
 
@@ -113,7 +112,6 @@
             serverPreview.classList.remove('hidden');
             actions.classList.add('hidden');
             clear.classList.add('hidden');
-            zoom.value = '0';
         }
 
         function selectionToSourcePixels() {
@@ -149,7 +147,6 @@
             if (!cropperImage || !cropperSelection) { return; }
             cropperImage.$resetTransform();
             cropperSelection.$reset();
-            zoom.value = '0';
             window.requestAnimationFrame(selectionToSourcePixels);
         }
 
@@ -160,6 +157,8 @@
             orientationUnsafe = orientation !== 1;
             var canvas = document.createElement('cropper-canvas');
             canvas.setAttribute('background', '');
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
             var cropperImageElement = document.createElement('cropper-image');
             cropperImageElement.setAttribute('translatable', '');
             cropperImageElement.setAttribute('scalable', '');
@@ -171,6 +170,7 @@
             selection.setAttribute('aspect-ratio', '1');
             selection.setAttribute('initial-aspect-ratio', '1');
             selection.setAttribute('movable', '');
+            selection.setAttribute('resizable', '');
             var grid = document.createElement('cropper-grid');
             grid.setAttribute('role', 'grid');
             grid.setAttribute('bordered', '');
@@ -183,6 +183,11 @@
             selection.appendChild(grid);
             selection.appendChild(crosshair);
             selection.appendChild(moveHandle);
+            ['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'].forEach(function (direction) {
+                var resizeHandle = document.createElement('cropper-handle');
+                resizeHandle.setAttribute('action', direction + '-resize');
+                selection.appendChild(resizeHandle);
+            });
             canvas.appendChild(cropperImageElement);
             canvas.appendChild(shade);
             canvas.appendChild(selection);
@@ -204,6 +209,7 @@
                 window.requestAnimationFrame(selectionToSourcePixels);
             });
             cropperImage.$ready(function () {
+                cropperImage.$center('cover');
                 window.requestAnimationFrame(selectionToSourcePixels);
             }).catch(function () {
                 clearCropFields();
@@ -225,12 +231,6 @@
             });
         });
 
-        zoom.addEventListener('input', function () {
-            if (cropperImage) {
-                cropperImage.$zoom(Number(zoom.value));
-                window.requestAnimationFrame(selectionToSourcePixels);
-            }
-        });
         reset.addEventListener('click', resetCrop);
         clear.addEventListener('click', function () {
             input.value = '';

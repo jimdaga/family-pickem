@@ -6687,7 +6687,6 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.assertContains(response, 'id="id_logo"')
         self.assertContains(response, 'data-family-logo-server-preview')
         self.assertContains(response, 'data-family-logo-editor')
-        self.assertContains(response, 'data-family-logo-zoom')
         self.assertContains(response, 'data-family-logo-reset')
         self.assertContains(response, 'data-family-logo-clear')
         for field_name in ('crop_x', 'crop_y', 'crop_width', 'crop_height', 'remove_logo'):
@@ -6717,7 +6716,7 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.client.force_login(self.admin_user)
         response = self.client.get(self._settings_url())
 
-        self.assertContains(response, 'images/familypickem.png')
+        self.assertContains(response, 'images/logo.png')
         self.assertNotContains(response, 'blob:')
         self.assertNotContains(response, 'logo_url')
 
@@ -6804,7 +6803,7 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Families you can oversee as Superuser')
-        self.assertContains(response, 'images/familypickem.png')
+        self.assertContains(response, 'images/logo.png')
         self.assertContains(response, 'alt="" aria-hidden="true"')
         self.assertNotContains(response, 'logo_url')
         self.assertNotContains(response, 'blob:')
@@ -6818,7 +6817,7 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
 
         default_response = self.client.get(lobby_url)
         self.assertEqual(default_response.status_code, 200)
-        self.assertContains(default_response, 'images/familypickem.png')
+        self.assertContains(default_response, 'images/logo.png')
         self.assertContains(default_response, 'alt="" aria-hidden="true"')
         self.assertContains(default_response, 'h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg')
         self.assertNotContains(default_response, 'logo_url')
@@ -6871,7 +6870,7 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         for url in (settings_url, picker_url, lobby_url):
             with self.subTest(default_surface=url):
                 response = self.client.get(url)
-                self.assertContains(response, 'images/familypickem.png')
+                self.assertContains(response, 'images/logo.png')
                 self.assertNotContains(response, canonical_url)
                 self.assertNotContains(response, 'blob:')
                 self.assertNotContains(response, 'logo_url')
