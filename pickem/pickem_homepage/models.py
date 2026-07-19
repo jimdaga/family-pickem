@@ -132,6 +132,8 @@ class FamilyPublication(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
+                # Meta cannot reference the enclosing Source class at model
+                # construction time, so keep this DB-level mirror explicit.
                 check=models.Q(source__in=['commissioner', 'ai_weekly_summary']),
                 name='publication_source_valid',
             ),

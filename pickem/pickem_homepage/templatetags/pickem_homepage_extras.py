@@ -43,20 +43,26 @@ def safe_markdown(value):
     text = re.sub(r'\*\*([^*]+)\*\*|__([^_]+)__', lambda m: f'<strong>{m.group(1) or m.group(2)}</strong>', text)
     text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)|(?<!_)_([^_]+)_(?!_)', lambda m: f'<em>{m.group(1) or m.group(2)}</em>', text)
 
-    blocks, list_items = [], []
+    blocks, list_items, ordered_list_items = [], [], []
     def flush_list():
         if list_items:
             blocks.append('<ul class="my-3 list-disc space-y-1 pl-5">' + ''.join(f'<li>{item}</li>' for item in list_items) + '</ul>')
             list_items.clear()
+        if ordered_list_items:
+            blocks.append('<ol class="my-3 list-decimal space-y-1 pl-5">' + ''.join(f'<li>{item}</li>' for item in ordered_list_items) + '</ol>')
+            ordered_list_items.clear()
     for line in text.splitlines():
         heading = re.match(r'^(#{1,3})\s+(.+)$', line)
         bullet = re.match(r'^[-*]\s+(.+)$', line)
+        numbered = re.match(r'^\d+[.)]\s+(.+)$', line)
         if heading:
             flush_list()
             level = len(heading.group(1))
             blocks.append(f'<h{level} class="mt-4 font-bold text-text-dark dark:text-white">{heading.group(2)}</h{level}>')
         elif bullet:
             list_items.append(bullet.group(1))
+        elif numbered:
+            ordered_list_items.append(numbered.group(1))
         elif line.strip():
             flush_list()
             blocks.append(f'<p class="my-2">{line}</p>')

@@ -1583,6 +1583,20 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
             id=publication_pk, family=family, pool=pool
         ).first()
 
+    def publish_exclusively(message):
+        """Publish one message while atomically replacing the current one."""
+        try:
+            with transaction.atomic():
+                FamilyPublication.objects.filter(
+                    family=family, pool=pool, is_published=True
+                ).exclude(id=message.id).update(is_published=False, published_at=None)
+                message.is_published = True
+                message.published_at = timezone.now()
+                message.save()
+        except IntegrityError:
+            return False
+        return True
+
     action = request.POST.get('action') if request.method == 'POST' else None
     form = FamilyPublicationForm()
     if action in {'create', 'create_publish', 'edit'}:
@@ -1593,26 +1607,26 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
             form = FamilyPublicationForm(request.POST, instance=publication)
             if form.is_valid():
                 message = form.save(commit=False)
+                publish_succeeded = True
                 if publication is None:
                     message.family, message.pool = family, pool
                     message.author = request.user
                     message.source = FamilyPublication.Source.COMMISSIONER
                     if action == 'create_publish':
-                        FamilyPublication.objects.filter(
-                            family=family, pool=pool, is_published=True
-                        ).update(is_published=False, published_at=None)
-                        message.is_published = True
-                        message.published_at = timezone.now()
-                message.save()
-                FamilyAuditLog.objects.create(
-                    family=family, pool=pool, actor=request.user,
-                    action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
-                    target_type='FamilyPublication', target_id=str(message.id),
-                    metadata={'summary': f"Lobby message {'updated' if publication else ('published' if message.is_published else 'created')}: {message.title}"},
-                    **get_invite_audit_context(request),
-                )
-                messages.success(request, 'Lobby message published.' if action == 'create_publish' else 'Lobby message saved.')
-                return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)
+                        publish_succeeded = publish_exclusively(message)
+                if action != 'create_publish':
+                    message.save()
+                if publish_succeeded:
+                    FamilyAuditLog.objects.create(
+                        family=family, pool=pool, actor=request.user,
+                        action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                        target_type='FamilyPublication', target_id=str(message.id),
+                        metadata={'summary': f"Lobby message {'updated' if publication else ('published' if message.is_published else 'created')}: {message.title}"},
+                        **get_invite_audit_context(request),
+                    )
+                    messages.success(request, 'Lobby message published.' if action == 'create_publish' else 'Lobby message saved.')
+                    return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)
+                form.add_error(None, 'Another message was published at the same time. Please try again.')
     elif action in {'publish', 'unpublish', 'delete'}:
         publication = get_publication()
         if publication is None:
@@ -1630,12 +1644,13 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
             )
         else:
             if action == 'publish':
-                FamilyPublication.objects.filter(
-                    family=family, pool=pool, is_published=True
-                ).exclude(id=publication.id).update(is_published=False, published_at=None)
-            publication.is_published = action == 'publish'
-            publication.published_at = timezone.now() if publication.is_published else None
-            publication.save(update_fields=['is_published', 'published_at', 'updated_at'])
+                if not publish_exclusively(publication):
+                    messages.error(request, 'Another message was published at the same time. Please try again.')
+                    return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)
+            else:
+                publication.is_published = False
+                publication.published_at = None
+                publication.save(update_fields=['is_published', 'published_at', 'updated_at'])
             messages.success(request, f"Lobby message {'published' if publication.is_published else 'unpublished'}.")
             FamilyAuditLog.objects.create(
                 family=family, pool=pool, actor=request.user,

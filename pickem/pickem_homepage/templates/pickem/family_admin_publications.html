@@ -30,9 +30,11 @@
   const selectedLines = (prefix) => { const {start, end} = selection(); const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1; const lineEnd = textarea.value.indexOf('\n', end); const finish = lineEnd < 0 ? textarea.value.length : lineEnd; replace(textarea.value.slice(lineStart, finish).split('\n').map((line, i) => prefix === '1. ' ? `${i + 1}. ${line}` : `${prefix}${line}`).join('\n'), lineStart, finish); };
   const render = () => {
     let html = textarea.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
-    html = html.replace(/^### (.+)$/gm, '<h3 class="mt-3 font-bold">$1</h3>').replace(/^## (.+)$/gm, '<h2 class="mt-3 text-lg font-bold">$1</h2>');
+    html = html.replace(/^### (.+)$/gm, '<h3 class="mt-3 font-bold">$1</h3>').replace(/^## (.+)$/gm, '<h2 class="mt-3 text-lg font-bold">$1</h2>').replace(/^# (.+)$/gm, '<h1 class="mt-3 text-xl font-bold">$1</h1>');
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/(?<!\*)\*(.+?)\*(?!\*)/g, '<em>$1</em>');
     html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a class="text-primary underline" href="$2">$1</a>');
+    html = html.replace(/(?:^- .+(?:\n|$))+/gm, block => '<ul class="my-3 list-disc space-y-1 pl-5">' + block.trim().split('\n').map(line => `<li>${line.slice(2)}</li>`).join('') + '</ul>');
+    html = html.replace(/(?:^\d+[.)] .+(?:\n|$))+/gm, block => '<ol class="my-3 list-decimal space-y-1 pl-5">' + block.trim().split('\n').map(line => `<li>${line.replace(/^\d+[.)] /, '')}</li>`).join('') + '</ol>');
     preview.innerHTML = html.replace(/\n/g, '<br>');
   };
   editor.querySelectorAll('[data-md-action]').forEach(button => button.addEventListener('click', () => {
@@ -53,7 +55,7 @@
     document.querySelectorAll('form').forEach(form => form.addEventListener('submit', event => {
       const clicked = event.submitter;
       const hiddenAction = form.querySelector('input[name="action"]');
-      const action = clicked ? clicked.value : (hiddenAction && hiddenAction.value);
+      const action = (hiddenAction && hiddenAction.value) || (clicked && clicked.value);
       if ((action === 'create_publish' || action === 'publish') && !window.confirm(`Publishing this message will unpublish “${activeTitle}”. Continue?`)) event.preventDefault();
     }));
   }
