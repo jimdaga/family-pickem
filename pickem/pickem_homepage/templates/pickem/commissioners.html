@@ -231,7 +231,10 @@
                                     <label for="{{ banner_form.icon.id_for_label }}" class="block text-sm font-semibold text-text-dark dark:text-white mb-2">
                                         {{ banner_form.icon.label }}
                                     </label>
-                                    {{ banner_form.icon }}
+                                    <div class="relative">
+                                        <i data-icon-preview data-base="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-text-secondary-light dark:text-text-secondary" class="{{ banner_form.icon.value|default:'fas fa-bullhorn' }} pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-text-secondary-light dark:text-text-secondary"></i>
+                                        {{ banner_form.icon }}
+                                    </div>
                                     {% if banner_form.icon.help_text %}
                                         <small class="block mt-1 text-xs text-text-secondary-light dark:text-text-secondary">{{ banner_form.icon.help_text }}</small>
                                     {% endif %}
@@ -874,5 +877,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+<script>
+(function () {
+    document.querySelectorAll('select[name="icon"]').forEach(function (select) {
+        const preview = select.closest('form').querySelector('[data-icon-preview]');
+        if (!preview) return;
+        select.addEventListener('change', function () {
+            preview.className = select.value + ' ' + preview.dataset.base;
+        });
+    });
+})();
 </script>
 {% endblock %}
