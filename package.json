@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build:css": "npx tailwindcss -i ./pickem/pickem_homepage/static/css/input.css -o ./pickem/pickem_homepage/static/css/tailwind.css --watch",
-    "build:css:once": "npx tailwindcss -i ./pickem/pickem_homepage/static/css/input.css -o ./pickem/pickem_homepage/static/css/tailwind.css",
+    "build:css:once": "npx tailwindcss -i ./pickem/pickem_homepage/static/css/input.css -o ./pickem/pickem_homepage/static/css/tailwind.css --minify",
     "build:prod": "npx tailwindcss -i ./pickem/pickem_homepage/static/css/input.css -o ./pickem/pickem_homepage/static/css/tailwind.css --minify",
     "build:logo-editor-assets": "mkdir -p ./pickem/pickem_homepage/static/vendor/cropperjs && cp ./node_modules/cropperjs/dist/cropper.js ./pickem/pickem_homepage/static/vendor/cropperjs/cropper.js && printf '%s\\n' '/* Cropper.js 2.1.1 packages its component styles in cropper.js. */' > ./pickem/pickem_homepage/static/vendor/cropperjs/cropper.css",
     "test": "echo \"Error: no test specified\" && exit 1"
