@@ -5614,7 +5614,7 @@ class FamilyAdminExperienceTests(TestCase):
         owner_points.save()
         other_points = self._season_points(self.outsider, pool=self.other_pool, week=3, points=8)
 
-        self.client.force_login(self.admin_user)
+        self.client.force_login(self.owner)
         response = self.client.post(
             self._winners_url(),
             {
@@ -5644,7 +5644,7 @@ class FamilyAdminExperienceTests(TestCase):
         audit = FamilyAuditLog.objects.get(
             family=self.family,
             pool=self.pool,
-            actor=self.admin_user,
+            actor=self.owner,
             action=FamilyAuditLog.Action.WEEK_WINNER_UPDATED,
             target_type="userSeasonPoints",
             target_id=str(member_points.id),
@@ -5653,14 +5653,14 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(audit.metadata["previous_winner_user_id"], self.owner.id)
         self.assertEqual(audit.metadata["new_winner_user_id"], self.member.id)
         self.assertEqual(audit.metadata["bonus_points"], 2)
-        self.assertEqual(audit.metadata["actor_id"], self.admin_user.id)
+        self.assertEqual(audit.metadata["actor_id"], self.owner.id)
         self.assertNotIn("1999", str(audit.metadata))
         self.assertNotIn("pool_id", audit.metadata)
         self.assertNotIn("family_id", audit.metadata)
 
     def test_winner_post_rejects_invalid_weeks_before_dynamic_fields(self):
         self._season_points(self.member, week=1, points=1)
-        self.client.force_login(self.admin_user)
+        self.client.force_login(self.owner)
 
         for invalid_week in ("0", "19", "abc", "1; DROP", "", None):
             with self.subTest(invalid_week=invalid_week):
@@ -5691,7 +5691,7 @@ class FamilyAdminExperienceTests(TestCase):
         )
         self._membership(no_standing_user, self.family, FamilyMembership.Role.MEMBER)
 
-        self.client.force_login(self.admin_user)
+        self.client.force_login(self.owner)
         cases = [
             self.outsider.id,
             no_standing_user.id,
@@ -5742,6 +5742,26 @@ class FamilyAdminExperienceTests(TestCase):
         )
         self.assertEqual(csrf_response.status_code, 403)
         self.assertFalse(userSeasonPoints.objects.filter(pool=self.pool, week_5_winner=True).exists())
+
+    def test_winner_post_denies_non_owner_admin_without_mutation(self):
+        self._season_points(self.member, week=5, points=2)
+
+        self.client.force_login(self.admin_user)
+        get_response = self.client.get(self._winners_url())
+        self.assertEqual(get_response.status_code, 200)
+
+        post_response = self.client.post(
+            self._winners_url(),
+            {"week_number": "5", "winner_uid": str(self.member.id)},
+        )
+        self.assertEqual(post_response.status_code, 403)
+        self.assertFalse(userSeasonPoints.objects.filter(pool=self.pool, week_5_winner=True).exists())
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                action=FamilyAuditLog.Action.WEEK_WINNER_UPDATED,
+            ).exists()
+        )
 
     def test_winner_override_visible_to_owner_only(self):
         self._season_points(self.member, week=1, points=2)

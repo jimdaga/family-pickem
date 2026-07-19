@@ -1,4 +1,4 @@
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.template import loader
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -1907,6 +1907,9 @@ def family_pool_admin_winners(request, family_slug, pool_slug):
     tenant_context = request.tenant_context
     if request.method == 'GET':
         return render_family_admin_winners(request, tenant_context)
+
+    if tenant_context.membership.role != FamilyMembership.Role.OWNER:
+        return HttpResponseForbidden('Permission denied.')
 
     form = FamilyWeekWinnerForm(request.POST)
     if not form.is_valid():
