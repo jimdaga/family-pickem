@@ -8,7 +8,7 @@ usage() {
 Usage: provision.sh <dev|prd>
 
 Requires authenticated aws and kubectl CLIs plus jq. Set LOGO_STORAGE_NAMESPACE
-when the release is not in the default namespace (default: family-pickem).
+when the release is not in the default namespace (default: pickem-<environment>).
 EOF
   exit 64
 }
@@ -27,7 +27,7 @@ prefix=family-logos
 user_name="family-pickem-${environment}-logo-storage"
 policy_name="${user_name}-objects-only"
 secret_id="family-pickem/${environment}/family-logo-storage"
-namespace=${LOGO_STORAGE_NAMESPACE:-family-pickem}
+namespace=${LOGO_STORAGE_NAMESPACE:-"pickem-${environment}"}
 release_name="family-pickem-${environment}"
 external_secret="${release_name}-logo-storage"
 deployment="${release_name}"
@@ -67,8 +67,13 @@ rollback() {
 trap rollback ERR
 
 assert_bucket_posture() {
-  local location public_access ownership encryption policy_status
+  local location public_access ownership encryption policy_status policy_status_error
   location=$(aws s3api get-bucket-location --bucket "$bucket" --query LocationConstraint --output text)
+  # S3 represents the legacy us-east-1 LocationConstraint as null/"None".
+  # Normalize the AWS CLI rendering before enforcing the configured region.
+  if [[ "$location" == "None" && "$region" == "us-east-1" ]]; then
+    location="$region"
+  fi
   [[ "$location" == "$region" ]] || { echo "Unsafe bucket region: expected $region, got $location" >&2; exit 1; }
 
   public_access=$(aws s3api get-public-access-block --bucket "$bucket" --query PublicAccessBlockConfiguration --output json)
@@ -83,7 +88,18 @@ assert_bucket_posture() {
   jq -e '.ApplyServerSideEncryptionByDefault.SSEAlgorithm == "AES256" or .ApplyServerSideEncryptionByDefault.SSEAlgorithm == "aws:kms"' <<<"$encryption" >/dev/null \
     || { echo "Bucket default encryption is missing or invalid; refusing to continue." >&2; exit 1; }
 
-  policy_status=$(aws s3api get-bucket-policy-status --bucket "$bucket" --query PolicyStatus.IsPublic --output text)
+  policy_status_error=$(mktemp)
+  if ! policy_status=$(aws s3api get-bucket-policy-status --bucket "$bucket" --query PolicyStatus.IsPublic --output text 2>"$policy_status_error"); then
+    # A bucket with no policy is private; every other API failure remains unsafe.
+    if grep -q 'NoSuchBucketPolicy' "$policy_status_error"; then
+      policy_status=False
+    else
+      cat "$policy_status_error" >&2
+      rm -f "$policy_status_error"
+      exit 1
+    fi
+  fi
+  rm -f "$policy_status_error"
   [[ "$policy_status" == "False" ]] \
     || { echo "Bucket policy is public; refusing to continue." >&2; exit 1; }
 }

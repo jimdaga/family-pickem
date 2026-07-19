@@ -1,7 +1,7 @@
 ---
 phase: 08
 slug: private-aws-delivery-and-adversarial-verification
-status: planned
+status: blocked
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-07-18
@@ -33,7 +33,7 @@ created: 2026-07-18
 | 08-01-02 | 01 | 1 | SAFE-02, SAFE-03 | T-08-02/T-08-03 | Hostile requests have no side effects; cleanup follows commit | Django request/transaction | `FamilyLogoUploadFoundationTests` + app suites | Yes | pending |
 | 08-02-01 | 02 | 1 | S3-03 | T-08-06/T-08-08 | ESO secret reaches web/migrate only, never backup | Helm render | default/dev/prd `helm template` and `rg` checks | Yes | pending |
 | 08-02-02 | 02 | 1 | S3-02, S3-03 | T-08-05/T-08-07 | IAM prefix is exact and provisioning fails closed | shell/JSON/AWS CLI | `bash -n`, JSON parse, IAM simulation, bucket readback | Yes | pending |
-| 08-03-01 | 03 | 2 | S3-02, S3-03, SAFE-02, SAFE-03 | T-08-09 | Automated app/chart/cloud gates recorded before smoke | release gate | full Django suite, checks, migrations, Helm, shell/JSON | Yes | pending |
+| 08-03-01 | 03 | 2 | S3-02, S3-03, SAFE-02, SAFE-03 | T-08-09 | Automated app/chart/cloud gates recorded before smoke | release gate | full Django suite, checks, migrations, Helm, shell/JSON | Yes | blocked — deployed logo ExternalSecret absent |
 | 08-03-02 | 03 | 2 | S3-02, S3-03, SAFE-02, SAFE-03 | T-08-10/T-08-11/T-08-12 | Staging then production prove signed delivery, audit, cleanup, fallback | manual deployed smoke | artifact-presence check plus runbook steps | Yes | pending |
 
 ## Wave 0 Requirements
@@ -51,8 +51,8 @@ None — existing Django test infrastructure and existing chart rendering tools 
 - [x] All tasks have an automated verify command or a preceding Wave 0 dependency.
 - [x] Sampling continuity is maintained across both waves.
 - [x] No watch-mode commands are planned.
-- [ ] Automated gates passed during execution.
+- [ ] Automated gates passed during execution — blocked 2026-07-19 because `family-pickem-dev-logo-storage` is not deployed in `pickem-dev`; see the redacted runbook record.
 - [ ] Staging smoke recorded.
 - [ ] Production smoke recorded.
 
-**Approval:** planned — release remains blocked until the final two smoke records are complete.
+**Approval:** no-ship — local, chart, bucket, and IAM gates passed, but the deployed dev logo ExternalSecret is absent. Deploy the reviewed dev chart, rerun the provisioner/ESO gate, then complete the final two smoke records before release.
