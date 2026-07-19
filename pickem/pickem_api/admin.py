@@ -68,8 +68,8 @@ class FamilyMembershipAdmin(admin.ModelAdmin):
 
 @admin.register(PoolSettings)
 class PoolSettingsAdmin(admin.ModelAdmin):
-    list_display = ('pool', 'picks_lock_at_kickoff', 'allow_tiebreaker', 'created_at', 'updated_at')
-    list_filter = ('picks_lock_at_kickoff', 'allow_tiebreaker', 'created_at')
+    list_display = ('pool', 'picks_lock_mode', 'allow_tiebreaker', 'created_at', 'updated_at')
+    list_filter = ('picks_lock_mode', 'allow_tiebreaker', 'created_at')
     search_fields = ('pool__name', 'pool__slug', 'pool__family__name', 'pool__family__slug')
     date_hierarchy = 'created_at'
     ordering = ('pool__family__name', 'pool__name')

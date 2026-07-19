@@ -36,6 +36,19 @@
               </td>
               <td class="sa-mono text-[#667085]">{{ row.family.created_at|date:"Y-m-d" }}</td>
             </tr>
+            <tr class="{% if row.family.status == 'inactive' %}sa-locked{% endif %}">
+              <td colspan="7">
+                <details class="mt-2">
+                  <summary class="cursor-pointer text-[12px] font-semibold text-red-700">Delete family…</summary>
+                  <form method="post" action="{% url 'superadmin:family_force_delete' row.family.id %}" class="mt-2 flex items-center gap-2">
+                    {% csrf_token %}
+                    <span class="text-[12px] text-[#667085]">Type <code>{{ row.family.slug }}</code> to confirm ({{ row.family.member_count }} members, {{ row.family.pool_count }} pools):</span>
+                    <input type="text" name="confirm_slug" class="sa-input w-48 !py-1" autocomplete="off">
+                    <button type="submit" class="rounded bg-red-600 px-3 py-1 text-[12px] font-semibold text-white">Delete</button>
+                  </form>
+                </details>
+              </td>
+            </tr>
           {% empty %}
             <tr><td colspan="7" class="sa-empty">No families yet.</td></tr>
           {% endfor %}

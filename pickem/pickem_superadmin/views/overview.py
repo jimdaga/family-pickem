@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 from pickem_api.models import (
     Family, GamePicks, GamesAndScores, Pool, currentSeason,
 )
+from pickem_homepage.forms import BANNER_ICON_CHOICES
 from pickem_homepage.models import SiteBanner
 from pickem_superadmin import jobs, services
 from pickem_superadmin.audit import diff_fields, log_action
@@ -82,6 +83,7 @@ def overview(request):
         'anomalies': _anomalies(season),
         'current_season': current,
         'site_banners': SiteBanner.objects.filter(family__isnull=True, is_active=True),
+        'banner_icon_choices': BANNER_ICON_CHOICES,
     })
 
 
@@ -164,10 +166,16 @@ def banner_publish(request):
         messages.error(request, 'A banner needs a title.')
         return redirect('superadmin:overview')
 
+    valid_icons = {value for value, _label in BANNER_ICON_CHOICES}
+    icon = request.POST.get('icon', '').strip()
+    if icon not in valid_icons:
+        icon = 'fas fa-bullhorn'
+
     banner = SiteBanner.objects.create(
         title=title,
         description=request.POST.get('description', '').strip(),
         banner_type=request.POST.get('banner_type', 'info'),
+        icon=icon,
         family=None,
         is_active=True,
     )

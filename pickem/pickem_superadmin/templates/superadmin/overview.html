@@ -55,6 +55,12 @@
           <option value="danger">danger</option>
           <option value="success">success</option>
         </select>
+        <select name="icon" class="sa-select">
+          {% for value, label in banner_icon_choices %}
+            <option value="{{ value }}"{% if value == 'fas fa-bullhorn' %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <i data-icon-preview class="fas fa-bullhorn text-lg"></i>
         <button type="submit" class="sa-btn sa-btn-primary">Publish</button>
       </form>
       <div class="mt-3 space-y-1.5">
@@ -134,4 +140,13 @@
 
   </div>
 
+<script>
+(function () {
+  document.querySelectorAll('select[name="icon"]').forEach(function (sel) {
+    const preview = sel.closest('form').querySelector('[data-icon-preview]');
+    if (!preview) return;
+    sel.addEventListener('change', function () { preview.className = sel.value + ' text-lg'; });
+  });
+})();
+</script>
 {% endblock %}

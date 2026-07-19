@@ -213,6 +213,10 @@ class PoolSettings(models.Model):
         STRAIGHT_UP = 'straight_up', 'Straight up (pick the winner)'
         AGAINST_SPREAD = 'against_spread', 'Against the spread (coming soon)'
 
+    class PicksLockMode(models.TextChoices):
+        KICKOFF = 'kickoff', 'Lock each game at kickoff'
+        SUNDAY_1PM = 'sunday_1pm', 'Weekly cutoff — Sunday 1PM ET'
+
     class MissedPickPolicy(models.TextChoices):
         ZERO_POINTS = 'zero_points', 'No points for missed picks'
         AUTO_HOME = 'auto_home', 'Auto-pick the home team'
@@ -229,9 +233,11 @@ class PoolSettings(models.Model):
         SECOND_GETS_FEE_BACK = 'second_gets_fee_back', '1st takes the pool, 2nd gets their entry fee back'
 
     pool = models.OneToOneField(Pool, on_delete=models.PROTECT, related_name='settings')
-    picks_lock_at_kickoff = models.BooleanField(
-        default=True,
-        help_text="Lock picks when each game starts",
+    picks_lock_mode = models.CharField(
+        max_length=16,
+        choices=PicksLockMode.choices,
+        default=PicksLockMode.KICKOFF,
+        help_text="When picks lock: each game at kickoff, or a weekly Sunday 1PM ET cutoff",
     )
     allow_tiebreaker = models.BooleanField(
         default=True,

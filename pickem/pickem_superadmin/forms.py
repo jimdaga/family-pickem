@@ -20,7 +20,7 @@ class PoolSettingsRowForm(forms.ModelForm):
         model = PoolSettings
         fields = (
             'win_points', 'tie_points', 'weekly_winner_points',
-            'picks_lock_at_kickoff', 'allow_tiebreaker',
+            'picks_lock_mode', 'allow_tiebreaker',
             'primary_tiebreaker', 'secondary_tiebreaker',
             'perfect_week_bonus_enabled', 'perfect_week_bonus_amount',
             'entry_fee_enabled', 'entry_fee_amount',
@@ -33,6 +33,7 @@ class PoolSettingsRowForm(forms.ModelForm):
             'weekly_winner_points': forms.NumberInput(attrs={'class': NUM_CELL}),
             'perfect_week_bonus_amount': forms.NumberInput(attrs={'class': NUM_CELL}),
             'entry_fee_amount': forms.NumberInput(attrs={'class': NUM_CELL}),
+            'picks_lock_mode': forms.Select(attrs={'class': CELL}),
             'primary_tiebreaker': forms.Select(attrs={'class': CELL}),
             'secondary_tiebreaker': forms.Select(attrs={'class': CELL}),
             'missed_pick_policy': forms.Select(attrs={'class': CELL}),

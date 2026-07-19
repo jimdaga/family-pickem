@@ -30,12 +30,6 @@
                     <img src="{% static 'images/logo.png' %}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain">
                     {% endif %}
                     <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
-                    {% if choice.membership.role == "owner" %}
-                    <span class="inline-flex items-center gap-1 rounded-full border border-sky-400/40 bg-sky-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-sky-600 dark:text-sky-300">
-                        <i class="fas fa-gavel text-[10px]"></i>
-                        Family Commissioner
-                    </span>
-                    {% endif %}
                 </div>
                 {% if choice.pool %}
                 <p class="text-sm text-text-secondary-light dark:text-text-secondary">
@@ -47,16 +41,27 @@
                 </p>
                 {% endif %}
             </div>
-            {% if choice.url %}
-            <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
-                <span>Enter pool</span>
-                <i class="fas fa-arrow-right"></i>
-            </a>
-            {% else %}
-            <span class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-border-light dark:bg-surface-hover text-text-secondary-light dark:text-text-secondary font-semibold">
-                Pool setup needed
-            </span>
-            {% endif %}
+            <div class="flex flex-col items-end gap-2 flex-none">
+                {% if choice.membership.role == "owner" %}
+                <span class="inline-flex items-center gap-1 rounded-full border border-sky-400/40 bg-sky-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-sky-600 dark:text-sky-300">
+                    <i class="fas fa-gavel text-[10px]"></i>
+                    Family Commissioner
+                </span>
+                {% endif %}
+                {% if choice.url %}
+                <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
+                    {% if choice.family.logo %}
+                    <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-7 w-7 object-contain">
+                    {% endif %}
+                    <span>Enter pool</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+                {% else %}
+                <span class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-border-light dark:bg-surface-hover text-text-secondary-light dark:text-text-secondary font-semibold">
+                    Pool setup needed
+                </span>
+                {% endif %}
+            </div>
         </div>
         {% endfor %}
     </section>
@@ -78,10 +83,6 @@
                     <img src="{% static 'images/logo.png' %}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain">
                     {% endif %}
                     <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
-                    <span class="inline-flex items-center gap-1 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300">
-                        <i class="fas fa-bolt text-[10px]"></i>
-                        Superuser
-                    </span>
                 </div>
                 {% if choice.pool %}
                 <p class="text-sm text-text-secondary-light dark:text-text-secondary">
@@ -93,16 +94,25 @@
                 </p>
                 {% endif %}
             </div>
-            {% if choice.url %}
-            <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-yellow-400/40 bg-yellow-400/10 text-yellow-700 dark:text-yellow-200 font-semibold hover:bg-yellow-400/15 transition-colors">
-                <span>Open family</span>
-                <i class="fas fa-arrow-right"></i>
-            </a>
-            {% else %}
-            <span class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-border-light dark:bg-surface-hover text-text-secondary-light dark:text-text-secondary font-semibold">
-                Pool setup needed
-            </span>
-            {% endif %}
+            <div class="flex flex-col items-end gap-2 flex-none">
+                <span class="inline-flex items-center gap-1 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300">
+                    <i class="fas fa-bolt text-[10px]"></i>
+                    Superuser
+                </span>
+                {% if choice.url %}
+                <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-yellow-400/40 bg-yellow-400/10 text-yellow-700 dark:text-yellow-200 font-semibold hover:bg-yellow-400/15 transition-colors">
+                    {% if choice.family.logo %}
+                    <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-7 w-7 object-contain">
+                    {% endif %}
+                    <span>Open family</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+                {% else %}
+                <span class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-border-light dark:bg-surface-hover text-text-secondary-light dark:text-text-secondary font-semibold">
+                    Pool setup needed
+                </span>
+                {% endif %}
+            </div>
         </div>
         {% endfor %}
     </section>
