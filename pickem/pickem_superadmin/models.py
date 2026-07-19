@@ -26,6 +26,7 @@ class SuperAdminAuditLog(models.Model):
         USER_UNBLOCKED = 'user_unblocked', 'User unblocked'
         USER_PROFILE_UPDATED = 'user_profile_updated', 'User profile updated'
         FAMILY_UPDATED = 'family_updated', 'Family updated'
+        FAMILY_FORCE_DELETED = 'family_force_deleted', 'Family force-deleted'
         POOL_SETTINGS_UPDATED = 'pool_settings_updated', 'Pool settings updated'
         TEAM_UPDATED = 'team_updated', 'Team updated'
         SEASON_UPDATED = 'season_updated', 'Current season updated'

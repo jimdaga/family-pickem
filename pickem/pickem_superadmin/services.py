@@ -296,3 +296,63 @@ def fix_stuck_game(request, game, status, home_score, away_score):
         changes=changes,
     )
     return changes
+
+
+@transaction.atomic
+def force_delete_family(request, family):
+    """Hard-delete a family and every pool/family-scoped row beneath it.
+
+    Family/Pool FKs are mostly PROTECT (Pool.family, FamilyMembership.family,
+    FamilyInvitation.family, FamilyAuditLog.family, PoolSettings.pool), so a
+    raw `family.delete()` raises ProtectedError until every child row is gone.
+    Deletion runs child-first in one transaction so a failure partway through
+    rolls back cleanly rather than leaving the family half-deleted.
+
+    NEVER deletes User or UserProfile rows: memberships, picks, and season
+    stats disappear, but the accounts underneath them survive untouched.
+
+    log_action() derives target_type/target_id from a live target object, but
+    the target here (the family) no longer exists once we're done. So the
+    audit write happens *before* `family.delete()`, while `family` still has
+    a real pk — the resulting SuperAdminAuditLog row is a plain DB row with
+    those values already baked in, so it survives the family's deletion
+    intact, still inside the same atomic block.
+    """
+    from pickem_api.models import (
+        Pool, PoolSettings, FamilyMembership, FamilyInvitation, FamilyAuditLog,
+        GamePicks, userPoints, userSeasonPoints, userStats,
+    )
+    from pickem_homepage.models import (
+        MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner,
+    )
+
+    pool_ids = list(Pool.objects.filter(family=family).values_list('id', flat=True))
+    counts = {}
+    counts['picks'] = GamePicks.objects.filter(pool_id__in=pool_ids).delete()[0]
+    counts['user_points'] = userPoints.objects.filter(pool_id__in=pool_ids).delete()[0]
+    counts['season_points'] = userSeasonPoints.objects.filter(pool_id__in=pool_ids).delete()[0]
+    counts['user_stats'] = userStats.objects.filter(pool_id__in=pool_ids).delete()[0]
+    counts['votes'] = MessageBoardVote.objects.filter(family=family).delete()[0]
+    counts['comments'] = MessageBoardComment.objects.filter(family=family).delete()[0]
+    counts['posts'] = MessageBoardPost.objects.filter(family=family).delete()[0]
+    counts['family_audit'] = FamilyAuditLog.objects.filter(family=family).delete()[0]
+    counts['invitations'] = FamilyInvitation.objects.filter(family=family).delete()[0]
+    counts['pool_settings'] = PoolSettings.objects.filter(pool_id__in=pool_ids).delete()[0]
+    counts['memberships'] = FamilyMembership.objects.filter(family=family).delete()[0]
+    counts['banners'] = SiteBanner.objects.filter(family=family).delete()[0]
+    counts['pools'] = Pool.objects.filter(family=family).delete()[0]
+
+    before = {'slug': family.slug, 'name': family.name, 'deleted_counts': counts}
+
+    # Log while `family` still has a real pk (see docstring) — target_type/
+    # target_id are derived from it here, before the row disappears.
+    log_action(
+        request,
+        action=SuperAdminAuditLog.Action.FAMILY_FORCE_DELETED,
+        target=family,
+        summary=f"Force-deleted family {before['slug']}",
+        changes={'before': before, 'after': None},
+    )
+
+    family.delete()
+    return counts
