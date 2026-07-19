@@ -24,6 +24,13 @@
         <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border-light bg-gray-50 dark:border-border-subtle dark:bg-bg-dark">
+                        {% if choice.family.logo %}
+                        <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-full w-full object-contain">
+                        {% else %}
+                        <img src="{% static 'images/familypickem.png' %}" alt="" aria-hidden="true" class="h-full w-full object-contain">
+                        {% endif %}
+                    </div>
                     <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
                     {% if choice.membership.role == "owner" %}
                     <span class="inline-flex items-center gap-1 rounded-full border border-sky-400/40 bg-sky-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-sky-600 dark:text-sky-300">
@@ -44,7 +51,6 @@
             </div>
             {% if choice.url %}
             <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
-                <img src="{% if choice.family.logo %}{{ choice.family.logo.url }}{% else %}{% static 'images/logo.png' %}{% endif %}" alt="{{ choice.family.name }} logo" class="h-7 w-7 rounded-full object-cover bg-white/20">
                 <span>Enter pool</span>
                 <i class="fas fa-arrow-right"></i>
             </a>
@@ -68,6 +74,13 @@
         <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border-light bg-gray-50 dark:border-border-subtle dark:bg-bg-dark">
+                        {% if choice.family.logo %}
+                        <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-full w-full object-contain">
+                        {% else %}
+                        <img src="{% static 'images/familypickem.png' %}" alt="" aria-hidden="true" class="h-full w-full object-contain">
+                        {% endif %}
+                    </div>
                     <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
                     <span class="inline-flex items-center gap-1 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300">
                         <i class="fas fa-bolt text-[10px]"></i>
@@ -86,7 +99,6 @@
             </div>
             {% if choice.url %}
             <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-yellow-400/40 bg-yellow-400/10 text-yellow-700 dark:text-yellow-200 font-semibold hover:bg-yellow-400/15 transition-colors">
-                <img src="{% if choice.family.logo %}{{ choice.family.logo.url }}{% else %}{% static 'images/logo.png' %}{% endif %}" alt="{{ choice.family.name }} logo" class="h-7 w-7 rounded-full object-cover bg-white/20">
                 <span>Open family</span>
                 <i class="fas fa-arrow-right"></i>
             </a>

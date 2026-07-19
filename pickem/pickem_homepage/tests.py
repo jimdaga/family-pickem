@@ -6777,6 +6777,60 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         audit = FamilyAuditLog.objects.filter(family=self.family).latest('created_at')
         self.assertEqual(audit.metadata['logo'], {'before_present': True, 'after_present': False})
 
+    def test_member_picker_renders_only_canonical_logo_in_decorative_compact_mark(self):
+        self.family.logo.save(
+            'canonical.webp', SimpleUploadedFile('canonical.webp', b'canonical'), save=True
+        )
+        canonical_url = self.family.logo.url
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(reverse('family_picker'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, canonical_url)
+        self.assertContains(response, 'h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg')
+        self.assertContains(response, 'alt="" aria-hidden="true"')
+        self.assertNotContains(response, 'alt="%s logo"' % self.family.name)
+        self.assertNotContains(response, 'logo_url')
+        self.assertNotContains(response, 'blob:')
+
+    def test_picker_default_and_superadmin_variants_use_same_static_mark_contract(self):
+        superuser = User.objects.create_user(
+            'logo-superuser', email='logosre@example.com', password='pass', is_superuser=True,
+        )
+        self.client.force_login(superuser)
+
+        response = self.client.get(reverse('family_picker'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Families you can oversee as Superuser')
+        self.assertContains(response, 'images/familypickem.png')
+        self.assertContains(response, 'alt="" aria-hidden="true"')
+        self.assertNotContains(response, 'logo_url')
+        self.assertNotContains(response, 'blob:')
+
+    def test_family_home_uses_canonical_or_default_decorative_compact_mark(self):
+        self.client.force_login(self.admin_user)
+        lobby_url = reverse(
+            'family_pool_home',
+            kwargs={'family_slug': self.family.slug, 'pool_slug': self.pool.slug},
+        )
+
+        default_response = self.client.get(lobby_url)
+        self.assertEqual(default_response.status_code, 200)
+        self.assertContains(default_response, 'images/familypickem.png')
+        self.assertContains(default_response, 'alt="" aria-hidden="true"')
+        self.assertContains(default_response, 'h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg')
+        self.assertNotContains(default_response, 'logo_url')
+
+        self.family.logo.save(
+            'canonical.webp', SimpleUploadedFile('canonical.webp', b'canonical'), save=True
+        )
+        canonical_url = self.family.logo.url
+        saved_response = self.client.get(lobby_url)
+        self.assertContains(saved_response, canonical_url)
+        self.assertNotContains(saved_response, 'blob:')
+
 
 class FamilyAdminSettingsFormTests(TestCase):
     """Server-side protections on the pool-admin settings form."""

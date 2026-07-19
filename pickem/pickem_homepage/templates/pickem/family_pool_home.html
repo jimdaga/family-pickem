@@ -24,13 +24,13 @@
         <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div class="lobby-hero-copy">
                 <div class="mb-5 flex items-center gap-4">
-                    {% if family.logo %}
-                    <img src="{{ family.logo.url }}" alt="{{ family.name }} logo"
-                         class="h-16 w-16 object-contain drop-shadow-xl">
-                    {% else %}
-                    <img src="{% static 'images/logo.png' %}" alt="Family Pick'em logo"
-                         class="h-16 w-16 object-contain drop-shadow-xl">
-                    {% endif %}
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/20 bg-white/10">
+                        {% if family.logo %}
+                        <img src="{{ family.logo.url }}" alt="" aria-hidden="true" class="h-full w-full object-contain drop-shadow-xl">
+                        {% else %}
+                        <img src="{% static 'images/familypickem.png' %}" alt="" aria-hidden="true" class="h-full w-full object-contain drop-shadow-xl">
+                        {% endif %}
+                    </div>
                     <div>
                         <p class="text-xs font-black uppercase tracking-[0.26em] text-sky-200/75">Pool Lobby</p>
                         <h1 class="mt-1 text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-none drop-shadow-lg">
