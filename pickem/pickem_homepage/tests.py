@@ -6689,8 +6689,11 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.assertContains(response, 'data-family-logo-editor')
         self.assertContains(response, 'data-family-logo-clear')
         self.assertContains(response, 'data-family-logo-save')
+        self.assertContains(response, 'data-family-logo-adjust')
+        self.assertContains(response, 'data-family-logo-full-image')
         for field_name in ('crop_x', 'crop_y', 'crop_width', 'crop_height', 'remove_logo'):
             self.assertContains(response, 'name="%s"' % field_name)
+        self.assertContains(response, 'vendor/cropperjs/cropper.js')
         self.assertContains(response, 'js/family-logo-editor.js')
         self.assertNotContains(response, 'logo_url')
 
@@ -6818,7 +6821,7 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.assertEqual(default_response.status_code, 200)
         self.assertContains(default_response, 'images/logo.png')
         self.assertContains(default_response, 'alt="" aria-hidden="true"')
-        self.assertContains(default_response, 'h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg')
+        self.assertContains(default_response, 'h-14 w-14 shrink-0 object-contain sm:h-16 sm:w-16')
         self.assertNotContains(default_response, 'logo_url')
 
         self.family.logo.save(
