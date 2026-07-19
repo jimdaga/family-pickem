@@ -1192,6 +1192,49 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertContains(response, "Your Pick")
         self.assertNotContains(response, self.other_member.email)
 
+    def test_tenant_picks_page_lock_filter_called_once_per_game(self):
+        # Regression guard for the picks.html N+1: `is_game_locked_for_pool`
+        # was previously called ~8x per game (once per lock gate: LOCKED
+        # badge, both team options, both tiebreaker inputs x2, locked
+        # message), each re-running its own GamesAndScores/PoolSettings
+        # queries. It must now be computed once per game via
+        # `{% with locked=... %}` and reused. `is_pick_locked_for_pool` is
+        # imported locally inside the filter on every call, so patching the
+        # module attribute reliably intercepts every invocation regardless
+        # of caller.
+        for i in range(5):
+            GamesAndScores.objects.create(
+                id=2100 + i,
+                slug=f"extra-game-{i}",
+                competition="nfl",
+                gameWeek="1",
+                gameyear="2025",
+                gameseason=2526,
+                startTimestamp=timezone.now() + timedelta(days=1),
+                statusType="notstarted",
+                statusTitle="Scheduled",
+                homeTeamId=1,
+                homeTeamSlug="atl",
+                homeTeamName="Atlanta Falcons",
+                awayTeamId=2,
+                awayTeamSlug="ari",
+                awayTeamName="Arizona Cardinals",
+            )
+        self.client.force_login(self.member)
+
+        from pickem import utils as pickem_utils
+
+        with patch(
+            "pickem.utils.is_pick_locked_for_pool",
+            wraps=pickem_utils.is_pick_locked_for_pool,
+        ) as mock_locked:
+            response = self.client.get(self._tenant_picks_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["game_list"]), 6)
+        # One call per game, not one per lock gate.
+        self.assertEqual(mock_locked.call_count, 6)
+
     def test_tenant_picks_page_includes_compact_polish_hooks(self):
         self.client.force_login(self.member)
 
@@ -1902,12 +1945,12 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self._active_membership(self.jones_player, self.jones_family)
         PoolSettings.objects.create(
             pool=self.smith_pool,
-            picks_lock_at_kickoff=False,
+            picks_lock_mode=PoolSettings.PicksLockMode.SUNDAY_1PM,
             allow_tiebreaker=True,
         )
         PoolSettings.objects.create(
             pool=self.jones_pool,
-            picks_lock_at_kickoff=True,
+            picks_lock_mode=PoolSettings.PicksLockMode.KICKOFF,
             allow_tiebreaker=False,
         )
 
@@ -2252,11 +2295,11 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertTemplateUsed(response, "pickem/rules.html")
         self.assertContains(response, "Smith Family")
         self.assertContains(response, "Main Pickem")
-        self.assertContains(response, "Locking: Off")
+        self.assertContains(response, "Locking: Weekly cutoff — Sunday 1PM ET")
         self.assertContains(response, "Tiebreakers: On")
         # No settings-editing form for non-admins. (The base nav includes a
         # logout POST form, so check for editing controls specifically.)
-        self.assertNotContains(response, 'name="picks_lock_at_kickoff"')
+        self.assertNotContains(response, 'name="picks_lock_mode"')
         self.assertNotContains(response, "Save settings")
         self.assertEqual(response.context["pool_settings"], self.smith_pool.settings)
 
@@ -2323,9 +2366,9 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
 
         self.assertContains(standings_response, "smith-score-player")
         self.assertNotContains(standings_response, "jones-score-player")
-        self.assertContains(rules_response, "Locking: Off")
+        self.assertContains(rules_response, "Locking: Weekly cutoff — Sunday 1PM ET")
         self.assertContains(rules_response, "Tiebreakers: On")
-        self.assertNotContains(rules_response, "Locking: On")
+        self.assertNotContains(rules_response, "Locking: Lock each game at kickoff")
         self.assertNotContains(rules_response, "Tiebreakers: Off")
 
     def test_final_slug_query_and_overlay_tampering_do_not_cross_family_scores_standings_or_rules(self):
@@ -2358,9 +2401,9 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
             self.assertContains(response, "smith-score-player")
             self.assertNotContains(response, "jones-score-player")
         self.assertContains(rules_response, "Smith Family")
-        self.assertContains(rules_response, "Locking: Off")
+        self.assertContains(rules_response, "Locking: Weekly cutoff — Sunday 1PM ET")
         self.assertNotContains(rules_response, "Jones Family")
-        self.assertNotContains(rules_response, "Locking: On")
+        self.assertNotContains(rules_response, "Locking: Lock each game at kickoff")
 
 
 class Phase4SharedContextScopeTests(TestCase):
@@ -3995,7 +4038,7 @@ class FamilyAdminExperienceTests(TestCase):
             {
                 "family_name": self.family.name,
                 "pool_name": self.pool.name,
-                "picks_lock_at_kickoff": "on",
+                "picks_lock_mode": PoolSettings.PicksLockMode.KICKOFF,
                 "allow_tiebreaker": "on",
                 **self._default_scoring_fields(
                     win_points=2,
@@ -4082,6 +4125,7 @@ class FamilyAdminExperienceTests(TestCase):
                         "family_name": self.family.name,
                         "pool_name": self.pool.name,
                         "logo_url": logo_url,
+                        "picks_lock_mode": PoolSettings.PicksLockMode.KICKOFF,
                         "allow_tiebreaker": "on",
                         **self._default_scoring_fields(),
                     },
@@ -4131,6 +4175,7 @@ class FamilyAdminExperienceTests(TestCase):
                 "family_name": self.family.name,
                 "pool_name": self.pool.name,
                 "logo_url": "",
+                "picks_lock_mode": PoolSettings.PicksLockMode.KICKOFF,
                 "allow_tiebreaker": "on",
                 **self._default_scoring_fields(),
             },
@@ -4464,7 +4509,7 @@ class FamilyAdminExperienceTests(TestCase):
                 self.assertTemplateUsed(response, "pickem/family_admin_settings.html")
                 self.assertContains(response, "Smith Family")
                 self.assertContains(response, "Main Pickem")
-                self.assertContains(response, "Pick Locking")
+                self.assertContains(response, "Pick locking")
                 self.assertContains(response, "Tiebreakers")
                 self.assertContains(response, self._banners_url())
                 self.assertNotContains(response, "Recent banners")
@@ -4548,7 +4593,7 @@ class FamilyAdminExperienceTests(TestCase):
             {
                 "family_name": "Updated Smith Family",
                 "pool_name": "Updated Main Pickem",
-                "picks_lock_at_kickoff": "",
+                "picks_lock_mode": PoolSettings.PicksLockMode.SUNDAY_1PM,
                 "allow_tiebreaker": "on",
                 **self._default_scoring_fields(),
                 "family_id": self.other_family.id,
@@ -4574,11 +4619,15 @@ class FamilyAdminExperienceTests(TestCase):
 
         self.assertEqual(self.family.name, "Updated Smith Family")
         self.assertEqual(self.pool.name, "Updated Main Pickem")
-        self.assertFalse(self.pool.settings.picks_lock_at_kickoff)
+        self.assertEqual(
+            self.pool.settings.picks_lock_mode, PoolSettings.PicksLockMode.SUNDAY_1PM
+        )
         self.assertTrue(self.pool.settings.allow_tiebreaker)
         self.assertEqual(self.other_family.name, "Jones Family")
         self.assertEqual(self.other_pool.name, "Main Pickem")
-        self.assertTrue(other_settings.picks_lock_at_kickoff)
+        self.assertEqual(
+            other_settings.picks_lock_mode, PoolSettings.PicksLockMode.KICKOFF
+        )
         self.assertTrue(other_settings.allow_tiebreaker)
 
         audit = FamilyAuditLog.objects.get(
@@ -4594,7 +4643,7 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(audit.metadata["pool_id"], self.pool.id)
         self.assertIn("family.name", audit.metadata["changed_fields"])
         self.assertIn("pool.name", audit.metadata["changed_fields"])
-        self.assertIn("settings.picks_lock_at_kickoff", audit.metadata["changed_fields"])
+        self.assertIn("settings.picks_lock_mode", audit.metadata["changed_fields"])
         self.assertNotIn("secret", str(audit.metadata).lower())
         self.assertNotIn("csrf", str(audit.metadata).lower())
         self.assertFalse(
@@ -5254,6 +5303,32 @@ class FamilyAdminExperienceTests(TestCase):
         invite.refresh_from_db()
         self.assertFalse(invite.is_revoked)
 
+    def test_create_invite_rejected_when_entries_locked(self):
+        settings = self.pool.settings
+        settings.late_join_policy = PoolSettings.LateJoinPolicy.LOCK_AFTER_WEEK_1
+        settings.save(update_fields=["late_join_policy"])
+        self.client.force_login(self.owner)
+        before_count = FamilyInvitation.objects.count()
+
+        with patch("pickem_api.weekly_winners.week_is_complete", return_value=True):
+            response = self.client.post(
+                self._invites_url(),
+                {
+                    "role": FamilyMembership.Role.MEMBER,
+                    "recipient_email": "blocked@example.com",
+                    "expires_in_days": "14",
+                },
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTemplateUsed(response, "pickem/family_admin_invites.html")
+        self.assertEqual(FamilyInvitation.objects.count(), before_count)
+        self.assertContains(
+            response,
+            "Entries are locked for this pool, so new invites can&#x27;t be created.",
+            status_code=400,
+        )
+
     def test_manual_pick_page_lists_current_family_users_and_current_pool_games(self):
         current_game = self._admin_game(game_id=9601, week="1")
         other_week_game = self._admin_game(game_id=9602, week="2", home="mia", away="buf")
@@ -5582,7 +5657,7 @@ class FamilyAdminExperienceTests(TestCase):
         owner_points.save()
         other_points = self._season_points(self.outsider, pool=self.other_pool, week=3, points=8)
 
-        self.client.force_login(self.admin_user)
+        self.client.force_login(self.owner)
         response = self.client.post(
             self._winners_url(),
             {
@@ -5612,7 +5687,7 @@ class FamilyAdminExperienceTests(TestCase):
         audit = FamilyAuditLog.objects.get(
             family=self.family,
             pool=self.pool,
-            actor=self.admin_user,
+            actor=self.owner,
             action=FamilyAuditLog.Action.WEEK_WINNER_UPDATED,
             target_type="userSeasonPoints",
             target_id=str(member_points.id),
@@ -5621,14 +5696,14 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(audit.metadata["previous_winner_user_id"], self.owner.id)
         self.assertEqual(audit.metadata["new_winner_user_id"], self.member.id)
         self.assertEqual(audit.metadata["bonus_points"], 2)
-        self.assertEqual(audit.metadata["actor_id"], self.admin_user.id)
+        self.assertEqual(audit.metadata["actor_id"], self.owner.id)
         self.assertNotIn("1999", str(audit.metadata))
         self.assertNotIn("pool_id", audit.metadata)
         self.assertNotIn("family_id", audit.metadata)
 
     def test_winner_post_rejects_invalid_weeks_before_dynamic_fields(self):
         self._season_points(self.member, week=1, points=1)
-        self.client.force_login(self.admin_user)
+        self.client.force_login(self.owner)
 
         for invalid_week in ("0", "19", "abc", "1; DROP", "", None):
             with self.subTest(invalid_week=invalid_week):
@@ -5659,7 +5734,7 @@ class FamilyAdminExperienceTests(TestCase):
         )
         self._membership(no_standing_user, self.family, FamilyMembership.Role.MEMBER)
 
-        self.client.force_login(self.admin_user)
+        self.client.force_login(self.owner)
         cases = [
             self.outsider.id,
             no_standing_user.id,
@@ -5710,6 +5785,39 @@ class FamilyAdminExperienceTests(TestCase):
         )
         self.assertEqual(csrf_response.status_code, 403)
         self.assertFalse(userSeasonPoints.objects.filter(pool=self.pool, week_5_winner=True).exists())
+
+    def test_winner_post_denies_non_owner_admin_without_mutation(self):
+        self._season_points(self.member, week=5, points=2)
+
+        self.client.force_login(self.admin_user)
+        get_response = self.client.get(self._winners_url())
+        self.assertEqual(get_response.status_code, 200)
+
+        post_response = self.client.post(
+            self._winners_url(),
+            {"week_number": "5", "winner_uid": str(self.member.id)},
+        )
+        self.assertEqual(post_response.status_code, 403)
+        self.assertFalse(userSeasonPoints.objects.filter(pool=self.pool, week_5_winner=True).exists())
+        self.assertFalse(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                action=FamilyAuditLog.Action.WEEK_WINNER_UPDATED,
+            ).exists()
+        )
+
+    def test_winner_override_visible_to_owner_only(self):
+        self._season_points(self.member, week=1, points=2)
+
+        self.client.force_login(self.owner)
+        owner_response = self.client.get(self._winners_url())
+        self.assertEqual(owner_response.status_code, 200)
+        self.assertIn(b"Correct this", owner_response.content)
+
+        self.client.force_login(self.admin_user)
+        admin_response = self.client.get(self._winners_url())
+        self.assertEqual(admin_response.status_code, 200)
+        self.assertNotIn(b"Correct this", admin_response.content)
 
     def test_legacy_commissioner_routes_are_disabled_without_login_html_or_global_mutation(self):
         UserProfile.objects.create(user=self.owner, is_commissioner=True)
@@ -5767,6 +5875,134 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertFalse(GamePicks.objects.filter(userID=str(self.owner.id), pick_game_id=legacy_pick_game.id).exists())
 
 
+class BatchInviteTests(TestCase):
+    """Task 10: submitting several `recipient_email` values at once creates
+    one invite per valid, distinct address instead of a single invite."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user(
+            "batch-owner", email="batch-owner@example.com", password="pass"
+        )
+        self.family = Family.objects.create(name="Batch Family", slug="batch-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="batch-main",
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        PoolSettings.objects.create(pool=self.pool)
+        FamilyMembership.objects.create(
+            family=self.family, user=self.owner, role=FamilyMembership.Role.OWNER
+        )
+        self.client.force_login(self.owner)
+
+    def _invites_url(self):
+        return reverse(
+            "family_pool_admin_invites",
+            kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
+        )
+
+    def test_multiple_emails_create_multiple_invites(self):
+        before_count = FamilyInvitation.objects.filter(family=self.family).count()
+
+        # Batch success uses Post/Redirect/Get; follow to the final page where the
+        # summary flash message renders.
+        response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.MEMBER,
+                "recipient_email": ["a@x.com", "b@x.com"],
+                "expires_in_days": "14",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain[-1][1], 302)
+        self.assertEqual(
+            FamilyInvitation.objects.filter(family=self.family).count(),
+            before_count + 2,
+        )
+        recipient_emails = set(
+            FamilyInvitation.objects.filter(family=self.family).values_list(
+                "recipient_email", flat=True
+            )
+        )
+        self.assertIn("a@x.com", recipient_emails)
+        self.assertIn("b@x.com", recipient_emails)
+        self.assertContains(response, "Sent 2 invite(s).")
+        # A multi-invite batch does not surface a one-time invite link.
+        self.assertIsNone(response.context.get("invite_link"))
+
+    def test_invalid_email_skipped_valid_still_created(self):
+        before_count = FamilyInvitation.objects.filter(family=self.family).count()
+
+        # One created + one skipped goes through the batch-summary (redirect) path.
+        response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.MEMBER,
+                "recipient_email": ["good@x.com", "not-an-email"],
+                "expires_in_days": "14",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain[-1][1], 302)
+        self.assertEqual(
+            FamilyInvitation.objects.filter(family=self.family).count(),
+            before_count + 1,
+        )
+        self.assertTrue(
+            FamilyInvitation.objects.filter(
+                family=self.family, recipient_email="good@x.com"
+            ).exists()
+        )
+        self.assertContains(response, "Sent 1 invite(s).")
+        self.assertContains(response, "Skipped")
+        self.assertContains(response, "not-an-email")
+
+    def test_all_blank_emails_creates_no_invite_and_400s(self):
+        before_count = FamilyInvitation.objects.filter(family=self.family).count()
+
+        response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.MEMBER,
+                "recipient_email": ["", "   "],
+                "expires_in_days": "14",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            FamilyInvitation.objects.filter(family=self.family).count(),
+            before_count,
+        )
+        self.assertContains(
+            response,
+            "Enter at least one email address to invite.",
+            status_code=400,
+        )
+        # No blank-recipient invite should have been created, so the
+        # per-invite email feedback message (which would otherwise render
+        # "Invite email will be sent to None.") must never appear.
+        self.assertNotContains(response, "sent to None", status_code=400)
+        self.assertNotContains(response, "saved for None", status_code=400)
+
+
 class CreateFamilyFlowTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -5816,7 +6052,7 @@ class CreateFamilyFlowTests(TestCase):
         rule choices (prefilled from PoolSettings defaults in the UI)."""
         payload = {
             "name": "Smith Family",
-            "picks_lock_at_kickoff": "on",
+            "picks_lock_mode": PoolSettings.PicksLockMode.KICKOFF,
             "allow_tiebreaker": "on",
             "win_points": 1,
             "tie_points": 0,
@@ -6697,6 +6933,92 @@ class InviteFlowTests(TestCase):
         )
 
 
+class StaleInviteRedemptionTests(TestCase):
+    """A previously-issued invite link is otherwise perfectly valid (unexpired,
+    unused, correct family/pool) but must still be rejected when redeemed by a
+    brand-new (non-member) user after the pool has locked entries following
+    Week 1. Exercises accept_invitation_for_user() directly rather than via
+    the join_family/accept_invite_link views."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            "stale-invite-owner", email="stale-owner@example.com", password="pass"
+        )
+        self.new_user = User.objects.create_user(
+            "stale-invite-newuser", email="stale-newuser@example.com", password="pass"
+        )
+        self.family = Family.objects.create(name="Stale Family", slug="stale-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="main",
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.owner,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        PoolSettings.objects.create(
+            pool=self.pool,
+            late_join_policy=PoolSettings.LateJoinPolicy.LOCK_AFTER_WEEK_1,
+        )
+
+    def test_prior_link_rejected_for_new_user_when_locked(self):
+        from pickem_homepage.views import (
+            accept_invitation_for_user,
+            create_admin_invitation,
+            ENTRIES_LOCKED_MESSAGE,
+        )
+
+        factory = RequestFactory()
+
+        # Invite issued earlier, while the pool was still open to new joiners.
+        creation_request = factory.post("/family/stale-family/main/invites/")
+        creation_request.user = self.owner
+        invitation, raw_code = create_admin_invitation(
+            family=self.family,
+            pool=self.pool,
+            actor=self.owner,
+            role=FamilyMembership.Role.MEMBER,
+            recipient_email='',
+            expires_in_days=14,
+            request=creation_request,
+        )
+
+        # Week 1 has since completed, locking the pool to new entries. A new
+        # (never-a-member) user now tries to redeem that still-valid link.
+        with patch("pickem_api.weekly_winners.week_is_complete", return_value=True):
+            redemption_request = factory.post("/invites/{}/".format(raw_code))
+            redemption_request.user = self.new_user
+            result_invitation, result_pool, membership, error = accept_invitation_for_user(
+                redemption_request, raw_code,
+            )
+
+        self.assertIsNone(result_invitation)
+        self.assertIsNone(result_pool)
+        self.assertIsNone(membership)
+        self.assertEqual(error, ENTRIES_LOCKED_MESSAGE)
+        self.assertFalse(
+            FamilyMembership.objects.filter(
+                family=self.family, user=self.new_user,
+            ).exists()
+        )
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.use_count, 0)
+
+
 class FamilyAdminSettingsFormTests(TestCase):
     """Server-side protections on the pool-admin settings form."""
 
@@ -6705,6 +7027,7 @@ class FamilyAdminSettingsFormTests(TestCase):
             'family_name': 'Smith Family',
             'pool_name': 'Main Pickem',
             'logo_url': '',
+            'picks_lock_mode': PoolSettings.PicksLockMode.KICKOFF,
             'win_points': '1',
             'tie_points': '0',
             'weekly_winner_points': '2',
@@ -7626,3 +7949,224 @@ class TeamBrandPresentationFilterTests(TestCase):
         self.assertTrue(presentation["show_white_burst"])
         self.assertIn("drop-shadow", presentation["logo_style"])
         self.assertIn("rgba(255, 255, 255", presentation["logo_style"])
+
+
+class PicksLockForPoolModeTests(TestCase):
+    def _future_game(self):
+        return GamesAndScores.objects.create(
+            id=990001,
+            slug="aaa-bbb-2425-week-1",
+            gameseason=2425,
+            gameWeek='1',
+            gameyear="2024",
+            competition='nfl',
+            statusType='notstarted',
+            statusTitle='Scheduled',
+            startTimestamp=timezone.now() + timedelta(days=2),
+            awayTeamSlug='aaa',
+            awayTeamId=1,
+            awayTeamName='Aaa Team',
+            homeTeamSlug='bbb',
+            homeTeamId=2,
+            homeTeamName='Bbb Team',
+        )
+
+    def test_sunday_1pm_mode_uses_week_rule(self):
+        from pickem.utils import is_pick_locked_for_pool
+        fam = Family.objects.create(name="M", slug="m")
+        pool = Pool.objects.create(family=fam, name="p", slug="p", season=2425)
+        PoolSettings.objects.create(pool=pool, picks_lock_mode=PoolSettings.PicksLockMode.SUNDAY_1PM)
+        game = self._future_game()
+        locked, _reason = is_pick_locked_for_pool(game, pool)
+        self.assertFalse(locked)  # future game, before any cutoff
+
+    def test_kickoff_mode_future_game_unlocked(self):
+        from pickem.utils import is_pick_locked_for_pool
+        fam = Family.objects.create(name="K", slug="k")
+        pool = Pool.objects.create(family=fam, name="p", slug="p", season=2425)
+        PoolSettings.objects.create(pool=pool, picks_lock_mode=PoolSettings.PicksLockMode.KICKOFF)
+        game = self._future_game()
+        locked, _reason = is_pick_locked_for_pool(game, pool)
+        self.assertFalse(locked)
+
+    def test_sunday_1pm_mode_locks_late_game_before_its_own_kickoff(self):
+        """Discriminates the two modes: a "late" game (after the week's Sunday
+        1PM ET cutoff) that hasn't kicked off yet must be locked under
+        SUNDAY_1PM but would NOT be locked under KICKOFF (see test below).
+        """
+        from pickem.utils import is_pick_locked_for_pool
+        fam = Family.objects.create(name="S1", slug="s1")
+        pool = Pool.objects.create(family=fam, name="p", slug="p", season=2425)
+        PoolSettings.objects.create(pool=pool, picks_lock_mode=PoolSettings.PicksLockMode.SUNDAY_1PM)
+
+        # Anchor game fixes the week's Sunday 1PM ET cutoff safely in the past
+        # (2020-01-05 is a Sunday) so "now" is always past it.
+        anchor = GamesAndScores.objects.create(
+            id=990002,
+            slug="anchor-990002",
+            gameseason=2425,
+            gameWeek='1',
+            gameyear="2024",
+            competition='nfl',
+            statusType='finished',
+            statusTitle='Final',
+            startTimestamp=timezone.make_aware(timezone.datetime(2020, 1, 5, 12, 0)),
+            awayTeamSlug='ccc',
+            awayTeamId=3,
+            awayTeamName='Ccc Team',
+            homeTeamSlug='ddd',
+            homeTeamId=4,
+            homeTeamName='Ddd Team',
+        )
+        # Target "late" game: kickoff hasn't happened yet, but the week's
+        # Sunday 1PM ET cutoff (anchored above) has already passed.
+        late_game = GamesAndScores.objects.create(
+            id=990003,
+            slug="late-990003",
+            gameseason=2425,
+            gameWeek='1',
+            gameyear="2024",
+            competition='nfl',
+            statusType='notstarted',
+            statusTitle='Scheduled',
+            startTimestamp=timezone.now() + timedelta(hours=2),
+            awayTeamSlug='eee',
+            awayTeamId=5,
+            awayTeamName='Eee Team',
+            homeTeamSlug='fff',
+            homeTeamId=6,
+            homeTeamName='Fff Team',
+        )
+
+        locked, reason = is_pick_locked_for_pool(late_game, pool, week_games=[anchor, late_game])
+        self.assertTrue(locked)
+        self.assertIn("Sunday 1PM", reason)
+
+    def test_kickoff_mode_does_not_lock_late_game_before_its_own_kickoff(self):
+        """Same 'late game' shape as above, but under KICKOFF mode the game
+        must stay unlocked until its own kickoff, regardless of any weekly
+        cutoff — proving the branch genuinely reads picks_lock_mode."""
+        from pickem.utils import is_pick_locked_for_pool
+        fam = Family.objects.create(name="K1", slug="k1")
+        pool = Pool.objects.create(family=fam, name="p", slug="p", season=2425)
+        PoolSettings.objects.create(pool=pool, picks_lock_mode=PoolSettings.PicksLockMode.KICKOFF)
+
+        anchor = GamesAndScores.objects.create(
+            id=990004,
+            slug="anchor-990004",
+            gameseason=2425,
+            gameWeek='1',
+            gameyear="2024",
+            competition='nfl',
+            statusType='finished',
+            statusTitle='Final',
+            startTimestamp=timezone.make_aware(timezone.datetime(2020, 1, 5, 12, 0)),
+            awayTeamSlug='ggg',
+            awayTeamId=7,
+            awayTeamName='Ggg Team',
+            homeTeamSlug='hhh',
+            homeTeamId=8,
+            homeTeamName='Hhh Team',
+        )
+        late_game = GamesAndScores.objects.create(
+            id=990005,
+            slug="late-990005",
+            gameseason=2425,
+            gameWeek='1',
+            gameyear="2024",
+            competition='nfl',
+            statusType='notstarted',
+            statusTitle='Scheduled',
+            startTimestamp=timezone.now() + timedelta(hours=2),
+            awayTeamSlug='iii',
+            awayTeamId=9,
+            awayTeamName='Iii Team',
+            homeTeamSlug='jjj',
+            homeTeamId=10,
+            homeTeamName='Jjj Team',
+        )
+
+        locked, reason = is_pick_locked_for_pool(late_game, pool, week_games=[anchor, late_game])
+        self.assertFalse(locked)
+        self.assertEqual(reason, "Game not started yet")
+
+
+class PicksLockFormFieldTests(TestCase):
+    def test_form_has_lock_mode_choice(self):
+        from pickem_homepage.forms import PoolRulesForm
+        form = PoolRulesForm()
+        self.assertIn('picks_lock_mode', form.fields)
+        self.assertNotIn('picks_lock_at_kickoff', form.fields)
+
+    def test_admin_settings_fields_list_updated(self):
+        from pickem_homepage.views import ADMIN_POOL_SETTINGS_FIELDS
+        self.assertIn('picks_lock_mode', ADMIN_POOL_SETTINGS_FIELDS)
+        self.assertNotIn('picks_lock_at_kickoff', ADMIN_POOL_SETTINGS_FIELDS)
+
+
+class PicksPageLockFilterTests(TestCase):
+    def test_template_uses_pool_aware_filter(self):
+        # Guard against regressing to statusType-only gating.
+        import pathlib
+        tpl = pathlib.Path('pickem_homepage/templates/pickem/picks.html').read_text()
+        # The interactive pick options must gate on the pool-aware filter.
+        self.assertIn('is_game_locked_for_pool:pool', tpl)
+        # The old kickoff-only gate must be gone from the team-option cards.
+        self.assertNotIn("game.statusType != 'notstarted' or auth_required", tpl)
+
+
+class PayoutGroupingTests(TestCase):
+    def test_payout_not_in_generic_choice_loop(self):
+        import pathlib
+        tpl = pathlib.Path('pickem_homepage/templates/pickem/family_admin_settings.html').read_text()
+        # payout_structure must render inside the entry-fee card, keyed by name.
+        self.assertIn('form.payout_structure', tpl)
+        # And the entry-fee card must contain the payout wrapper marker.
+        self.assertIn('data-payout-group', tpl)
+
+        from pickem_homepage import views
+        # The generic rule_choice_fields loop (rendered for family_admin_settings.html)
+        # must no longer include payout_structure — it's grouped under Entry Fee instead.
+        source = pathlib.Path(views.__file__).read_text()
+        settings_view_block = source.split("def family_pool_admin_settings(")[1]
+        rule_choice_fields_snippet = settings_view_block.split("'rule_choice_fields':")[1][:200]
+        self.assertNotIn("payout_structure", rule_choice_fields_snippet)
+
+
+class BannerIconChoicesTests(TestCase):
+    def test_both_forms_use_select(self):
+        from django import forms as djf
+        from pickem_homepage.forms import SiteBannerForm, FamilyBannerForm, BANNER_ICON_CHOICES
+        self.assertTrue(len(BANNER_ICON_CHOICES) >= 10)
+        for FormClass in (SiteBannerForm, FamilyBannerForm):
+            widget = FormClass().fields['icon'].widget
+            self.assertIsInstance(widget, djf.Select)
+
+    def test_unknown_existing_icon_stays_selectable(self):
+        from pickem_homepage.forms import FamilyBannerForm
+        from pickem_homepage.models import SiteBanner
+        b = SiteBanner(icon='fas fa-custom-thing', title='t', description='d')
+        form = FamilyBannerForm(instance=b)
+        rendered = str(form['icon'])
+        self.assertIn('fas fa-custom-thing', rendered)
+
+
+class CreateFamilyRenderTests(TestCase):
+    """Regression guard for the create-family page: it must render every
+    CreateFamilyForm field it's supposed to, including picks_lock_mode.
+
+    NOTE: the CreateFamilyForm field for the family's display name is
+    ``name`` (rendered as ``name="name"``) — there is no ``family_name`` or
+    ``pool_name`` field on this form (those belong to FamilyAdminSettingsForm
+    on the separate family-admin-settings page; the pool name here is
+    auto-generated in the view). This test checks the fields that actually
+    exist on CreateFamilyForm.
+    """
+
+    def test_form_fields_still_present(self):
+        u = User.objects.create_user('cf', 'cf@x.com', 'pw')
+        c = Client()
+        c.force_login(u)
+        html = c.get('/families/create/').content.decode()
+        for needed in ('name="name"', 'picks_lock_mode', 'name="entry_fee_amount"'):
+            self.assertIn(needed, html)

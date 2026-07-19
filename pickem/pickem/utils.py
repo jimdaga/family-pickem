@@ -118,7 +118,11 @@ def is_pick_locked_for_pool(game, pool=None, week_games=None):
     if settings is None:
         settings = PoolSettings.objects.filter(pool=pool).first()
 
-    if not settings or settings.picks_lock_at_kickoff:
+    lock_mode = getattr(settings, "picks_lock_mode", None) if settings else None
+    if lock_mode is None:
+        lock_mode = PoolSettings.PicksLockMode.KICKOFF
+
+    if lock_mode == PoolSettings.PicksLockMode.KICKOFF:
         est = pytz.timezone('US/Eastern')
         now_est = datetime.now(est)
         if game.statusType != 'notstarted':

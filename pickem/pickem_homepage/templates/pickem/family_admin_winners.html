@@ -29,7 +29,7 @@
             <div class="border-b border-border-light dark:border-border-subtle px-5 py-4">
                 <h2 class="text-xl font-bold text-text-dark dark:text-white">Winner Controls</h2>
                 <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">
-                    Weekly winners are usually assigned by background jobs. Use this page to review or correct them.
+                    Winners are set automatically once a week's games are scored. This page is read-only.
                 </p>
             </div>
 
@@ -48,41 +48,62 @@
                 </button>
             </form>
 
-            <form method="post" action="{% url 'family_pool_admin_winners' family.slug pool.slug %}" class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto]" data-testid="winner-form">
-                {% csrf_token %}
-                <input type="hidden" name="week_number" value="{{ selected_week }}">
-
-                <div>
-                    <label for="winner-uid" class="block text-sm font-semibold text-text-dark dark:text-white">Winner</label>
-                    <select id="winner-uid" name="winner_uid" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white" required>
-                        {% for candidate in candidates %}
-                        <option value="{{ candidate.uid }}" {% if current_winner and current_winner.userID == candidate.uid|stringformat:"s" %}selected{% endif %}>
-                            {{ candidate.user.username }} - {{ candidate.wins }} correct pick{{ candidate.wins|pluralize }} - uid {{ candidate.uid }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    {% if form.winner_uid.errors %}
-                    <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ form.winner_uid.errors|join:", " }}</p>
+            <div class="p-5">
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                    Winners are set automatically.
+                    {% if current_winner %}
+                    Week {{ selected_week }}'s winner is
+                    <strong class="text-text-dark dark:text-white">{{ current_winner_name }}</strong>,
+                    with a <strong class="text-text-dark dark:text-white">+{{ pool_settings.weekly_winner_points }}</strong> bonus applied.
+                    {% else %}
+                    No winner has been computed for Week {{ selected_week }} yet.
                     {% endif %}
-                    {% if form.week_number.errors %}
-                    <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ form.week_number.errors|join:", " }}</p>
-                    {% endif %}
-                </div>
+                </p>
+            </div>
 
-                <div class="flex items-end">
-                    <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60" {% if not candidates %}disabled{% endif %}>
-                        <i class="fas fa-trophy"></i>
-                        Save Changes
-                    </button>
+            {% if can_override %}
+            <details class="mx-5 mb-5 rounded-lg border border-amber-300 dark:border-amber-500/40">
+                <summary class="cursor-pointer px-4 py-3 font-semibold text-amber-800 dark:text-amber-300">Correct this week's winner</summary>
+                <div class="p-4">
+                    <p class="mb-3 text-sm text-text-secondary-light dark:text-text-secondary">Only use this to fix a grading mistake. Winners are normally set automatically.</p>
+                    <form method="post" action="{% url 'family_pool_admin_winners' family.slug pool.slug %}" class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto]" data-testid="winner-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="week_number" value="{{ selected_week }}">
+
+                        <div>
+                            <label for="winner-uid" class="block text-sm font-semibold text-text-dark dark:text-white">Winner</label>
+                            <select id="winner-uid" name="winner_uid" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white" required>
+                                {% for candidate in candidates %}
+                                <option value="{{ candidate.uid }}" {% if current_winner and current_winner.userID == candidate.uid|stringformat:"s" %}selected{% endif %}>
+                                    {{ candidate.user.username }} - {{ candidate.wins }} correct pick{{ candidate.wins|pluralize }} - uid {{ candidate.uid }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.winner_uid.errors %}
+                            <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ form.winner_uid.errors|join:", " }}</p>
+                            {% endif %}
+                            {% if form.week_number.errors %}
+                            <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ form.week_number.errors|join:", " }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="flex items-end">
+                            <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60" {% if not candidates %}disabled{% endif %}>
+                                <i class="fas fa-trophy"></i>
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </details>
+            {% endif %}
         </section>
 
         <section class="grid gap-4 lg:grid-cols-3">
             <div class="rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-5 shadow-sm">
                 <div class="text-xs font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Current winner</div>
                 {% if current_winner %}
-                <div class="mt-3 text-xl font-bold text-text-dark dark:text-white">{{ current_winner.userID }}</div>
+                <div class="mt-3 text-xl font-bold text-text-dark dark:text-white">{{ current_winner_name }}</div>
                 <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">Week {{ selected_week }} currently has a saved winner.</p>
                 {% else %}
                 <div class="mt-3 text-xl font-bold text-text-dark dark:text-white">Not set</div>

@@ -19,6 +19,7 @@ from pickem_api.models import (
     userSeasonPoints,
     userStats,
 )
+from pickem_homepage.models import MessageBoardPost
 from pickem_superadmin import services
 from pickem_superadmin.models import SuperAdminAuditLog
 
@@ -420,3 +421,73 @@ class RepairServiceTests(TestCase):
         self.assertEqual(game.gameWinner, 'nyj')
         self.assertTrue(game.gameScored)
         self.assertTrue(pick.pick_correct)
+
+
+class ForceDeleteFamilyTests(TestCase):
+    """Family/Pool FKs are mostly PROTECT, so a raw family.delete() would raise
+    ProtectedError. The service must delete every pool/family-scoped child row
+    first (in dependency order) and must never touch User/UserProfile rows —
+    membership disappears, but the account underneath it must survive."""
+
+    def setUp(self):
+        self.root = User.objects.create_superuser(
+            username='root', email='root@example.com', password='pw',
+        )
+        self.member = User.objects.create_user(username='delfam-member', password='pw')
+        self.family = Family.objects.create(name='ToDelete', slug='to-delete')
+        self.pool = Pool.objects.create(
+            family=self.family, name='Pool', slug='pool', season=2627,
+        )
+        self.pool_settings = PoolSettings.objects.create(pool=self.pool)
+        self.membership = FamilyMembership.objects.create(
+            family=self.family, user=self.member,
+            role=FamilyMembership.Role.MEMBER, status=FamilyMembership.Status.ACTIVE,
+        )
+        self.pick = GamePicks.objects.create(
+            id='to-delete-pool-member-1', pool=self.pool, userID=str(self.member.id),
+            pick='ne', gameseason=2627, gameWeek='1', pick_game_id=101,
+        )
+        self.season_row = userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(self.member.id), gameseason=2627, total_points=10,
+        )
+        self.post = MessageBoardPost.objects.create(
+            family=self.family, user=self.member, title='Hi', content='Hello there',
+        )
+
+    def _request(self):
+        request = RequestFactory().post('/superadmin/families/')
+        request.user = self.root
+        request.META['REMOTE_ADDR'] = '10.0.0.5'
+        return request
+
+    def test_cascade_deletes_related_but_keeps_users(self):
+        family_pk = self.family.pk
+
+        services.force_delete_family(self._request(), self.family)
+
+        self.assertFalse(Family.objects.filter(pk=family_pk).exists())
+        self.assertFalse(Pool.objects.filter(pk=self.pool.pk).exists())
+        self.assertFalse(PoolSettings.objects.filter(pk=self.pool_settings.pk).exists())
+        self.assertFalse(FamilyMembership.objects.filter(pk=self.membership.pk).exists())
+        self.assertFalse(GamePicks.objects.filter(pk=self.pick.pk).exists())
+        self.assertFalse(userSeasonPoints.objects.filter(pk=self.season_row.pk).exists())
+        self.assertFalse(MessageBoardPost.objects.filter(pk=self.post.pk).exists())
+
+        # Never delete accounts.
+        self.assertTrue(User.objects.filter(pk=self.member.pk).exists())
+        self.assertTrue(User.objects.filter(pk=self.root.pk).exists())
+
+    def test_writes_an_audit_row_with_captured_before_state(self):
+        family_pk = self.family.pk
+
+        services.force_delete_family(self._request(), self.family)
+
+        entry = SuperAdminAuditLog.objects.get(
+            action=SuperAdminAuditLog.Action.FAMILY_FORCE_DELETED,
+        )
+        self.assertEqual(entry.target_id, str(family_pk))
+        self.assertEqual(entry.changes['before']['slug'], 'to-delete')
+        self.assertEqual(entry.changes['before']['name'], 'ToDelete')
+        self.assertEqual(entry.changes['before']['deleted_counts']['pools'], 1)
+        self.assertEqual(entry.changes['before']['deleted_counts']['picks'], 1)
+        self.assertIsNone(entry.changes['after'])

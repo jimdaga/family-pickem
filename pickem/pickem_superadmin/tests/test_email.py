@@ -58,6 +58,24 @@ class EmailSettingsViewTests(TestCase):
         self.assertContains(response, 'Enable invite emails')
         self.assertContains(response, 'Weekly picks campaign')
 
+    def test_provider_card_hidden_via_attribute_not_class(self):
+        """Tailwind's `space-y-4` uses the `:not([hidden])` selector, which only
+        keys off the HTML `hidden` attribute. Hiding the card with the `.hidden`
+        class instead leaves it counted as a space-y sibling, adding a phantom
+        margin that misaligns the left column against the right sidebar.
+        With no form errors the card must carry the `hidden` attribute (not
+        just the `.hidden` class) so it's correctly skipped for spacing."""
+        response = self.client.get(reverse('superadmin:email_settings'))
+        html = response.content.decode()
+
+        card_start = html.index('id="provider-settings-card"')
+        tag_start = html.rindex('<div', 0, card_start)
+        tag_end = html.index('>', card_start)
+        opening_tag = html[tag_start:tag_end + 1]
+
+        self.assertIn('hidden', opening_tag)
+        self.assertNotRegex(opening_tag, r'class="[^"]*\bhidden\b')
+
     def test_current_status_has_edit_button_and_never_exposes_key(self):
         settings_obj = EmailProviderSettings.load()
         settings_obj.set_api_key('re_super_secret_ABC123')

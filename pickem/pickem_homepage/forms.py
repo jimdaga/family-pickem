@@ -69,12 +69,11 @@ class PoolRulesForm(forms.Form):
     and the create-family flow so both enforce identical validation
     (locked pick types, tiebreaker-chain sanity, bonus/fee amounts)."""
 
-    picks_lock_at_kickoff = forms.BooleanField(
-        label="Pick Locking",
-        required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
-        }),
+    picks_lock_mode = forms.ChoiceField(
+        label="Pick locking",
+        choices=PoolSettings.PicksLockMode.choices,
+        help_text="Choose when picks lock each week.",
+        widget=forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
     )
     allow_tiebreaker = forms.BooleanField(
         label="Tiebreakers",
@@ -390,10 +389,18 @@ class FamilyWeekWinnerForm(forms.Form):
 
 
 class FamilyInviteCreateForm(forms.Form):
+    """Validates the batch-wide fields (role, expiry) for the invite create form.
+
+    Recipient email(s) are handled separately by the view since a single
+    submission can carry multiple `recipient_email` values (one invite is
+    created per valid, distinct address) - a plain EmailField can't represent
+    that, so this field is optional and unused for validation of the batch.
+    """
+
     role = forms.ChoiceField(required=True)
     recipient_email = forms.EmailField(
         label="Recipient email",
-        required=True,
+        required=False,
         widget=forms.EmailInput(attrs={
             'class': ADMIN_TEXT_INPUT_CLASSES,
             'autocomplete': 'email',
@@ -557,9 +564,28 @@ class WeekWinnerForm(forms.Form):
         )
 
 
+BANNER_ICON_CHOICES = [
+    ('fas fa-bullhorn', 'Announcement'),
+    ('fas fa-info-circle', 'Info'),
+    ('fas fa-exclamation-triangle', 'Warning'),
+    ('fas fa-check-circle', 'Success'),
+    ('fas fa-trophy', 'Trophy'),
+    ('fas fa-football-ball', 'Football'),
+    ('fas fa-star', 'Star'),
+    ('fas fa-fire', 'Hot'),
+    ('fas fa-gift', 'Gift'),
+    ('fas fa-bell', 'Bell'),
+    ('fas fa-clock', 'Reminder'),
+    ('fas fa-calendar', 'Calendar'),
+    ('fas fa-users', 'Members'),
+    ('fas fa-dollar-sign', 'Money'),
+    ('fas fa-wrench', 'Maintenance'),
+]
+
+
 class SiteBannerForm(forms.ModelForm):
     """Form for managing site banners"""
-    
+
     class Meta:
         model = SiteBanner
         fields = [
@@ -581,9 +607,8 @@ class SiteBannerForm(forms.ModelForm):
             'banner_type': forms.Select(attrs={
                 'class': 'form-select'
             }),
-            'icon': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'e.g., fas fa-trophy, fas fa-info-circle'
+            'icon': forms.Select(attrs={
+                'class': 'form-select'
             }),
             'start_date': forms.DateTimeInput(attrs={
                 'class': 'form-control',
@@ -626,6 +651,13 @@ class SiteBannerForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        choices = list(BANNER_ICON_CHOICES)
+        current = (self.instance.icon or '').strip()
+        if current and current not in dict(choices):
+            choices = [(current, f'{current} (current)')] + choices
+        self.fields['icon'].choices = choices
+        self.fields['icon'].widget.choices = choices
+
         # Set default values for new banners
         if not self.instance.pk:
             self.fields['priority'].initial = 1
@@ -661,10 +693,7 @@ class FamilyBannerForm(forms.ModelForm):
                 'placeholder': 'Optional details…',
             }),
             'banner_type': forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
-            'icon': forms.TextInput(attrs={
-                'class': ADMIN_TEXT_INPUT_CLASSES,
-                'placeholder': 'fas fa-bullhorn',
-            }),
+            'icon': forms.Select(attrs={'class': ADMIN_TEXT_INPUT_CLASSES}),
             'show_close_button': forms.CheckboxInput(attrs={
                 'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
             }),
@@ -674,6 +703,14 @@ class FamilyBannerForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['title'].required = True
         self.fields['description'].required = False
+
+        choices = list(BANNER_ICON_CHOICES)
+        current = (self.instance.icon or '').strip()
+        if current and current not in dict(choices):
+            choices = [(current, f'{current} (current)')] + choices
+        self.fields['icon'].choices = choices
+        self.fields['icon'].widget.choices = choices
+
         if not self.instance.pk:
             self.fields['icon'].initial = 'fas fa-bullhorn'
             self.fields['show_close_button'].initial = True

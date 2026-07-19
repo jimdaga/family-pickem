@@ -34,7 +34,7 @@
                     </span>
                     {% if pool_settings %}
                     <span class="inline-flex items-center gap-2 rounded-full border border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 px-3 py-1.5 text-sm font-semibold text-text-dark dark:text-white">
-                        Locking: {% if pool_settings.picks_lock_at_kickoff %}On{% else %}Off{% endif %}
+                        Locking: {{ pool_settings.get_picks_lock_mode_display }}
                     </span>
                     <span class="inline-flex items-center gap-2 rounded-full border border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/40 px-3 py-1.5 text-sm font-semibold text-text-dark dark:text-white">
                         Tiebreakers: {% if pool_settings.allow_tiebreaker %}On{% else %}Off{% endif %}
@@ -134,10 +134,10 @@
                     </span>
                     <div class="font-bold text-text-dark dark:text-white mb-1">Game Locking</div>
                     <p class="text-sm text-text-secondary-light dark:text-text-secondary leading-relaxed">
-                        {% if pool_settings.picks_lock_at_kickoff %}
+                        {% if pool_settings.picks_lock_mode == 'kickoff' %}
                         Games <strong class="text-text-dark dark:text-white">lock automatically</strong> when they start &mdash; no late picks allowed
                         {% else %}
-                        Kickoff locking is <strong class="text-text-dark dark:text-white">off</strong> for this pool &mdash; standard weekly deadlines apply
+                        Picks lock at the <strong class="text-text-dark dark:text-white">Sunday 1PM ET</strong> weekly cutoff for this pool &mdash; not per-game at kickoff
                         {% endif %}
                     </p>
                 </div>

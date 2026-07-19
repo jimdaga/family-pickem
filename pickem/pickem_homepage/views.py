@@ -1,5 +1,7 @@
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.template import loader
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from django import forms
@@ -1252,7 +1254,7 @@ def family_pool_admin(request, family_slug, pool_slug):
 # initial values, audit metadata, and save path all iterate this list, so a
 # new rule only needs a model field + form field + template input.
 ADMIN_POOL_SETTINGS_FIELDS = [
-    'picks_lock_at_kickoff',
+    'picks_lock_mode',
     'allow_tiebreaker',
     'win_points',
     'tie_points',
@@ -1392,7 +1394,7 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
         ],
         'rule_choice_fields': [
             form['pick_type'], form['missed_pick_policy'],
-            form['late_join_policy'], form['payout_structure'],
+            form['late_join_policy'],
         ],
     }
     return render(request, 'pickem/family_admin_settings.html', context)
@@ -1882,6 +1884,14 @@ def render_family_admin_winners(request, tenant_context, form=None, *, status=20
         .order_by('id')
         .first()
     )
+    current_winner_name = None
+    if current_winner:
+        current_winner_name = (
+            User.objects.filter(id=current_winner.userID)
+            .values_list('username', flat=True)
+            .first()
+            or current_winner.userID
+        )
     pool_settings = PoolSettings.objects.filter(pool=pool).first() or PoolSettings()
     context = {
         'family': family,
@@ -1892,9 +1902,11 @@ def render_family_admin_winners(request, tenant_context, form=None, *, status=20
         'week_choices': range(1, 19),
         'candidates': candidates,
         'current_winner': current_winner,
+        'current_winner_name': current_winner_name,
         'form': form,
         'pool_settings': pool_settings,
         'perfect_week_members': get_perfect_week_members(family, pool, selected_week),
+        'can_override': tenant_context.membership.role == FamilyMembership.Role.OWNER,
     }
     return render(request, 'pickem/family_admin_winners.html', context, status=status)
 
@@ -1904,6 +1916,9 @@ def family_pool_admin_winners(request, family_slug, pool_slug):
     tenant_context = request.tenant_context
     if request.method == 'GET':
         return render_family_admin_winners(request, tenant_context)
+
+    if tenant_context.membership.role != FamilyMembership.Role.OWNER:
+        return HttpResponseForbidden('Permission denied.')
 
     form = FamilyWeekWinnerForm(request.POST)
     if not form.is_valid():
@@ -2206,8 +2221,14 @@ def render_family_admin_invites(request, tenant_context, form, *, invite_code=No
 def family_pool_admin_invites(request, family_slug, pool_slug):
     tenant_context = request.tenant_context
     allowed_roles = get_invite_role_choices_for_membership(tenant_context.membership)
+    # recipient_email is handled separately below (a batch submits multiple
+    # values for that key), so it's excluded here and only role/expiry are
+    # validated through the form.
+    form_data = request.POST.copy() if request.POST else None
+    if form_data is not None:
+        form_data.pop('recipient_email', None)
     form = FamilyInviteCreateForm(
-        request.POST or None,
+        form_data,
         allowed_roles=allowed_roles,
         initial={
             'role': FamilyMembership.Role.MEMBER,
@@ -2216,6 +2237,13 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
     )
 
     if request.method == 'POST':
+        if pool_entries_locked(tenant_context.pool):
+            messages.error(
+                request,
+                "Entries are locked for this pool, so new invites can't be created.",
+            )
+            return render_family_admin_invites(request, tenant_context, form, status=400)
+
         if not form.is_valid():
             return render_family_admin_invites(
                 request,
@@ -2224,30 +2252,83 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
                 status=400,
             )
 
+        raw_emails = [e.strip().lower() for e in request.POST.getlist('recipient_email')]
+        emails, seen = [], set()
+        for e in raw_emails:
+            if e and e not in seen:
+                seen.add(e)
+                emails.append(e)
+
+        if not emails:
+            messages.error(request, "Enter at least one email address to invite.")
+            return render_family_admin_invites(request, tenant_context, form, status=400)
+
+        role = form.cleaned_data['role']
+        expires_in_days = form.cleaned_data['expires_in_days']
+
+        created = []
+        skipped_invalid = []
         with transaction.atomic():
-            invitation, raw_code = create_admin_invitation(
-                family=tenant_context.family,
-                pool=tenant_context.pool,
-                actor=request.user,
-                role=form.cleaned_data['role'],
-                recipient_email=form.cleaned_data['recipient_email'],
-                expires_in_days=form.cleaned_data['expires_in_days'],
-                request=request,
+            for email in emails:
+                try:
+                    validate_email(email)
+                except DjangoValidationError:
+                    skipped_invalid.append(email)
+                    continue
+                invitation, raw_code = create_admin_invitation(
+                    family=tenant_context.family,
+                    pool=tenant_context.pool,
+                    actor=request.user,
+                    role=role,
+                    recipient_email=email,
+                    expires_in_days=expires_in_days,
+                    request=request,
+                )
+                created.append((invitation, raw_code))
+
+        for invitation, raw_code in created:
+            handle_targeted_invite_email_feedback(
+                request,
+                invitation=invitation,
+                raw_code=raw_code,
             )
 
-        messages.success(request, "Invite created. Share the invite link now; it will not be shown again.")
-        handle_targeted_invite_email_feedback(
-            request,
-            invitation=invitation,
-            raw_code=raw_code,
-        )
-        return render_family_admin_invites(
-            request,
-            tenant_context,
-            form,
-            invite_link=request.build_absolute_uri(
-                reverse('accept_invite_link', kwargs={'invite_code': raw_code})
-            ),
+        if not created:
+            messages.error(
+                request,
+                (
+                    "No invites created. Skipped invalid address(es): "
+                    f"{', '.join(skipped_invalid)}."
+                ),
+            )
+            return render_family_admin_invites(request, tenant_context, form, status=400)
+
+        if len(created) == 1 and not skipped_invalid:
+            _invitation, raw_code = created[0]
+            messages.success(request, "Invite created. Share the invite link now; it will not be shown again.")
+            return render_family_admin_invites(
+                request,
+                tenant_context,
+                form,
+                invite_link=request.build_absolute_uri(
+                    reverse('accept_invite_link', kwargs={'invite_code': raw_code})
+                ),
+            )
+
+        summary = f"Sent {len(created)} invite(s)."
+        if skipped_invalid:
+            summary += (
+                f" Skipped {len(skipped_invalid)} invalid address(es): "
+                f"{', '.join(skipped_invalid)}."
+            )
+        messages.success(request, summary)
+        # Post/Redirect/Get: a batch shows no one-time link, so redirect to avoid
+        # a refresh re-submitting the whole batch. (The single-invite path above
+        # deliberately keeps render() to display the one-time invite link.)
+        return redirect(
+            'family_pool_admin_invites',
+            family_slug=tenant_context.family.slug,
+            pool_slug=tenant_context.pool.slug,
         )
 
     return render_family_admin_invites(request, tenant_context, form)

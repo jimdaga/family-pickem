@@ -122,6 +122,33 @@ class OverviewTests(TestCase):
         entry = SuperAdminAuditLog.objects.get()
         self.assertEqual(entry.action, SuperAdminAuditLog.Action.BANNER_PUBLISHED)
 
+    def test_publishing_a_site_wide_banner_accepts_a_chosen_icon(self):
+        self.client.post(
+            reverse('superadmin:banner_publish'),
+            {'title': 'Playoffs!', 'banner_type': 'success', 'icon': 'fas fa-trophy'},
+        )
+        banner = SiteBanner.objects.get()
+        self.assertEqual(banner.icon, 'fas fa-trophy')
+
+    def test_publishing_a_site_wide_banner_defaults_icon_when_missing(self):
+        self.client.post(
+            reverse('superadmin:banner_publish'),
+            {'title': 'Scheduled maintenance', 'banner_type': 'warning'},
+        )
+        banner = SiteBanner.objects.get()
+        self.assertEqual(banner.icon, 'fas fa-bullhorn')
+
+    def test_publishing_a_site_wide_banner_rejects_an_unlisted_icon(self):
+        """A POST that bypasses the <select> must not smuggle an arbitrary
+        class string onto SiteBanner.icon — only BANNER_ICON_CHOICES values
+        (or the default) may be persisted."""
+        self.client.post(
+            reverse('superadmin:banner_publish'),
+            {'title': 'Sketchy icon', 'banner_type': 'info', 'icon': 'fas fa-not-a-real-icon'},
+        )
+        banner = SiteBanner.objects.get()
+        self.assertEqual(banner.icon, 'fas fa-bullhorn')
+
     def test_publishing_a_banner_requires_a_title(self):
         self.client.post(reverse('superadmin:banner_publish'), {'title': ''})
         self.assertEqual(SiteBanner.objects.count(), 0)
@@ -217,3 +244,16 @@ class OverviewTests(TestCase):
     def test_no_current_season_flags_nothing(self):
         response = self.client.get(reverse('superadmin:overview'))
         self.assertEqual(response.context['anomalies']['families_off_season'], [])
+
+    def test_nav_order_jobs_logs_audit(self):
+        """Nav tabs appear in order: jobs, logs, audit."""
+        response = self.client.get(reverse('superadmin:overview'))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        jobs_idx = html.index('>jobs<')
+        logs_idx = html.index('>logs<')
+        audit_idx = html.index('>audit<')
+        self.assertLess(jobs_idx, logs_idx, 'jobs should appear before logs')
+        self.assertLess(logs_idx, audit_idx, 'logs should appear before audit')
+
+

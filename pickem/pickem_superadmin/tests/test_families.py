@@ -63,3 +63,51 @@ class FamiliesPageTests(TestCase):
         self.family.refresh_from_db()
         self.assertEqual(self.family.name, 'First')
         self.assertContains(response, 'changed since you loaded it')
+
+
+class FamilyForceDeleteViewTests(TestCase):
+    def setUp(self):
+        self.root = User.objects.create_superuser(
+            username='root2', email='root2@example.com', password='pw',
+        )
+        self.member = User.objects.create_user(username='member2', password='pw')
+        self.family = Family.objects.create(name='Dagostino', slug='dagostino')
+        Pool.objects.create(
+            family=self.family, name='Pickem Pool', slug='pickem-pool', season=2627,
+        )
+        FamilyMembership.objects.create(
+            family=self.family, user=self.member, role=FamilyMembership.Role.MEMBER,
+        )
+
+    def test_slug_mismatch_aborts(self):
+        self.client.force_login(self.root)
+        response = self.client.post(
+            reverse('superadmin:family_force_delete', args=[self.family.id]),
+            {'confirm_slug': 'wrong'},
+            follow=True,
+        )
+        self.assertTrue(Family.objects.filter(id=self.family.id).exists())
+        self.assertContains(response, 'Confirmation did not match')
+        self.assertEqual(SuperAdminAuditLog.objects.count(), 0)
+
+    def test_correct_slug_deletes(self):
+        self.client.force_login(self.root)
+        response = self.client.post(
+            reverse('superadmin:family_force_delete', args=[self.family.id]),
+            {'confirm_slug': 'dagostino'},
+        )
+        self.assertRedirects(response, reverse('superadmin:families'))
+        self.assertFalse(Family.objects.filter(id=self.family.id).exists())
+        self.assertEqual(
+            SuperAdminAuditLog.objects.get().action,
+            SuperAdminAuditLog.Action.FAMILY_FORCE_DELETED,
+        )
+
+    def test_requires_superadmin(self):
+        self.client.force_login(self.member)
+        response = self.client.post(
+            reverse('superadmin:family_force_delete', args=[self.family.id]),
+            {'confirm_slug': 'dagostino'},
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Family.objects.filter(id=self.family.id).exists())

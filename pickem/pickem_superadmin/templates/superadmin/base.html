@@ -35,10 +35,10 @@
       <a href="{{ u_teams }}" class="sa-tab {% if '/teams' in request.path %}sa-tab-active{% endif %}">teams</a>
       {% url 'superadmin:jobs' as u_jobs %}
       <a href="{{ u_jobs }}" class="sa-tab {% if '/jobs' in request.path %}sa-tab-active{% endif %}">jobs</a>
-      {% url 'superadmin:audit' as u_audit %}
-      <a href="{{ u_audit }}" class="sa-tab {% if '/audit' in request.path %}sa-tab-active{% endif %}">audit</a>
       {% url 'superadmin:logs' as u_logs %}
       <a href="{{ u_logs }}" class="sa-tab {% if '/logs' in request.path %}sa-tab-active{% endif %}">logs</a>
+      {% url 'superadmin:audit' as u_audit %}
+      <a href="{{ u_audit }}" class="sa-tab {% if '/audit' in request.path %}sa-tab-active{% endif %}">audit</a>
     </nav>
   </header>
 
