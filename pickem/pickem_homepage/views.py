@@ -1343,7 +1343,9 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
             processed_logo = None
             if form.cleaned_data.get('logo'):
                 try:
-                    processed_logo = process_family_logo(form.cleaned_data['logo'])
+                    processed_logo = process_family_logo(
+                        form.cleaned_data['logo'], form.cleaned_data['crop_data']
+                    )
                 except LogoValidationError as error:
                     error_messages = {
                         'file_too_large': 'Choose an image smaller than 5 MB, then try again.',
@@ -1362,6 +1364,17 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
                         'tiebreaker_fields': [form['primary_tiebreaker'], form['secondary_tiebreaker']],
                         'rule_choice_fields': [form['pick_type'], form['missed_pick_policy'], form['late_join_policy'], form['payout_structure']],
                     })
+
+            if form.cleaned_data.get('remove_logo'):
+                old_logo_present = bool(locked_family.logo.name)
+                if old_logo_present:
+                    # Stale-object lifecycle belongs to Phase 8.  This only
+                    # clears the controlled DB reference in the authorized,
+                    # locked settings transaction.
+                    locked_family.logo = None
+                    locked_family.save(update_fields=['logo', 'updated_at'])
+                    metadata['logo'] = {'before_present': True, 'after_present': False}
+                    changed_fields.append('family.logo')
 
             if processed_logo is not None:
                 old_logo_name = locked_family.logo.name
