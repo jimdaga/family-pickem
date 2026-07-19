@@ -6679,6 +6679,48 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.assertContains(rendered, 'Choose a JPEG, PNG, or WebP image up to 5 MB.')
         self.assertNotContains(rendered, 'logo_url')
 
+    def test_settings_logo_editor_keeps_native_form_contract_and_enhancement_hooks(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.get(self._settings_url())
+
+        self.assertContains(response, 'data-family-logo-form')
+        self.assertContains(response, 'id="id_logo"')
+        self.assertContains(response, 'data-family-logo-server-preview')
+        self.assertContains(response, 'data-family-logo-editor')
+        self.assertContains(response, 'data-family-logo-zoom')
+        self.assertContains(response, 'data-family-logo-reset')
+        self.assertContains(response, 'data-family-logo-clear')
+        for field_name in ('crop_x', 'crop_y', 'crop_width', 'crop_height', 'remove_logo'):
+            self.assertContains(response, 'name="%s"' % field_name)
+        self.assertContains(response, 'vendor/cropperjs/cropper.js')
+        self.assertContains(response, 'js/family-logo-editor.js')
+        self.assertNotContains(response, 'logo_url')
+
+    def test_settings_error_keeps_bound_values_and_old_server_logo(self):
+        self.family.logo.save('already.webp', SimpleUploadedFile('already.webp', b'canonical'), save=True)
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            self._settings_url(),
+            {
+                'family_name': 'Edited Family', 'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'logo': SimpleUploadedFile('bad.png', b'not-an-image', content_type='image/png'),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="Edited Family"')
+        self.assertContains(response, 'data-family-logo-saved-image')
+        self.assertContains(response, 'Select the file again before saving settings.')
+
+    def test_settings_only_renders_canonical_or_static_logo_sources(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.get(self._settings_url())
+
+        self.assertContains(response, 'images/familypickem.png')
+        self.assertNotContains(response, 'blob:')
+        self.assertNotContains(response, 'logo_url')
+
     def test_invalid_logo_preserves_existing_reference(self):
         self.family.logo.save('already.webp', SimpleUploadedFile('already.webp', b'canonical'), save=True)
         original = self.family.logo.name
