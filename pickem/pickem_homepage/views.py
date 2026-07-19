@@ -40,6 +40,7 @@ from urllib.parse import parse_qs, urlparse
 from collections import defaultdict
 import hashlib
 import json
+import logging
 import secrets
 
 from datetime import date, timedelta
@@ -64,6 +65,22 @@ from pickem_homepage.emailing import (
 )
 
 ESPN_NEWS_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news'
+logger = logging.getLogger(__name__)
+
+
+def _delete_obsolete_family_logo(storage, family_id, logo_name):
+    """Best-effort cleanup for an already-committed, server-generated logo."""
+    try:
+        storage.delete(logo_name)
+    except Exception:
+        # Keep the stable tenant/key correlation needed for operational cleanup,
+        # without ever emitting an upload filename, signed URL, or credentials.
+        logger.warning(
+            "Family logo cleanup failed family_id=%s logo_key=%s",
+            family_id,
+            logo_name,
+            exc_info=True,
+        )
 
 
 @require_http_methods(["GET", "POST"])
@@ -1341,6 +1358,7 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
             )
 
             processed_logo = None
+            obsolete_logo_name = None
             if form.cleaned_data.get('logo'):
                 try:
                     processed_logo = process_family_logo(
@@ -1366,11 +1384,9 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
                     })
 
             if form.cleaned_data.get('remove_logo'):
-                old_logo_present = bool(locked_family.logo.name)
+                obsolete_logo_name = locked_family.logo.name
+                old_logo_present = bool(obsolete_logo_name)
                 if old_logo_present:
-                    # Stale-object lifecycle belongs to Phase 8.  This only
-                    # clears the controlled DB reference in the authorized,
-                    # locked settings transaction.
                     locked_family.logo = None
                     locked_family.save(update_fields=['logo', 'updated_at'])
                     metadata['logo'] = {'before_present': True, 'after_present': False}
@@ -1391,6 +1407,7 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
                     locked_family.save(update_fields=update_fields)
                     metadata['logo'] = {'before_present': old_logo_present, 'after_present': True}
                     changed_fields.append('family.logo')
+                    obsolete_logo_name = old_logo_name
                 except Exception:
                     locked_family.logo.storage.delete(new_logo_name)
                     locked_family.logo.name = old_logo_name
@@ -1432,6 +1449,14 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
                         locked_family.logo.storage.delete(new_logo_name)
                         locked_family.logo.name = old_logo_name
                     raise
+                if obsolete_logo_name:
+                    transaction.on_commit(
+                        lambda storage=locked_family.logo.storage,
+                        family_id=locked_family.id,
+                        logo_name=obsolete_logo_name: _delete_obsolete_family_logo(
+                            storage, family_id, logo_name
+                        )
+                    )
                 messages.success(request, "Settings updated.")
             else:
                 messages.info(request, "No settings changes to save.")

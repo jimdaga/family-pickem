@@ -6778,6 +6778,126 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         audit = FamilyAuditLog.objects.filter(family=self.family).latest('created_at')
         self.assertEqual(audit.metadata['logo'], {'before_present': True, 'after_present': False})
 
+    def test_replacement_deletes_only_the_previous_logo_after_commit(self):
+        self.family.logo.save('previous.webp', SimpleUploadedFile('previous.webp', b'canonical'), save=True)
+        old_name = self.family.logo.name
+        self.client.force_login(self.admin_user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(self._settings_url(), {
+                'family_name': self.family.name,
+                'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'logo': self._logo_upload(),
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertNotEqual(self.family.logo.name, old_name)
+        self.assertFalse(self.family.logo.storage.exists(old_name))
+        self.assertTrue(self.family.logo.storage.exists(self.family.logo.name))
+
+    def test_removal_deletes_only_the_previous_logo_after_commit(self):
+        self.family.logo.save('previous.webp', SimpleUploadedFile('previous.webp', b'canonical'), save=True)
+        old_name = self.family.logo.name
+        self.client.force_login(self.admin_user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(self._settings_url(), {
+                'family_name': self.family.name,
+                'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'remove_logo': 'true',
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertFalse(self.family.logo.name)
+        self.assertFalse(Family._meta.get_field('logo').storage.exists(old_name))
+
+    def test_first_upload_has_no_obsolete_logo_cleanup(self):
+        storage = Family._meta.get_field('logo').storage
+        self.client.force_login(self.admin_user)
+
+        with patch.object(storage, 'delete', wraps=storage.delete) as delete, self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(self._settings_url(), {
+                'family_name': self.family.name,
+                'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'logo': self._logo_upload(),
+            })
+
+        self.assertEqual(response.status_code, 302)
+        delete.assert_not_called()
+
+    def test_audit_failure_compensates_only_new_logo_and_retains_old_reference(self):
+        self.family.logo.save('previous.webp', SimpleUploadedFile('previous.webp', b'canonical'), save=True)
+        old_name = self.family.logo.name
+        storage = Family._meta.get_field('logo').storage
+        self.client.force_login(self.admin_user)
+
+        with patch.object(FamilyAuditLog.objects, 'create', side_effect=RuntimeError('audit failed')), \
+             patch.object(storage, 'delete', wraps=storage.delete) as delete:
+            with self.assertRaises(RuntimeError):
+                self.client.post(self._settings_url(), {
+                    'family_name': self.family.name,
+                    'pool_name': self.pool.name,
+                    **self._default_scoring_fields(),
+                    'logo': self._logo_upload(),
+                })
+
+        self.family.refresh_from_db()
+        self.assertEqual(self.family.logo.name, old_name)
+        self.assertTrue(storage.exists(old_name))
+        self.assertEqual(delete.call_count, 1)
+        self.assertNotEqual(delete.call_args.args[0], old_name)
+
+    def test_hostile_logo_posts_have_no_storage_or_audit_side_effects(self):
+        self.family.logo.save('previous.webp', SimpleUploadedFile('previous.webp', b'canonical'), save=True)
+        old_name = self.family.logo.name
+        storage = Family._meta.get_field('logo').storage
+        audit_count = FamilyAuditLog.objects.filter(family=self.family).count()
+        cases = (
+            (Client(), self._settings_url(), 302),
+            (self.client, self._settings_url(), 403, self.member),
+            (self.client, self._settings_url(), 404, self.outsider),
+            (self.client, self._settings_url(pool=self.other_pool), 404, self.admin_user),
+        )
+
+        with patch.object(storage, 'save', wraps=storage.save) as save:
+            for client, url, expected_status, *user in cases:
+                with self.subTest(url=url, expected_status=expected_status):
+                    if user:
+                        client.force_login(user[0])
+                    response = client.post(url, {
+                        'family_name': self.family.name,
+                        'pool_name': self.pool.name,
+                        **self._default_scoring_fields(),
+                        'logo': self._logo_upload(),
+                        'family_id': self.other_family.id,
+                        'pool_id': self.other_pool.id,
+                        'logo_key': 'family-logos/other-family/forged.webp',
+                    })
+                    self.assertEqual(response.status_code, expected_status)
+            save.assert_not_called()
+
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.admin_user)
+        with patch.object(storage, 'save', wraps=storage.save) as save:
+            csrf_response = csrf_client.post(self._settings_url(), {
+                'family_name': self.family.name,
+                'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'logo': self._logo_upload(),
+            })
+            self.assertEqual(csrf_response.status_code, 403)
+            save.assert_not_called()
+
+        self.family.refresh_from_db()
+        self.assertEqual(self.family.logo.name, old_name)
+        self.assertTrue(storage.exists(old_name))
+        self.assertEqual(FamilyAuditLog.objects.filter(family=self.family).count(), audit_count)
+
     def test_member_picker_renders_only_canonical_logo_in_decorative_compact_mark(self):
         self.family.logo.save(
             'canonical.webp', SimpleUploadedFile('canonical.webp', b'canonical'), save=True
