@@ -115,10 +115,13 @@ class FamilyLogoProcessorTests(SimpleTestCase):
                     validate_square_crop(crop, (400, 300))
                 self.assertEqual(raised.exception.code, "invalid_crop")
 
-    def test_default_crop_is_center_square(self):
+    def test_default_processing_preserves_the_full_logo_inside_a_square(self):
         result = process_family_logo(self.uploaded_image("PNG", size=(400, 200)))
         with Image.open(result) as output:
             self.assertEqual(output.size, (256, 256))
+            self.assertEqual(output.mode, "RGBA")
+            self.assertEqual(output.getpixel((0, 0))[3], 0)
+            self.assertEqual(output.getpixel((0, 128))[3], 255)
 
     def test_fresh_webp_omits_source_png_text_metadata(self):
         png_info = PngImagePlugin.PngInfo()

@@ -6687,11 +6687,10 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.assertContains(response, 'id="id_logo"')
         self.assertContains(response, 'data-family-logo-server-preview')
         self.assertContains(response, 'data-family-logo-editor')
-        self.assertContains(response, 'data-family-logo-reset')
         self.assertContains(response, 'data-family-logo-clear')
+        self.assertContains(response, 'data-family-logo-save')
         for field_name in ('crop_x', 'crop_y', 'crop_width', 'crop_height', 'remove_logo'):
             self.assertContains(response, 'name="%s"' % field_name)
-        self.assertContains(response, 'vendor/cropperjs/cropper.js')
         self.assertContains(response, 'js/family-logo-editor.js')
         self.assertNotContains(response, 'logo_url')
 

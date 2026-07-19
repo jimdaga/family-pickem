@@ -62,12 +62,6 @@ def validate_square_crop(crop_data, image_size):
     return x, y, x + width, y + height
 
 
-def _center_square_box(image_size):
-    width, height = image_size
-    side = min(width, height)
-    return (width - side) // 2, (height - side) // 2, (width + side) // 2, (height + side) // 2
-
-
 def _rewind(uploaded_file):
     try:
         uploaded_file.seek(0)
@@ -100,16 +94,23 @@ def process_family_logo(uploaded_file, crop_data=None):
 
                 source.load()
                 normalized = ImageOps.exif_transpose(source)
-                crop_box = (
-                    _center_square_box(normalized.size)
+                # Preserve the entire logo by default. A square output remains
+                # bounded and cacheable, while transparent padding avoids
+                # cutting off wide or tall marks. Explicit crop coordinates
+                # remain supported for trusted future editor controls.
+                crop_source = (
+                    normalized
                     if crop_data is None
-                    else validate_square_crop(crop_data, normalized.size)
+                    else normalized.crop(validate_square_crop(crop_data, normalized.size))
                 )
-                result = normalized.crop(crop_box).resize(
-                    (OUTPUT_SIZE, OUTPUT_SIZE), Image.Resampling.LANCZOS
+                resized = ImageOps.contain(
+                    crop_source, (OUTPUT_SIZE, OUTPUT_SIZE), Image.Resampling.LANCZOS
+                ).convert("RGBA")
+                result = Image.new("RGBA", (OUTPUT_SIZE, OUTPUT_SIZE), (0, 0, 0, 0))
+                result.alpha_composite(
+                    resized,
+                    ((OUTPUT_SIZE - resized.width) // 2, (OUTPUT_SIZE - resized.height) // 2),
                 )
-                if result.mode not in ("RGB", "RGBA"):
-                    result = result.convert("RGBA" if "transparency" in source.info else "RGB")
 
                 encoded = BytesIO()
                 result.save(encoded, format="WEBP", quality=85, method=6)
