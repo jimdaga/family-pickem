@@ -7,9 +7,9 @@
 
 ### Logo Experience
 
-- [ ] **LOGO-01**: An authorized family commissioner can select a local image from the family commissioner/settings page instead of entering a logo URL.
-- [ ] **LOGO-02**: Before saving, the commissioner can preview, zoom, reposition, and apply a fixed square crop to the selected logo.
-- [ ] **LOGO-03**: A commissioner can save a new logo, replace the current logo, or remove it and return the family to the default logo.
+- [x] **LOGO-01**: An authorized family commissioner can select a local image from the family commissioner/settings page instead of entering a logo URL.
+- [x] **LOGO-02**: Before saving, the commissioner can preview, zoom, reposition, and apply a fixed square crop to the selected logo.
+- [x] **LOGO-03**: A commissioner can save a new logo, replace the current logo, or remove it and return the family to the default logo.
 - [ ] **LOGO-04**: Family surfaces render the saved processed logo at the intended bounded display size with an accessible fallback/alt text.
 
 ### Image Security And Processing
@@ -54,9 +54,9 @@
 
 | Requirement | Phase | Status |
 |---|---:|---|
-| LOGO-01 | Phase 7 | Pending |
-| LOGO-02 | Phase 7 | Pending |
-| LOGO-03 | Phase 7 | Pending |
+| LOGO-01 | Phase 7 | Complete |
+| LOGO-02 | Phase 7 | Complete |
+| LOGO-03 | Phase 7 | Complete |
 | LOGO-04 | Phase 7 | Pending |
 | IMG-01 | Phase 6 | Complete |
 | IMG-02 | Phase 6 | Complete |
