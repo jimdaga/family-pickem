@@ -181,7 +181,7 @@
                     </div>
                 </div>
                 <div class="rounded-lg border border-border-light dark:border-border-subtle bg-gray-50 dark:bg-bg-dark p-4">
-                    <label class="flex items-start gap-3" data-entry-fee-enabled>
+                    <label class="flex items-start gap-3">
                         {{ form.entry_fee_enabled }}
                         <span>
                             <span class="block font-bold text-text-dark dark:text-white">Entry Fee</span>
@@ -190,7 +190,7 @@
                             </span>
                         </span>
                     </label>
-                    <div class="mt-3" data-entry-fee-amount>
+                    <div class="mt-3">
                         <label class="block text-xs font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary" for="{{ form.entry_fee_amount.id_for_label }}">
                             Amount (whole dollars)
                         </label>
@@ -199,7 +199,7 @@
                         <p class="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">{{ error }}</p>
                         {% endfor %}
                     </div>
-                    <div class="mt-3" data-payout-group hidden>
+                    <div class="mt-3">
                         <label class="block text-xs font-semibold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary" for="{{ form.payout_structure.id_for_label }}">
                             {{ form.payout_structure.label }}
                         </label>
@@ -282,19 +282,4 @@
         {% endif %}
     </div>
 </div>
-<script>
-(function () {
-  const group = document.querySelector('[data-payout-group]');
-  if (!group) return;
-  const enabled = document.querySelector('#{{ form.entry_fee_enabled.id_for_label }}');
-  const amount = document.querySelector('#{{ form.entry_fee_amount.id_for_label }}');
-  function sync() {
-    const on = enabled && enabled.checked && amount && Number(amount.value) > 0;
-    group.hidden = !on;
-  }
-  if (enabled) enabled.addEventListener('change', sync);
-  if (amount) amount.addEventListener('input', sync);
-  sync();
-})();
-</script>
 {% endblock %}
