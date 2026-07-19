@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from .storage import FamilyLogoStorage
 
 # Create your models here.
 
@@ -51,6 +52,11 @@ class UserProfile(models.Model):
         ordering = ['user__username']
 
 
+def family_logo_upload_to(instance, _filename):
+    """Return a server-owned key relative to ``FamilyLogoStorage.location``."""
+    return f"{instance.pk}/{uuid.uuid4().hex}.webp"
+
+
 class Family(models.Model):
     class Status(models.TextChoices):
         ACTIVE = 'active', 'Active'
@@ -58,7 +64,13 @@ class Family(models.Model):
 
     name = models.CharField(max_length=200, help_text="Family display name")
     slug = models.SlugField(max_length=80, unique=True, help_text="Stable family URL slug")
-    logo_url = models.CharField(max_length=500, null=True, blank=True, help_text="URL or static path to family logo (e.g. /static/images/logo.png or https://...)")
+    logo = models.ImageField(
+        storage=FamilyLogoStorage(),
+        upload_to=family_logo_upload_to,
+        null=True,
+        blank=True,
+        help_text="Server-generated canonical family logo.",
+    )
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

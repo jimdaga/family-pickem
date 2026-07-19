@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-from django.core.validators import URLValidator, validate_email
+from django.core.validators import validate_email
 from pickem_api.models import FamilyMembership, GamePicks, PoolSettings, userSeasonPoints
 from .models import MessageBoardPost, MessageBoardComment, SiteBanner
 
@@ -221,6 +221,23 @@ class PoolRulesForm(forms.Form):
 
 
 class FamilyAdminSettingsForm(PoolRulesForm):
+    logo = forms.FileField(
+        label="Family logo",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={
+            'class': ADMIN_TEXT_INPUT_CLASSES,
+            'accept': 'image/jpeg,image/png,image/webp',
+            'aria-describedby': 'family-logo-help family-logo-error',
+        }),
+    )
+    # These values are deliberately strings at the form boundary.  Django's
+    # IntegerField accepts representations (such as ``1.0``) that the logo
+    # processor must never treat as a browser crop coordinate.
+    crop_x = forms.CharField(required=False, widget=forms.HiddenInput())
+    crop_y = forms.CharField(required=False, widget=forms.HiddenInput())
+    crop_width = forms.CharField(required=False, widget=forms.HiddenInput())
+    crop_height = forms.CharField(required=False, widget=forms.HiddenInput())
+    remove_logo = forms.BooleanField(required=False, widget=forms.HiddenInput())
     family_name = forms.CharField(
         label="Family display name",
         max_length=200,
@@ -241,41 +258,6 @@ class FamilyAdminSettingsForm(PoolRulesForm):
             'autocomplete': 'off',
         }),
     )
-    logo_url = forms.CharField(
-        label="Family logo URL",
-        max_length=500,
-        required=False,
-        strip=True,
-        widget=forms.TextInput(attrs={
-            'class': ADMIN_TEXT_INPUT_CLASSES,
-            'placeholder': 'https://example.com/logo.png or /static/images/logo.png',
-            'autocomplete': 'off',
-        }),
-        help_text="Shown at the top of your family's lobby. Leave blank to use the default Pick'em logo.",
-    )
-
-    def clean_logo_url(self):
-        value = (self.cleaned_data.get('logo_url') or '').strip()
-        if not value:
-            return value
-        # Site-relative paths are fine, but '//' is protocol-relative (an
-        # arbitrary external host) and browsers normalize '\' to '/', so
-        # '/\evil.com/...' would resolve protocol-relative too — both must go
-        # through the URL validator instead of the fast path.
-        if (
-            value.startswith('/')
-            and not value.startswith('//')
-            and '\\' not in value
-        ):
-            return value
-        try:
-            URLValidator(schemes=['http', 'https'])(value)
-        except forms.ValidationError:
-            raise forms.ValidationError(
-                "Enter a full URL (https://...) or a site-relative path starting with /."
-            )
-        return value
-
     def clean_family_name(self):
         name = self.cleaned_data.get('family_name', '').strip()
         if not name:
@@ -287,6 +269,34 @@ class FamilyAdminSettingsForm(PoolRulesForm):
         if not name:
             raise forms.ValidationError("Pool display name is required.")
         return " ".join(name.split())
+
+    def clean(self):
+        cleaned = super().clean()
+        crop_fields = ('crop_x', 'crop_y', 'crop_width', 'crop_height')
+        crop_values = [cleaned.get(field) for field in crop_fields]
+        present = [value not in (None, '') for value in crop_values]
+
+        cleaned['crop_data'] = None
+        if any(present):
+            if not all(present):
+                self.add_error('logo', 'Choose the image again before saving settings.')
+            elif not all(
+                isinstance(value, str) and value.isascii() and value.isdecimal()
+                for value in crop_values
+            ):
+                self.add_error('logo', 'Choose the image again before saving settings.')
+            else:
+                x, y, width, height = (int(value) for value in crop_values)
+                if width <= 0 or height <= 0 or width != height:
+                    self.add_error('logo', 'Choose the image again before saving settings.')
+                else:
+                    cleaned['crop_data'] = {
+                        'x': x, 'y': y, 'width': width, 'height': height,
+                    }
+
+        if cleaned.get('remove_logo') and cleaned.get('logo'):
+            self.add_error('logo', 'Choose either a replacement logo or remove the current logo.')
+        return cleaned
 
 
 class CreateFamilyForm(PoolRulesForm):

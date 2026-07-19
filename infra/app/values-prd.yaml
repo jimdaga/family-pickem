@@ -14,6 +14,7 @@ ingress:
   className: "nginx"
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "6m"
   hosts:
     - host: family-pickem.com
       paths:
@@ -44,6 +45,7 @@ externalSecrets:
   enabled: true
   clusterSecretStore: aws-secrets-manager
   envvarsKey: family-pickem/prd/envvars
+  logoStorageKey: family-pickem/prd/family-logo-storage
 
 backup:
   enabled: true

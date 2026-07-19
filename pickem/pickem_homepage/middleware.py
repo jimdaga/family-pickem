@@ -1,5 +1,30 @@
 from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
+from django.urls import resolve
+
+from .upload_handlers import FamilyLogoUploadSizeLimitHandler
+
+
+class FamilyLogoUploadHandlerMiddleware:
+    """Install the logo stream limiter before CSRF parses multipart input."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        content_type = request.META.get("CONTENT_TYPE", "")
+        if request.method != "POST" or not content_type.startswith("multipart/form-data"):
+            return None
+        # `view_func` can be decorator-wrapped; the resolver's url_name is
+        # stable and avoids installing a handler on similarly shaped routes.
+        match = resolve(request.path_info)
+        if match.url_name != "family_pool_admin_settings":
+            return None
+        request.upload_handlers.insert(0, FamilyLogoUploadSizeLimitHandler(request))
+        return None
 
 
 class RequireLoginForInternalPagesMiddleware:

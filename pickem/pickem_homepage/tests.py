@@ -1,7 +1,9 @@
 from datetime import date, timedelta
-from io import StringIO
+from io import BytesIO, StringIO
 from importlib import import_module
 import json
+import tempfile
+from types import SimpleNamespace
 from unittest.mock import ANY, patch
 
 from django.contrib import admin
@@ -9,6 +11,9 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.core.management import call_command
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.storage import FileSystemStorage
+from django.core.files.uploadhandler import StopUpload
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.http import Http404, HttpResponse
@@ -43,6 +48,7 @@ from pickem_homepage.models import (
     SiteBanner,
 )
 from pickem_homepage.views import is_commissioner
+from PIL import Image
 
 
 class ViewSmokeTests(TestCase):
@@ -277,6 +283,7 @@ class PostLoginTenantRoutingTests(TestCase):
         self.assertContains(picker_response, "Smith Family")
         self.assertContains(picker_response, "Jones Family")
         self.assertContains(picker_response, "Add a family")
+        self.assertContains(picker_response, "images/logo.png")
         self.assertContains(picker_response, f'href="{reverse("create_family")}"')
         self.assertNotContains(picker_response, "Inactive Family")
 
@@ -4114,87 +4121,7 @@ class FamilyAdminExperienceTests(TestCase):
         settings.refresh_from_db()
         self.assertEqual(settings.pick_type, "straight_up")
 
-    def test_settings_post_accepts_absolute_and_static_relative_logo_urls(self):
-        self.client.force_login(self.admin_user)
-
-        for logo_url in ("https://example.com/logo.png", "/static/images/custom-logo.png"):
-            with self.subTest(logo_url=logo_url):
-                response = self.client.post(
-                    self._settings_url(),
-                    {
-                        "family_name": self.family.name,
-                        "pool_name": self.pool.name,
-                        "logo_url": logo_url,
-                        "picks_lock_mode": PoolSettings.PicksLockMode.KICKOFF,
-                        "allow_tiebreaker": "on",
-                        **self._default_scoring_fields(),
-                    },
-                )
-                self.assertRedirects(response, self._settings_url())
-                self.family.refresh_from_db()
-                self.assertEqual(self.family.logo_url, logo_url)
-
-    def test_settings_post_rejects_invalid_logo_url_without_mutation(self):
-        self.family.logo_url = "https://example.com/original.png"
-        self.family.save(update_fields=["logo_url"])
-        self.client.force_login(self.admin_user)
-
-        # "//host/..." is protocol-relative (an arbitrary external host) and
-        # browsers normalize "\" to "/", so "/\host/..." resolves the same way
-        # — neither may slip through the site-relative-path fast path.
-        for bad_value in (
-            "not a url",
-            "//evil.example/logo.png",
-            "/\\evil.example/logo.png",
-        ):
-            with self.subTest(logo_url=bad_value):
-                response = self.client.post(
-                    self._settings_url(),
-                    {
-                        "family_name": self.family.name,
-                        "pool_name": self.pool.name,
-                        "logo_url": bad_value,
-                        "allow_tiebreaker": "on",
-                        **self._default_scoring_fields(),
-                    },
-                )
-
-                self.assertEqual(response.status_code, 200)
-                self.assertContains(response, "Enter a full URL")
-                self.family.refresh_from_db()
-                self.assertEqual(self.family.logo_url, "https://example.com/original.png")
-
-    def test_settings_post_clears_logo_url_and_audits_change(self):
-        self.family.logo_url = "https://example.com/original.png"
-        self.family.save(update_fields=["logo_url"])
-        self.client.force_login(self.admin_user)
-
-        response = self.client.post(
-            self._settings_url(),
-            {
-                "family_name": self.family.name,
-                "pool_name": self.pool.name,
-                "logo_url": "",
-                "picks_lock_mode": PoolSettings.PicksLockMode.KICKOFF,
-                "allow_tiebreaker": "on",
-                **self._default_scoring_fields(),
-            },
-        )
-
-        self.assertRedirects(response, self._settings_url())
-        self.family.refresh_from_db()
-        self.assertIsNone(self.family.logo_url)
-        audit = FamilyAuditLog.objects.get(
-            family=self.family,
-            actor=self.admin_user,
-            action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
-            target_type="AdminSettings",
-        )
-        self.assertIn("family.logo_url", audit.metadata["changed_fields"])
-
-    def test_lobby_falls_back_to_default_logo_when_family_logo_url_errors(self):
-        self.family.logo_url = "https://example.com/broken.png"
-        self.family.save(update_fields=["logo_url"])
+    def test_lobby_uses_static_default_logo_when_family_has_no_canonical_logo(self):
         self.client.force_login(self.member)
 
         response = self.client.get(
@@ -4205,8 +4132,6 @@ class FamilyAdminExperienceTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "https://example.com/broken.png")
-        self.assertContains(response, "onerror=")
         self.assertContains(response, "images/logo.png")
 
     def test_scoring_rules_validation_requires_value_when_bonus_enabled(self):
@@ -4593,9 +4518,10 @@ class FamilyAdminExperienceTests(TestCase):
             {
                 "family_name": "Updated Smith Family",
                 "pool_name": "Updated Main Pickem",
-                "picks_lock_mode": PoolSettings.PicksLockMode.SUNDAY_1PM,
                 "allow_tiebreaker": "on",
-                **self._default_scoring_fields(),
+                **self._default_scoring_fields(
+                    picks_lock_mode=PoolSettings.PicksLockMode.SUNDAY_1PM,
+                ),
                 "family_id": self.other_family.id,
                 "pool_id": self.other_pool.id,
                 "site_banner_id": SiteBanner.objects.create(
@@ -6933,6 +6859,384 @@ class InviteFlowTests(TestCase):
         )
 
 
+class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
+    def _default_scoring_fields(self, **overrides):
+        overrides.setdefault(
+            'picks_lock_mode', PoolSettings.PicksLockMode.KICKOFF,
+        )
+        return super()._default_scoring_fields(**overrides)
+
+    def setUp(self):
+        super().setUp()
+        self._logo_storage_tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._logo_storage_tmp.cleanup)
+        field = Family._meta.get_field('logo')
+        self._previous_logo_storage = field.storage
+        field.storage = FileSystemStorage(location=self._logo_storage_tmp.name)
+        self.addCleanup(setattr, field, 'storage', self._previous_logo_storage)
+        # The fixture accessed ``family.logo`` before this override, so its
+        # cached FieldFile keeps the original storage instance.
+        self.family.logo.storage = field.storage
+
+    def _logo_upload(self):
+        data = BytesIO()
+        Image.new('RGB', (24, 12), 'red').save(data, format='PNG')
+        return SimpleUploadedFile('untrusted-name.png', data.getvalue(), content_type='image/png')
+
+    def test_streaming_handler_marks_and_aborts_only_after_exact_five_mib(self):
+        from pickem_homepage.upload_handlers import (
+            FamilyLogoUploadSizeLimitHandler,
+            MAX_FAMILY_LOGO_UPLOAD_BYTES,
+        )
+
+        request = SimpleNamespace()
+        handler = FamilyLogoUploadSizeLimitHandler(request)
+        handler.new_file('logo', 'untrusted.png', 'image/png', None)
+        self.assertEqual(
+            handler.receive_data_chunk(b'x' * MAX_FAMILY_LOGO_UPLOAD_BYTES, 0),
+            b'x' * MAX_FAMILY_LOGO_UPLOAD_BYTES,
+        )
+        with self.assertRaises(StopUpload):
+            handler.receive_data_chunk(b'x', MAX_FAMILY_LOGO_UPLOAD_BYTES)
+        self.assertEqual(request._family_logo_upload_error, 'file_too_large')
+
+    def test_admin_uploads_only_canonical_logo_and_settings_template_is_multipart(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            self._settings_url(),
+            {
+                'family_name': self.family.name,
+                'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'logo': self._logo_upload(),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertTrue(self.family.logo.name.endswith('.webp'))
+        rendered = self.client.get(self._settings_url())
+        self.assertContains(rendered, 'enctype="multipart/form-data"')
+        self.assertContains(rendered, 'accept="image/jpeg,image/png,image/webp"')
+        self.assertContains(rendered, 'Choose a JPEG, PNG, or WebP image up to 5 MB.')
+        self.assertNotContains(rendered, 'logo_url')
+
+    def test_settings_logo_editor_keeps_native_form_contract_and_enhancement_hooks(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.get(self._settings_url())
+
+        self.assertContains(response, 'data-family-logo-form')
+        self.assertContains(response, 'id="id_logo"')
+        self.assertContains(response, 'data-family-logo-server-preview')
+        self.assertContains(response, 'data-family-logo-editor')
+        self.assertContains(response, 'data-family-logo-clear')
+        self.assertContains(response, 'data-family-logo-save')
+        self.assertContains(response, 'data-family-logo-adjust')
+        self.assertContains(response, 'data-family-logo-full-image')
+        for field_name in ('crop_x', 'crop_y', 'crop_width', 'crop_height', 'remove_logo'):
+            self.assertContains(response, 'name="%s"' % field_name)
+        self.assertContains(response, 'vendor/cropperjs/cropper.js')
+        self.assertContains(response, 'js/family-logo-editor.js')
+        self.assertNotContains(response, 'logo_url')
+
+    def test_settings_error_keeps_bound_values_and_old_server_logo(self):
+        self.family.logo.save('already.webp', SimpleUploadedFile('already.webp', b'canonical'), save=True)
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            self._settings_url(),
+            {
+                'family_name': 'Edited Family', 'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'logo': SimpleUploadedFile('bad.png', b'not-an-image', content_type='image/png'),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="Edited Family"')
+        self.assertContains(response, 'data-family-logo-saved-image')
+        self.assertContains(response, 'Select the file again before saving settings.')
+
+    def test_settings_only_renders_canonical_or_static_logo_sources(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.get(self._settings_url())
+
+        self.assertContains(response, 'images/logo.png')
+        self.assertNotContains(response, 'blob:')
+        self.assertNotContains(response, 'logo_url')
+
+    def test_invalid_logo_preserves_existing_reference(self):
+        self.family.logo.save('already.webp', SimpleUploadedFile('already.webp', b'canonical'), save=True)
+        original = self.family.logo.name
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            self._settings_url(),
+            {'family_name': self.family.name, 'pool_name': self.pool.name, **self._default_scoring_fields(),
+             'logo': SimpleUploadedFile('bad.png', b'not-an-image', content_type='image/png')},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.family.refresh_from_db()
+        self.assertEqual(self.family.logo.name, original)
+        self.assertContains(response, "safely read")
+
+    def test_crop_coordinates_are_forwarded_only_with_source_file(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.post(self._settings_url(), {
+            'family_name': self.family.name, 'pool_name': self.pool.name,
+            **self._default_scoring_fields(), 'logo': self._logo_upload(),
+            'crop_x': '0', 'crop_y': '0', 'crop_width': '12', 'crop_height': '12',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertTrue(self.family.logo.name.endswith('.webp'))
+
+    def test_invalid_crop_and_replacement_removal_tampering_preserve_logo(self):
+        self.family.logo.save('already.webp', SimpleUploadedFile('already.webp', b'canonical'), save=True)
+        original = self.family.logo.name
+        self.client.force_login(self.admin_user)
+        for payload in (
+            {'crop_x': '0', 'crop_y': '0', 'crop_width': '12'},
+            {'crop_x': '0', 'crop_y': '0', 'crop_width': '12', 'crop_height': '11'},
+            {'remove_logo': 'true', 'logo': self._logo_upload()},
+        ):
+            with self.subTest(payload=payload):
+                response = self.client.post(self._settings_url(), {
+                    'family_name': self.family.name, 'pool_name': self.pool.name,
+                    **self._default_scoring_fields(), **payload,
+                })
+                self.assertEqual(response.status_code, 200)
+                self.family.refresh_from_db()
+                self.assertEqual(self.family.logo.name, original)
+
+    def test_remove_logo_clears_reference_and_audits_presence_only(self):
+        self.family.logo.save('already.webp', SimpleUploadedFile('already.webp', b'canonical'), save=True)
+        self.client.force_login(self.admin_user)
+        response = self.client.post(self._settings_url(), {
+            'family_name': self.family.name, 'pool_name': self.pool.name,
+            **self._default_scoring_fields(), 'remove_logo': 'true',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertFalse(self.family.logo.name)
+        audit = FamilyAuditLog.objects.filter(family=self.family).latest('created_at')
+        self.assertEqual(audit.metadata['logo'], {'before_present': True, 'after_present': False})
+
+    def test_replacement_deletes_only_the_previous_logo_after_commit(self):
+        self.family.logo.save('previous.webp', SimpleUploadedFile('previous.webp', b'canonical'), save=True)
+        old_name = self.family.logo.name
+        self.client.force_login(self.admin_user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(self._settings_url(), {
+                'family_name': self.family.name,
+                'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'logo': self._logo_upload(),
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertNotEqual(self.family.logo.name, old_name)
+        self.assertFalse(self.family.logo.storage.exists(old_name))
+        self.assertTrue(self.family.logo.storage.exists(self.family.logo.name))
+
+    def test_removal_deletes_only_the_previous_logo_after_commit(self):
+        self.family.logo.save('previous.webp', SimpleUploadedFile('previous.webp', b'canonical'), save=True)
+        old_name = self.family.logo.name
+        self.client.force_login(self.admin_user)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(self._settings_url(), {
+                'family_name': self.family.name,
+                'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'remove_logo': 'true',
+            })
+
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertFalse(self.family.logo.name)
+        self.assertFalse(Family._meta.get_field('logo').storage.exists(old_name))
+
+    def test_first_upload_has_no_obsolete_logo_cleanup(self):
+        storage = Family._meta.get_field('logo').storage
+        self.client.force_login(self.admin_user)
+
+        with patch.object(storage, 'delete', wraps=storage.delete) as delete, self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(self._settings_url(), {
+                'family_name': self.family.name,
+                'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'logo': self._logo_upload(),
+            })
+
+        self.assertEqual(response.status_code, 302)
+        delete.assert_not_called()
+
+    def test_audit_failure_compensates_only_new_logo_and_retains_old_reference(self):
+        self.family.logo.save('previous.webp', SimpleUploadedFile('previous.webp', b'canonical'), save=True)
+        old_name = self.family.logo.name
+        storage = Family._meta.get_field('logo').storage
+        self.client.force_login(self.admin_user)
+
+        with patch.object(FamilyAuditLog.objects, 'create', side_effect=RuntimeError('audit failed')), \
+             patch.object(storage, 'delete', wraps=storage.delete) as delete:
+            with self.assertRaises(RuntimeError):
+                self.client.post(self._settings_url(), {
+                    'family_name': self.family.name,
+                    'pool_name': self.pool.name,
+                    **self._default_scoring_fields(),
+                    'logo': self._logo_upload(),
+                })
+
+        self.family.refresh_from_db()
+        self.assertEqual(self.family.logo.name, old_name)
+        self.assertTrue(storage.exists(old_name))
+        self.assertEqual(delete.call_count, 1)
+        self.assertNotEqual(delete.call_args.args[0], old_name)
+
+    def test_hostile_logo_posts_have_no_storage_or_audit_side_effects(self):
+        self.family.logo.save('previous.webp', SimpleUploadedFile('previous.webp', b'canonical'), save=True)
+        old_name = self.family.logo.name
+        storage = Family._meta.get_field('logo').storage
+        audit_count = FamilyAuditLog.objects.filter(family=self.family).count()
+        cases = (
+            (Client(), self._settings_url(), 302),
+            (self.client, self._settings_url(), 403, self.member),
+            (self.client, self._settings_url(), 404, self.outsider),
+            (self.client, self._settings_url(pool=self.other_pool), 404, self.admin_user),
+        )
+
+        with patch.object(storage, 'save', wraps=storage.save) as save:
+            for client, url, expected_status, *user in cases:
+                with self.subTest(url=url, expected_status=expected_status):
+                    if user:
+                        client.force_login(user[0])
+                    response = client.post(url, {
+                        'family_name': self.family.name,
+                        'pool_name': self.pool.name,
+                        **self._default_scoring_fields(),
+                        'logo': self._logo_upload(),
+                        'family_id': self.other_family.id,
+                        'pool_id': self.other_pool.id,
+                        'logo_key': 'family-logos/other-family/forged.webp',
+                    })
+                    self.assertEqual(response.status_code, expected_status)
+            save.assert_not_called()
+
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.admin_user)
+        with patch.object(storage, 'save', wraps=storage.save) as save:
+            csrf_response = csrf_client.post(self._settings_url(), {
+                'family_name': self.family.name,
+                'pool_name': self.pool.name,
+                **self._default_scoring_fields(),
+                'logo': self._logo_upload(),
+            })
+            self.assertEqual(csrf_response.status_code, 403)
+            save.assert_not_called()
+
+        self.family.refresh_from_db()
+        self.assertEqual(self.family.logo.name, old_name)
+        self.assertTrue(storage.exists(old_name))
+        self.assertEqual(FamilyAuditLog.objects.filter(family=self.family).count(), audit_count)
+
+    def test_member_picker_renders_only_canonical_logo_in_decorative_compact_mark(self):
+        self.family.logo.save(
+            'canonical.webp', SimpleUploadedFile('canonical.webp', b'canonical'), save=True
+        )
+        canonical_url = self.family.logo.url
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(reverse('family_picker'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, canonical_url)
+        self.assertContains(response, 'h-10 w-10 shrink-0 object-contain')
+        self.assertContains(response, 'alt="" aria-hidden="true"')
+        self.assertNotContains(response, 'alt="%s logo"' % self.family.name)
+        self.assertNotContains(response, 'logo_url')
+        self.assertNotContains(response, 'blob:')
+
+    def test_picker_default_and_superadmin_variants_use_same_static_mark_contract(self):
+        superuser = User.objects.create_user(
+            'logo-superuser', email='logosre@example.com', password='pass', is_superuser=True,
+        )
+        self.client.force_login(superuser)
+
+        response = self.client.get(reverse('family_picker'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Families you can oversee as Superuser')
+        self.assertContains(response, 'images/logo.png')
+        self.assertContains(response, 'alt="" aria-hidden="true"')
+        self.assertNotContains(response, 'logo_url')
+        self.assertNotContains(response, 'blob:')
+
+    def test_family_home_uses_canonical_or_default_decorative_compact_mark(self):
+        self.client.force_login(self.admin_user)
+        lobby_url = reverse(
+            'family_pool_home',
+            kwargs={'family_slug': self.family.slug, 'pool_slug': self.pool.slug},
+        )
+
+        default_response = self.client.get(lobby_url)
+        self.assertEqual(default_response.status_code, 200)
+        self.assertContains(default_response, 'images/logo.png')
+        self.assertContains(default_response, 'alt="" aria-hidden="true"')
+        self.assertContains(default_response, 'h-16 w-16 shrink-0 object-contain sm:h-20 sm:w-20')
+        self.assertNotContains(default_response, 'logo_url')
+
+        self.family.logo.save(
+            'canonical.webp', SimpleUploadedFile('canonical.webp', b'canonical'), save=True
+        )
+        canonical_url = self.family.logo.url
+        saved_response = self.client.get(lobby_url)
+        self.assertContains(saved_response, canonical_url)
+        self.assertNotContains(saved_response, 'blob:')
+
+    def test_uploaded_and_removed_logo_render_only_persisted_canonical_or_default_sources(self):
+        self.client.force_login(self.admin_user)
+        settings_url = self._settings_url()
+        picker_url = reverse('family_picker')
+        lobby_url = reverse(
+            'family_pool_home',
+            kwargs={'family_slug': self.family.slug, 'pool_slug': self.pool.slug},
+        )
+        upload_response = self.client.post(settings_url, {
+            'family_name': self.family.name,
+            'pool_name': self.pool.name,
+            **self._default_scoring_fields(),
+            'logo': self._logo_upload(),
+        })
+        self.assertEqual(upload_response.status_code, 302)
+        self.family.refresh_from_db()
+        canonical_url = self.family.logo.url
+        self.assertTrue(self.family.logo.name.endswith('.webp'))
+
+        for url in (settings_url, picker_url, lobby_url):
+            with self.subTest(saved_surface=url):
+                response = self.client.get(url)
+                self.assertContains(response, canonical_url)
+                self.assertNotContains(response, 'blob:')
+                self.assertNotContains(response, 'logo_url')
+                self.assertNotContains(response, 'untrusted-name.png')
+
+        remove_response = self.client.post(settings_url, {
+            'family_name': self.family.name,
+            'pool_name': self.pool.name,
+            **self._default_scoring_fields(),
+            'remove_logo': 'true',
+        })
+        self.assertEqual(remove_response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertFalse(self.family.logo.name)
+
+        for url in (settings_url, picker_url, lobby_url):
+            with self.subTest(default_surface=url):
+                response = self.client.get(url)
+                self.assertContains(response, 'images/logo.png')
+                self.assertNotContains(response, canonical_url)
+                self.assertNotContains(response, 'blob:')
+                self.assertNotContains(response, 'logo_url')
 class StaleInviteRedemptionTests(TestCase):
     """A previously-issued invite link is otherwise perfectly valid (unexpired,
     unused, correct family/pool) but must still be rejected when redeemed by a
@@ -7026,7 +7330,6 @@ class FamilyAdminSettingsFormTests(TestCase):
         payload = {
             'family_name': 'Smith Family',
             'pool_name': 'Main Pickem',
-            'logo_url': '',
             'picks_lock_mode': PoolSettings.PicksLockMode.KICKOFF,
             'win_points': '1',
             'tie_points': '0',
@@ -7054,6 +7357,21 @@ class FamilyAdminSettingsFormTests(TestCase):
     def test_baseline_payload_is_valid(self):
         form = self._form()
         self.assertTrue(form.is_valid(), form.errors)
+
+    def test_crop_fields_are_all_or_nothing_strict_square_integers(self):
+        valid = self._form(crop_x='0', crop_y='1', crop_width='12', crop_height='12')
+        self.assertTrue(valid.is_valid(), valid.errors)
+        self.assertEqual(valid.cleaned_data['crop_data'], {'x': 0, 'y': 1, 'width': 12, 'height': 12})
+        for invalid in (
+            {'crop_x': '0'},
+            {'crop_x': '0', 'crop_y': '0', 'crop_width': '12', 'crop_height': '12.0'},
+            {'crop_x': '-1', 'crop_y': '0', 'crop_width': '12', 'crop_height': '12'},
+            {'crop_x': '0', 'crop_y': '0', 'crop_width': '12', 'crop_height': '11'},
+        ):
+            with self.subTest(invalid=invalid):
+                form = self._form(**invalid)
+                self.assertFalse(form.is_valid())
+                self.assertIn('logo', form.errors)
 
     def test_zero_win_points_rejected(self):
         form = self._form(win_points='0')

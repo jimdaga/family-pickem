@@ -1,30 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: v1.1
+milestone_name: Family Logo Uploads
+current_phase: 08
 status: completed
-stopped_at: Phase 5 executed and validated
-last_updated: "2026-07-03T00:18:07.935Z"
+stopped_at: Phase 8 context gathered
+last_updated: "2026-07-19T10:32:58.690Z"
+last_activity: 2026-07-19
+last_activity_desc: Phase 08 execution started
 progress:
-  total_phases: 8
-  completed_phases: 5
-  total_plans: 25
-  completed_plans: 25
-  percent: 63
-current_phase: 05
+  total_phases: 3
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 8
+  percent: 67
+current_phase_name: private-aws-delivery-and-adversarial-verification
 ---
 
 # GSD State
 
 **Project:** Family Pickem Multi-Tenancy  
-**Updated:** 2026-07-03 after Phase 5 execution and validation
+**Updated:** 2026-07-18 after v1.1 roadmap creation
 
 ## Project Reference
 
 See: `.planning/PROJECT.md`
 
 **Core value:** Families can run private pick'em pools with strict server-enforced data isolation.  
-**Current focus:** Phase 05 — family admin experience
+**Current focus:** Phase 08 — private-aws-delivery-and-adversarial-verification
 
 ## Completed
 
@@ -218,6 +221,9 @@ See: `.planning/PROJECT.md`
 - [Phase 05-family-admin-experience]: 05-06: Week-winner admin uses explicit tenant admin URLs and family_member_required(admin) for browser access.
 - [Phase 05-family-admin-experience]: 05-06: Week numbers are validated as integers in 1..18 before constructing dynamic winner and bonus fields.
 - [Phase 05-family-admin-experience]: 05-06: Legacy commissioner page and JSON handlers deny globally instead of rendering or mutating global tools.
+- [Phase 06]: Image uploads use restricted decoder verification and fresh WebP canonicalization.
+- [Phase 08]: Dedicated logo ESO target uses the same non-empty-key condition as every Deployment envFrom reference.
+- [Phase 08]: Reuse an adopted active key; rotate only when credential metadata does not match, with rollback before key retirement.
 
 ## Verification
 
@@ -291,9 +297,9 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 
 ## Session
 
-**Last session:** 2026-07-03T00:18:07.928Z
-**Stopped at:** Phase 5 executed and validated
-**Resume file:** .planning/phases/05-family-admin-experience/05-07-SUMMARY.md
+**Last session:** 2026-07-19T10:32:23.615Z
+**Stopped at:** Phase 8 context gathered
+**Resume file:** .planning/phases/08-private-aws-delivery-and-adversarial-verification/08-CONTEXT.md
 
 ## Performance Metrics
 
@@ -316,3 +322,16 @@ Proceed to Phase 5 planning/execution for family admin experience. Do not treat 
 | Phase 05-family-admin-experience P04 | 6min | 3 tasks | 6 files |
 | Phase 05-family-admin-experience P05 | 6min | 3 tasks | 5 files |
 | Phase 05-family-admin-experience P06 | 18min | 3 tasks | 7 files |
+| Phase 06 P01 | 7 min | 2 tasks | 4 files |
+| Phase 06 P02 | 18 min | 3 tasks | 13 files |
+| Phase 07 P01 | 18 min | 3 tasks | 7 files |
+| Phase 07 P02 | 22 min | 2 tasks | 3 files |
+| Phase 07 P03 | 9 min | 2 tasks | 4 files |
+| Phase 08 P02 | 24min | 2 tasks | 9 files |
+
+## Current Position
+
+Phase: 08 (private-aws-delivery-and-adversarial-verification) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-07-19 — Phase 08 execution started

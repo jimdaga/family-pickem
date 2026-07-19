@@ -1,4 +1,5 @@
 {% extends 'pickem/base.html' %}
+{% load static %}
 
 {% block title %}Choose Family - Family Pick'em{% endblock %}
 
@@ -22,7 +23,14 @@
         {% for choice in member_family_choices %}
         <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="min-w-0 flex-1">
-                <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                <div class="flex flex-wrap items-center gap-2">
+                    {% if choice.family.logo %}
+                    <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain">
+                    {% else %}
+                    <img src="{% static 'images/logo.png' %}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain">
+                    {% endif %}
+                    <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                </div>
                 {% if choice.pool %}
                 <p class="text-sm text-text-secondary-light dark:text-text-secondary">
                     {{ choice.pool.name }} - {{ choice.pool.display_season }}
@@ -42,8 +50,8 @@
                 {% endif %}
                 {% if choice.url %}
                 <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
-                    {% if choice.family.logo_url %}
-                    <img src="{{ choice.family.logo_url }}" alt="{{ choice.family.name }} logo" class="h-7 w-7 rounded-full object-cover bg-white/20" onerror="this.remove()">
+                    {% if choice.family.logo %}
+                    <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-7 w-7 object-contain">
                     {% endif %}
                     <span>Enter pool</span>
                     <i class="fas fa-arrow-right"></i>
@@ -68,7 +76,14 @@
         {% for choice in superadmin_family_choices %}
         <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="min-w-0 flex-1">
-                <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                <div class="flex flex-wrap items-center gap-2">
+                    {% if choice.family.logo %}
+                    <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain">
+                    {% else %}
+                    <img src="{% static 'images/logo.png' %}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain">
+                    {% endif %}
+                    <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                </div>
                 {% if choice.pool %}
                 <p class="text-sm text-text-secondary-light dark:text-text-secondary">
                     {{ choice.pool.name }} - {{ choice.pool.display_season }}
@@ -86,8 +101,8 @@
                 </span>
                 {% if choice.url %}
                 <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-yellow-400/40 bg-yellow-400/10 text-yellow-700 dark:text-yellow-200 font-semibold hover:bg-yellow-400/15 transition-colors">
-                    {% if choice.family.logo_url %}
-                    <img src="{{ choice.family.logo_url }}" alt="{{ choice.family.name }} logo" class="h-7 w-7 rounded-full object-cover bg-white/20" onerror="this.remove()">
+                    {% if choice.family.logo %}
+                    <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-7 w-7 object-contain">
                     {% endif %}
                     <span>Open family</span>
                     <i class="fas fa-arrow-right"></i>

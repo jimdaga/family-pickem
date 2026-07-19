@@ -42,6 +42,7 @@ from urllib.parse import parse_qs, urlparse
 from collections import defaultdict
 import hashlib
 import json
+import logging
 import secrets
 
 from datetime import date, timedelta
@@ -58,6 +59,7 @@ from pickem_api.authz import (
     require_tenant_context,
 )
 from pickem_api.models import Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, Pool, PoolSettings
+from pickem_api.logo_processing import LogoValidationError, process_family_logo
 from pickem_homepage.authz import family_member_required
 from pickem_homepage.emailing import (
     resend_invite_email_is_configured,
@@ -65,6 +67,22 @@ from pickem_homepage.emailing import (
 )
 
 ESPN_NEWS_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/news'
+logger = logging.getLogger(__name__)
+
+
+def _delete_obsolete_family_logo(storage, family_id, logo_name):
+    """Best-effort cleanup for an already-committed, server-generated logo."""
+    try:
+        storage.delete(logo_name)
+    except Exception:
+        # Keep the stable tenant/key correlation needed for operational cleanup,
+        # without ever emitting an upload filename, signed URL, or credentials.
+        logger.warning(
+            "Family logo cleanup failed family_id=%s logo_key=%s",
+            family_id,
+            logo_name,
+            exc_info=True,
+        )
 
 
 @require_http_methods(["GET", "POST"])
@@ -1276,12 +1294,10 @@ ADMIN_POOL_SETTINGS_FIELDS = [
 def build_admin_settings_metadata(*, family, pool, settings, cleaned_data):
     before = {
         'family.name': family.name,
-        'family.logo_url': family.logo_url or '',
         'pool.name': pool.name,
     }
     after = {
         'family.name': cleaned_data['family_name'],
-        'family.logo_url': cleaned_data['logo_url'],
         'pool.name': cleaned_data['pool_name'],
     }
     for field in ADMIN_POOL_SETTINGS_FIELDS:
@@ -1311,15 +1327,20 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
     initial = {
         'family_name': family.name,
         'pool_name': pool.name,
-        'logo_url': family.logo_url or '',
     }
     for field in ADMIN_POOL_SETTINGS_FIELDS:
         initial[field] = getattr(pool_settings, field)
 
     form = FamilyAdminSettingsForm(
         request.POST if request.method == 'POST' else None,
+        request.FILES if request.method == 'POST' else None,
         initial=initial,
     )
+
+    # The streaming handler has already run during CSRF multipart parsing.
+    # Keep the user on the same bound form and avoid every persistence seam.
+    if request.method == 'POST' and getattr(request, '_family_logo_upload_error', None) == 'file_too_large':
+        form.add_error('logo', 'Choose an image smaller than 5 MB, then try again.')
 
     if request.method == 'POST' and form.is_valid():
         with transaction.atomic():
@@ -1338,15 +1359,68 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
                 cleaned_data=form.cleaned_data,
             )
 
+            processed_logo = None
+            obsolete_logo_name = None
+            if form.cleaned_data.get('logo'):
+                try:
+                    processed_logo = process_family_logo(
+                        form.cleaned_data['logo'], form.cleaned_data['crop_data']
+                    )
+                except LogoValidationError as error:
+                    error_messages = {
+                        'file_too_large': 'Choose an image smaller than 5 MB, then try again.',
+                        'invalid_crop': 'The logo selection could not be processed. Choose the image again and save settings.',
+                        'invalid_image': 'We couldn\'t safely read that image. Choose a different JPEG, PNG, or WebP file.',
+                        'too_many_pixels': 'We couldn\'t safely read that image. Choose a different JPEG, PNG, or WebP file.',
+                    }
+                    form.add_error('logo', error_messages.get(error.code, error_messages['invalid_image']))
+                    processed_logo = None
+                    # A form error must render the submitted ordinary fields,
+                    # without mutating settings, audit records, or storage.
+                    return render(request, 'pickem/family_admin_settings.html', {
+                        'family': family, 'pool': pool, 'membership': tenant_context.membership,
+                        'gameseason': pool.season or get_season(), 'form': form, 'pool_settings': pool_settings,
+                        'scoring_point_fields': [form['win_points'], form['tie_points'], form['weekly_winner_points']],
+                        'tiebreaker_fields': [form['primary_tiebreaker'], form['secondary_tiebreaker']],
+                        'rule_choice_fields': [form['pick_type'], form['missed_pick_policy'], form['late_join_policy']],
+                    })
+
+            if form.cleaned_data.get('remove_logo'):
+                obsolete_logo_name = locked_family.logo.name
+                old_logo_present = bool(obsolete_logo_name)
+                if old_logo_present:
+                    locked_family.logo = None
+                    locked_family.save(update_fields=['logo', 'updated_at'])
+                    metadata['logo'] = {'before_present': True, 'after_present': False}
+                    changed_fields.append('family.logo')
+
+            if processed_logo is not None:
+                old_logo_name = locked_family.logo.name
+                old_logo_present = bool(old_logo_name)
+                # Storage writes before the model row. Keep enough state to
+                # compensate only the generated object if DB/audit fails.
+                locked_family.logo.save('canonical.webp', processed_logo, save=False)
+                new_logo_name = locked_family.logo.name
+                try:
+                    update_fields = ['logo', 'updated_at']
+                    if 'family.name' in changed_fields:
+                        locked_family.name = form.cleaned_data['family_name']
+                        update_fields.append('name')
+                    locked_family.save(update_fields=update_fields)
+                    metadata['logo'] = {'before_present': old_logo_present, 'after_present': True}
+                    changed_fields.append('family.logo')
+                    obsolete_logo_name = old_logo_name
+                except Exception:
+                    locked_family.logo.storage.delete(new_logo_name)
+                    locked_family.logo.name = old_logo_name
+                    raise
+
             if changed_fields:
                 family_fields = []
                 if 'family.name' in changed_fields:
                     locked_family.name = form.cleaned_data['family_name']
                     family_fields.append('name')
-                if 'family.logo_url' in changed_fields:
-                    locked_family.logo_url = form.cleaned_data['logo_url'] or None
-                    family_fields.append('logo_url')
-                if family_fields:
+                if family_fields and processed_logo is None:
                     locked_family.save(update_fields=family_fields + ['updated_at'])
                 if 'pool.name' in changed_fields:
                     locked_pool.name = form.cleaned_data['pool_name']
@@ -1359,16 +1433,32 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
                 if settings_fields:
                     locked_settings.save(update_fields=settings_fields + ['updated_at'])
 
-                FamilyAuditLog.objects.create(
-                    family=locked_family,
-                    pool=locked_pool,
-                    actor=request.user,
-                    action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
-                    target_type='AdminSettings',
-                    target_id=str(locked_pool.id),
-                    metadata=metadata,
-                    **get_invite_audit_context(request),
-                )
+                try:
+                    FamilyAuditLog.objects.create(
+                        family=locked_family,
+                        pool=locked_pool,
+                        actor=request.user,
+                        action=FamilyAuditLog.Action.POOL_SETTINGS_UPDATED,
+                        target_type='AdminSettings',
+                        target_id=str(locked_pool.id),
+                        metadata=metadata,
+                        **get_invite_audit_context(request),
+                    )
+                except Exception:
+                    if processed_logo is not None:
+                        # The surrounding transaction restores the row; this
+                        # compensates the separate storage write best-effort.
+                        locked_family.logo.storage.delete(new_logo_name)
+                        locked_family.logo.name = old_logo_name
+                    raise
+                if obsolete_logo_name:
+                    transaction.on_commit(
+                        lambda storage=locked_family.logo.storage,
+                        family_id=locked_family.id,
+                        logo_name=obsolete_logo_name: _delete_obsolete_family_logo(
+                            storage, family_id, logo_name
+                        )
+                    )
                 messages.success(request, "Settings updated.")
             else:
                 messages.info(request, "No settings changes to save.")

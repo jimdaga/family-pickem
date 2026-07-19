@@ -37,6 +37,10 @@ spec:
           envFrom:
           - secretRef:
               name: {{ include "family-pickem.fullname" . }}-envvars
+          {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.logoStorageKey }}
+          - secretRef:
+              name: {{ include "family-pickem.fullname" . }}-logo-storage
+          {{- end }}
           env:
           - name: THIS_POD_IP
             valueFrom:
@@ -53,6 +57,10 @@ spec:
           envFrom:
           - secretRef:
               name: {{ include "family-pickem.fullname" . }}-envvars
+          {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.logoStorageKey }}
+          - secretRef:
+              name: {{ include "family-pickem.fullname" . }}-logo-storage
+          {{- end }}
           env:
           - name: THIS_POD_IP
             valueFrom:

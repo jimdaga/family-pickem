@@ -1,199 +1,85 @@
-# Roadmap: Family Pickem Multi-Tenancy
+# Roadmap: Family Logo Uploads
 
-**Created:** 2026-06-28  
-**Current focus:** Phase 5: Family Admin Experience
+**Milestone:** v1.1  
+**Created:** 2026-07-18  
+**Current focus:** Phase 6 — Secure Logo Foundation
 
-## Phase 0: Discovery And Repo Readiness
+## Phase 6: Secure Logo Foundation
 
-**Status:** Complete
+**Goal:** Establish a tenant-safe logo data model and server-side image processing boundary before any upload UI can persist content.
 
-Discovery artifacts:
+**Requirements:** IMG-01, IMG-02, IMG-03, IMG-04, S3-01, SAFE-01
 
-- `DISCOVERY.md`
-- `FAMILY_MULTI_TENANCY_PLAN.md`
-- `SECURITY_THREAT_MODEL.md`
-- `MIGRATION_PLAN.md`
-- `TEST_PLAN.md`
+**Success criteria:**
 
-Definition of done:
+1. The Family model persists a server-owned logo object reference, replacing arbitrary user-entered logo URLs without breaking default-logo fallbacks.
+2. The server accepts only decoder-verified JPEG, PNG, and WebP inputs within explicit byte and pixel limits; unsupported, spoofed, malformed, and decompression-bomb inputs fail safely.
+3. Crop inputs are bounded and validated; the only persisted logo is a generated fixed-size, metadata-free raster asset with a server-generated object key under `family-logos/`.
+4. Tenant-aware commissioner authorization and CSRF are enforced before any logo mutation, and tests cover hostile file/crop/key/tenant input.
 
-- Existing architecture, domain model, routes/APIs, security risks, UX gaps, and migration strategy documented.
-- Existing checks/tests run.
+## Phase 7: Commissioner Upload and Delivery Experience
 
-## Phase 1: Domain Schema Foundation
+**Goal:** Replace the logo URL field with a clear commissioner flow that previews, crops, saves, replaces, removes, and renders a processed family logo.
 
-**Goal:** Introduce the family/pool schema and safely attach existing global data to a default legacy family/pool without changing runtime behavior broadly.
+**Requirements:** LOGO-01, LOGO-02, LOGO-03, LOGO-04, S3-04
 
-**Plans:** 4/4 plans complete
+**Success criteria:**
 
-Plans:
+1. A family owner/admin using the existing commissioner/settings page can select a local image and see a fixed-square Cropper.js preview with zoom/reposition controls.
+2. Save, replace, and remove actions preserve tenant context, surface useful validation feedback, and render the resulting logo/fallback consistently in family UI.
+3. Browser behavior cannot bypass server validation; templates render only the controlled processed-asset URL with safe image response handling.
+4. The former arbitrary URL entry path is removed from the commissioner experience.
 
-- [x] 01-01-PLAN.md — Create core family/pool/membership/invitation/audit schema.
-- [x] 01-02-PLAN.md — Add nullable pool scope and legacy competition data backfill.
-- [x] 01-03-PLAN.md — Add nullable family scope for homepage community and banner data.
-- [x] 01-04-PLAN.md — Run final Phase 1 verification after all implementation plans complete. (completed 2026-06-28)
+## Phase 8: Private AWS Delivery and Adversarial Verification
 
-Scope:
+**Goal:** Finish the production S3/ESO integration and prove the complete upload lifecycle withstands authorization, storage, and malicious-input attacks.
 
-- Add `Family`, `FamilyMembership`, `Pool`, `PoolSettings`, `FamilyInvitation`, and `FamilyAuditLog`.
-- Add nullable tenant FKs to tenant-owned legacy tables.
-- Add idempotent data migration for default legacy family/pool.
-- Backfill picks, standings, stats, message board rows, and banners.
-- Add admin registrations and focused model/migration tests.
+**Requirements:** S3-02, S3-03, SAFE-02, SAFE-03
 
-Definition of done:
-
-- Existing pages/tests still pass.
-- Every existing tenant-owned row has a legacy family/pool assignment where applicable.
-- New schema supports owner/admin/member roles and invite code lifecycle.
-- No route migration is required yet.
-
-## Phase 2: Authorization Foundation
-
-**Goal:** Centralize family/pool resolution, role checks, and tenant-scoped query helpers before moving pages.
-
-**Plans:** 3/3 plans complete
+**Plans:** 2/3 plans executed
 
 Plans:
+**Wave 1**
 
-- [x] 02-01-PLAN.md — Create core tenant authorization helpers.
-- [x] 02-02-PLAN.md — Add view/API guards and a proof integration.
-- [x] 02-03-PLAN.md — Run final Phase 2 verification and handoff. (completed 2026-06-28)
+- [x] 08-01-PLAN.md — Dedicated logo storage configuration, adversarial request coverage, and post-commit cleanup.
+- [x] 08-02-PLAN.md — Prefix-limited IAM provisioning and Secrets Manager/ESO/Helm delivery isolation.
 
-Scope:
+**Wave 2** *(blocked on Wave 1 completion)*
 
-- Add tenant authz helpers.
-- Add reusable guards for family/pool pages and API endpoints.
-- Add negative tests for non-member and wrong-role access.
-- Define 404 vs 403 behavior.
+- [ ] 08-03-PLAN.md — Automated gates plus staging and production lifecycle smoke before release.
 
-Definition of done:
+**Success criteria:**
 
-- New family/pool routes cannot be written without a shared guard.
-- Cross-family helper tests pass.
+1. The application has prefix-limited S3 permissions for `family-logos/` without public ACL/policy access, and the existing bucket’s Block Public Access/ownership/encryption posture remains intact.
+2. Development and production consume required S3 settings/credentials through the existing AWS Secrets Manager → ESO → Helm/Kubernetes flow; no credentials appear in Git or manually managed Kubernetes Secrets.
+3. Tests prove unauthenticated, ordinary-member, wrong-family, forged tenant/object-key, and missing-CSRF requests cannot mutate or infer another family’s logo.
+4. Create/replace/remove actions produce tenant-scoped audit entries and correctly clean up obsolete assets without deleting a currently referenced logo.
 
-## Phase 3: Onboarding And Family Selection
+## Requirement Coverage
 
-**Goal:** Let users create, join, and switch families/pools.
+| Requirement | Phase | Status |
+|---|---:|---|
+| LOGO-01 | 7 | Pending |
+| LOGO-02 | 7 | Pending |
+| LOGO-03 | 7 | Pending |
+| LOGO-04 | 7 | Pending |
+| IMG-01 | 6 | Pending |
+| IMG-02 | 6 | Pending |
+| IMG-03 | 6 | Pending |
+| IMG-04 | 6 | Pending |
+| S3-01 | 6 | Pending |
+| S3-02 | 8 | Pending |
+| S3-03 | 8 | Pending |
+| S3-04 | 7 | Pending |
+| SAFE-01 | 6 | Pending |
+| SAFE-02 | 8 | Pending |
+| SAFE-03 | 8 | Pending |
 
-**Plans:** 5/5 plans complete
+**Coverage:** 15/15 requirements mapped ✓
 
-Plans:
+## Phase Ordering
 
-- [x] 03-01-PLAN.md — Add post-login routing and onboarding shell.
-- [x] 03-02-PLAN.md — Add create-family flow with default pool.
-- [x] 03-03-PLAN.md — Add minimal invite creation and acceptance.
-- [x] 03-04-PLAN.md — Add header/mobile family switcher.
-- [x] 03-05-PLAN.md — Run final Phase 3 verification and handoff. (completed 2026-06-29)
+Phase 6 constructs the server-side security boundary first. Phase 7 adds the commissioner experience on top of canonical processed assets. Phase 8 applies least-privilege cloud delivery and validates the whole lifecycle against hostile and cross-family cases.
 
-Scope:
-
-- Post-login routing for zero/one/multiple family memberships.
-- Create family flow.
-- Join family by invite flow.
-- Header/mobile family switcher.
-- Empty states.
-
-Definition of done:
-
-- Signed-in users can get into an authorized family/pool context without seeing global league data.
-
-Completion evidence:
-
-- Final summary: `.planning/phases/03-onboarding-and-family-selection/03-05-SUMMARY.md`.
-- Django check, migration dry-run, focused `pickem_homepage pickem_api` tests, full test suite, and local public-home curl spot-check passed.
-- Remaining global gameplay page migration is explicitly handed off to Phase 4.
-
-## Phase 4: Family-Scoped App Pages
-
-**Goal:** Move user-facing gameplay pages into explicit tenant context.
-
-**Plans:** 6/6 plans complete
-
-Plans:
-
-- [x] 04-01-PLAN.md — Migrate dashboard/home into tenant context.
-- [x] 04-02-PLAN.md — Move pick submit/edit into tenant URLs with server-derived writes.
-- [x] 04-03-PLAN.md — Scope scores, standings, weekly winners, and rules.
-- [x] 04-04-PLAN.md — Make profiles, player lists, and message-board AJAX family-private.
-- [x] 04-05-PLAN.md — Clean shared navigation, shared context processors, dashboard, picks, and scores links.
-- [x] 04-06-PLAN.md — Complete final link cleanup, negative tests, and validation handoff.
-
-Scope:
-
-- Dashboard/home, scores, standings, picks, rules, profiles, message board.
-- Tenant-aware URLs and links.
-- Tenant-scoped query filters for picks, standings, stats, and community content.
-- Legacy route redirects.
-
-Definition of done:
-
-- Cross-family page/API access is denied.
-- No global pick/standing/message data appears inside a family context.
-
-## Phase 5: Family Admin Experience
-
-**Goal:** Replace global commissioner behavior with family owner/admin management.
-
-**Plans:** 7/7 plans executed
-
-Plans:
-
-- [x] 05-01-PLAN.md — Create tenant admin hub, scoped audit display, and admin navigation.
-- [x] 05-02-PLAN.md — Add family, pool, rules/settings editing, and banner non-leakage preservation.
-- [x] 05-03-PLAN.md — Add member role/status management with owner protections.
-- [x] 05-04-PLAN.md — Add simple current-model invite management.
-- [x] 05-05-PLAN.md — Add tenant-scoped manual pick and user-pick retrieval tools.
-- [x] 05-06-PLAN.md — Add week-winner tools and disable legacy commissioner routes.
-- [x] 05-07-PLAN.md — Complete final cross-feature validation and handoff.
-
-Scope:
-
-- Family settings.
-- Member management.
-- Invite management.
-- Role management.
-- Audit log display.
-- Tenant-scoped manual pick and week-winner admin actions.
-
-Definition of done:
-
-- Owners/admins can manage their family safely.
-- Members cannot access admin actions by direct URL/API call.
-
-## Phase 6: Production Migration And Hardening
-
-**Goal:** Enforce tenant constraints and harden production operations.
-
-Scope:
-
-- Make tenant FKs non-null after route/write migration.
-- Add tenant-scoped unique constraints and indexes.
-- Convert or harden cron/scoring paths to pool-aware behavior.
-- Add migration verification runbook.
-- Harden settings, CSRF, rate limiting, secrets, and logging.
-
-Definition of done:
-
-- Production data has enforced tenant boundaries.
-- Backup/rollback and verification procedures are documented and rehearsed.
-
-## Phase 7: Polish And QA
-
-**Goal:** Make the multi-family product feel native, clear, and trustworthy.
-
-Scope:
-
-- Copy pass from global league language to family/pool language.
-- Mobile family switcher QA.
-- Accessibility review.
-- Error/empty/loading states.
-- E2E happy path and cross-family isolation tests.
-
-Definition of done:
-
-- New visitor, no-family user, one-family user, multi-family user, owner/admin, and member journeys all pass manual QA.
-
-## Current Recommendation
-
-Proceed to Phase 5: replace global commissioner behavior with family owner/admin management. Phase 4 completed tenant-scoped user-facing gameplay pages and cross-family negative coverage, but family admin editing, cron/scoring hardening, and production migration hardening remain later-phase work.
+---
+*Roadmap created: 2026-07-18 for milestone v1.1*
