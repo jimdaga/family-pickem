@@ -6789,7 +6789,7 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, canonical_url)
-        self.assertContains(response, 'h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg')
+        self.assertContains(response, 'h-10 w-10 shrink-0 object-contain')
         self.assertContains(response, 'alt="" aria-hidden="true"')
         self.assertNotContains(response, 'alt="%s logo"' % self.family.name)
         self.assertNotContains(response, 'logo_url')
@@ -6821,7 +6821,7 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.assertEqual(default_response.status_code, 200)
         self.assertContains(default_response, 'images/logo.png')
         self.assertContains(default_response, 'alt="" aria-hidden="true"')
-        self.assertContains(default_response, 'h-14 w-14 shrink-0 object-contain sm:h-16 sm:w-16')
+        self.assertContains(default_response, 'h-16 w-16 shrink-0 object-contain sm:h-20 sm:w-20')
         self.assertNotContains(default_response, 'logo_url')
 
         self.family.logo.save(
