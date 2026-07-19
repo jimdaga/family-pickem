@@ -46,6 +46,7 @@ externalSecrets:
   enabled: true
   clusterSecretStore: aws-secrets-manager
   envvarsKey: family-pickem/dev/envvars
+  logoStorageKey: family-pickem/dev/family-logo-storage
 
 backup:
   enabled: false

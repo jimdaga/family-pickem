@@ -115,6 +115,9 @@ externalSecrets:
   enabled: false
   clusterSecretStore: aws-secrets-manager
   envvarsKey: ""
+  # A separate, least-privilege secret for the private family-logo S3 prefix.
+  # Leave blank to omit both its ExternalSecret and Deployment injection.
+  logoStorageKey: ""
 
 backup:
   enabled: false
