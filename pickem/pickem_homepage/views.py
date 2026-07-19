@@ -1382,7 +1382,7 @@ def family_pool_admin_settings(request, family_slug, pool_slug):
                         'gameseason': pool.season or get_season(), 'form': form, 'pool_settings': pool_settings,
                         'scoring_point_fields': [form['win_points'], form['tie_points'], form['weekly_winner_points']],
                         'tiebreaker_fields': [form['primary_tiebreaker'], form['secondary_tiebreaker']],
-                        'rule_choice_fields': [form['pick_type'], form['missed_pick_policy'], form['late_join_policy'], form['payout_structure']],
+                        'rule_choice_fields': [form['pick_type'], form['missed_pick_policy'], form['late_join_policy']],
                     })
 
             if form.cleaned_data.get('remove_logo'):
