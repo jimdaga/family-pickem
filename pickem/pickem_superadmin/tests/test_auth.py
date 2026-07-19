@@ -42,6 +42,7 @@ SUPERADMIN_POST_URLS = [
     ('superadmin:pick_delete', ['x']),
     ('superadmin:season_row_reset', [1]),
     ('superadmin:game_fix', [1]),
+    ('superadmin:family_force_delete', [1]),
 ]
 
 # GET endpoints that take a required arg, so they cannot be reversed with no

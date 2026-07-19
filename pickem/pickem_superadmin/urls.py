@@ -15,6 +15,7 @@ urlpatterns = [
     path('pools/save/', views.pools_save, name='pools_save'),
     path('families/', views.families, name='families'),
     path('families/save/', views.families_save, name='families_save'),
+    path('families/<int:family_id>/force-delete/', views.family_force_delete, name='family_force_delete'),
     path('teams/', views.teams, name='teams'),
     path('teams/save/', views.teams_save, name='teams_save'),
     path('jobs/', views.jobs_page, name='jobs'),

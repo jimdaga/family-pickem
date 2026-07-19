@@ -1,9 +1,10 @@
 from django.contrib import messages
 from django.db.models import Count, Q
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from pickem_api.models import Family, FamilyMembership
+from pickem_superadmin import services
 from pickem_superadmin.audit import log_action
 from pickem_superadmin.decorators import superadmin_required
 from pickem_superadmin.forms import FamilyRowForm
@@ -70,4 +71,17 @@ def families_save(request):
     if not saved and not stale and not failed:
         messages.success(request, 'No changes.')
 
+    return redirect('superadmin:families')
+
+
+@superadmin_required
+@require_POST
+def family_force_delete(request, family_id):
+    family = get_object_or_404(Family, id=family_id)
+    confirm = (request.POST.get('confirm_slug') or '').strip()
+    if confirm != family.slug:
+        messages.error(request, f'Confirmation did not match. Type "{family.slug}" exactly to delete.')
+        return redirect('superadmin:families')
+    services.force_delete_family(request, family)
+    messages.success(request, f'Family "{family.slug}" and all related data were deleted.')
     return redirect('superadmin:families')
