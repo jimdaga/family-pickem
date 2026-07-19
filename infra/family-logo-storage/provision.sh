@@ -141,7 +141,23 @@ simulate_policy() {
   assert_decision implicitDeny s3:GetObject "arn:aws:s3:::${bucket}/other-prefix/private.webp"
   assert_decision implicitDeny s3:GetObject "arn:aws:s3:::${bucket}/family-logos"
   assert_decision implicitDeny s3:PutObjectAcl "$target"
-  assert_decision implicitDeny s3:ListBucket "arn:aws:s3:::${bucket}"
+  # django-storages calls HeadObject before saving a generated name.  S3
+  # reports an absent object as 403 unless this narrowly scoped discovery
+  # permission is present; it cannot list objects outside family-logos/.
+  decision=$(aws iam simulate-principal-policy \
+    --policy-source-arn "$principal_arn" \
+    --action-names s3:ListBucket \
+    --resource-arns "arn:aws:s3:::${bucket}" \
+    --context-entries ContextKeyName=s3:prefix,ContextKeyValues=family-logos/verification-object.webp,ContextKeyType=string \
+    --query 'EvaluationResults[0].EvalDecision' --output text)
+  [[ "$decision" == "allowed" ]] || { echo "IAM simulation expected prefix-scoped ListBucket to be allowed, got $decision" >&2; exit 1; }
+  decision=$(aws iam simulate-principal-policy \
+    --policy-source-arn "$principal_arn" \
+    --action-names s3:ListBucket \
+    --resource-arns "arn:aws:s3:::${bucket}" \
+    --context-entries ContextKeyName=s3:prefix,ContextKeyValues=other-prefix/private.webp,ContextKeyType=string \
+    --query 'EvaluationResults[0].EvalDecision' --output text)
+  [[ "$decision" == "implicitDeny" ]] || { echo "IAM simulation expected out-of-prefix ListBucket to be denied, got $decision" >&2; exit 1; }
   assert_decision implicitDeny s3:PutBucketPolicy "arn:aws:s3:::${bucket}"
 }
 
