@@ -5916,6 +5916,8 @@ class BatchInviteTests(TestCase):
     def test_multiple_emails_create_multiple_invites(self):
         before_count = FamilyInvitation.objects.filter(family=self.family).count()
 
+        # Batch success uses Post/Redirect/Get; follow to the final page where the
+        # summary flash message renders.
         response = self.client.post(
             self._invites_url(),
             {
@@ -5923,9 +5925,11 @@ class BatchInviteTests(TestCase):
                 "recipient_email": ["a@x.com", "b@x.com"],
                 "expires_in_days": "14",
             },
+            follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain[-1][1], 302)
         self.assertEqual(
             FamilyInvitation.objects.filter(family=self.family).count(),
             before_count + 2,
@@ -5944,6 +5948,7 @@ class BatchInviteTests(TestCase):
     def test_invalid_email_skipped_valid_still_created(self):
         before_count = FamilyInvitation.objects.filter(family=self.family).count()
 
+        # One created + one skipped goes through the batch-summary (redirect) path.
         response = self.client.post(
             self._invites_url(),
             {
@@ -5951,9 +5956,11 @@ class BatchInviteTests(TestCase):
                 "recipient_email": ["good@x.com", "not-an-email"],
                 "expires_in_days": "14",
             },
+            follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain[-1][1], 302)
         self.assertEqual(
             FamilyInvitation.objects.filter(family=self.family).count(),
             before_count + 1,

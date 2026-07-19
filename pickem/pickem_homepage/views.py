@@ -2322,7 +2322,14 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
                 f"{', '.join(skipped_invalid)}."
             )
         messages.success(request, summary)
-        return render_family_admin_invites(request, tenant_context, form)
+        # Post/Redirect/Get: a batch shows no one-time link, so redirect to avoid
+        # a refresh re-submitting the whole batch. (The single-invite path above
+        # deliberately keeps render() to display the one-time invite link.)
+        return redirect(
+            'family_pool_admin_invites',
+            family_slug=tenant_context.family.slug,
+            pool_slug=tenant_context.pool.slug,
+        )
 
     return render_family_admin_invites(request, tenant_context, form)
 

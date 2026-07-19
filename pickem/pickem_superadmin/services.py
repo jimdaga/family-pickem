@@ -319,33 +319,49 @@ def force_delete_family(request, family):
     intact, still inside the same atomic block.
     """
     from pickem_api.models import (
-        Pool, PoolSettings, FamilyMembership, FamilyInvitation, FamilyAuditLog,
+        Family, Pool, PoolSettings, FamilyMembership, FamilyInvitation, FamilyAuditLog,
         GamePicks, userPoints, userSeasonPoints, userStats,
     )
     from pickem_homepage.models import (
         MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner,
     )
 
-    pool_ids = list(Pool.objects.filter(family=family).values_list('id', flat=True))
-    counts = {}
-    counts['picks'] = GamePicks.objects.filter(pool_id__in=pool_ids).delete()[0]
-    counts['user_points'] = userPoints.objects.filter(pool_id__in=pool_ids).delete()[0]
-    counts['season_points'] = userSeasonPoints.objects.filter(pool_id__in=pool_ids).delete()[0]
-    counts['user_stats'] = userStats.objects.filter(pool_id__in=pool_ids).delete()[0]
-    counts['votes'] = MessageBoardVote.objects.filter(family=family).delete()[0]
-    counts['comments'] = MessageBoardComment.objects.filter(family=family).delete()[0]
-    counts['posts'] = MessageBoardPost.objects.filter(family=family).delete()[0]
-    counts['family_audit'] = FamilyAuditLog.objects.filter(family=family).delete()[0]
-    counts['invitations'] = FamilyInvitation.objects.filter(family=family).delete()[0]
-    counts['pool_settings'] = PoolSettings.objects.filter(pool_id__in=pool_ids).delete()[0]
-    counts['memberships'] = FamilyMembership.objects.filter(family=family).delete()[0]
-    counts['banners'] = SiteBanner.objects.filter(family=family).delete()[0]
-    counts['pools'] = Pool.objects.filter(family=family).delete()[0]
+    # Re-fetch under a row lock so two concurrent force-deletes can't both act on
+    # the same stale instance (double audit, or a success reported after another
+    # request already deleted it). If it vanished while we waited, there's nothing
+    # to do.
+    try:
+        family = Family.objects.select_for_update().get(pk=family.pk)
+    except Family.DoesNotExist:
+        return None
 
+    pool_ids = list(Pool.objects.filter(family=family).values_list('id', flat=True))
+
+    # Capture the before-state (pre-deletion counts) BEFORE mutating anything, per
+    # the destructive-action audit convention. These are the same numbers the
+    # deletes would report, snapshotted while the rows still exist.
+    counts = {
+        'picks': GamePicks.objects.filter(pool_id__in=pool_ids).count(),
+        'user_points': userPoints.objects.filter(pool_id__in=pool_ids).count(),
+        'season_points': userSeasonPoints.objects.filter(pool_id__in=pool_ids).count(),
+        'user_stats': userStats.objects.filter(pool_id__in=pool_ids).count(),
+        'votes': MessageBoardVote.objects.filter(family=family).count(),
+        'comments': MessageBoardComment.objects.filter(family=family).count(),
+        'posts': MessageBoardPost.objects.filter(family=family).count(),
+        'family_audit': FamilyAuditLog.objects.filter(family=family).count(),
+        'invitations': FamilyInvitation.objects.filter(family=family).count(),
+        'pool_settings': PoolSettings.objects.filter(pool_id__in=pool_ids).count(),
+        'memberships': FamilyMembership.objects.filter(family=family).count(),
+        'banners': SiteBanner.objects.filter(family=family).count(),
+        'pools': Pool.objects.filter(family=family).count(),
+    }
     before = {'slug': family.slug, 'name': family.name, 'deleted_counts': counts}
 
-    # Log while `family` still has a real pk (see docstring) — target_type/
-    # target_id are derived from it here, before the row disappears.
+    # Audit the before-state before we mutate. `family` still has a live pk here so
+    # log_action can derive target_type/target_id; no `family=` kwarg is passed, so
+    # it writes only a SuperAdminAuditLog row (no FamilyAuditLog dual-write that
+    # would PROTECT-block the delete). That row survives the family's deletion
+    # below, inside the same atomic block.
     log_action(
         request,
         action=SuperAdminAuditLog.Action.FAMILY_FORCE_DELETED,
@@ -354,5 +370,19 @@ def force_delete_family(request, family):
         changes={'before': before, 'after': None},
     )
 
+    # Delete child-first (FKs are mostly PROTECT), then the family itself.
+    GamePicks.objects.filter(pool_id__in=pool_ids).delete()
+    userPoints.objects.filter(pool_id__in=pool_ids).delete()
+    userSeasonPoints.objects.filter(pool_id__in=pool_ids).delete()
+    userStats.objects.filter(pool_id__in=pool_ids).delete()
+    MessageBoardVote.objects.filter(family=family).delete()
+    MessageBoardComment.objects.filter(family=family).delete()
+    MessageBoardPost.objects.filter(family=family).delete()
+    FamilyAuditLog.objects.filter(family=family).delete()
+    FamilyInvitation.objects.filter(family=family).delete()
+    PoolSettings.objects.filter(pool_id__in=pool_ids).delete()
+    FamilyMembership.objects.filter(family=family).delete()
+    SiteBanner.objects.filter(family=family).delete()
+    Pool.objects.filter(family=family).delete()
     family.delete()
     return counts
