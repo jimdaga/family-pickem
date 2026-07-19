@@ -94,6 +94,64 @@ class SiteBanner(models.Model):
         ).first()
 
 
+class FamilyPublication(models.Model):
+    """A longer-form, auditable message shown on one pool's lobby.
+
+    Publications deliberately keep source metadata separate from the actor.  A
+    future generated weekly summary can therefore use the same review and
+    publication path without acquiring commissioner privileges.
+    """
+
+    class Source(models.TextChoices):
+        COMMISSIONER = 'commissioner', 'Commissioner'
+        AI_WEEKLY_SUMMARY = 'ai_weekly_summary', 'AI weekly summary'
+
+    family = models.ForeignKey(
+        'pickem_api.Family', on_delete=models.PROTECT, related_name='publications'
+    )
+    pool = models.ForeignKey(
+        'pickem_api.Pool', on_delete=models.PROTECT, related_name='publications'
+    )
+    title = models.CharField(max_length=200)
+    body = models.TextField(help_text='Markdown source. Raw HTML is never rendered.')
+    author = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='family_publications'
+    )
+    source = models.CharField(max_length=32, choices=Source.choices, default=Source.COMMISSIONER)
+    generation_reference = models.CharField(max_length=255, blank=True)
+    is_published = models.BooleanField(default=False)
+    published_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-published_at', '-created_at']
+        indexes = [
+            models.Index(fields=['family', 'pool', 'is_published', 'published_at'], name='publication_lobby_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                # Meta cannot reference the enclosing Source class at model
+                # construction time, so keep this DB-level mirror explicit.
+                check=models.Q(source__in=['commissioner', 'ai_weekly_summary']),
+                name='publication_source_valid',
+            ),
+            models.UniqueConstraint(
+                fields=['pool'], condition=models.Q(is_published=True),
+                name='one_published_publication_per_pool',
+            ),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.pool_id and self.family_id and self.pool.family_id != self.family_id:
+            raise ValidationError({'pool': 'The pool must belong to this family.'})
+
+    def __str__(self):
+        return f'{self.family.name} / {self.pool.name}: {self.title}'
+
+
 class MessageBoardPost(models.Model):
     """Model for main message board posts"""
     

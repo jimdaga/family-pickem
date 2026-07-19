@@ -6,11 +6,70 @@ from django.shortcuts import render
 from allauth.socialaccount.models import SocialAccount
 from datetime import date
 from django.utils import timezone
+from django.utils.html import conditional_escape
+from django.utils.safestring import mark_safe
 import requests
 import re
 from pickem.utils import get_season
 
 register = template.Library()
+
+
+@register.filter(is_safe=True)
+def safe_markdown(value):
+    """Render a small, deliberately safe Markdown subset.
+
+    Escaping happens before any Markdown transforms, so raw HTML (including
+    scripts and event attributes) is always text. Links only allow http(s),
+    mailto, and local paths. This avoids granting lobby authors an HTML
+    execution surface while supporting the useful message-writing basics.
+    """
+    import re
+    from urllib.parse import urlparse
+
+    text = conditional_escape(value or '')
+
+    def link(match):
+        label, url = match.group(1), match.group(2)
+        parsed = urlparse(url)
+        if parsed.scheme.lower() not in {'http', 'https', 'mailto', ''}:
+            return label
+        if not parsed.scheme and not url.startswith(('/', '#')):
+            return label
+        return f'<a href="{url}" rel="nofollow noopener noreferrer" class="text-primary underline">{label}</a>'
+
+    text = re.sub(r'\[([^\]]+)\]\(([^\s)]+)\)', link, text)
+    text = re.sub(r'`([^`]+)`', r'<code class="rounded bg-black/5 px-1 py-0.5 dark:bg-white/10">\1</code>', text)
+    text = re.sub(r'\*\*([^*]+)\*\*|__([^_]+)__', lambda m: f'<strong>{m.group(1) or m.group(2)}</strong>', text)
+    text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)|(?<!_)_([^_]+)_(?!_)', lambda m: f'<em>{m.group(1) or m.group(2)}</em>', text)
+
+    blocks, list_items, ordered_list_items = [], [], []
+    def flush_list():
+        if list_items:
+            blocks.append('<ul class="my-3 list-disc space-y-1 pl-5">' + ''.join(f'<li>{item}</li>' for item in list_items) + '</ul>')
+            list_items.clear()
+        if ordered_list_items:
+            blocks.append('<ol class="my-3 list-decimal space-y-1 pl-5">' + ''.join(f'<li>{item}</li>' for item in ordered_list_items) + '</ol>')
+            ordered_list_items.clear()
+    for line in text.splitlines():
+        heading = re.match(r'^(#{1,3})\s+(.+)$', line)
+        bullet = re.match(r'^[-*]\s+(.+)$', line)
+        numbered = re.match(r'^\d+[.)]\s+(.+)$', line)
+        if heading:
+            flush_list()
+            level = len(heading.group(1))
+            blocks.append(f'<h{level} class="mt-4 font-bold text-text-dark dark:text-white">{heading.group(2)}</h{level}>')
+        elif bullet:
+            list_items.append(bullet.group(1))
+        elif numbered:
+            ordered_list_items.append(numbered.group(1))
+        elif line.strip():
+            flush_list()
+            blocks.append(f'<p class="my-2">{line}</p>')
+        else:
+            flush_list()
+    flush_list()
+    return mark_safe('\n'.join(blocks))
 
 @register.filter
 def display_name(user):

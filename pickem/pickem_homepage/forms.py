@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import validate_email
 from pickem_api.models import FamilyMembership, GamePicks, PoolSettings, userSeasonPoints
-from .models import MessageBoardPost, MessageBoardComment, SiteBanner
+from .models import FamilyPublication, MessageBoardPost, MessageBoardComment, SiteBanner
 
 
 MAX_CREATE_FAMILY_INVITES = 20
@@ -644,3 +644,22 @@ class FamilyBannerForm(forms.ModelForm):
         if not self.instance.pk:
             self.fields['icon'].initial = 'fas fa-bullhorn'
             self.fields['show_close_button'].initial = True
+
+
+class FamilyPublicationForm(forms.ModelForm):
+    """Commissioner-facing editor for lobby publications."""
+
+    class Meta:
+        model = FamilyPublication
+        fields = ['title', 'body']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': ADMIN_TEXT_INPUT_CLASSES,
+                'placeholder': 'e.g. Welcome to the 2026 season!',
+            }),
+            'body': forms.Textarea(attrs={
+                'class': ADMIN_TEXT_INPUT_CLASSES,
+                'rows': 10,
+                'placeholder': 'Write in Markdown. Raw HTML is displayed as text.',
+            }),
+        }

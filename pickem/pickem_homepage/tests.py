@@ -45,6 +45,7 @@ from pickem_homepage.models import (
     MessageBoardPost,
     MessageBoardComment,
     MessageBoardVote,
+    FamilyPublication,
     SiteBanner,
 )
 from pickem_homepage.views import is_commissioner
@@ -8493,3 +8494,123 @@ class CreateFamilyRenderTests(TestCase):
         html = c.get('/families/create/').content.decode()
         for needed in ('name="name"', 'picks_lock_mode', 'name="entry_fee_amount"'):
             self.assertIn(needed, html)
+
+
+class FamilyPublicationTests(FamilyAdminExperienceTests):
+    def _publications_url(self, *, family=None, pool=None):
+        family, pool = family or self.family, pool or self.pool
+        return reverse('family_pool_admin_publications', kwargs={
+            'family_slug': family.slug, 'pool_slug': pool.slug,
+        })
+
+    def test_commissioner_can_create_publish_and_render_safe_markdown(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(self._publications_url(), {
+            'action': 'create', 'title': 'Kickoff',
+            'body': '# Hello\n**Picks** are live. <script>alert(1)</script>',
+        })
+        self.assertEqual(response.status_code, 302)
+        publication = FamilyPublication.objects.get(title='Kickoff')
+        self.assertEqual(publication.source, FamilyPublication.Source.COMMISSIONER)
+        self.client.post(self._publications_url(), {
+            'action': 'publish', 'publication_id': publication.id,
+        })
+        lobby = self.client.get(reverse('family_pool_home', kwargs={
+            'family_slug': self.family.slug, 'pool_slug': self.pool.slug,
+        }))
+        self.assertContains(lobby, '<strong>Picks</strong>', html=True)
+        self.assertContains(lobby, '&lt;script&gt;alert(1)&lt;/script&gt;')
+        self.assertNotContains(lobby, '<script>alert(1)</script>', html=True)
+
+    def test_commissioner_can_publish_directly_from_composer(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(self._publications_url(), {
+            'action': 'create_publish', 'title': 'Published now', 'body': 'Hello lobby',
+        })
+        self.assertEqual(response.status_code, 302)
+        publication = FamilyPublication.objects.get(title='Published now')
+        self.assertTrue(publication.is_published)
+        self.assertIsNotNone(publication.published_at)
+
+    def test_publishing_replaces_the_pool_active_message(self):
+        old = FamilyPublication.objects.create(
+            family=self.family, pool=self.pool, author=self.owner,
+            title='Old announcement', body='Old', is_published=True,
+            published_at=timezone.now(),
+        )
+        draft = FamilyPublication.objects.create(
+            family=self.family, pool=self.pool, author=self.owner,
+            title='New announcement', body='New',
+        )
+        self.client.force_login(self.owner)
+        self.client.post(self._publications_url(), {
+            'action': 'publish', 'publication_id': draft.id,
+        })
+        old.refresh_from_db()
+        draft.refresh_from_db()
+        self.assertFalse(old.is_published)
+        self.assertTrue(draft.is_published)
+        self.assertEqual(
+            FamilyPublication.objects.filter(pool=self.pool, is_published=True).count(), 1
+        )
+
+    def test_messages_are_newest_first_and_paginated(self):
+        for index in range(11):
+            publication = FamilyPublication.objects.create(
+                family=self.family, pool=self.pool, author=self.owner,
+                title=f'Message {index}', body='History',
+            )
+            FamilyPublication.objects.filter(id=publication.id).update(
+                created_at=timezone.now() - timedelta(minutes=11 - index)
+            )
+        self.client.force_login(self.owner)
+        response = self.client.get(self._publications_url())
+        page = response.context['publications']
+        self.assertEqual(len(page.object_list), 10)
+        self.assertEqual(page.object_list[0].title, 'Message 10')
+        self.assertContains(response, 'Older')
+        second_page = self.client.get(self._publications_url() + '?page=2')
+        self.assertContains(second_page, 'Message 0')
+
+    def test_members_cannot_manage_messages(self):
+        self.client.force_login(self.member)
+        response = self.client.get(self._publications_url())
+        self.assertEqual(response.status_code, 403)
+
+    def test_commissioner_can_open_message_admin_page(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(self._publications_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Lobby Messages')
+
+    def test_publications_are_isolated_to_their_pool(self):
+        FamilyPublication.objects.create(
+            family=self.other_family, pool=self.other_pool, author=self.outsider,
+            title='Private', body='Not for Smith', is_published=True,
+            published_at=timezone.now(),
+        )
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('family_pool_home', kwargs={
+            'family_slug': self.family.slug, 'pool_slug': self.pool.slug,
+        }))
+        self.assertNotContains(response, 'Private')
+
+    def test_unpublished_message_is_not_rendered(self):
+        FamilyPublication.objects.create(
+            family=self.family, pool=self.pool, author=self.owner,
+            title='Draft only', body='Not live',
+        )
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('family_pool_home', kwargs={
+            'family_slug': self.family.slug, 'pool_slug': self.pool.slug,
+        }))
+        self.assertNotContains(response, 'Draft only')
+
+    def test_ai_source_metadata_can_be_stored_without_commissioner_actor(self):
+        publication = FamilyPublication.objects.create(
+            family=self.family, pool=self.pool, title='Weekly summary', body='Recap',
+            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
+            generation_reference='run-123', is_published=False,
+        )
+        self.assertIsNone(publication.author)
+        self.assertEqual(publication.generation_reference, 'run-123')
