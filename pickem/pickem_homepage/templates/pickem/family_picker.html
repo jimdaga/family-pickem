@@ -23,23 +23,25 @@
         {% for choice in member_family_choices %}
         <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-2">
                     {% if choice.family.logo %}
                     <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain">
                     {% else %}
                     <img src="{% static 'images/logo.png' %}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain">
                     {% endif %}
-                    <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                    <div class="min-w-0">
+                        <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                        {% if choice.pool %}
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                            {{ choice.pool.name }} - {{ choice.pool.display_season }}
+                        </p>
+                        {% else %}
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                            This family needs an active pool before play can begin.
+                        </p>
+                        {% endif %}
+                    </div>
                 </div>
-                {% if choice.pool %}
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
-                    {{ choice.pool.name }} - {{ choice.pool.display_season }}
-                </p>
-                {% else %}
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
-                    This family needs an active pool before play can begin.
-                </p>
-                {% endif %}
             </div>
             <div class="flex flex-col items-end gap-2 flex-none">
                 {% if choice.membership.role == "owner" %}
@@ -50,9 +52,6 @@
                 {% endif %}
                 {% if choice.url %}
                 <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">
-                    {% if choice.family.logo %}
-                    <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-7 w-7 object-contain">
-                    {% endif %}
                     <span>Enter pool</span>
                     <i class="fas fa-arrow-right"></i>
                 </a>
@@ -76,23 +75,25 @@
         {% for choice in superadmin_family_choices %}
         <div class="bg-surface-light dark:bg-surface border border-border-light dark:border-border-subtle rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-2">
                     {% if choice.family.logo %}
                     <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain">
                     {% else %}
                     <img src="{% static 'images/logo.png' %}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain">
                     {% endif %}
-                    <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                    <div class="min-w-0">
+                        <h2 class="text-xl font-bold text-text-dark dark:text-white">{{ choice.family.name }}</h2>
+                        {% if choice.pool %}
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                            {{ choice.pool.name }} - {{ choice.pool.display_season }}
+                        </p>
+                        {% else %}
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                            This family needs an active pool before play can begin.
+                        </p>
+                        {% endif %}
+                    </div>
                 </div>
-                {% if choice.pool %}
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
-                    {{ choice.pool.name }} - {{ choice.pool.display_season }}
-                </p>
-                {% else %}
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
-                    This family needs an active pool before play can begin.
-                </p>
-                {% endif %}
             </div>
             <div class="flex flex-col items-end gap-2 flex-none">
                 <span class="inline-flex items-center gap-1 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300">
@@ -101,9 +102,6 @@
                 </span>
                 {% if choice.url %}
                 <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-yellow-400/40 bg-yellow-400/10 text-yellow-700 dark:text-yellow-200 font-semibold hover:bg-yellow-400/15 transition-colors">
-                    {% if choice.family.logo %}
-                    <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-7 w-7 object-contain">
-                    {% endif %}
                     <span>Open family</span>
                     <i class="fas fa-arrow-right"></i>
                 </a>

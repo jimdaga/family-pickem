@@ -7151,6 +7151,7 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, canonical_url)
         self.assertContains(response, 'h-10 w-10 shrink-0 object-contain')
+        self.assertNotContains(response, 'h-7 w-7 object-contain')
         self.assertContains(response, 'alt="" aria-hidden="true"')
         self.assertNotContains(response, 'alt="%s logo"' % self.family.name)
         self.assertNotContains(response, 'logo_url')
