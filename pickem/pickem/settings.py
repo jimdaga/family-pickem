@@ -327,6 +327,41 @@ if not DEBUG:
 
 AWS_S3_ADDRESSING_STYLE = "virtual"
 
+# Family-logo delivery is deliberately isolated from the generic AWS
+# configuration used by static files and backup jobs.  Production must provide
+# every value below through its dedicated ESO-managed Secret; development can
+# omit the whole set and use local media storage instead.
+_FAMILY_LOGO_AWS_SETTING_NAMES = (
+    "FAMILY_LOGO_STORAGE_BUCKET_NAME",
+    "FAMILY_LOGO_AWS_S3_REGION_NAME",
+    "FAMILY_LOGO_AWS_ACCESS_KEY_ID",
+    "FAMILY_LOGO_AWS_SECRET_ACCESS_KEY",
+)
+for _setting_name in _FAMILY_LOGO_AWS_SETTING_NAMES:
+    globals()[_setting_name] = os.environ.get(_setting_name, "")
+
+_family_logo_values = tuple(globals()[name] for name in _FAMILY_LOGO_AWS_SETTING_NAMES)
+if any(_family_logo_values) and not all(_family_logo_values):
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "Family logo S3 storage requires all FAMILY_LOGO_* credential settings."
+    )
+
+try:
+    FAMILY_LOGO_AWS_QUERYSTRING_EXPIRE = int(
+        os.environ.get("FAMILY_LOGO_AWS_QUERYSTRING_EXPIRE", "300")
+    )
+except ValueError as error:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "FAMILY_LOGO_AWS_QUERYSTRING_EXPIRE must be a positive integer."
+    ) from error
+if FAMILY_LOGO_AWS_QUERYSTRING_EXPIRE <= 0:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "FAMILY_LOGO_AWS_QUERYSTRING_EXPIRE must be a positive integer."
+    )
+
 if 'AWS_STORAGE_BUCKET_NAME' in os.environ:
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
