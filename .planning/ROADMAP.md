@@ -39,8 +39,13 @@
 **Plans:** 3 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 08-01-PLAN.md — Dedicated logo storage configuration, adversarial request coverage, and post-commit cleanup.
 - [ ] 08-02-PLAN.md — Prefix-limited IAM provisioning and Secrets Manager/ESO/Helm delivery isolation.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 08-03-PLAN.md — Automated gates plus staging and production lifecycle smoke before release.
 
 **Success criteria:**
