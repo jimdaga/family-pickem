@@ -6693,6 +6693,48 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.assertEqual(self.family.logo.name, original)
         self.assertContains(response, "safely read")
 
+    def test_crop_coordinates_are_forwarded_only_with_source_file(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.post(self._settings_url(), {
+            'family_name': self.family.name, 'pool_name': self.pool.name,
+            **self._default_scoring_fields(), 'logo': self._logo_upload(),
+            'crop_x': '0', 'crop_y': '0', 'crop_width': '12', 'crop_height': '12',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertTrue(self.family.logo.name.endswith('.webp'))
+
+    def test_invalid_crop_and_replacement_removal_tampering_preserve_logo(self):
+        self.family.logo.save('already.webp', SimpleUploadedFile('already.webp', b'canonical'), save=True)
+        original = self.family.logo.name
+        self.client.force_login(self.admin_user)
+        for payload in (
+            {'crop_x': '0', 'crop_y': '0', 'crop_width': '12'},
+            {'crop_x': '0', 'crop_y': '0', 'crop_width': '12', 'crop_height': '11'},
+            {'remove_logo': 'true', 'logo': self._logo_upload()},
+        ):
+            with self.subTest(payload=payload):
+                response = self.client.post(self._settings_url(), {
+                    'family_name': self.family.name, 'pool_name': self.pool.name,
+                    **self._default_scoring_fields(), **payload,
+                })
+                self.assertEqual(response.status_code, 200)
+                self.family.refresh_from_db()
+                self.assertEqual(self.family.logo.name, original)
+
+    def test_remove_logo_clears_reference_and_audits_presence_only(self):
+        self.family.logo.save('already.webp', SimpleUploadedFile('already.webp', b'canonical'), save=True)
+        self.client.force_login(self.admin_user)
+        response = self.client.post(self._settings_url(), {
+            'family_name': self.family.name, 'pool_name': self.pool.name,
+            **self._default_scoring_fields(), 'remove_logo': 'true',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.family.refresh_from_db()
+        self.assertFalse(self.family.logo.name)
+        audit = FamilyAuditLog.objects.filter(family=self.family).latest('created_at')
+        self.assertEqual(audit.metadata['logo'], {'before_present': True, 'after_present': False})
+
 
 class FamilyAdminSettingsFormTests(TestCase):
     """Server-side protections on the pool-admin settings form."""
@@ -6727,6 +6769,21 @@ class FamilyAdminSettingsFormTests(TestCase):
     def test_baseline_payload_is_valid(self):
         form = self._form()
         self.assertTrue(form.is_valid(), form.errors)
+
+    def test_crop_fields_are_all_or_nothing_strict_square_integers(self):
+        valid = self._form(crop_x='0', crop_y='1', crop_width='12', crop_height='12')
+        self.assertTrue(valid.is_valid(), valid.errors)
+        self.assertEqual(valid.cleaned_data['crop_data'], {'x': 0, 'y': 1, 'width': 12, 'height': 12})
+        for invalid in (
+            {'crop_x': '0'},
+            {'crop_x': '0', 'crop_y': '0', 'crop_width': '12', 'crop_height': '12.0'},
+            {'crop_x': '-1', 'crop_y': '0', 'crop_width': '12', 'crop_height': '12'},
+            {'crop_x': '0', 'crop_y': '0', 'crop_width': '12', 'crop_height': '11'},
+        ):
+            with self.subTest(invalid=invalid):
+                form = self._form(**invalid)
+                self.assertFalse(form.is_valid())
+                self.assertIn('logo', form.errors)
 
     def test_zero_win_points_rejected(self):
         form = self._form(win_points='0')
