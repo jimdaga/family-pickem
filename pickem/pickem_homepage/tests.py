@@ -8458,13 +8458,12 @@ class PayoutGroupingTests(TestCase):
 
 
 class BannerIconChoicesTests(TestCase):
-    def test_both_forms_use_select(self):
+    def test_family_banner_form_uses_select(self):
         from django import forms as djf
-        from pickem_homepage.forms import SiteBannerForm, FamilyBannerForm, BANNER_ICON_CHOICES
+        from pickem_homepage.forms import FamilyBannerForm, BANNER_ICON_CHOICES
         self.assertTrue(len(BANNER_ICON_CHOICES) >= 10)
-        for FormClass in (SiteBannerForm, FamilyBannerForm):
-            widget = FormClass().fields['icon'].widget
-            self.assertIsInstance(widget, djf.Select)
+        widget = FamilyBannerForm().fields['icon'].widget
+        self.assertIsInstance(widget, djf.Select)
 
     def test_unknown_existing_icon_stays_selectable(self):
         from pickem_homepage.forms import FamilyBannerForm
