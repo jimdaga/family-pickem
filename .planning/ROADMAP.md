@@ -36,6 +36,13 @@
 
 **Requirements:** S3-02, S3-03, SAFE-02, SAFE-03
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Dedicated logo storage configuration, adversarial request coverage, and post-commit cleanup.
+- [ ] 08-02-PLAN.md — Prefix-limited IAM provisioning and Secrets Manager/ESO/Helm delivery isolation.
+- [ ] 08-03-PLAN.md — Automated gates plus staging and production lifecycle smoke before release.
+
 **Success criteria:**
 
 1. The application has prefix-limited S3 permissions for `family-logos/` without public ACL/policy access, and the existing bucket’s Block Public Access/ownership/encryption posture remains intact.
