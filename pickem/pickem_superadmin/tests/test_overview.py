@@ -244,3 +244,16 @@ class OverviewTests(TestCase):
     def test_no_current_season_flags_nothing(self):
         response = self.client.get(reverse('superadmin:overview'))
         self.assertEqual(response.context['anomalies']['families_off_season'], [])
+
+    def test_nav_order_jobs_logs_audit(self):
+        """Nav tabs appear in order: jobs, logs, audit."""
+        response = self.client.get(reverse('superadmin:overview'))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        jobs_idx = html.index('>jobs<')
+        logs_idx = html.index('>logs<')
+        audit_idx = html.index('>audit<')
+        self.assertLess(jobs_idx, logs_idx, 'jobs should appear before logs')
+        self.assertLess(logs_idx, audit_idx, 'logs should appear before audit')
+
+
