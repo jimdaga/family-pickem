@@ -1884,6 +1884,14 @@ def render_family_admin_winners(request, tenant_context, form=None, *, status=20
         .order_by('id')
         .first()
     )
+    current_winner_name = None
+    if current_winner:
+        current_winner_name = (
+            User.objects.filter(id=current_winner.userID)
+            .values_list('username', flat=True)
+            .first()
+            or current_winner.userID
+        )
     pool_settings = PoolSettings.objects.filter(pool=pool).first() or PoolSettings()
     context = {
         'family': family,
@@ -1894,6 +1902,7 @@ def render_family_admin_winners(request, tenant_context, form=None, *, status=20
         'week_choices': range(1, 19),
         'candidates': candidates,
         'current_winner': current_winner,
+        'current_winner_name': current_winner_name,
         'form': form,
         'pool_settings': pool_settings,
         'perfect_week_members': get_perfect_week_members(family, pool, selected_week),

@@ -1192,6 +1192,49 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertContains(response, "Your Pick")
         self.assertNotContains(response, self.other_member.email)
 
+    def test_tenant_picks_page_lock_filter_called_once_per_game(self):
+        # Regression guard for the picks.html N+1: `is_game_locked_for_pool`
+        # was previously called ~8x per game (once per lock gate: LOCKED
+        # badge, both team options, both tiebreaker inputs x2, locked
+        # message), each re-running its own GamesAndScores/PoolSettings
+        # queries. It must now be computed once per game via
+        # `{% with locked=... %}` and reused. `is_pick_locked_for_pool` is
+        # imported locally inside the filter on every call, so patching the
+        # module attribute reliably intercepts every invocation regardless
+        # of caller.
+        for i in range(5):
+            GamesAndScores.objects.create(
+                id=2100 + i,
+                slug=f"extra-game-{i}",
+                competition="nfl",
+                gameWeek="1",
+                gameyear="2025",
+                gameseason=2526,
+                startTimestamp=timezone.now() + timedelta(days=1),
+                statusType="notstarted",
+                statusTitle="Scheduled",
+                homeTeamId=1,
+                homeTeamSlug="atl",
+                homeTeamName="Atlanta Falcons",
+                awayTeamId=2,
+                awayTeamSlug="ari",
+                awayTeamName="Arizona Cardinals",
+            )
+        self.client.force_login(self.member)
+
+        from pickem import utils as pickem_utils
+
+        with patch(
+            "pickem.utils.is_pick_locked_for_pool",
+            wraps=pickem_utils.is_pick_locked_for_pool,
+        ) as mock_locked:
+            response = self.client.get(self._tenant_picks_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["game_list"]), 6)
+        # One call per game, not one per lock gate.
+        self.assertEqual(mock_locked.call_count, 6)
+
     def test_tenant_picks_page_includes_compact_polish_hooks(self):
         self.client.force_login(self.member)
 
