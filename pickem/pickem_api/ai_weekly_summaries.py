@@ -48,7 +48,10 @@ class SummarySettings:
                 timeout=provider_settings.timeout_seconds,
                 retries=provider_settings.retries,
                 max_runs=provider_settings.max_runs_per_pool_week,
-                mock=settings.OPENAI_WEEKLY_SUMMARIES_MOCK,
+                # A real, enabled database configuration is an explicit
+                # operator choice. Do not let a stale local mock environment
+                # flag silently replace paid provider output with fixtures.
+                mock=settings.OPENAI_WEEKLY_SUMMARIES_MOCK and not provider_settings.has_api_key,
             )
         return cls(
             enabled=settings.OPENAI_WEEKLY_SUMMARIES_ENABLED,

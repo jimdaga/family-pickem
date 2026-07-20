@@ -3,9 +3,10 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
-from pickem_api.ai_weekly_summaries import build_summary_facts, generate_weekly_summary
+from pickem_api.ai_weekly_summaries import SummarySettings, build_summary_facts, generate_weekly_summary
 from pickem_api.models import Family, FamilyMembership, GamesAndScores, Pool, userSeasonPoints
 from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
+from pickem_superadmin.models import AIProviderSettings
 
 
 class AIWeeklySummaryTests(TestCase):
@@ -77,6 +78,18 @@ class AIWeeklySummaryTests(TestCase):
 
         self.assertEqual(first.status, AIWeeklySummaryRun.Status.SUCCESS)
         self.assertEqual(second.status, AIWeeklySummaryRun.Status.SUCCESS)
+
+    @override_settings(OPENAI_WEEKLY_SUMMARIES_MOCK=True)
+    def test_saved_provider_key_overrides_stale_mock_environment_flag(self):
+        provider_settings = AIProviderSettings.load()
+        provider_settings.enabled = True
+        provider_settings.set_api_key('sk-test-real-provider-key')
+        provider_settings.save()
+
+        config = SummarySettings.from_django()
+
+        self.assertTrue(config.active)
+        self.assertFalse(config.mock)
 
     @override_settings(
         OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
