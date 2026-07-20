@@ -1509,13 +1509,18 @@ class UpdateGamesCommandTest(TestCase):
             mock_fetch.return_value = payload
             call_command("update_games", season=2526, week=1)
 
-        # `.values("gameScored", "gameWinner")` aliases the columns (`AS
-        # "gameScored"`); update_or_create's own internal lookup selects the
-        # full row with no such alias, so this substring uniquely identifies
-        # the previous-state lookup this fix targets.
+        # `.values("gameScored", "gameWinner")` selects only those two
+        # columns; update_or_create's own internal lookup selects the full
+        # row (including hometeamscore, absent here), so this combination
+        # uniquely identifies the previous-state lookup this fix targets —
+        # independent of Django-version-specific column-aliasing syntax in
+        # the generated SQL (verified to differ between the 4.2/5.2 lines).
         previous_state_queries = [
             q for q in ctx.captured_queries
-            if 'as "gamescored"' in q["sql"].lower()
+            if "gamesandscores" in q["sql"].lower()
+            and "gamescored" in q["sql"].lower()
+            and "hometeamscore" not in q["sql"].lower()
+            and "select" in q["sql"].lower()
         ]
         self.assertEqual(
             len(previous_state_queries), 1,
@@ -2554,16 +2559,17 @@ class UpdateStatsCommandTest(TestCase):
         # to this identity's gameseason__isnull=False rows — the shape both
         # picked_game_ids and played_seasons share. Before the fix there are
         # two (one per query); after, they must be combined into one.
+        # `'"uid" = '` (an equality filter) — not column-aliasing syntax,
+        # which differs between Django versions — is what distinguishes
+        # these identity-scoped queries from handle()'s top-level "distinct
+        # uids" enumeration query, which filters by gameseason only.
         raw_gamepicks_queries = [
             q for q in ctx.captured_queries
             if "pickem_api_gamepicks" in q["sql"].lower()
             and "gameseason" in q["sql"].lower()
             and "count(" not in q["sql"].lower()
             and "group by" not in q["sql"].lower()
-            # Excludes handle()'s top-level "distinct uids" query, which
-            # selects `uid` as an output column; picked_game_ids/
-            # played_seasons only ever filter by uid, never select it.
-            and 'as "uid"' not in q["sql"].lower()
+            and '"uid" = ' in q["sql"].lower()
         ]
         self.assertEqual(
             len(raw_gamepicks_queries), 1,
