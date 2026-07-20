@@ -28,8 +28,11 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL='https'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-# Allowed Host(s)
-ALLOWED_HOSTS = ['localhost', 'corticolous-unarbitrarily-noel.ngrok-free.dev']
+# Allowed Host(s). Dev-only hosts (ngrok tunnel) are gated behind DEBUG so
+# they never widen the accepted Host set in production.
+ALLOWED_HOSTS = ['localhost']
+if DEBUG:
+    ALLOWED_HOSTS.append('corticolous-unarbitrarily-noel.ngrok-free.dev')
 
 if 'DJANGO_ALLOWED_HOSTS' in os.environ:
     django_allowed_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS')
@@ -48,8 +51,14 @@ if 'RDS_DB_NAME' in os.environ:
     except requests.exceptions.RequestException:
         pass
 
-# CSRF Origins 
-CSRF_TRUSTED_ORIGINS = ['https://*.localhost', 'https://*.corticolous-unarbitrarily-noel.ngrok-free.dev']
+# CSRF Origins. Dev-only origins are gated behind DEBUG so the wildcard
+# localhost/ngrok origins are never trusted in production.
+CSRF_TRUSTED_ORIGINS = []
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS += [
+        'https://*.localhost',
+        'https://*.corticolous-unarbitrarily-noel.ngrok-free.dev',
+    ]
 
 if 'CSRF_TRUSTED_ORIGINS' in os.environ:
     CSRF_TRUSTED_ORIGINS.append(os.environ["CSRF_TRUSTED_ORIGINS"])
@@ -70,7 +79,6 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'django_apscheduler',
     'bootstrap5',
-    # 'django_ratelimit',  # Disabled for now - enable later when ready
     'allauth',
     'storages',
     'allauth.account',
@@ -93,7 +101,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Cache configuration for rate limiting
+# Default cache (file-based; also used by Django internals).
+# NOTE: application-level rate limiting was removed — request throttling is
+# handled at the edge by a Cloudflare rate-limiting rule instead.
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
@@ -104,18 +114,6 @@ CACHES = {
         }
     }
 }
-
-# Rate limiting configuration
-if DEBUG:
-    # Development: Disable rate limiting to avoid cache backend issues
-    RATELIMIT_ENABLE = False
-else:
-    # Production: Enable rate limiting
-    RATELIMIT_ENABLE = True
-    # Use cache for rate limiting (default uses default cache)
-    RATELIMIT_USE_CACHE = 'default'
-    # View to show when rate limit is exceeded
-    RATELIMIT_VIEW = 'pickem_homepage.views.ratelimited'
 
 ROOT_URLCONF = 'pickem.urls'
 

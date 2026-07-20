@@ -31,14 +31,12 @@ from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.utils.text import slugify
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from functools import wraps
 from urllib.parse import parse_qs, urlparse
-# from django_ratelimit.decorators import ratelimit  # Disabled for now
 from collections import defaultdict
 import hashlib
 import json
@@ -51,6 +49,7 @@ from django.forms import formset_factory
 from django.utils import timezone
 from pickem.utils import get_season as get_season_from_api
 from pickem_api.authz import (
+    ROLE_ORDER,
     AuthenticationRequired,
     PermissionDeniedForTenant,
     TenantNotFound,
@@ -146,18 +145,6 @@ def get_espn_nfl_news(limit=6):
 
 def get_season(display_name=False):
     return get_season_from_api(display_name=display_name)
-
-def is_commissioner(user):
-    """Check if user is a commissioner or admin"""
-    if not user.is_authenticated:
-        return False
-    if user.is_superuser:
-        return True
-    try:
-        profile = user.profile
-        return profile.is_commissioner
-    except UserProfile.DoesNotExist:
-        return False
 
 def current_user_picks(picks, user):
     return picks.filter(Q(userID=str(user.id)) | Q(uid=user.id)).distinct()
@@ -285,20 +272,6 @@ def attach_dashboard_pick_groups(games, *, pool, family):
         game.dashboard_pick_groups = groups
 
     return games
-
-def commissioner_required(view_func):
-    """Decorator that ensures only commissioners and admins can access a view"""
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            messages.error(request, "You must be logged in to access this page.")
-            return redirect('/')
-        if not is_commissioner(request.user):
-            messages.error(request, "You don't have permission to access this page. Commissioner privileges required.")
-            return redirect('/')
-        return view_func(request, *args, **kwargs)
-    return _wrapped_view
-
 
 def get_default_active_pool_for_family(family):
     """Return a family's default active pool, or first active pool as a safe fallback."""
@@ -702,7 +675,11 @@ def accept_invitation_for_user(request, raw_code):
         previous_role = membership.role
         previous_status = membership.status
         if not created:
-            membership.role = invitation.role
+            # Redeeming an invite only ever upgrades: an OWNER/ADMIN
+            # re-clicking a generic member share-link must keep their role
+            # (a demotion here could leave the family with zero owners).
+            if ROLE_ORDER[invitation.role] > ROLE_ORDER[membership.role]:
+                membership.role = invitation.role
             membership.status = FamilyMembership.Status.ACTIVE
             membership.save(update_fields=['role', 'status', 'updated_at'])
 
@@ -2612,7 +2589,6 @@ def family_pool_admin_member_update(request, family_slug, pool_slug):
     )
 
 
-# @ratelimit(key='ip', rate='30/m', method='GET', block=True)  # Disabled for now
 def index(request):
     if request.user.is_authenticated:
         family_choices = get_family_pool_choices(request.user)
@@ -3168,6 +3144,20 @@ def tenant_scores(request, family_slug, pool_slug):
 
 
 def render_scores_page(request, *, tenant_context=None, competition=None, gameseason=None, week=None):
+    # The week lands in "week_{}_winner"/"week_{}_points" field names; the URL
+    # regex only bounds it to digits, so an out-of-range value would raise
+    # FieldError (a 500). 404 anything outside the real 1-18 range.
+    if week is not None:
+        try:
+            week_number = int(week)
+        except (TypeError, ValueError):
+            raise Http404("Invalid week")
+        if not 1 <= week_number <= 18:
+            raise Http404("Invalid week")
+        # Normalize: a zero-padded URL segment ("007") passes the range check
+        # above but must not survive as the literal string past this point,
+        # or it still builds a bad "week_007_winner" field name below.
+        week = week_number
     today = date.today()
     today_date = today.strftime("%Y-%m-%d")
     gameseason = gameseason or (tenant_context.pool.season if tenant_context else get_season())
@@ -3792,13 +3782,10 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
                 pool_slug=tenant_context.pool.slug,
             )
             
-    except Exception as e:
-        error_msg = f'Error updating pick: {str(e)}'
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'error': True, 'message': error_msg}, status=500)
-        else:
-            # For non-AJAX requests, you might want to show an error page or redirect with error
-            return JsonResponse({'error': True, 'message': error_msg}, status=500)
+    except Exception:
+        logger.exception('Error updating pick')
+        error_msg = 'Error updating pick. Please try again.'
+        return JsonResponse({'error': True, 'message': error_msg}, status=500)
 
 
 def rules(request):
@@ -4250,7 +4237,6 @@ def tenant_messages(request, family_slug, pool_slug):
 
 
 @login_required
-# @ratelimit(key='user', rate='10/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def create_post(request):
     return message_board_not_found()
@@ -4341,7 +4327,6 @@ def create_post_for_family(request, family):
 
 
 @login_required
-# @ratelimit(key='user', rate='15/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def create_comment(request):
     return message_board_not_found()
@@ -4351,6 +4336,12 @@ def create_comment(request):
 @require_http_methods(["POST"])
 def tenant_create_comment(request, family_slug, pool_slug):
     return create_comment_for_family(request, request.tenant_context.family)
+
+
+# Maximum reply nesting. Depth is computed by walking the parent chain (one
+# query per level), so an uncapped chain is both a rendering and a query-storm
+# problem; deeper replies are rejected at create time.
+MAX_COMMENT_DEPTH = 8
 
 
 def create_comment_for_family(request, family):
@@ -4382,6 +4373,11 @@ def create_comment_for_family(request, family):
                 post=post,
                 is_active=True,
             )
+            if parent.depth + 1 > MAX_COMMENT_DEPTH:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Reply nesting is too deep'
+                }, status=400)
 
         comment = MessageBoardComment.objects.create(
             family=family,
@@ -4414,15 +4410,15 @@ def create_comment_for_family(request, family):
             'success': False,
             'error': 'Invalid JSON data'
         }, status=400)
-    except Exception as e:
+    except Exception:
+        logger.exception('Message board request failed')
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Something went wrong. Please try again.'
         }, status=500)
 
 
 @login_required
-# @ratelimit(key='user', rate='30/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def vote_post(request):
     return message_board_not_found()
@@ -4468,13 +4464,20 @@ def vote_post_for_family(request, family):
                 existing_vote.save()
                 action = 'changed'
         else:
-            MessageBoardVote.objects.create(
-                family=family,
+            # get_or_create: two simultaneous first-votes would both miss the
+            # lookup above; the insert-race loser must land on the existing
+            # row instead of an IntegrityError 500.
+            vote, vote_created = MessageBoardVote.objects.get_or_create(
                 user=request.user,
                 post=post,
-                vote_type=vote_type
+                defaults={'family': family, 'vote_type': vote_type},
             )
-            action = 'added'
+            if vote_created or vote.vote_type == vote_type:
+                action = 'added'
+            else:
+                vote.vote_type = vote_type
+                vote.save()
+                action = 'changed'
 
         post.refresh_from_db()
 
@@ -4493,15 +4496,15 @@ def vote_post_for_family(request, family):
             'success': False,
             'error': 'Invalid JSON data'
         }, status=400)
-    except Exception as e:
+    except Exception:
+        logger.exception('Message board request failed')
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Something went wrong. Please try again.'
         }, status=500)
 
 
 @login_required
-# @ratelimit(key='user', rate='30/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def vote_comment(request):
     return message_board_not_found()
@@ -4547,13 +4550,19 @@ def vote_comment_for_family(request, family):
                 existing_vote.save()
                 action = 'changed'
         else:
-            MessageBoardVote.objects.create(
-                family=family,
+            # get_or_create: see vote_post_for_family — the insert-race loser
+            # must land on the existing row, not an IntegrityError 500.
+            vote, vote_created = MessageBoardVote.objects.get_or_create(
                 user=request.user,
                 comment=comment,
-                vote_type=vote_type
+                defaults={'family': family, 'vote_type': vote_type},
             )
-            action = 'added'
+            if vote_created or vote.vote_type == vote_type:
+                action = 'added'
+            else:
+                vote.vote_type = vote_type
+                vote.save()
+                action = 'changed'
 
         comment.refresh_from_db()
 
@@ -4572,14 +4581,14 @@ def vote_comment_for_family(request, family):
             'success': False,
             'error': 'Invalid JSON data'
         }, status=400)
-    except Exception as e:
+    except Exception:
+        logger.exception('Message board request failed')
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Something went wrong. Please try again.'
         }, status=500)
 
 
-# @ratelimit(key='ip', rate='60/m', method='GET', block=True)  # Disabled for now
 def get_post_comments(request, post_id):
     return message_board_not_found()
 
@@ -4642,10 +4651,11 @@ def get_post_comments_for_family(request, family, post_id):
 
     except Http404:
         return message_board_not_found()
-    except Exception as e:
+    except Exception:
+        logger.exception('Message board request failed')
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': 'Something went wrong. Please try again.'
         }, status=500)
 
 
@@ -4665,7 +4675,6 @@ def is_board_moderator(request):
 
 
 @login_required
-# @ratelimit(key='user', rate='10/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def edit_post(request, post_id):
     return message_board_not_found()
@@ -4746,7 +4755,6 @@ def edit_post_for_family(request, family, post_id):
 
 
 @login_required
-# @ratelimit(key='user', rate='10/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def delete_post(request, post_id):
     return message_board_not_found()
@@ -4787,7 +4795,6 @@ def delete_post_for_family(request, family, post_id):
 
 
 @login_required
-# @ratelimit(key='user', rate='15/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def edit_comment(request, comment_id):
     return message_board_not_found()
@@ -4848,7 +4855,6 @@ def edit_comment_for_family(request, family, comment_id):
 
 
 @login_required
-# @ratelimit(key='user', rate='15/m', method='POST', block=True)  # Disabled for now
 @require_http_methods(["POST"])
 def delete_comment(request, comment_id):
     return message_board_not_found()
@@ -4919,7 +4925,6 @@ def commissioners(request):
 
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def set_week_winner(request):
     return legacy_commissioner_json_denial(request)
 
@@ -4982,7 +4987,6 @@ def get_week_candidates(gameseason, week, competition):
 
 
 @require_http_methods(["POST"])
-@csrf_exempt
 def submit_manual_pick(request):
     return legacy_commissioner_json_denial(request)
 

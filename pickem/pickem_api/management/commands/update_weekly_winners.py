@@ -15,7 +15,7 @@ from pickem_api.models import Family, Pool
 from pickem_api.weekly_winners import (
     EspnGameStatsProvider,
     award_weekly_winners,
-    latest_complete_week,
+    complete_weeks,
     week_is_complete,
 )
 
@@ -40,8 +40,11 @@ class Command(BaseCommand):
         season = options["season"] or get_season()
         week = options["week"]
         if week is None:
-            week = latest_complete_week(season)
-            if week is None:
+            # Walk every complete week, not just the latest: awarding is
+            # idempotent per pool/week, and this back-fills any week whose
+            # award was missed (e.g. a scheduler outage spanning MNF).
+            weeks = complete_weeks(season)
+            if not weeks:
                 self.stdout.write("No completed week yet; nothing to award.")
                 return
         elif not week_is_complete(season, week):
@@ -49,34 +52,43 @@ class Command(BaseCommand):
                 f"Week {week} still has unfinished/unscored games; skipping."
             )
             return
+        else:
+            weeks = [week]
 
         stats_provider = EspnGameStatsProvider()
-        awarded = 0
         # Skip pools of deactivated (soft-deleted) families — no bonuses are
         # awarded while a family is inactive — and other seasons' pools,
         # which could never award anything for this season anyway.
-        for pool in Pool.objects.filter(
+        pools = list(Pool.objects.filter(
             status=Pool.Status.ACTIVE,
             season=season,
             family__status=Family.Status.ACTIVE,
-        ):
-            try:
-                result = award_weekly_winners(
-                    pool, season, week,
-                    stats_provider=stats_provider,
-                    force=options["force"],
-                )
-            except Exception:
-                logger.exception("Weekly winner award failed for pool %s", pool)
-                self.stderr.write(f" - {pool}: award failed (see logs)")
-                continue
-            if result:
-                awarded += 1
-                self.stdout.write(
-                    f" - {pool}: week {week} -> {', '.join(result['winners'])} "
-                    f"(+{result['bonus_each']} each, via {result['method']})"
-                )
+        ))
+        for target_week in weeks:
+            awarded = 0
+            for pool in pools:
+                try:
+                    result = award_weekly_winners(
+                        pool, season, target_week,
+                        stats_provider=stats_provider,
+                        force=options["force"],
+                    )
+                except Exception:
+                    logger.exception(
+                        "Weekly winner award failed for pool %s", pool
+                    )
+                    self.stderr.write(f" - {pool}: award failed (see logs)")
+                    continue
+                if result:
+                    awarded += 1
+                    self.stdout.write(
+                        f" - {pool}: week {target_week} -> "
+                        f"{', '.join(result['winners'])} "
+                        f"(+{result['bonus_each']} each, via {result['method']})"
+                    )
 
-        self.stdout.write(
-            self.style.SUCCESS(f"Week {week}: awarded winners in {awarded} pool(s).")
-        )
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Week {target_week}: awarded winners in {awarded} pool(s)."
+                )
+            )

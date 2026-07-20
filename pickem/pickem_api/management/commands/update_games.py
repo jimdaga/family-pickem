@@ -8,14 +8,14 @@ season instead of the old hardcoded ``game_year = "2025"``.
 """
 
 import logging
-from datetime import date
 
 import requests
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from pickem.utils import get_season
-from pickem_api.models import GameWeeks, GamesAndScores, Teams
+from pickem_api.models import GamePicks, GameWeeks, GamesAndScores, Teams, userSeasonPoints
 from pickem_api.management.commands.update_records import season_start_year
 
 logger = logging.getLogger(__name__)
@@ -64,6 +64,13 @@ def _int(value):
         return None
 
 
+def _float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _linescores(competitor):
     """Return (p1, p2, p3, p4, ot) integer scores, None where missing."""
     scores = [None, None, None, None, None]
@@ -73,33 +80,41 @@ def _linescores(competitor):
 
 
 def _win_probabilities(competition):
+    """Best-effort odds parse. Odds are optional metadata: ESPN quirks like
+    ``"homeTeamOdds": null`` or ``"spread": "EVEN"`` must degrade to None /
+    50-50, never raise — a raise here would discard the game's scores too."""
     spread = over_under = home_prob = away_prob = None
-    odds = competition.get("odds") or []
-    if odds:
-        data = odds[0]
-        spread = data.get("spread")
-        over_under = data.get("overUnder")
-        home_fav = data.get("homeTeamOdds", {}).get("favorite", False)
-        away_fav = data.get("awayTeamOdds", {}).get("favorite", False)
-        if spread is not None:
-            factor = min(abs(spread) * 2, 25)
-            if home_fav:
-                home_prob = min(52 + factor, 85)
-                away_prob = 100 - home_prob
-            elif away_fav:
-                away_prob = min(52 + factor, 85)
-                home_prob = 100 - away_prob
+    try:
+        odds = competition.get("odds") or []
+        if odds:
+            data = odds[0] or {}
+            spread = _float(data.get("spread"))
+            over_under = _float(data.get("overUnder"))
+            home_fav = (data.get("homeTeamOdds") or {}).get("favorite", False)
+            away_fav = (data.get("awayTeamOdds") or {}).get("favorite", False)
+            if spread is not None:
+                factor = min(abs(spread) * 2, 25)
+                if home_fav:
+                    home_prob = min(52 + factor, 85)
+                    away_prob = 100 - home_prob
+                elif away_fav:
+                    away_prob = min(52 + factor, 85)
+                    home_prob = 100 - away_prob
+                else:
+                    home_prob = away_prob = 50
             else:
                 home_prob = away_prob = 50
-        else:
-            home_prob = away_prob = 50
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        logger.warning("Ignoring malformed ESPN odds payload: %s", exc)
+        return None, None, None, None
     return spread, over_under, home_prob, away_prob
 
 
 def _weather(event, game_id):
+    """Best-effort weather parse; optional metadata, never raises."""
     temperature = condition = None
     weather = event.get("weather")
-    if weather:
+    if isinstance(weather, dict):
         temperature = weather.get("temperature")
         condition = weather.get("displayValue")
         if not condition:
@@ -210,7 +225,7 @@ def parse_scoreboard(payload, season, game_year, slug_lookup=team_slug):
                     "broadcast": _broadcast(competition),
                     "gamecastUrl": _gamecast_url(event),
                 }
-            except (KeyError, TypeError, ValueError) as exc:
+            except (AttributeError, KeyError, TypeError, ValueError) as exc:
                 logger.warning(
                     "Skipping malformed ESPN competition payload for event=%s competition=%s: %s",
                     event.get("id"),
@@ -235,7 +250,10 @@ def parse_scoreboard(payload, season, game_year, slug_lookup=team_slug):
 
 
 def current_week_for_today(season=None):
-    today = date.today().strftime("%Y-%m-%d")
+    # localdate(), not date.today(): the server host's OS timezone (often
+    # UTC in containers) can disagree with the league's timezone near
+    # midnight Eastern and resolve the wrong week's scoreboard.
+    today = timezone.localdate().strftime("%Y-%m-%d")
     weeks = GameWeeks.objects.all()
     if season is not None:
         weeks = weeks.filter(season=season)
@@ -282,9 +300,53 @@ class Command(BaseCommand):
         self.stdout.write(f"Updating games for season {season} week {week}")
 
         payload = fetch_scoreboard(week, year)
+        parsed = list(parse_scoreboard(payload, season, year))
+        # Bulk pre-fetch every game's pre-update state in one query rather
+        # than one query per game inside the loop below (an N+1 that ran on
+        # every scheduled sync during live game windows).
+        previous_by_id = {
+            row["id"]: row
+            for row in GamesAndScores.objects.filter(
+                id__in=[game_id for game_id, _ in parsed]
+            ).values("id", "gameScored", "gameWinner")
+        }
         count = 0
-        for game_id, defaults in parse_scoreboard(payload, season, year):
-            GamesAndScores.objects.update_or_create(id=game_id, defaults=defaults)
+        for game_id, defaults in parsed:
+            previous = previous_by_id.get(game_id)
+            game, _created = GamesAndScores.objects.update_or_create(
+                id=game_id, defaults=defaults
+            )
+            # ESPN occasionally reverses an already-scored result (forfeit,
+            # replay correction). update_picks only re-visits gameScored=False
+            # games, so without this the old winner's pickers stay wrongly
+            # credited forever. Reopen the game and clear its picks' grading
+            # so the next update_picks run re-grades everyone from scratch.
+            if (
+                previous
+                and previous["gameScored"]
+                and previous["gameWinner"] != game.gameWinner
+            ):
+                GamesAndScores.objects.filter(id=game_id).update(gameScored=False)
+                GamePicks.objects.filter(pick_game_id=game_id).update(
+                    pick_correct=False
+                )
+                # A winner already awarded for this week must also be
+                # reopened: award_weekly_winners only re-evaluates a week
+                # while its winner_field is False, so without this the
+                # bonus would stay pinned to the pre-correction winner
+                # forever. update_standings/update_weekly_winners run later
+                # in the same pipeline and will recompute points and
+                # re-award correctly.
+                if str(game.gameWeek).isdigit() and 1 <= int(game.gameWeek) <= 18:
+                    winner_field = f"week_{game.gameWeek}_winner"
+                    bonus_field = f"week_{game.gameWeek}_bonus"
+                    userSeasonPoints.objects.filter(
+                        gameseason=season, **{winner_field: True}
+                    ).update(**{winner_field: False, bonus_field: 0})
+                self.stdout.write(
+                    f"   winner corrected ({previous['gameWinner']!r} -> "
+                    f"{game.gameWinner!r}); reopened for re-grading"
+                )
             count += 1
             self.stdout.write(f" - {defaults['slug']} ({defaults['statusType']})")
 

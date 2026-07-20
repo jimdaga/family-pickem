@@ -83,6 +83,49 @@ class SaveMatrixTests(TestCase):
         self.assertEqual(self.settings.win_points, 5)
         self.assertEqual(calls, [])
 
+    def test_concurrent_save_does_not_clobber_a_prior_save_lost_update(self):
+        """Two requests can load the same row with the same updated_at. The
+        first save must not be silently overwritten by the second just
+        because the second's in-memory `obj.updated_at` (captured before
+        either request started) still matches what it submits — the check
+        has to be re-verified against a fresh DB read at save time, not
+        trusted from the possibly-stale in-memory object."""
+        stale_copy = PoolSettings.objects.get(pk=self.settings.pk)
+        stale_stamp = stale_copy.updated_at.isoformat()
+
+        # First "request" saves successfully, advancing updated_at in the DB.
+        first_saved, _failed, _stale = save_matrix(
+            self._request(self._payload(win_points='5', updated_at=stale_stamp)),
+            objects=[self.settings],
+            form_class=PoolSettingsRowForm,
+            tracked_fields=TRACKED_FIELDS,
+            key_field='win_points',
+            on_save=lambda obj, changes: None,
+        )
+        self.assertEqual(first_saved, 1)
+
+        # Second "request" holds a stale in-memory copy from before the first
+        # request's save (same updated_at as what it submits) — a real lost
+        # update. It must be rejected, not silently applied.
+        calls = []
+        saved, failed, stale = save_matrix(
+            self._request(self._payload(win_points='9', updated_at=stale_stamp)),
+            objects=[stale_copy],
+            form_class=PoolSettingsRowForm,
+            tracked_fields=TRACKED_FIELDS,
+            key_field='win_points',
+            on_save=lambda obj, changes: calls.append((obj, changes)),
+        )
+
+        self.settings.refresh_from_db()
+        self.assertEqual(saved, 0)
+        self.assertEqual(stale, [stale_copy])
+        self.assertEqual(
+            self.settings.win_points, 5,
+            'first save must not be clobbered by the second',
+        )
+        self.assertEqual(calls, [])
+
     def test_stale_check_false_skips_the_concurrency_check(self):
         """stale_check=False (Teams, which has no updated_at column) must save
         even though the submitted stamp no longer matches the DB row."""

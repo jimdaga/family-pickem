@@ -474,6 +474,46 @@ class WeeklyPicksCampaignTests(TestCase):
         self.assertEqual(self.campaign.last_sent_week, 1)
         self.assertEqual(self.campaign.last_sent_count, 1)
 
+    def test_failed_send_does_not_mark_week_as_sent(self):
+        # A transient provider outage (every send errors, sent=0) must leave
+        # the campaign eligible to retry on the next tick — marking the week
+        # sent would silently suppress that week's reminder forever.
+        self._seed_week_one()
+        september_9_2026 = timezone.make_aware(datetime(2026, 9, 9, 13, 5))
+        resend_mock = Mock()
+        resend_mock.Emails.send.side_effect = Exception('resend down')
+
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_due_email_campaigns(now=september_9_2026)
+
+        self.assertEqual(result['campaigns'][0]['sent_count'], 0)
+        self.campaign.refresh_from_db()
+        self.assertIsNone(self.campaign.last_sent_season)
+        self.assertIsNone(self.campaign.last_sent_week)
+
+        # Provider recovers: the same week now goes out.
+        resend_mock.Emails.send.side_effect = None
+        resend_mock.Emails.send.return_value = {'id': 'weekly_email_retry'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            retry = send_due_email_campaigns(now=september_9_2026)
+
+        self.assertEqual(retry['campaigns'][0]['sent_count'], 1)
+        self.campaign.refresh_from_db()
+        self.assertEqual(self.campaign.last_sent_season, 2627)
+        self.assertEqual(self.campaign.last_sent_week, 1)
+
+    def test_eligibility_enumeration_does_not_create_profiles(self):
+        # Preview/eligibility checks are reads: a user without a profile must
+        # not have a UserProfile row created as a side effect.
+        from pickem_homepage.emailing import _eligible_weekly_picks_users
+
+        UserProfile.objects.all().delete()
+        before = UserProfile.objects.count()
+
+        _eligible_weekly_picks_users(self.campaign)
+
+        self.assertEqual(UserProfile.objects.count(), before)
+
     def test_campaign_prefers_non_legacy_commissioner_family_for_multi_family_user(self):
         legacy_family, _ = Family.objects.get_or_create(
             slug='legacy-family-league',

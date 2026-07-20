@@ -518,9 +518,12 @@ class GamesAndScores(models.Model):
 
 class GamePicks(models.Model):
     id = models.CharField(max_length=250, primary_key=True)
+    # PROTECT: deleting a Pool with SET_NULL would silently merge its picks
+    # into the pool-NULL (legacy) bucket. Pools with history must be emptied
+    # deliberately (force_delete_family) before they can go away.
     pool = models.ForeignKey(
         Pool,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name='game_picks',
         blank=True,
         null=True,
@@ -552,13 +555,29 @@ class GamePicks(models.Model):
             models.Index(fields=['pool', 'gameseason', 'gameWeek'], name='gp_pool_season_week_idx'),
             models.Index(fields=['pool', 'userID'], name='gp_pool_userid_idx'),
         ]
+        constraints = [
+            # One pick per user per game per pool, enforced by the DB rather
+            # than only by the app's deterministic "{pool}-{user}-{game}" pk.
+            # NULL pools (legacy rows) get their own partial constraint
+            # because SQL UNIQUE treats NULLs as distinct.
+            models.UniqueConstraint(
+                fields=['pool', 'userID', 'pick_game_id'],
+                name='gp_unique_pool_user_game',
+            ),
+            models.UniqueConstraint(
+                fields=['userID', 'pick_game_id'],
+                condition=models.Q(pool__isnull=True),
+                name='gp_unique_nullpool_user_game',
+            ),
+        ]
 
 
 class userSeasonPoints(models.Model):
     id = models.AutoField(primary_key=True)
+    # PROTECT (not SET_NULL): see GamePicks.pool.
     pool = models.ForeignKey(
         Pool,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name='season_points',
         blank=True,
         null=True,
@@ -653,13 +672,28 @@ class userSeasonPoints(models.Model):
             models.Index(fields=['pool', 'gameseason'], name='usp_pool_season_idx'),
             models.Index(fields=['pool', 'userID'], name='usp_pool_userid_idx'),
         ]
+        constraints = [
+            # One season-points row per user per pool per season. NULL pools
+            # (legacy rows) get their own partial constraint because SQL
+            # UNIQUE treats NULLs as distinct.
+            models.UniqueConstraint(
+                fields=['pool', 'userID', 'gameseason'],
+                name='usp_unique_pool_user_season',
+            ),
+            models.UniqueConstraint(
+                fields=['userID', 'gameseason'],
+                condition=models.Q(pool__isnull=True),
+                name='usp_unique_nullpool_user_season',
+            ),
+        ]
 
 
 class userPoints(models.Model):
     id = models.CharField(max_length=250, primary_key=True)
+    # PROTECT (not SET_NULL): see GamePicks.pool.
     pool = models.ForeignKey(
         Pool,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name='legacy_user_points',
         blank=True,
         null=True,
@@ -763,9 +797,10 @@ class GameWeeks(models.Model):
 
 class userStats(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # PROTECT (not SET_NULL): see GamePicks.pool.
     pool = models.ForeignKey(
         Pool,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name='user_stats',
         blank=True,
         null=True,
@@ -802,6 +837,20 @@ class userStats(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['pool', 'userID'], name='us_pool_userid_idx'),
+        ]
+        constraints = [
+            # One stats row per user per pool; the global stats row uses a
+            # NULL pool, which needs its own partial constraint because SQL
+            # UNIQUE treats NULLs as distinct.
+            models.UniqueConstraint(
+                fields=['pool', 'userID'],
+                name='us_unique_pool_user',
+            ),
+            models.UniqueConstraint(
+                fields=['userID'],
+                condition=models.Q(pool__isnull=True),
+                name='us_unique_nullpool_user',
+            ),
         ]
 
 class currentSeason(models.Model):

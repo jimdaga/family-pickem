@@ -60,8 +60,9 @@ class GradingTestCase(TestCase):
 
         Production runs ``update_all`` every minute; a week's winner is
         awarded on the first run after its last game goes final. Multi-week
-        tests should therefore finish a week's games, call this, and repeat —
-        ``update_weekly_winners`` only awards the *latest* complete week.
+        tests can finish a week's games, call this, and repeat — or rely on
+        ``update_weekly_winners`` back-filling every complete-but-unawarded
+        week in one run.
 
         Returns the combined command output (handy for asserting messages).
         """

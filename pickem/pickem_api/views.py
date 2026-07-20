@@ -11,6 +11,7 @@ from pickem_api.models import (
     FamilyMembership,
     GamesAndScores, GameWeeks, GamePicks, Teams, userSeasonPoints, currentSeason,
 )
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import HttpResponse
 from django.http.response import JsonResponse
@@ -275,13 +276,25 @@ def user_picks(request, pick_id):
 
     elif request.method == 'PATCH':
         request_data = JSONParser().parse(request)
-        pick = GamePicks.objects.get(id=pick_id)
-        # picks_serializer = GamePicksSerializer(pick, data=request_data, partial=True)
+        try:
+            pick = GamePicks.objects.get(id=pick_id)
+        except GamePicks.DoesNotExist:
+            return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND)
         picks_serializer = GamePicksSerializer(
-            pick, data={'pick_correct': 'true'}, partial=True)
+            pick, data=request_data, partial=True)
         if picks_serializer.is_valid():
-            picks_serializer.save()
-            return JsonResponse(picks_serializer.data, status=status.HTTP_201_CREATED)
+            try:
+                # Savepoint: a caught IntegrityError must not poison any
+                # outer transaction (e.g. Postgres ATOMIC_REQUESTS) beyond
+                # this save.
+                with transaction.atomic():
+                    picks_serializer.save()
+            except IntegrityError:
+                return JsonResponse(
+                    {'message': 'A pick already exists for that pool/user/game'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            return JsonResponse(picks_serializer.data, status=status.HTTP_200_OK)
         return JsonResponse(picks_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -393,6 +406,42 @@ def user_points_all(request):
         return JsonResponse(user_point_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+def _season_points_scope(request, game_season, id):
+    """Season-points rows for a user+season, optionally narrowed to one pool
+    via ``?pool=<id>``. Returns (queryset, error_response)."""
+    queryset = userSeasonPoints.objects.filter(userID=id, gameseason=game_season)
+    pool_param = request.GET.get('pool')
+    if pool_param is not None:
+        try:
+            queryset = queryset.filter(pool_id=int(pool_param))
+        except (TypeError, ValueError):
+            return None, JsonResponse(
+                {'message': 'pool must be an integer pool id'},
+                status=status.HTTP_400_BAD_REQUEST)
+    return queryset, None
+
+
+def _single_season_points(request, game_season, id):
+    """Resolve exactly one season-points row or an error response.
+
+    A user can hold a row per pool per season, so an id+season lookup can be
+    ambiguous; require ``?pool=<id>`` in that case instead of 500ing.
+    """
+    queryset, error = _season_points_scope(request, game_season, id)
+    if error is not None:
+        return None, error
+    rows = list(queryset[:2])
+    if not rows:
+        return None, JsonResponse(
+            {'message': 'There was an issue getting this data'},
+            status=status.HTTP_404_NOT_FOUND)
+    if len(rows) > 1:
+        return None, JsonResponse(
+            {'message': 'User has season points in multiple pools; specify ?pool=<id>'},
+            status=status.HTTP_400_BAD_REQUEST)
+    return rows[0], None
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
 def delete_user_record(request, game_season, id):
@@ -400,9 +449,12 @@ def delete_user_record(request, game_season, id):
     DELETE user season points record
     """
     if request.method == 'DELETE':
-        cleanup = userSeasonPoints.objects.get(userID=id, gameseason=game_season).delete()
-        return JsonResponse({'message': 'Deleted record for user id {}'.format(cleanup[0])}, status=status.HTTP_204_NO_CONTENT)
-    
+        record, error = _single_season_points(request, game_season, id)
+        if error is not None:
+            return error
+        record.delete()
+        return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+
 
 @api_view(['GET', 'POST', 'PATCH'])
 @permission_classes([IsAdminUser])
@@ -412,10 +464,9 @@ def user_points(request, game_season, id):
     Find user points for a given year
     """
     if request.method == 'GET':
-        try:
-            user_points = userSeasonPoints.objects.get(userID=id, gameseason=game_season)
-        except userSeasonPoints.DoesNotExist:
-            return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND)
+        user_points, error = _single_season_points(request, game_season, id)
+        if error is not None:
+            return error
 
         user_point_serializer = UserSeasonPointsSerializer(user_points)
         return Response(user_point_serializer.data)
@@ -432,11 +483,10 @@ def user_points(request, game_season, id):
 
     elif request.method == 'PATCH':
         request_data = JSONParser().parse(request)
-        try:
-            user_points = userSeasonPoints.objects.get(userID=id, gameseason=game_season)
-        except userSeasonPoints.DoesNotExist:
-            return JsonResponse({'message': 'There was an issue getting this data'}, status=status.HTTP_404_NOT_FOUND)
-        
+        user_points, error = _single_season_points(request, game_season, id)
+        if error is not None:
+            return error
+
         user_point_serializer = UserSeasonPointsSerializer(
             user_points, data=request_data, partial=True)
         if user_point_serializer.is_valid():

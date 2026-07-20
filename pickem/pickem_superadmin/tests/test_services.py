@@ -362,6 +362,47 @@ class RepairServiceTests(TestCase):
         pick.refresh_from_db()
         self.assertTrue(pick.pick_correct)
 
+    def test_rescore_week_regrades_sibling_pools_on_shared_games(self):
+        """Games are shared across pools. After a result correction, every
+        pool that picked the game must be re-graded — not just the target
+        pool, or siblings silently keep stale pick_correct and standings."""
+        other_family = Family.objects.create(name='Smith', slug='smith')
+        other_pool = Pool.objects.create(
+            family=other_family, name='Smith Pool', slug='smith-pool', season=2627,
+        )
+        # The game's result was corrected: nyj now the winner, already scored.
+        GamesAndScores.objects.create(
+            id=420, slug='ne-at-nyj-w2', competition='nfl', gameWeek='1',
+            gameyear='2026', gameseason=2627, startTimestamp=timezone.now(),
+            statusType='finished', statusTitle='Final',
+            homeTeamId=1, homeTeamSlug='nyj', homeTeamName='Jets',
+            awayTeamId=2, awayTeamSlug='ne', awayTeamName='Patriots',
+            homeTeamScore=21, awayTeamScore=17, gameWinner='nyj', gameScored=True,
+        )
+        # Target pool's pick: graded correct under the OLD (wrong) result.
+        target_pick = GamePicks.objects.create(
+            id='dagostino-pickem-pool-root-420', pool=self.pool, userID='root',
+            pick='ne', gameseason=2627, gameWeek=1, pick_game_id=420,
+            pick_correct=True,
+        )
+        # Sibling pool's pick on the same game, same stale grading.
+        sibling_pick = GamePicks.objects.create(
+            id=f'{other_pool.id}-bob-420', pool=other_pool, userID='bob',
+            pick='ne', gameseason=2627, gameWeek=1, pick_game_id=420,
+            pick_correct=True,
+        )
+
+        result = services.rescore_week(self._request(), self.pool, week=1)
+
+        target_pick.refresh_from_db()
+        sibling_pick.refresh_from_db()
+        self.assertFalse(target_pick.pick_correct)
+        self.assertFalse(
+            sibling_pick.pick_correct,
+            'sibling pool pick on the corrected game must be re-graded too',
+        )
+        self.assertIn(other_pool.id, result.get('affected_pools', []))
+
     def test_fix_stuck_game_records_before_and_after(self):
         game = GamesAndScores.objects.create(
             id=401, slug='ne-at-nyj', competition='nfl', gameWeek='1',

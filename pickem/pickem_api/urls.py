@@ -32,7 +32,8 @@ urlpatterns = [
     re_path(
         r'^userpickids/(?P<game_season>[0-9]+)/(?P<game_week>[0-9]+)$', views.game_picks_week_all),
     re_path(r'^picks/(?P<pick_game_id>[0-9]+)$', views.game_picks),
-    re_path(r'^userpicks/(?P<pick_id>[0-9]+-[0-9]+)$', views.user_picks),
+    # Pick ids are "{pool}-{user}-{game}" (legacy rows: "{user}-{game}").
+    re_path(r'^userpicks/(?P<pick_id>[0-9]+-[0-9]+(?:-[0-9]+)?)$', views.user_picks),
 
     # TEAMS
     re_path(r'^teams/id/(?P<team_id>[0-9]+)$', views.get_teams_detail),

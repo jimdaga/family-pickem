@@ -82,10 +82,12 @@ class Command(BaseCommand):
         }
 
         # Shared reference data, fetched once. Games aren't pool-scoped, so this
-        # is unaffected by --pool.
-        finished_slugs = set(
+        # is unaffected by --pool. Keyed by game id, never slug: matchup slugs
+        # ("eagles-chiefs") recur every season, so a slug match would grade a
+        # current pick against a previous season's finished game.
+        finished_ids = set(
             GamesAndScores.objects.filter(statusType="finished").values_list(
-                "slug", flat=True
+                "id", flat=True
             )
         )
         # Scored games as (season, week, id), for missed picks + perfect weeks.
@@ -94,7 +96,7 @@ class Command(BaseCommand):
                 gameScored=True, gameseason__isnull=False
             ).values("id", "gameseason", "gameWeek")
         )
-        scored_ids_all = {g["id"] for g in scored_games}
+        scored_season_by_id = {g["id"]: g["gameseason"] for g in scored_games}
         scored_ids_season = {
             g["id"] for g in scored_games if g["gameseason"] == season
         }
@@ -104,7 +106,7 @@ class Command(BaseCommand):
             key = (g["gameseason"], g["gameWeek"])
             scored_by_week[key] = scored_by_week.get(key, 0) + 1
 
-        if pool_id:
+        if pool_id is not None:
             # Pool-scoped: identify users by their (string) userID within this
             # pool's picks, and write a per-pool row for each — the global
             # (pool-null) row from a season-wide run is left untouched.
@@ -124,8 +126,8 @@ class Command(BaseCommand):
                     identity_filter,
                     user_id,
                     season,
-                    finished_slugs,
-                    scored_ids_all,
+                    finished_ids,
+                    scored_season_by_id,
                     scored_ids_season,
                     scored_by_week,
                     pool_id=pool_id,
@@ -156,8 +158,8 @@ class Command(BaseCommand):
                     identity_filter,
                     user_id,
                     season,
-                    finished_slugs,
-                    scored_ids_all,
+                    finished_ids,
+                    scored_season_by_id,
                     scored_ids_season,
                     scored_by_week,
                     pool_id=None,
@@ -175,22 +177,27 @@ class Command(BaseCommand):
         identity_filter,
         user_id,
         season,
-        finished_slugs,
-        scored_ids_all,
+        finished_ids,
+        scored_season_by_id,
         scored_ids_season,
         scored_by_week,
         pool_id=None,
     ):
         # --- Pick accuracy (real picks whose game is finished) ---
         finished_picks = GamePicks.objects.filter(
-            **identity_filter, gameseason__isnull=False, slug__in=finished_slugs,
-            auto_pick=False,
+            **identity_filter, gameseason__isnull=False,
+            pick_game_id__in=finished_ids, auto_pick=False,
         )
+        # Distinct games, not raw pick rows: the global (pool-null) run sees
+        # one pick per pool per game for multi-pool users, which would double
+        # every count (and make perfect weeks unreachable).
         totals = finished_picks.aggregate(
-            total=Count("id"), correct=Count("id", filter=Q(pick_correct=True))
+            total=Count("pick_game_id", distinct=True),
+            correct=Count("pick_game_id", filter=Q(pick_correct=True), distinct=True),
         )
         season_totals = finished_picks.filter(gameseason=season).aggregate(
-            total=Count("id"), correct=Count("id", filter=Q(pick_correct=True))
+            total=Count("pick_game_id", distinct=True),
+            correct=Count("pick_game_id", filter=Q(pick_correct=True), distinct=True),
         )
         correct_total = totals["correct"] or 0
         total_total = totals["total"] or 0
@@ -199,7 +206,7 @@ class Command(BaseCommand):
 
         # --- Weeks won / seasons won (from userSeasonPoints) ---
         usp = userSeasonPoints.objects.filter(userID=user_id)
-        if pool_id:
+        if pool_id is not None:
             usp = usp.filter(pool_id=pool_id)
         weeks_won_total = self._sum_weeks_won(usp.filter(gameseason__isnull=False))
         weeks_won_season = self._sum_weeks_won(usp.filter(gameseason=season))
@@ -208,12 +215,25 @@ class Command(BaseCommand):
         ).count()
 
         # --- Missed picks: scored games the user never picked themselves ---
-        picked_game_ids = set(
-            GamePicks.objects.filter(
-                **identity_filter, gameseason__isnull=False, auto_pick=False
-            ).values_list("pick_game_id", flat=True)
+        # One query for both picked_game_ids (real picks only) and
+        # played_seasons (any pick, auto or not, bounds the all-time
+        # "missed" universe to seasons the user actually played) instead of
+        # two separate queries over the same identity/gameseason filter.
+        own_picks = list(
+            GamePicks.objects.filter(**identity_filter, gameseason__isnull=False)
+            .order_by()
+            .values_list("pick_game_id", "gameseason", "auto_pick")
         )
-        missed_total = len(scored_ids_all - picked_game_ids)
+        picked_game_ids = {
+            game_id for game_id, _season, auto in own_picks if not auto
+        }
+        played_seasons = {season for _game_id, season, _auto in own_picks}
+        scored_ids_played = {
+            g_id
+            for g_id, g_season in scored_season_by_id.items()
+            if g_season in played_seasons
+        }
+        missed_total = len(scored_ids_played - picked_game_ids)
         missed_season = len(scored_ids_season - picked_game_ids)
 
         # --- Perfect weeks ---
@@ -256,10 +276,11 @@ class Command(BaseCommand):
     def _perfect_weeks(identity_filter, scored_by_week, season):
         """Count weeks where the user picked every scored game, all correct.
 
-        Matches pickemctl: a week is perfect when the number of scored games in
-        it equals both the user's correct-pick count and total-pick count for
-        that week (so missing a game, getting one wrong, or extra cross-pool
-        picks all disqualify it).
+        A week is perfect when the number of scored games in it equals both
+        the user's correct-pick count and total-pick count for that week (so
+        missing a game or getting one wrong disqualifies it). Counts are per
+        distinct game so a multi-pool user's duplicate per-pool picks don't
+        inflate the totals and make perfection unreachable.
         """
         pick_filter = dict(identity_filter, auto_pick=False)
         if season is not None:
@@ -273,8 +294,10 @@ class Command(BaseCommand):
             GamePicks.objects.filter(**pick_filter)
             .values("gameseason", "gameWeek")
             .annotate(
-                total=Count("id"),
-                correct=Count("id", filter=Q(pick_correct=True)),
+                total=Count("pick_game_id", distinct=True),
+                correct=Count(
+                    "pick_game_id", filter=Q(pick_correct=True), distinct=True
+                ),
             )
         )
         for row in rows:
@@ -307,7 +330,7 @@ class Command(BaseCommand):
         if season is not None:
             qs = qs.filter(gameseason=season)
         counts = list(
-            qs.values("pick").annotate(c=Count("id")).order_by()
+            qs.values("pick").annotate(c=Count("pick_game_id", distinct=True)).order_by()
         )
         counts = [row for row in counts if row["pick"]]
         if not counts:

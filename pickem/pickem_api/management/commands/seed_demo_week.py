@@ -33,7 +33,9 @@ from pickem_api.models import (
     Pool,
     PoolSettings,
     Teams,
+    userPoints,
     userSeasonPoints,
+    userStats,
 )
 
 DEMO_SLUG = 'demo-engine-test'
@@ -223,6 +225,12 @@ class Command(BaseCommand):
             deleted['audit'] = FamilyAuditLog.objects.filter(family=family).delete()[0]
             deleted['memberships'] = FamilyMembership.objects.filter(family=family).delete()[0]
             for pool in family.pools.all():
+                # Pool FKs are PROTECT: clear every competition row that
+                # references the pool before deleting it.
+                GamePicks.objects.filter(pool=pool).delete()
+                userSeasonPoints.objects.filter(pool=pool).delete()
+                userPoints.objects.filter(pool=pool).delete()
+                userStats.objects.filter(pool=pool).delete()
                 PoolSettings.objects.filter(pool=pool).delete()
                 pool.delete()
             family.delete()

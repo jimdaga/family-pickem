@@ -261,18 +261,25 @@ def week_is_complete(season, week, competition='nfl'):
     return not games.exclude(statusType='finished', gameScored=True).exists()
 
 
-def latest_complete_week(season, competition='nfl'):
+def complete_weeks(season, competition='nfl'):
+    """All fully complete weeks of the season, ascending. The award loop
+    walks every one (awarding is idempotent per pool/week) so a scheduler
+    outage across a week boundary can't permanently skip a week's bonus."""
     weeks = (
         GamesAndScores.objects.filter(gameseason=season, competition=competition)
         .order_by()  # clear Meta.ordering so DISTINCT applies to gameWeek only
         .values_list('gameWeek', flat=True)
         .distinct()
     )
-    numeric = sorted((int(w) for w in weeks if str(w).isdigit()), reverse=True)
-    for week in numeric:
-        if week_is_complete(season, week, competition):
-            return week
-    return None
+    numeric = sorted(int(w) for w in weeks if str(w).isdigit())
+    return [
+        week for week in numeric if week_is_complete(season, week, competition)
+    ]
+
+
+def latest_complete_week(season, competition='nfl'):
+    weeks = complete_weeks(season, competition)
+    return weeks[-1] if weeks else None
 
 
 def _recompute_total(row):

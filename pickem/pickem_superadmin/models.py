@@ -31,6 +31,7 @@ class SuperAdminAuditLog(models.Model):
         TEAM_UPDATED = 'team_updated', 'Team updated'
         SEASON_UPDATED = 'season_updated', 'Current season updated'
         BANNER_PUBLISHED = 'banner_published', 'Site banner published'
+        BANNER_DEACTIVATED = 'banner_deactivated', 'Site banner deactivated'
         JOB_QUEUED = 'job_queued', 'Pipeline job queued'
         DATA_REPAIR = 'data_repair', 'Data repair action'
         SCHEDULE_UPDATED = 'schedule_updated', 'Job schedule updated'

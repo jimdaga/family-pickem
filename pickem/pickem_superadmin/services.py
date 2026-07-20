@@ -192,38 +192,56 @@ def rescore_week(request, pool, week):
     """Re-score one week after a game result is corrected.
 
     Two resets are required for this to actually recompute:
-      1. Clear pick_correct on this pool's week picks — update_picks only ever
+      1. Clear pick_correct on the week's picks — update_picks only ever
          sets picks True, never back to False, so a formerly-correct-now-wrong
          pick would otherwise stay True.
       2. Reset gameScored=False on the games those picks reference — update_picks
          only revisits games where gameScored is False, so without this the
          common case (games already scored) recomputes nothing and the cleared
          picks stay False.
-    update_picks re-marks correct picks from the current game winners; re-running
-    it is idempotent for other pools' picks on the same (shared) games, since it
-    only ever sets True. Standings are then recomputed for this pool only.
+
+    Games are SHARED across pools, so a result correction invalidates every
+    pool's grading on the affected games, not just the target pool's. The
+    clear therefore covers all picks on those games, and standings are
+    recomputed for every affected pool (reported in the result/audit).
     """
     week_picks = GamePicks.objects.filter(
         pool=pool, gameseason=pool.season, gameWeek=str(week),
     )
     game_ids = list(week_picks.values_list('pick_game_id', flat=True).distinct())
 
-    week_picks.update(pick_correct=False)
+    affected_picks = GamePicks.objects.filter(pick_game_id__in=game_ids)
+    affected_pool_ids = sorted(
+        set(
+            affected_picks.exclude(pool=None)
+            .order_by()
+            .values_list('pool_id', flat=True)
+            .distinct()
+        )
+        | {pool.id}
+    )
+
+    affected_picks.update(pick_correct=False)
     GamesAndScores.objects.filter(id__in=game_ids).update(gameScored=False)
     call_command('update_picks', season=pool.season)
-    call_command('update_standings', season=pool.season, pool=pool.id)
+    for affected_pool_id in affected_pool_ids:
+        call_command('update_standings', season=pool.season, pool=affected_pool_id)
 
+    sibling_pool_ids = [p for p in affected_pool_ids if p != pool.id]
     log_action(
         request,
         action=SuperAdminAuditLog.Action.DATA_REPAIR,
         target=pool,
         summary=f'Re-scored week {week} for {pool.family.slug}/{pool.slug}',
-        changes={'rescore_week': [None, week]},
+        changes={
+            'rescore_week': [None, week],
+            'sibling_pools_recomputed': [None, sibling_pool_ids],
+        },
         family=pool.family,
         pool=pool,
         family_action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
     )
-    return {'pool': pool.id, 'week': week}
+    return {'pool': pool.id, 'week': week, 'affected_pools': affected_pool_ids}
 
 
 @transaction.atomic

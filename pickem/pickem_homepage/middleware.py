@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
+from django.http import JsonResponse
 from django.urls import resolve
 
 from .upload_handlers import FamilyLogoUploadSizeLimitHandler
@@ -50,6 +51,13 @@ class RequireLoginForInternalPagesMiddleware:
 
     def __call__(self, request):
         if self._requires_login(request):
+            # AJAX/JSON callers get a proper 401 instead of a 302 to an HTML
+            # login page — but never a pass-through to the view: protected
+            # pages must stay unreachable regardless of Accept headers.
+            if self._expects_json(request):
+                return JsonResponse(
+                    {"error": "authentication required"}, status=401
+                )
             return redirect_to_login(
                 request.get_full_path(),
                 login_url=getattr(settings, "LOGIN_URL", None),
@@ -58,11 +66,6 @@ class RequireLoginForInternalPagesMiddleware:
 
     def _requires_login(self, request):
         if request.user.is_authenticated:
-            return False
-
-        # Let API/AJAX (JSON) requests fall through to the view so it can return a
-        # proper 401 JSON response instead of a 302 redirect to an HTML login page.
-        if self._expects_json(request):
             return False
 
         path = request.path_info or "/"

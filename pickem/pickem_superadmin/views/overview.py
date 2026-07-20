@@ -171,10 +171,15 @@ def banner_publish(request):
     if icon not in valid_icons:
         icon = 'fas fa-bullhorn'
 
+    valid_banner_types = {value for value, _label in SiteBanner.BANNER_TYPES}
+    banner_type = request.POST.get('banner_type', 'info').strip()
+    if banner_type not in valid_banner_types:
+        banner_type = 'info'
+
     banner = SiteBanner.objects.create(
         title=title,
         description=request.POST.get('description', '').strip(),
-        banner_type=request.POST.get('banner_type', 'info'),
+        banner_type=banner_type,
         icon=icon,
         family=None,
         is_active=True,
@@ -199,7 +204,7 @@ def banner_deactivate(request, banner_id):
 
     log_action(
         request,
-        action=SuperAdminAuditLog.Action.BANNER_PUBLISHED,
+        action=SuperAdminAuditLog.Action.BANNER_DEACTIVATED,
         target=banner,
         summary=f'Deactivated banner: {banner.title}',
         changes={'is_active': [True, False]},
