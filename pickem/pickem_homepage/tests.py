@@ -8684,45 +8684,59 @@ class FamilyPublicationTests(FamilyAdminExperienceTests):
         self.assertTrue(publication.is_published)
         self.assertIsNotNone(publication.published_at)
 
-    def test_publishing_replaces_the_pool_active_message(self):
-        old = FamilyPublication.objects.create(
+    def test_publishing_one_source_does_not_affect_the_other(self):
+        # FamilyPublication now holds exactly one row per (pool, source) — a
+        # fixed slot, not a growing history — so "replacing the active
+        # message" within a source means editing that single row in place.
+        # What's still worth guarding: publish_exclusively only clears
+        # is_published within the message's own source, so publishing the AI
+        # recap slot must not unpublish an already-published commissioner
+        # announcement (or vice versa).
+        commissioner_msg = FamilyPublication.objects.create(
             family=self.family, pool=self.pool, author=self.owner,
-            title='Old announcement', body='Old', is_published=True,
-            published_at=timezone.now(),
+            title='Commissioner announcement', body='Old',
+            source=FamilyPublication.Source.COMMISSIONER,
+            is_published=True, published_at=timezone.now(),
         )
-        draft = FamilyPublication.objects.create(
-            family=self.family, pool=self.pool, author=self.owner,
-            title='New announcement', body='New',
+        ai_msg = FamilyPublication.objects.create(
+            family=self.family, pool=self.pool,
+            title='AI recap', body='New',
+            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
         )
         self.client.force_login(self.owner)
         self.client.post(self._publications_url(), {
-            'action': 'publish', 'publication_id': draft.id,
+            'action': 'publish', 'publication_id': ai_msg.id,
         })
-        old.refresh_from_db()
-        draft.refresh_from_db()
-        self.assertFalse(old.is_published)
-        self.assertTrue(draft.is_published)
+        commissioner_msg.refresh_from_db()
+        ai_msg.refresh_from_db()
+        self.assertTrue(commissioner_msg.is_published)
+        self.assertTrue(ai_msg.is_published)
         self.assertEqual(
-            FamilyPublication.objects.filter(pool=self.pool, is_published=True).count(), 1
+            FamilyPublication.objects.filter(pool=self.pool, is_published=True).count(), 2
         )
 
-    def test_messages_are_newest_first_and_paginated(self):
-        for index in range(11):
-            publication = FamilyPublication.objects.create(
-                family=self.family, pool=self.pool, author=self.owner,
-                title=f'Message {index}', body='History',
-            )
-            FamilyPublication.objects.filter(id=publication.id).update(
-                created_at=timezone.now() - timedelta(minutes=11 - index)
-            )
+    def test_messages_are_newest_first(self):
+        # At most one row per (pool, source) can exist, so with both slots
+        # filled the list still has real ordering to verify.
+        older = FamilyPublication.objects.create(
+            family=self.family, pool=self.pool, author=self.owner,
+            title='Commissioner announcement', body='History',
+            source=FamilyPublication.Source.COMMISSIONER,
+        )
+        FamilyPublication.objects.filter(id=older.id).update(
+            created_at=timezone.now() - timedelta(minutes=5)
+        )
+        newer = FamilyPublication.objects.create(
+            family=self.family, pool=self.pool,
+            title='AI recap', body='Recent',
+            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
+        )
         self.client.force_login(self.owner)
         response = self.client.get(self._publications_url())
         page = response.context['publications']
-        self.assertEqual(len(page.object_list), 10)
-        self.assertEqual(page.object_list[0].title, 'Message 10')
-        self.assertContains(response, 'Older')
-        second_page = self.client.get(self._publications_url() + '?page=2')
-        self.assertContains(second_page, 'Message 0')
+        self.assertEqual(len(page.object_list), 2)
+        self.assertEqual(page.object_list[0].title, newer.title)
+        self.assertEqual(page.object_list[1].title, older.title)
 
     def test_members_cannot_manage_messages(self):
         self.client.force_login(self.member)

@@ -12,6 +12,7 @@ from pickem_api.models import Family, FamilyMembership, Pool
 SUPERADMIN_URLS = [
     'superadmin:overview',
     'superadmin:email_settings',
+    'superadmin:ai_settings',
     'superadmin:users',
     'superadmin:pools',
     'superadmin:families',
