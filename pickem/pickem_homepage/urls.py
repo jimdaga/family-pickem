@@ -39,6 +39,11 @@ urlpatterns = [
         name='family_pool_admin_banners',
     ),
     path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/lobby-messages/',
+        views.family_pool_admin_publications,
+        name='family_pool_admin_publications',
+    ),
+    path(
         'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/members/',
         views.family_pool_admin_members,
         name='family_pool_admin_members',
