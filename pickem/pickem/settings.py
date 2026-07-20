@@ -44,6 +44,11 @@ if 'DJANGO_ALLOWED_HOSTS' in os.environ:
 if 'THIS_POD_IP' in os.environ:
     ALLOWED_HOSTS.append(os.environ["THIS_POD_IP"])
 
+# Local development is intentionally reachable from phones and other devices
+# on the same LAN. Production still uses the explicit allowlist above.
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+
 if 'RDS_DB_NAME' in os.environ:
     try:
         EC2_IP = requests.get('http://169.254.169.254/latest/meta-data/local-ipv4').text
