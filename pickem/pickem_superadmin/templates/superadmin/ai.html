@@ -1,0 +1,67 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}AI{% endblock %}
+{% block eyebrow %}provider configuration{% endblock %}
+{% block heading %}AI recaps{% endblock %}
+{% block content %}
+  <div class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+    <div class="sa-card p-4">
+      <div class="sa-h2 mb-1">OpenAI provider settings</div>
+      <p class="mb-4 text-[12px] text-[#667085]">
+        One AI recap draft is generated per pool and week. The key is write-only: it is encrypted before storage and is never rendered, serialized, or recorded in the audit log.
+      </p>
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Provider</label>
+            {{ form.provider }}
+            {% for error in form.provider.errors %}<div class="mt-1 text-[12px] text-red-700">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="flex items-center gap-2 pt-7">
+            {{ form.enabled }}
+            <label for="{{ form.enabled.id_for_label }}" class="text-[13px] font-medium text-[#1b212b]">Enable AI weekly recaps</label>
+          </div>
+        </div>
+        <div>
+          <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Model</label>
+          {{ form.model }}
+          {% for error in form.model.errors %}<div class="mt-1 text-[12px] text-red-700">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="grid gap-4 md:grid-cols-3">
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Timeout (seconds)</label>
+            {{ form.timeout_seconds }}
+          </div>
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Retries</label>
+            {{ form.retries }}
+          </div>
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Max runs / pool / week</label>
+            {{ form.max_runs_per_pool_week }}
+          </div>
+        </div>
+        <div>
+          <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">OpenAI API key</label>
+          {{ form.api_key }}
+          <div class="mt-1 text-[12px] text-[#667085]">{{ form.api_key.help_text }}</div>
+          {% for error in form.api_key.errors %}<div class="mt-1 text-[12px] text-red-700">{{ error }}</div>{% endfor %}
+        </div>
+        <button type="submit" class="sa-btn sa-btn-primary">Save AI settings</button>
+      </form>
+    </div>
+
+    <div class="sa-card p-4">
+      <div class="sa-h2 mb-2">Current status</div>
+      <div class="space-y-2 text-[13px]">
+        <div class="flex items-center justify-between gap-3"><span class="text-[#667085]">Provider</span><span class="sa-mono">{{ ai_settings.get_provider_display }}</span></div>
+        <div class="flex items-center justify-between gap-3"><span class="text-[#667085]">Recaps</span><span class="sa-pill {% if ai_settings.enabled %}sa-pill-ok{% else %}sa-pill-muted{% endif %}">{% if ai_settings.enabled %}enabled{% else %}disabled{% endif %}</span></div>
+        <div class="flex items-center justify-between gap-3"><span class="text-[#667085]">Model</span><span class="sa-mono">{{ ai_settings.model }}</span></div>
+        <div class="flex items-center justify-between gap-3"><span class="text-[#667085]">API key</span><span class="sa-mono">{% if ai_settings.has_api_key %}stored{% else %}unset{% endif %}</span></div>
+      </div>
+      <p class="mt-5 border-t border-slate-200 pt-4 text-[12px] text-[#667085]">
+        The saved database record takes precedence over environment variables. Disable recaps here to immediately stop provider calls.
+      </p>
+    </div>
+  </div>
+{% endblock %}

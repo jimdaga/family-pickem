@@ -170,6 +170,36 @@ User → userStats (One-to-One)
 | `GOOGLE_OAUTH2_SECRET` | Google OAuth client secret | Yes |
 | `DEBUG` | Enable debug mode | No |
 | `ALLOWED_HOSTS` | Comma-separated allowed hosts | No |
+| `OPENAI_WEEKLY_SUMMARIES_ENABLED` | Bootstrap fallback: enable recaps until database settings are saved | No (defaults to `false`) |
+| `OPENAI_API_KEY` | Bootstrap fallback key until database settings are saved | No |
+| `OPENAI_WEEKLY_SUMMARIES_MODEL` | Bootstrap fallback model (defaults to `gpt-4o-mini`) | No |
+| `OPENAI_WEEKLY_SUMMARIES_TIMEOUT_SECONDS` | Bootstrap fallback timeout (defaults to `30`) | No |
+| `OPENAI_WEEKLY_SUMMARIES_RETRIES` | Bootstrap fallback retry count (defaults to `2`) | No |
+| `OPENAI_WEEKLY_SUMMARIES_MAX_RUNS_PER_POOL_WEEK` | Bootstrap fallback generation cap per pool/week (defaults to `3`) | No |
+| `OPENAI_WEEKLY_SUMMARIES_MOCK` | Creates deterministic local preview drafts; never calls OpenAI | No (development only) |
+
+### AI weekly recap operations
+
+AI recaps are disabled by default. Configure them in **Super Admin → AI**. The
+OpenAI key is a write-only field: it is encrypted before being stored, never
+rendered again, excluded from API responses and audit records, and used only
+while the server submits a provider request. A saved database setting takes
+precedence over environment values, including when it is disabled. Environment
+variables remain available only as a migration/bootstrap fallback; do not put
+keys in Helm values, logs, templates, or source control.
+
+After scoring and rankings complete, the pipeline creates one unpublished
+recap draft per pool for the latest completed week. Commissioners can generate
+a replacement draft from **Lobby Messages**, then edit, publish, unpublish, or
+remove it through the existing review flow. A provider failure is recorded as a
+safe status-only run record and is retried by the next scheduled pipeline run;
+no prompt or provider-response payload is retained.
+
+For a no-cost local preview, restart the development server with
+`OPENAI_WEEKLY_SUMMARIES_ENABLED=true OPENAI_WEEKLY_SUMMARIES_MOCK=true`.
+The **Generate weekly recap** button will create an unpublished, clearly marked
+mock draft once a fully scored week exists; no OpenAI key or network call is
+used.
 
 ### Settings Configuration
 

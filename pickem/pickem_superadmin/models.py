@@ -40,6 +40,7 @@ class SuperAdminAuditLog(models.Model):
         EMAIL_CAMPAIGN_UPDATED = 'email_campaign_updated', 'Email campaign updated'
         EMAIL_CAMPAIGN_SENT = 'email_campaign_sent', 'Email campaign sent'
         EMAIL_PREVIEW_SENT = 'email_preview_sent', 'Email preview sent'
+        AI_SETTINGS_UPDATED = 'ai_settings_updated', 'AI settings updated'
 
     actor = models.ForeignKey(
         User, on_delete=models.SET_NULL, related_name='superadmin_audit_logs',
@@ -170,6 +171,70 @@ class EmailProviderSettings(models.Model):
         if len(raw) <= 8:
             return '•' * len(raw)
         return f"{raw[:4]}{'•' * max(len(raw) - 8, 4)}{raw[-4:]}"
+
+
+class AIProviderSettings(models.Model):
+    """The single, write-only configuration record for the recap provider.
+
+    The API key is encrypted using a key derived from Django's SECRET_KEY. It is
+    deliberately excluded from string representations, snapshots, and all UI
+    contexts. The raw value exists only while saving the form or making a
+    provider request.
+    """
+
+    class Provider(models.TextChoices):
+        OPENAI = 'openai', 'OpenAI'
+
+    singleton = models.CharField(max_length=20, unique=True, default='default')
+    provider = models.CharField(max_length=30, choices=Provider.choices, default=Provider.OPENAI)
+    enabled = models.BooleanField(default=False)
+    model = models.CharField(max_length=100, default='gpt-4o-mini')
+    timeout_seconds = models.PositiveIntegerField(default=30)
+    retries = models.PositiveSmallIntegerField(default=2)
+    max_runs_per_pool_week = models.PositiveSmallIntegerField(default=3)
+    api_key_ciphertext = models.TextField(blank=True, default='', editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'AI provider settings'
+        verbose_name_plural = 'AI provider settings'
+
+    def __str__(self):
+        return f'{self.get_provider_display()} AI settings'
+
+    @classmethod
+    def load(cls):
+        obj, _created = cls.objects.get_or_create(singleton='default')
+        return obj
+
+    @classmethod
+    def current(cls):
+        return cls.objects.filter(singleton='default').first()
+
+    def set_api_key(self, raw_api_key):
+        raw_api_key = (raw_api_key or '').strip()
+        if not raw_api_key:
+            self.api_key_ciphertext = ''
+            return
+        self.api_key_ciphertext = _superadmin_secret_fernet().encrypt(
+            raw_api_key.encode('utf-8')
+        ).decode('utf-8')
+
+    def get_api_key(self):
+        if not self.api_key_ciphertext:
+            return ''
+        try:
+            return _superadmin_secret_fernet().decrypt(
+                self.api_key_ciphertext.encode('utf-8')
+            ).decode('utf-8')
+        except Exception:
+            logger.warning('Failed to decrypt stored AI provider API key.')
+            return ''
+
+    @property
+    def has_api_key(self):
+        return bool(self.get_api_key())
 
 
 class EmailNotificationCampaign(models.Model):

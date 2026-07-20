@@ -31,6 +31,7 @@ PIPELINE = [
     "update_standings",
     "update_weekly_winners",
     "update_rankings",
+    "generate_weekly_summaries",
     "update_season_winners",
     "update_stats",
 ]

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
-from .models import FamilyPublication, SiteBanner, MessageBoardPost, MessageBoardComment, MessageBoardVote
+from .models import AIWeeklySummaryRun, FamilyPublication, SiteBanner, MessageBoardPost, MessageBoardComment, MessageBoardVote
 
 
 @admin.register(FamilyPublication)
@@ -10,6 +10,14 @@ class FamilyPublicationAdmin(admin.ModelAdmin):
     list_filter = ['family', 'pool', 'source', 'is_published']
     search_fields = ['title', 'body', 'generation_reference']
     readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(AIWeeklySummaryRun)
+class AIWeeklySummaryRunAdmin(admin.ModelAdmin):
+    list_display = ['id', 'family', 'pool', 'season', 'week', 'status', 'model', 'input_tokens', 'output_tokens', 'created_at']
+    list_filter = ['status', 'season', 'model']
+    search_fields = ['family__name', 'pool__name', 'error_code']
+    readonly_fields = ['family', 'pool', 'season', 'week', 'status', 'model', 'input_tokens', 'output_tokens', 'error_code', 'publication', 'created_at', 'finished_at']
 
 @admin.register(SiteBanner)
 class SiteBannerAdmin(admin.ModelAdmin):

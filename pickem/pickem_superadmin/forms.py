@@ -1,7 +1,7 @@
 from django import forms
 
 from pickem_api.models import Family, PoolSettings, ScheduledJobConfig, Teams
-from pickem_superadmin.models import EmailNotificationCampaign, EmailProviderSettings
+from pickem_superadmin.models import AIProviderSettings, EmailNotificationCampaign, EmailProviderSettings
 
 CELL = 'sa-select w-full !py-1'
 NUM_CELL = 'sa-input w-16 !px-2 !py-1 sa-num text-center'
@@ -116,6 +116,35 @@ class EmailProviderSettingsForm(forms.ModelForm):
             self.add_error('from_email', 'From email is required when invites are enabled.')
         if invites_enabled and not (self.instance.has_api_key or api_key):
             self.add_error('api_key', 'API key is required when invites are enabled.')
+        return cleaned
+
+
+class AIProviderSettingsForm(forms.ModelForm):
+    api_key = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput(
+            render_value=False,
+            attrs={'class': 'sa-input w-full', 'autocomplete': 'new-password'},
+        ),
+        help_text='Write-only. Leave blank to keep the stored key; enter a new value to rotate it.',
+    )
+
+    class Meta:
+        model = AIProviderSettings
+        fields = ('provider', 'enabled', 'model', 'timeout_seconds', 'retries', 'max_runs_per_pool_week')
+        widgets = {
+            'provider': forms.Select(attrs={'class': 'sa-select w-full'}),
+            'model': forms.TextInput(attrs={'class': 'sa-input w-full'}),
+            'timeout_seconds': forms.NumberInput(attrs={'class': 'sa-input w-full', 'min': 1}),
+            'retries': forms.NumberInput(attrs={'class': 'sa-input w-full', 'min': 0}),
+            'max_runs_per_pool_week': forms.NumberInput(attrs={'class': 'sa-input w-full', 'min': 1}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        api_key = (self.cleaned_data.get('api_key') or '').strip()
+        if cleaned.get('enabled') and not (self.instance.has_api_key or api_key):
+            self.add_error('api_key', 'An API key is required when AI recaps are enabled.')
         return cleaned
 
 
