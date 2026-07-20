@@ -288,6 +288,16 @@ build the stylesheet with `npm run build:css` (watch) or `npm run build:prod`
 (minified). The compiled `tailwind.css` is committed and served, so new utility
 classes require a rebuild before commit.
 
+> ⚠️ **NEVER append a `?v=...` cache-buster query string to a `{% static %}` URL.**
+> In production `{% static %}` returns an **S3 querystring-signed URL** (already
+> carrying `?X-Amz-...` params). Adding `?v=...` produces a second `?`, corrupts
+> the signature, and the browser blocks the asset — the whole site renders
+> **completely unstyled**. Link the stylesheet plainly:
+> `<link rel="stylesheet" href="{% static 'css/tailwind.css' %}">`.
+> The signature already makes prd URLs unique per render, so a cache-buster buys
+> nothing. This has regressed twice (commits `dff2d03`, then again in the AI-recaps
+> change) — do not reintroduce it.
+
 ## URL Patterns
 
 Key routes (see `pickem/urls.py` and `pickem_homepage/views.py`):

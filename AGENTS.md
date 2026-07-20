@@ -48,6 +48,16 @@ npm run build:css
 npm run build:prod
 ```
 
+> ⚠️ **NEVER append a `?v=...` cache-buster query string to a `{% static %}` URL.**
+> In production `{% static %}` returns an **S3 querystring-signed URL** (already
+> carrying `?X-Amz-...` params). Adding `?v=...` produces a second `?`, corrupts
+> the signature, and the browser blocks the asset — the whole site renders
+> **completely unstyled**. Link the stylesheet plainly:
+> `<link rel="stylesheet" href="{% static 'css/tailwind.css' %}">`.
+> The signature already makes prd URLs unique per render, so a cache-buster buys
+> nothing. This has regressed twice (commits `dff2d03`, then again in the AI-recaps
+> change) — do not reintroduce it.
+
 ## Project Architecture
 
 ### Django Apps Structure
