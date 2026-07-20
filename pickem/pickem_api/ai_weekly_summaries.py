@@ -217,7 +217,7 @@ def generate_weekly_summary(pool, season, week, *, force=False, preview=False):
         run.status, run.error_code, run.finished_at = 'skipped', 'already_generated', timezone.now()
         run.save(update_fields=['status', 'error_code', 'finished_at'])
         return run
-    if AIWeeklySummaryRun.objects.filter(
+    if not force and AIWeeklySummaryRun.objects.filter(
         pool=pool, season=season, week=week, status=AIWeeklySummaryRun.Status.SUCCESS,
     ).count() >= config.max_runs:
         run.status, run.error_code, run.finished_at = 'skipped', 'run_limit', timezone.now()

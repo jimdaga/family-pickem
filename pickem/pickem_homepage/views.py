@@ -1675,6 +1675,8 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
                 messages.success(request, f"Week {week} AI recap {'preview ' if preview else ''}draft created for review.")
             elif run.status == 'disabled':
                 messages.error(request, 'AI weekly recaps are disabled for this environment.')
+            elif run.error_code == 'run_limit':
+                messages.error(request, 'The automatic recap limit has been reached. Use Regenerate AI recap to create a replacement draft.')
             else:
                 messages.error(request, 'The recap was not generated. Please try again later.')
         return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)

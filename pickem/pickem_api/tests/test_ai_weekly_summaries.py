@@ -68,6 +68,19 @@ class AIWeeklySummaryTests(TestCase):
     @override_settings(
         OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
         OPENAI_WEEKLY_SUMMARIES_MOCK=True,
+        OPENAI_WEEKLY_SUMMARIES_MAX_RUNS_PER_POOL_WEEK=1,
+        OPENAI_API_KEY='',
+    )
+    def test_forced_regeneration_bypasses_automatic_run_cap(self):
+        first = generate_weekly_summary(self.pool, 2627, 1, force=True)
+        second = generate_weekly_summary(self.pool, 2627, 1, force=True)
+
+        self.assertEqual(first.status, AIWeeklySummaryRun.Status.SUCCESS)
+        self.assertEqual(second.status, AIWeeklySummaryRun.Status.SUCCESS)
+
+    @override_settings(
+        OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
+        OPENAI_WEEKLY_SUMMARIES_MOCK=True,
         OPENAI_API_KEY='',
     )
     def test_mock_preview_can_use_an_unscored_week(self):
