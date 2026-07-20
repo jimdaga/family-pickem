@@ -8,6 +8,7 @@ is included in a request or retained in the run record.
 import json
 import logging
 from dataclasses import dataclass
+from urllib.parse import quote
 
 import requests
 from django.conf import settings
@@ -20,6 +21,7 @@ from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
 
 logger = logging.getLogger(__name__)
 OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
+OPENAI_MODELS_URL = 'https://api.openai.com/v1/models'
 
 
 @dataclass(frozen=True)
@@ -83,6 +85,7 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
             family=pool.family, status=FamilyMembership.Status.ACTIVE,
         ).select_related('user')
     }
+
     results = []
     for game in games:
         winner = game.gameWinner or ('Tie' if game.homeTeamScore == game.awayTeamScore else '')
@@ -133,6 +136,36 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
             'standings': standings,
         },
     }
+
+
+def validate_openai_configuration(api_key, model, timeout):
+    """Return a safe validation error code, never a provider response body."""
+    try:
+        response = requests.get(
+            f'{OPENAI_MODELS_URL}/{quote(model, safe="")}',
+            headers={'Authorization': f'Bearer {api_key}'}, timeout=timeout,
+        )
+    except requests.RequestException:
+        return 'network_error'
+    if response.status_code == 200:
+        return None
+    if response.status_code in (401, 403):
+        return 'invalid_api_key'
+    if response.status_code == 404:
+        return 'model_unavailable'
+    return 'provider_validation_failed'
+
+
+def _output_text_from_response(data):
+    """Read either Responses API text representation without retaining it."""
+    text = data.get('output_text', '')
+    if isinstance(text, str) and text.strip():
+        return text.strip()
+    for output in data.get('output', []):
+        for content in output.get('content', []):
+            if content.get('type') == 'output_text' and content.get('text'):
+                return content['text'].strip()
+    return ''
 
 
 @sensitive_variables('config')
@@ -191,7 +224,7 @@ def _provider_request(config, facts):
                 continue
             response.raise_for_status()
             data = response.json()
-            text = data.get('output_text', '').strip()
+            text = _output_text_from_response(data)
             if not text:
                 raise ValueError('provider_empty_output')
             return text, data.get('usage', {})

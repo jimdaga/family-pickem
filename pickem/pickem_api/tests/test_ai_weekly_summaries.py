@@ -3,7 +3,9 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
-from pickem_api.ai_weekly_summaries import SummarySettings, build_summary_facts, generate_weekly_summary
+from pickem_api.ai_weekly_summaries import (
+    SummarySettings, _output_text_from_response, build_summary_facts, generate_weekly_summary,
+)
 from pickem_api.models import Family, FamilyMembership, GamesAndScores, Pool, userSeasonPoints
 from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
 from pickem_superadmin.models import AIProviderSettings
@@ -36,6 +38,12 @@ class AIWeeklySummaryTests(TestCase):
         self.assertEqual(facts['pool']['standings'], [{'member': 'Sam', 'rank': 1, 'total_points': 8, 'week_points': 4, 'week_winner': False}])
         self.assertEqual(facts['results'][0]['winner'], 'Home')
         self.assertNotIn('Jo', str(facts))
+
+    def test_reads_standard_responses_output_content(self):
+        self.assertEqual(
+            _output_text_from_response({'output': [{'content': [{'type': 'output_text', 'text': 'Real recap'}]}]}),
+            'Real recap',
+        )
 
     @override_settings(OPENAI_WEEKLY_SUMMARIES_ENABLED=False, OPENAI_API_KEY='not-used')
     @patch('pickem_api.ai_weekly_summaries.requests.post')
