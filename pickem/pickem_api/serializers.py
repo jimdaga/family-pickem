@@ -15,8 +15,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserProfile
-        fields = ['id', 'user', 'tagline', 'favorite_team', 'phone_number', 
-                 'email_notifications', 'dark_mode', 'private_profile', 
+        # phone_number is deliberately excluded: this serializer isn't wired
+        # to any view today, but PII should never be one `many=True` away
+        # from leaking to a list/detail endpoint.
+        fields = ['id', 'user', 'tagline', 'favorite_team',
+                 'email_notifications', 'dark_mode', 'private_profile',
                  'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 

@@ -258,13 +258,15 @@ def _eligible_weekly_picks_users(campaign):
     safety_allowlist = _campaign_safety_allowlist()
     campaign_allowlist = set(campaign.allowlist)
     for user in base_qs:
+        # Eligibility is a read: no profile means default flags (notifications
+        # on, not blocked) — never create a UserProfile row from here, this
+        # also runs on the preview path.
         profile = getattr(user, 'profile', None)
-        if profile is None:
-            profile = UserProfile.objects.create(user=user)
-        if not profile.email_notifications:
-            continue
-        if profile.blocked_at is not None:
-            continue
+        if profile is not None:
+            if not profile.email_notifications:
+                continue
+            if profile.blocked_at is not None:
+                continue
         email_value = (user.email or '').strip().lower()
         if campaign.rollout_mode == EmailNotificationCampaign.RolloutMode.ALLOWLIST:
             if email_value not in campaign_allowlist:
@@ -439,13 +441,18 @@ def send_due_email_campaigns(*, now=None, force_weekly_picks=False):
         else:
             skipped.append({'email': user.email, 'reason': result.get('reason', 'unknown')})
 
-    campaign.last_sent_season = target['season']
-    campaign.last_sent_week = target['week']
-    campaign.last_sent_at = now
-    campaign.last_sent_count = sent
-    campaign.save(update_fields=[
-        'last_sent_season', 'last_sent_week', 'last_sent_at', 'last_sent_count', 'updated_at',
-    ])
+    # Only mark the week sent when at least one email actually went out:
+    # marking it on a zero-send (provider outage, empty eligible set) would
+    # permanently suppress the week's reminder. While sent == 0 the campaign
+    # stays due and retries on the next scheduler tick until the window closes.
+    if sent > 0:
+        campaign.last_sent_season = target['season']
+        campaign.last_sent_week = target['week']
+        campaign.last_sent_at = now
+        campaign.last_sent_count = sent
+        campaign.save(update_fields=[
+            'last_sent_season', 'last_sent_week', 'last_sent_at', 'last_sent_count', 'updated_at',
+        ])
 
     logger.info(
         'Weekly picks campaign evaluated.',

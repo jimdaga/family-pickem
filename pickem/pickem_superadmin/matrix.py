@@ -13,6 +13,11 @@ from django.db import transaction
 from pickem_superadmin.audit import diff_fields
 
 
+def _is_stale(submitted_stamp, row):
+    """True when the submitted updated_at no longer matches the row's."""
+    return submitted_stamp != row.updated_at.isoformat()
+
+
 def save_matrix(request, *, objects, form_class, tracked_fields, key_field,
                  on_save, stale_check=True):
     """Bind a prefixed row form per object, save changed rows, return (saved, failed, stale).
@@ -49,14 +54,18 @@ def save_matrix(request, *, objects, form_class, tracked_fields, key_field,
         if f'{prefix}-{key_field}' not in request.POST:
             continue  # row not on the submitted page (filtered out)
 
-        if stale_check:
-            # Optimistic concurrency: the row carries the updated_at it was
-            # rendered with. If the DB moved on, someone else saved while
-            # this page was open.
-            submitted_stamp = request.POST.get(f'{prefix}-updated_at', '')
-            if submitted_stamp != obj.updated_at.isoformat():
-                stale.append(obj)
-                continue
+        submitted_stamp = request.POST.get(f'{prefix}-updated_at', '') if stale_check else None
+
+        # Cheap pre-check against the caller's in-memory object, to skip
+        # obviously-stale rows without taking a lock. This alone is NOT
+        # sufficient: two requests can both load the row at the same
+        # updated_at, both pass this check, and the second would silently
+        # clobber the first (lost update). The authoritative check —
+        # against a locked, freshly-read row — happens inside the
+        # transaction below.
+        if stale_check and _is_stale(submitted_stamp, obj):
+            stale.append(obj)
+            continue
 
         before = {f: getattr(obj, f) for f in tracked_fields}
         form = form_class(request.POST, instance=obj, prefix=prefix)
@@ -70,6 +79,11 @@ def save_matrix(request, *, objects, form_class, tracked_fields, key_field,
             continue  # no diff — skip, not counted as saved
 
         with transaction.atomic():
+            if stale_check:
+                current = type(obj).objects.select_for_update().get(pk=obj.pk)
+                if _is_stale(submitted_stamp, current):
+                    stale.append(obj)
+                    continue
             form.save()
             on_save(obj, changes)
         saved += 1

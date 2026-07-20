@@ -20,7 +20,6 @@ django-apscheduler==0.7.0
 django-bootstrap-v5==1.0.11
 django-cors-headers==3.13.0
 django-crispy-forms==1.14.0
-django-ratelimit==4.1.0
 django-storages==1.13.1
 django-tables2==2.4.1
 djangorestframework==3.15.2

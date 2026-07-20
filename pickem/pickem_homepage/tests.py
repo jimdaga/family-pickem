@@ -48,7 +48,6 @@ from pickem_homepage.models import (
     FamilyPublication,
     SiteBanner,
 )
-from pickem_homepage.views import is_commissioner
 from PIL import Image
 
 
@@ -2986,7 +2985,7 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertContains(response, "smith-profile-member")
         self.assertContains(response, "smith-profile-player")
         self.assertNotContains(response, "jones-profile-player")
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             response.context["players"].values_list("id", flat=True).order_by("id"),
             sorted([self.smith_member.id, self.smith_player.id, self.smith_private.id]),
         )
@@ -3404,6 +3403,85 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
             self.assertIn("not found", payload["error"].lower())
             self.assertNotIn("Jones", json.dumps(payload))
         self.assertFalse(MessageBoardVote.objects.filter(family=self.jones_family).exists())
+
+    def test_reply_nesting_depth_is_capped(self):
+        from pickem_homepage.views import MAX_COMMENT_DEPTH
+
+        post = MessageBoardPost.objects.create(
+            family=self.smith_family, user=self.smith_member,
+            title="Deep thread", content="content",
+        )
+        parent = None
+        for _ in range(MAX_COMMENT_DEPTH + 1):
+            parent = MessageBoardComment.objects.create(
+                family=self.smith_family, post=post, user=self.smith_member,
+                parent=parent, content="reply",
+            )
+        self.client.force_login(self.smith_member)
+
+        response = self._json_post(
+            self._tenant_url("family_pool_create_comment"),
+            {"post_id": post.id, "parent_id": parent.id, "content": "too deep"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["success"])
+        self.assertFalse(
+            MessageBoardComment.objects.filter(content="too deep").exists()
+        )
+
+    def test_internal_errors_are_not_leaked_to_clients(self):
+        post = MessageBoardPost.objects.create(
+            family=self.smith_family, user=self.smith_member,
+            title="Thread", content="content",
+        )
+        self.client.force_login(self.smith_member)
+
+        with patch.object(
+            MessageBoardComment.objects, "create",
+            side_effect=RuntimeError("secret-db-detail"),
+        ):
+            response = self._json_post(
+                self._tenant_url("family_pool_create_comment"),
+                {"post_id": post.id, "content": "hello"},
+            )
+
+        self.assertEqual(response.status_code, 500)
+        payload = response.json()
+        self.assertFalse(payload["success"])
+        self.assertNotIn("secret-db-detail", json.dumps(payload))
+
+    def test_concurrent_first_vote_does_not_500(self):
+        # Two simultaneous first-votes both see "no existing vote"; the loser
+        # of the insert race must get a sane response, not an IntegrityError
+        # 500. Simulated by making the existing-vote lookup miss.
+        post = MessageBoardPost.objects.create(
+            family=self.smith_family, user=self.smith_member,
+            title="Race thread", content="content",
+        )
+        MessageBoardVote.objects.create(
+            family=self.smith_family, user=self.smith_member,
+            post=post, vote_type=1,
+        )
+        self.client.force_login(self.smith_member)
+
+        with patch.object(
+            MessageBoardVote.objects, "filter",
+            return_value=MessageBoardVote.objects.none(),
+        ):
+            response = self._json_post(
+                self._tenant_url("family_pool_vote_post"),
+                {"post_id": post.id, "vote_type": 1},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        # Still exactly one vote row for this user/post.
+        self.assertEqual(
+            MessageBoardVote.objects.filter(
+                user=self.smith_member, post=post
+            ).count(),
+            1,
+        )
 
     def test_tenant_get_comments_serializes_only_current_family_post_comments(self):
         smith_post, smith_comment, jones_post, jones_comment = self._seed_message_board_data()
@@ -6059,7 +6137,7 @@ class CreateFamilyFlowTests(TestCase):
             ).count(),
             1,
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             FamilyMembership.objects.filter(family=family).values_list(
                 "user_id", flat=True
             ),
@@ -6459,6 +6537,41 @@ class InviteFlowTests(TestCase):
         }
         defaults.update(overrides)
         return FamilyInvitation.objects.create(**defaults)
+
+    def test_member_invite_does_not_demote_existing_owner(self):
+        # An OWNER re-clicking a generic member share-link must keep their
+        # role — otherwise a family can end up with zero owners.
+        self._invitation(raw_code="OWNER-RECLICK", max_uses=5)
+        self.client.force_login(self.owner)
+
+        self.client.get(self._link_url("OWNER-RECLICK"), follow=True)
+
+        membership = FamilyMembership.objects.get(family=self.family, user=self.owner)
+        self.assertEqual(membership.role, FamilyMembership.Role.OWNER)
+
+    def test_admin_role_invite_upgrades_existing_member(self):
+        self._invitation(
+            raw_code="UPGRADE", role=FamilyMembership.Role.ADMIN, max_uses=5)
+        self.client.force_login(self.member)
+
+        self.client.get(self._link_url("UPGRADE"), follow=True)
+
+        membership = FamilyMembership.objects.get(family=self.family, user=self.member)
+        self.assertEqual(membership.role, FamilyMembership.Role.ADMIN)
+
+    def test_member_invite_reactivates_inactive_admin_keeping_role(self):
+        membership = FamilyMembership.objects.get(
+            family=self.family, user=self.admin_user)
+        membership.status = FamilyMembership.Status.INACTIVE
+        membership.save(update_fields=['status'])
+        self._invitation(raw_code="REJOIN", max_uses=5)
+        self.client.force_login(self.admin_user)
+
+        self.client.get(self._link_url("REJOIN"), follow=True)
+
+        membership.refresh_from_db()
+        self.assertEqual(membership.status, FamilyMembership.Status.ACTIVE)
+        self.assertEqual(membership.role, FamilyMembership.Role.ADMIN)
 
     def test_owner_can_create_member_invite_hash_only_with_defaults_and_audit(self):
         self.client.force_login(self.owner)
@@ -7416,48 +7529,6 @@ class FamilyAdminSettingsFormTests(TestCase):
         form = self._form(pick_type=PoolSettings.PickType.AGAINST_SPREAD)
         self.assertFalse(form.is_valid())
         self.assertIn('pick_type', form.errors)
-
-
-class IsCommissionerTests(TestCase):
-    """Unit tests for the is_commissioner() helper."""
-
-    @classmethod
-    def setUpTestData(cls):
-        Site.objects.get_or_create(
-            id=1, defaults={"domain": "testserver", "name": "testserver"}
-        )
-        currentSeason.objects.create(season=2526, display_name="2025-2026")
-
-    def test_anonymous_user_returns_false(self):
-        from django.contrib.auth.models import AnonymousUser
-
-        self.assertFalse(is_commissioner(AnonymousUser()))
-
-    def test_authenticated_user_no_profile_returns_false(self):
-        user = User.objects.create_user("noprofile", password="pass")
-        # Delete profile if auto-created by a signal
-        UserProfile.objects.filter(user=user).delete()
-        self.assertFalse(is_commissioner(user))
-
-    def test_authenticated_user_with_profile_not_commissioner(self):
-        user = User.objects.create_user("regular", password="pass")
-        UserProfile.objects.update_or_create(
-            user=user, defaults={"is_commissioner": False}
-        )
-        self.assertFalse(is_commissioner(user))
-
-    def test_user_with_commissioner_profile_returns_true(self):
-        user = User.objects.create_user("commish", password="pass")
-        UserProfile.objects.update_or_create(
-            user=user, defaults={"is_commissioner": True}
-        )
-        self.assertTrue(is_commissioner(user))
-
-    def test_superuser_returns_true(self):
-        user = User.objects.create_superuser(
-            "admin", "admin@example.com", "pass"
-        )
-        self.assertTrue(is_commissioner(user))
 
 
 class TenantAuthorizationDecoratorTests(TestCase):
@@ -8496,6 +8567,87 @@ class CreateFamilyRenderTests(TestCase):
             self.assertIn(needed, html)
 
 
+class RequireLoginJsonBypassTests(TestCase):
+    """Anonymous requests must not bypass the login wall by sending JSON/AJAX
+    headers: /scores/ and /standings/ render cross-pool data if reached."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def test_anonymous_json_accept_header_is_denied_on_protected_page(self):
+        response = self.client.get("/scores/", HTTP_ACCEPT="application/json")
+        self.assertEqual(response.status_code, 401)
+
+    def test_anonymous_ajax_header_is_denied_on_protected_page(self):
+        response = self.client.get(
+            "/standings/", HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_anonymous_browser_request_still_redirects_to_login(self):
+        response = self.client.get("/scores/")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("login", response["Location"])
+
+    def test_public_paths_still_reachable_anonymously(self):
+        response = self.client.get("/", HTTP_ACCEPT="text/html")
+        self.assertEqual(response.status_code, 200)
+
+
+class ScoresWeekValidationTests(TestCase):
+    """A crafted out-of-range week in the scores URL must 404, not build a
+    nonexistent week_NN_winner field lookup and 500 with FieldError."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        cls.user = User.objects.create_user('wkuser', 'wk@x.com', 'pw')
+        cls.family = Family.objects.create(name='Wk Fam', slug='wk-fam')
+        cls.pool = Pool.objects.create(
+            family=cls.family, name='Wk Pool', slug='wk-pool', season=2526)
+        FamilyMembership.objects.create(
+            family=cls.family,
+            user=cls.user,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _scores_url(self, week):
+        return (
+            f'/families/wk-fam/pools/wk-pool/scores/'
+            f'competition/0/season/2526/week/{week}'
+        )
+
+    def test_out_of_range_week_returns_404(self):
+        self.client.force_login(self.user)
+        for bad_week in (0, 19, 50, 999):
+            response = self.client.get(self._scores_url(bad_week))
+            self.assertEqual(
+                response.status_code, 404,
+                f'week={bad_week} should 404, got {response.status_code}',
+            )
+
+    def test_valid_week_renders(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self._scores_url(2))
+        self.assertEqual(response.status_code, 200)
+
+    def test_zero_padded_in_range_week_renders_not_500(self):
+        # "007" passes int(week) range validation (7 is in 1-18), but the
+        # original unnormalized string must not leak into the dynamic
+        # week_NN_winner field lookup, or this 500s with FieldError.
+        self.client.force_login(self.user)
+        response = self.client.get(self._scores_url('007'))
+        self.assertEqual(response.status_code, 200)
+
+
 class FamilyPublicationTests(FamilyAdminExperienceTests):
     def _publications_url(self, *, family=None, pool=None):
         family, pool = family or self.family, pool or self.pool
@@ -8532,45 +8684,59 @@ class FamilyPublicationTests(FamilyAdminExperienceTests):
         self.assertTrue(publication.is_published)
         self.assertIsNotNone(publication.published_at)
 
-    def test_publishing_replaces_the_pool_active_message(self):
-        old = FamilyPublication.objects.create(
+    def test_publishing_one_source_does_not_affect_the_other(self):
+        # FamilyPublication now holds exactly one row per (pool, source) — a
+        # fixed slot, not a growing history — so "replacing the active
+        # message" within a source means editing that single row in place.
+        # What's still worth guarding: publish_exclusively only clears
+        # is_published within the message's own source, so publishing the AI
+        # recap slot must not unpublish an already-published commissioner
+        # announcement (or vice versa).
+        commissioner_msg = FamilyPublication.objects.create(
             family=self.family, pool=self.pool, author=self.owner,
-            title='Old announcement', body='Old', is_published=True,
-            published_at=timezone.now(),
+            title='Commissioner announcement', body='Old',
+            source=FamilyPublication.Source.COMMISSIONER,
+            is_published=True, published_at=timezone.now(),
         )
-        draft = FamilyPublication.objects.create(
-            family=self.family, pool=self.pool, author=self.owner,
-            title='New announcement', body='New',
+        ai_msg = FamilyPublication.objects.create(
+            family=self.family, pool=self.pool,
+            title='AI recap', body='New',
+            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
         )
         self.client.force_login(self.owner)
         self.client.post(self._publications_url(), {
-            'action': 'publish', 'publication_id': draft.id,
+            'action': 'publish', 'publication_id': ai_msg.id,
         })
-        old.refresh_from_db()
-        draft.refresh_from_db()
-        self.assertFalse(old.is_published)
-        self.assertTrue(draft.is_published)
+        commissioner_msg.refresh_from_db()
+        ai_msg.refresh_from_db()
+        self.assertTrue(commissioner_msg.is_published)
+        self.assertTrue(ai_msg.is_published)
         self.assertEqual(
-            FamilyPublication.objects.filter(pool=self.pool, is_published=True).count(), 1
+            FamilyPublication.objects.filter(pool=self.pool, is_published=True).count(), 2
         )
 
-    def test_messages_are_newest_first_and_paginated(self):
-        for index in range(11):
-            publication = FamilyPublication.objects.create(
-                family=self.family, pool=self.pool, author=self.owner,
-                title=f'Message {index}', body='History',
-            )
-            FamilyPublication.objects.filter(id=publication.id).update(
-                created_at=timezone.now() - timedelta(minutes=11 - index)
-            )
+    def test_messages_are_newest_first(self):
+        # At most one row per (pool, source) can exist, so with both slots
+        # filled the list still has real ordering to verify.
+        older = FamilyPublication.objects.create(
+            family=self.family, pool=self.pool, author=self.owner,
+            title='Commissioner announcement', body='History',
+            source=FamilyPublication.Source.COMMISSIONER,
+        )
+        FamilyPublication.objects.filter(id=older.id).update(
+            created_at=timezone.now() - timedelta(minutes=5)
+        )
+        newer = FamilyPublication.objects.create(
+            family=self.family, pool=self.pool,
+            title='AI recap', body='Recent',
+            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
+        )
         self.client.force_login(self.owner)
         response = self.client.get(self._publications_url())
         page = response.context['publications']
-        self.assertEqual(len(page.object_list), 10)
-        self.assertEqual(page.object_list[0].title, 'Message 10')
-        self.assertContains(response, 'Older')
-        second_page = self.client.get(self._publications_url() + '?page=2')
-        self.assertContains(second_page, 'Message 0')
+        self.assertEqual(len(page.object_list), 2)
+        self.assertEqual(page.object_list[0].title, newer.title)
+        self.assertEqual(page.object_list[1].title, older.title)
 
     def test_members_cannot_manage_messages(self):
         self.client.force_login(self.member)

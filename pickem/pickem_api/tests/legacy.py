@@ -1,5 +1,6 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 import importlib
+from zoneinfo import ZoneInfo
 from importlib import import_module
 from unittest.mock import patch
 
@@ -505,15 +506,28 @@ class LegacyPoolScopeModelTest(TestCase):
             self.assertTrue(field.null, f'{model.__name__}.pool must stay nullable in Phase 1')
             self.assertTrue(field.blank, f'{model.__name__}.pool must allow blank admin/forms values')
 
-        self.assertFalse(
+        # Post-Phase-1: season points are unique per (pool, user, season) at
+        # the DB level so multi-pool users can't corrupt standings reads.
+        self.assertTrue(
             any(
-                getattr(constraint, 'fields', None)
-                and 'pool' in constraint.fields
-                and model in scoped_models
-                for model in scoped_models
-                for constraint in model._meta.constraints
+                getattr(constraint, 'fields', None) == ('pool', 'userID', 'gameseason')
+                for constraint in userSeasonPoints._meta.constraints
             ),
-            'Phase 1 must not add strict pool-scoped uniqueness to legacy competition tables',
+            'userSeasonPoints must be unique per (pool, userID, gameseason)',
+        )
+        self.assertTrue(
+            any(
+                getattr(constraint, 'fields', None) == ('pool', 'userID')
+                for constraint in userStats._meta.constraints
+            ),
+            'userStats must be unique per (pool, userID)',
+        )
+        self.assertTrue(
+            any(
+                getattr(constraint, 'fields', None) == ('pool', 'userID', 'pick_game_id')
+                for constraint in GamePicks._meta.constraints
+            ),
+            'GamePicks must be unique per (pool, userID, pick_game_id)',
         )
 
     def test_competition_rows_accept_null_and_pool_without_changing_legacy_user_fields(self):
@@ -836,6 +850,15 @@ class GameSerializerTest(TestCase):
         self.assertEqual(data['slug'], 'bears-packers')
         self.assertEqual(data['homeTeamName'], 'Chicago Bears')
         self.assertEqual(data['awayTeamName'], 'Green Bay Packers')
+
+
+class UserProfileSerializerTest(TestCase):
+    def test_phone_number_is_not_serialized(self):
+        # Not wired to any view today, but attaching it later to a list/detail
+        # endpoint must not leak other users' phone numbers as a side effect.
+        from pickem_api.serializers import UserProfileSerializer
+
+        self.assertNotIn('phone_number', UserProfileSerializer.Meta.fields)
 
 
 class CurrentSeasonSerializerTest(TestCase):
@@ -1298,6 +1321,31 @@ class UpdateSeasonWinnersCommandTest(TestCase):
         self.assertTrue(row.year_winner)
 
 
+class CurrentWeekForTodayTimezoneTest(TestCase):
+    """Week detection must resolve "today" in the league's timezone
+    (America/New_York), not the server's OS-local date — a UTC-hosted server
+    near midnight Eastern would otherwise fetch the wrong week's scoreboard."""
+
+    def test_resolves_week_using_eastern_local_date_not_utc_date(self):
+        from pickem_api.management.commands.update_games import current_week_for_today
+
+        GameWeeks.objects.create(weekNumber=1, date=date(2025, 9, 7), season=2526)
+        GameWeeks.objects.create(weekNumber=2, date=date(2025, 9, 8), season=2526)
+
+        # 2025-09-08 02:30 UTC is 2025-09-07 22:30 in America/New_York (still
+        # the 7th there). A UTC-based `date.today()` would pick week 2.
+        instant = timezone.make_aware(
+            datetime(2025, 9, 8, 2, 30), timezone=ZoneInfo("UTC")
+        )
+        with patch(
+            "pickem_api.management.commands.update_games.timezone.now",
+            return_value=instant,
+        ):
+            week = current_week_for_today(season=2526)
+
+        self.assertEqual(week, "1")
+
+
 class UpdateGamesCommandTest(TestCase):
     """ORM-based `update_games` command (replaces cron_update_games_v2.py)."""
 
@@ -1398,6 +1446,246 @@ class UpdateGamesCommandTest(TestCase):
         parsed = list(parse_scoreboard(payload, season=2526, game_year=2025))
 
         self.assertEqual(parsed, [])
+
+    def test_parse_scoreboard_survives_null_team_odds(self):
+        # ESPN sometimes sends "homeTeamOdds": null (key present, value null).
+        # That must not abort the parse: the game's scores/winner still land,
+        # with no favorite info the probabilities fall back to 50/50.
+        from pickem_api.management.commands.update_games import parse_scoreboard
+        import copy
+
+        payload = copy.deepcopy(self.PAYLOAD)
+        payload["events"][0]["competitions"][0]["odds"][0]["homeTeamOdds"] = None
+        payload["events"][0]["competitions"][0]["odds"][0]["awayTeamOdds"] = None
+
+        parsed = list(parse_scoreboard(payload, season=2526, game_year=2025))
+
+        self.assertEqual(len(parsed), 1)
+        defaults = parsed[0][1]
+        self.assertEqual(defaults["homeTeamScore"], 24)
+        self.assertEqual(defaults["gameWinner"], "home")
+        self.assertEqual(defaults["spread"], -3)
+        self.assertEqual(defaults["homeTeamWinProbability"], 50)
+        self.assertEqual(defaults["awayTeamWinProbability"], 50)
+
+    def test_parse_scoreboard_keeps_game_when_odds_malformed(self):
+        # A non-numeric spread (ESPN sends "EVEN" for pick'em lines) must not
+        # discard the game's scores/winner — only the odds fields degrade.
+        from pickem_api.management.commands.update_games import parse_scoreboard
+        import copy
+
+        payload = copy.deepcopy(self.PAYLOAD)
+        payload["events"][0]["competitions"][0]["odds"][0]["spread"] = "EVEN"
+
+        parsed = list(parse_scoreboard(payload, season=2526, game_year=2025))
+
+        self.assertEqual(len(parsed), 1)
+        defaults = parsed[0][1]
+        self.assertEqual(defaults["homeTeamScore"], 24)
+        self.assertEqual(defaults["gameWinner"], "home")
+        self.assertIsNone(defaults["spread"])
+        self.assertEqual(defaults["homeTeamWinProbability"], 50)
+        self.assertEqual(defaults["awayTeamWinProbability"], 50)
+
+    def test_previous_state_lookup_is_one_bulk_query_not_one_per_game(self):
+        # The winner-correction check needs each game's pre-update state, but
+        # must fetch it in one bulk query for the whole scoreboard, not one
+        # query per game (an N+1 on a command that runs every minute during
+        # live windows).
+        from django.core.management import call_command
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        import copy
+
+        payload = {"week": {"number": 1}, "events": []}
+        for i in range(3):
+            event = copy.deepcopy(self.PAYLOAD["events"][0])
+            event["competitions"][0]["id"] = str(500 + i)
+            payload["events"].append(event)
+
+        with patch(
+            "pickem_api.management.commands.update_games.fetch_scoreboard"
+        ) as mock_fetch, CaptureQueriesContext(connection) as ctx:
+            mock_fetch.return_value = payload
+            call_command("update_games", season=2526, week=1)
+
+        # `.values("gameScored", "gameWinner")` selects only those two
+        # columns; update_or_create's own internal lookup selects the full
+        # row (including hometeamscore, absent here), so this combination
+        # uniquely identifies the previous-state lookup this fix targets —
+        # independent of Django-version-specific column-aliasing syntax in
+        # the generated SQL (verified to differ between the 4.2/5.2 lines).
+        previous_state_queries = [
+            q for q in ctx.captured_queries
+            if "gamesandscores" in q["sql"].lower()
+            and "gamescored" in q["sql"].lower()
+            and "hometeamscore" not in q["sql"].lower()
+            and "select" in q["sql"].lower()
+        ]
+        self.assertEqual(
+            len(previous_state_queries), 1,
+            f"expected one bulk previous-state query for 3 games, "
+            f"got {len(previous_state_queries)}: {previous_state_queries}",
+        )
+
+    def test_winner_correction_resets_gamescored_and_pick_correct_for_regrading(self):
+        # ESPN reverses a final result (forfeit/replay correction) after the
+        # game was already scored: without a reset, update_picks never
+        # revisits it (it only scores gameScored=False games), so the old
+        # winner's pickers stay wrongly credited forever.
+        from django.core.management import call_command
+        import copy
+
+        pool = Pool.objects.create(
+            family=Family.objects.create(name="Rescore Fam", slug="rescore-fam"),
+            name="Pool", slug="pool", season=2526,
+        )
+        game = GamesAndScores.objects.create(
+            id=401, slug="home-away", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameWinner="home",
+            gameScored=True, homeTeamId=1, homeTeamSlug="home",
+            homeTeamName="Home Team", awayTeamId=2, awayTeamSlug="away",
+            awayTeamName="Away Team",
+        )
+        pick_for_old_winner = GamePicks.objects.create(
+            id=f"{pool.id}-1-401", pool=pool, pick_game_id=401, slug="home-away",
+            uid=1, userID="1", gameWeek="1", gameyear="2025", gameseason=2526,
+            competition="nfl", pick="home", pick_correct=True,
+        )
+        pick_for_new_winner = GamePicks.objects.create(
+            id=f"{pool.id}-2-401", pool=pool, pick_game_id=401, slug="home-away",
+            uid=2, userID="2", gameWeek="1", gameyear="2025", gameseason=2526,
+            competition="nfl", pick="away", pick_correct=False,
+        )
+
+        payload = copy.deepcopy(self.PAYLOAD)
+        payload["events"][0]["competitions"][0]["competitors"][0]["winner"] = False
+        payload["events"][0]["competitions"][0]["competitors"][1]["winner"] = True
+        payload["events"][0]["competitions"][0]["id"] = "401"
+
+        with patch(
+            "pickem_api.management.commands.update_games.fetch_scoreboard"
+        ) as mock_fetch:
+            mock_fetch.return_value = payload
+            call_command("update_games", season=2526, week=1)
+
+        game.refresh_from_db()
+        self.assertEqual(game.gameWinner, "away")
+        self.assertFalse(
+            game.gameScored, "corrected game must be reopened for re-grading"
+        )
+
+        call_command("update_picks", season=2526)
+        pick_for_old_winner.refresh_from_db()
+        pick_for_new_winner.refresh_from_db()
+        self.assertFalse(pick_for_old_winner.pick_correct)
+        self.assertTrue(pick_for_new_winner.pick_correct)
+
+    def test_winner_correction_resets_already_awarded_weekly_winner(self):
+        # award_weekly_winners only ever re-evaluates a week when its
+        # winner_field is False; if a correction reopens picks/standings but
+        # leaves week_N_winner=True untouched, the bonus stays pinned to the
+        # old (now wrong) winner forever. The correction must reset it too so
+        # the next scheduled update_weekly_winners run re-awards correctly.
+        from django.core.management import call_command
+        import copy
+
+        pool = Pool.objects.create(
+            family=Family.objects.create(name="Winner Reset Fam", slug="winner-reset-fam"),
+            name="Pool", slug="pool", season=2526,
+        )
+        game = GamesAndScores.objects.create(
+            id=401, slug="home-away", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameWinner="home",
+            gameScored=True, homeTeamId=1, homeTeamSlug="home",
+            homeTeamName="Home Team", awayTeamId=2, awayTeamSlug="away",
+            awayTeamName="Away Team",
+        )
+        # Winner already awarded to user 1 based on the (now stale) result.
+        row1 = userSeasonPoints.objects.create(
+            pool=pool, gameseason=2526, userID="1", week_1_points=10,
+            week_1_winner=True, week_1_bonus=2, total_points=12,
+        )
+        row2 = userSeasonPoints.objects.create(
+            pool=pool, gameseason=2526, userID="2", week_1_points=7,
+            week_1_winner=False, week_1_bonus=0, total_points=7,
+        )
+
+        payload = copy.deepcopy(self.PAYLOAD)
+        payload["events"][0]["competitions"][0]["competitors"][0]["winner"] = False
+        payload["events"][0]["competitions"][0]["competitors"][1]["winner"] = True
+        payload["events"][0]["competitions"][0]["id"] = "401"
+
+        with patch(
+            "pickem_api.management.commands.update_games.fetch_scoreboard"
+        ) as mock_fetch:
+            mock_fetch.return_value = payload
+            call_command("update_games", season=2526, week=1)
+
+        row1.refresh_from_db()
+        row2.refresh_from_db()
+        self.assertFalse(
+            row1.week_1_winner,
+            "a corrected result must reopen the week for re-award, not leave "
+            "the old winner flagged",
+        )
+        self.assertEqual(row1.week_1_bonus, 0)
+        self.assertFalse(row2.week_1_winner)
+
+    def test_winner_correction_reset_is_atomic(self):
+        # If the reset sequence (GamesAndScores.gameScored, GamePicks.pick_
+        # correct, userSeasonPoints winner/bonus) is interrupted partway
+        # through, it must roll back as a unit — otherwise a crash right
+        # after gameScored=False commits leaves the game permanently unable
+        # to re-trigger this reset (its "previous.gameScored" would already
+        # read False on the next run) while GamePicks/userSeasonPoints keep
+        # stale data forever.
+        from django.core.management import call_command
+        import copy
+
+        pool = Pool.objects.create(
+            family=Family.objects.create(name="Atomic Fam", slug="atomic-fam"),
+            name="Pool", slug="pool", season=2526,
+        )
+        game = GamesAndScores.objects.create(
+            id=401, slug="home-away", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameWinner="home",
+            gameScored=True, homeTeamId=1, homeTeamSlug="home",
+            homeTeamName="Home Team", awayTeamId=2, awayTeamSlug="away",
+            awayTeamName="Away Team",
+        )
+        pick = GamePicks.objects.create(
+            id=f"{pool.id}-1-401", pool=pool, pick_game_id=401, slug="home-away",
+            uid=1, userID="1", gameWeek="1", gameyear="2025", gameseason=2526,
+            competition="nfl", pick="home", pick_correct=True,
+        )
+
+        payload = copy.deepcopy(self.PAYLOAD)
+        payload["events"][0]["competitions"][0]["competitors"][0]["winner"] = False
+        payload["events"][0]["competitions"][0]["competitors"][1]["winner"] = True
+        payload["events"][0]["competitions"][0]["id"] = "401"
+
+        with patch(
+            "pickem_api.management.commands.update_games.fetch_scoreboard"
+        ) as mock_fetch, patch(
+            "pickem_api.management.commands.update_games.userSeasonPoints.objects.filter",
+            side_effect=RuntimeError("simulated crash"),
+        ):
+            mock_fetch.return_value = payload
+            with self.assertRaises(RuntimeError):
+                call_command("update_games", season=2526, week=1)
+
+        game.refresh_from_db()
+        pick.refresh_from_db()
+        self.assertTrue(
+            game.gameScored,
+            "an interrupted reset must roll back, not leave gameScored=False "
+            "with picks/standings still stale",
+        )
+        self.assertTrue(pick.pick_correct)
 
     def test_parse_scoreboard_maps_overtime_final_to_finished(self):
         from pickem_api.management.commands.update_games import parse_scoreboard
@@ -1501,6 +1789,179 @@ class VestigialApiWriteRemovalTests(TestCase):
         self.assertEqual(post.status_code, 405)
         self.assertEqual(delete.status_code, 405)
         self.assertEqual(detail_delete.status_code, 405)
+
+
+class UserSeasonPointsIntegrityTest(TestCase):
+    """Season points must be unique per (pool, userID, gameseason), and the
+    admin userpoints API must resolve multi-pool users without 500ing."""
+
+    def setUp(self):
+        self.client = Client()
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        self.staff = User.objects.create_user(
+            username="api-staff", email="api-staff@example.com",
+            password="pass", is_staff=True,
+        )
+        self.client.force_login(self.staff)
+        self.family = Family.objects.create(name="Fam", slug="fam")
+        self.pool_a = Pool.objects.create(
+            family=self.family, name="Pool A", slug="pool-a", season=2526)
+        self.pool_b = Pool.objects.create(
+            family=self.family, name="Pool B", slug="pool-b", season=2526)
+
+    def test_duplicate_pool_user_season_rejected(self):
+        userSeasonPoints.objects.create(pool=self.pool_a, userID="7", gameseason=2526)
+        with self.assertRaises(IntegrityError):
+            userSeasonPoints.objects.create(pool=self.pool_a, userID="7", gameseason=2526)
+
+    def test_duplicate_null_pool_user_season_rejected(self):
+        userSeasonPoints.objects.create(pool=None, userID="7", gameseason=2526)
+        with self.assertRaises(IntegrityError):
+            userSeasonPoints.objects.create(pool=None, userID="7", gameseason=2526)
+
+    def test_user_points_get_disambiguates_multi_pool_user(self):
+        userSeasonPoints.objects.create(
+            pool=self.pool_a, userID="7", gameseason=2526, total_points=10)
+        userSeasonPoints.objects.create(
+            pool=self.pool_b, userID="7", gameseason=2526, total_points=20)
+
+        ambiguous = self.client.get("/api/userpoints/2526/7")
+        self.assertEqual(ambiguous.status_code, 400)
+
+        scoped = self.client.get(f"/api/userpoints/2526/7?pool={self.pool_a.id}")
+        self.assertEqual(scoped.status_code, 200)
+        self.assertEqual(scoped.json()["total_points"], 10)
+
+    def test_delete_user_record_missing_returns_404(self):
+        response = self.client.delete("/api/userpointsdel/2526/999")
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_user_record_requires_pool_when_ambiguous(self):
+        userSeasonPoints.objects.create(pool=self.pool_a, userID="7", gameseason=2526)
+        userSeasonPoints.objects.create(pool=self.pool_b, userID="7", gameseason=2526)
+
+        ambiguous = self.client.delete("/api/userpointsdel/2526/7")
+        self.assertEqual(ambiguous.status_code, 400)
+
+        scoped = self.client.delete(f"/api/userpointsdel/2526/7?pool={self.pool_a.id}")
+        self.assertEqual(scoped.status_code, 204)
+        remaining = userSeasonPoints.objects.filter(userID="7", gameseason=2526)
+        self.assertEqual(remaining.count(), 1)
+        self.assertEqual(remaining.first().pool_id, self.pool_b.id)
+
+
+class UserPicksPatchTest(TestCase):
+    """The admin PATCH endpoint must honor the request body (it used to
+    hard-code pick_correct=true, making a pick impossible to un-mark) and
+    must route modern pool-scoped pick ids ("{pool}-{user}-{game}")."""
+
+    def setUp(self):
+        self.client = Client()
+        self.staff = User.objects.create_user(
+            username="picks-staff", email="picks-staff@example.com",
+            password="pass", is_staff=True,
+        )
+        self.client.force_login(self.staff)
+        family = Family.objects.create(name="Picks Fam", slug="picks-fam")
+        self.pool = Pool.objects.create(
+            family=family, name="Pool", slug="picks-pool", season=2526)
+        self.pick = GamePicks.objects.create(
+            id=f"{self.pool.id}-7-100", pool=self.pool, pick_game_id=100,
+            slug="home-away", uid=7, userID="7", gameWeek="1", gameyear="2025",
+            gameseason=2526, competition="nfl", pick="home", pick_correct=True,
+        )
+
+    def test_patch_honors_request_body(self):
+        response = self.client.patch(
+            f"/api/userpicks/{self.pick.id}",
+            data='{"pick_correct": false}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.pick.refresh_from_db()
+        self.assertFalse(self.pick.pick_correct)
+
+    def test_patch_missing_pick_returns_404(self):
+        response = self.client.patch(
+            "/api/userpicks/9-9-999",
+            data='{"pick_correct": true}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_patch_colliding_with_another_pick_returns_400_not_500(self):
+        # Honoring the request body means userID/pick_game_id are now
+        # editable; a PATCH that collides with another pick's (pool, userID,
+        # pick_game_id) must be a handled 400, not an unhandled IntegrityError.
+        GamePicks.objects.create(
+            id=f"{self.pool.id}-8-100", pool=self.pool, pick_game_id=100,
+            slug="home-away", uid=8, userID="8", gameWeek="1", gameyear="2025",
+            gameseason=2526, competition="nfl", pick="away",
+        )
+        response = self.client.patch(
+            f"/api/userpicks/{self.pick.id}",
+            data='{"userID": "8"}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.pick.refresh_from_db()
+        self.assertEqual(self.pick.userID, "7")
+
+
+class GamePicksIntegrityTest(TestCase):
+    """Pick uniqueness must be enforced by the DB, not just the app's
+    deterministic '{pool}-{user}-{game}' primary key; and deleting a Pool
+    must never silently merge its history into the pool-NULL bucket."""
+
+    def setUp(self):
+        family = Family.objects.create(name="Picks Int Fam", slug="picks-int-fam")
+        self.pool = Pool.objects.create(
+            family=family, name="Pool", slug="pool", season=2526)
+
+    def _pick(self, pick_id, pool, game_id):
+        return GamePicks.objects.create(
+            id=pick_id, pool=pool, pick_game_id=game_id, slug="home-away",
+            uid=7, userID="7", gameWeek="1", gameyear="2025", gameseason=2526,
+            competition="nfl", pick="home",
+        )
+
+    def test_duplicate_pick_for_same_game_rejected(self):
+        self._pick(f"{self.pool.id}-7-100", self.pool, 100)
+        with self.assertRaises(IntegrityError):
+            # Different row id, same (pool, user, game): must be refused.
+            self._pick("999-999", self.pool, 100)
+
+    def test_duplicate_null_pool_pick_rejected(self):
+        self._pick("7-100", None, 100)
+        with self.assertRaises(IntegrityError):
+            self._pick("7-100-dup", None, 100)
+
+    def test_pool_with_picks_cannot_be_deleted(self):
+        from django.db.models import ProtectedError
+
+        self._pick(f"{self.pool.id}-7-100", self.pool, 100)
+        with self.assertRaises(ProtectedError):
+            self.pool.delete()
+
+
+class UserStatsIntegrityTest(TestCase):
+    """Stats rows must be unique per (pool, userID), including the global
+    pool-null row, so a racing double-run can't leave divergent duplicates."""
+
+    def setUp(self):
+        family = Family.objects.create(name="Stats Fam", slug="stats-fam")
+        self.pool = Pool.objects.create(
+            family=family, name="Pool", slug="pool", season=2526)
+
+    def test_duplicate_pool_user_rejected(self):
+        userStats.objects.create(pool=self.pool, userID="7")
+        with self.assertRaises(IntegrityError):
+            userStats.objects.create(pool=self.pool, userID="7")
+
+    def test_duplicate_null_pool_user_rejected(self):
+        userStats.objects.create(pool=None, userID="7")
+        with self.assertRaises(IntegrityError):
+            userStats.objects.create(pool=None, userID="7")
 
 
 class PickemApiConfigReadyTest(TestCase):
@@ -1813,6 +2274,83 @@ class WeeklyWinnerEngineTest(TestCase):
         )
 
 
+class WeeklyWinnerBackfillTest(WeeklyWinnerEngineTest):
+    """The command must award every complete-but-unawarded week, not just the
+    latest — a scheduler outage across a week boundary would otherwise skip a
+    week's bonus forever (and block the season champion crowning)."""
+
+    def test_command_backfills_all_unawarded_complete_weeks(self):
+        from django.core.management import call_command
+        from io import StringIO
+
+        # Week 2 is also complete (single finished, scored game).
+        GamesAndScores.objects.create(
+            id=902, slug="e-f", competition="nfl", gameWeek="2", gameyear="2025",
+            gameseason=2526, startTimestamp=timezone.now() + timedelta(days=7),
+            statusType="finished", statusTitle="Final", gameScored=True,
+            homeTeamScore=30, awayTeamScore=13,
+            homeTeamId=5, homeTeamSlug="e", homeTeamName="E",
+            awayTeamId=6, awayTeamSlug="f", awayTeamName="F",
+        )
+        row = self._player("u1", 10)
+        row.week_2_points = 8
+        row.save(update_fields=["week_2_points"])
+
+        with patch(
+            "pickem_api.management.commands.update_weekly_winners.EspnGameStatsProvider"
+        ) as provider:
+            provider.return_value = self.StubStats()
+            out = StringIO()
+            call_command("update_weekly_winners", season=2526, stdout=out)
+
+        row.refresh_from_db()
+        self.assertTrue(row.week_2_winner, "latest complete week must be awarded")
+        self.assertTrue(
+            row.week_1_winner,
+            "older complete-but-unawarded week must be back-filled, not skipped",
+        )
+        self.assertEqual(row.total_points, 10 + 2 + 8 + 2)
+
+
+class UpdateStatsPoolIdZeroTest(TestCase):
+    """--pool 0 must be treated as a real pool id, not "no pool" — `if
+    pool_id:` would silently fall through to the global recompute instead."""
+
+    def test_pool_id_zero_runs_pool_scoped_not_global(self):
+        from django.core.management import call_command
+
+        family = Family.objects.create(name="Zero Fam", slug="zero-fam")
+        pool = Pool.objects.create(
+            pk=0, family=family, name="Zero Pool", slug="zero-pool", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        game = GamesAndScores.objects.create(
+            id=1, slug="g1", competition="nfl", gameWeek="1", gameyear="2025",
+            gameseason=2526, startTimestamp=timezone.now(), statusType="finished",
+            statusTitle="Final", gameWinner="eagles", gameScored=True,
+            homeTeamId=1, homeTeamSlug="eagles", homeTeamName="Eagles",
+            awayTeamId=2, awayTeamSlug="chiefs", awayTeamName="Chiefs",
+        )
+        alice = User.objects.create_user("alice-zero", email="alice-zero@x.com", password="x")
+        GamePicks.objects.create(
+            id="0-alice-1", pool=pool, pick_game_id=game.id, slug=game.slug,
+            uid=alice.id, userID=str(alice.id), gameWeek="1", gameyear="2025",
+            gameseason=2526, competition="nfl", pick="eagles", pick_correct=True,
+        )
+
+        call_command("update_stats", season=2526, pool=0)
+
+        # A pool-scoped run must write a row FOR pool 0, not a pool-null row.
+        self.assertTrue(
+            userStats.objects.filter(userID=str(alice.id), pool_id=0).exists(),
+            "pool_id=0 must be treated as a real pool, not falsy/no-pool",
+        )
+        self.assertFalse(
+            userStats.objects.filter(userID=str(alice.id), pool__isnull=True).exists(),
+            "pool_id=0 must not fall through to the global pool-null recompute",
+        )
+
+
 class UpdateStatsCommandTest(TestCase):
     """`update_stats` command — Django replacement for the pickemctl service."""
 
@@ -1924,6 +2462,120 @@ class UpdateStatsCommandTest(TestCase):
         self.assertEqual(stats.missedPicksSeason, 1)
         # And an auto-assisted week is never perfect.
         self.assertEqual(stats.perfectWeeksSeason, 0)
+
+
+    def test_cross_season_repeat_matchup_not_graded_before_game_finishes(self):
+        from django.core.management import call_command
+
+        # Prior season's finished game with the same slug (rematches recur
+        # every year: "eagles-chiefs" etc).
+        GamesAndScores.objects.create(
+            id=900, slug="rematch", competition="nfl", gameWeek="1",
+            gameyear="2024", gameseason=2425, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameWinner="eagles",
+            gameScored=True, homeTeamId=1, homeTeamSlug="eagles",
+            homeTeamName="Eagles", awayTeamId=2, awayTeamSlug="chiefs",
+            awayTeamName="Chiefs",
+        )
+        # Current-season rematch, still in progress: the pick is ungraded.
+        live = GamesAndScores.objects.create(
+            id=901, slug="rematch", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="inprogress", statusTitle="Q2", gameScored=False,
+            homeTeamId=1, homeTeamSlug="eagles", homeTeamName="Eagles",
+            awayTeamId=2, awayTeamSlug="chiefs", awayTeamName="Chiefs",
+        )
+        self._pick(self.alice, live, "eagles", correct=False)
+
+        call_command("update_stats", season=2526)
+
+        stats = userStats.objects.get(userID=str(self.alice.id), pool__isnull=True)
+        # The live pick must not count as a graded (and wrong) pick just
+        # because a previous season's game shares the slug.
+        self.assertEqual(stats.totalPicksSeason, 0)
+        self.assertEqual(stats.correctPickTotalSeason, 0)
+
+    def test_multi_pool_user_keeps_perfect_week_and_undoubled_counts(self):
+        from django.core.management import call_command
+
+        pool_b = self._pool("stats-fam-b")
+        g1 = self._game(31, "g31", week="1")
+        g2 = self._game(32, "g32", week="1")
+        for game in (g1, g2):
+            self._pick(self.alice, game, "eagles", correct=True, week="1")
+            GamePicks.objects.create(
+                id=f"{pool_b.id}-{self.alice.id}-{game.id}", pool=pool_b,
+                pick_game_id=game.id, slug=game.slug, uid=self.alice.id,
+                userID=str(self.alice.id), gameWeek="1", gameyear="2025",
+                gameseason=2526, competition="nfl", pick="eagles",
+                pick_correct=True,
+            )
+
+        call_command("update_stats", season=2526)
+
+        stats = userStats.objects.get(userID=str(self.alice.id), pool__isnull=True)
+        # 2 games picked (in two pools each) must count as 2, not 4 …
+        self.assertEqual(stats.totalPicksSeason, 2)
+        self.assertEqual(stats.correctPickTotalSeason, 2)
+        # … and a clean sweep of the week's games is still a perfect week.
+        self.assertEqual(stats.perfectWeeksSeason, 1)
+
+    def test_missed_total_ignores_seasons_before_user_played(self):
+        from django.core.management import call_command
+
+        # An old season full of scored games the user never participated in.
+        GamesAndScores.objects.create(
+            id=800, slug="ancient", competition="nfl", gameWeek="1",
+            gameyear="2023", gameseason=2324, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameWinner="eagles",
+            gameScored=True, homeTeamId=1, homeTeamSlug="eagles",
+            homeTeamName="Eagles", awayTeamId=2, awayTeamSlug="chiefs",
+            awayTeamName="Chiefs",
+        )
+        g1 = self._game(41, "g41")
+        self._pick(self.alice, g1, "eagles", correct=True)
+
+        call_command("update_stats", season=2526)
+
+        stats = userStats.objects.get(userID=str(self.alice.id), pool__isnull=True)
+        # Alice only ever played 2526: the 2324 game is not "missed".
+        self.assertEqual(stats.missedPicksTotal, 0)
+
+    def test_picked_game_ids_and_played_seasons_share_one_query(self):
+        # picked_game_ids and played_seasons both filtered the same
+        # (identity, gameseason__isnull=False) GamePicks rows separately;
+        # they must be derived from a single combined query instead.
+        from django.core.management import call_command
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        g1 = self._game(51, "g51")
+        self._pick(self.alice, g1, "eagles", correct=True)
+
+        with CaptureQueriesContext(connection) as ctx:
+            call_command("update_stats", season=2526)
+
+        # Non-aggregate (no COUNT/GROUP BY) SELECTs against GamePicks scoped
+        # to this identity's gameseason__isnull=False rows — the shape both
+        # picked_game_ids and played_seasons share. Before the fix there are
+        # two (one per query); after, they must be combined into one.
+        # `'"uid" = '` (an equality filter) — not column-aliasing syntax,
+        # which differs between Django versions — is what distinguishes
+        # these identity-scoped queries from handle()'s top-level "distinct
+        # uids" enumeration query, which filters by gameseason only.
+        raw_gamepicks_queries = [
+            q for q in ctx.captured_queries
+            if "pickem_api_gamepicks" in q["sql"].lower()
+            and "gameseason" in q["sql"].lower()
+            and "count(" not in q["sql"].lower()
+            and "group by" not in q["sql"].lower()
+            and '"uid" = ' in q["sql"].lower()
+        ]
+        self.assertEqual(
+            len(raw_gamepicks_queries), 1,
+            f"expected picked_game_ids + played_seasons combined into one "
+            f"query, got {len(raw_gamepicks_queries)}: {raw_gamepicks_queries}",
+        )
 
 
 class ApiEndpointAuthorizationTests(TestCase):

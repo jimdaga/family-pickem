@@ -160,6 +160,26 @@ class OverviewTests(TestCase):
         banner.refresh_from_db()
         self.assertFalse(banner.is_active)
 
+    def test_deactivating_a_banner_logs_its_own_audit_action(self):
+        # A deactivation logged as BANNER_PUBLISHED would mislabel the audit
+        # trail — anyone filtering by action="banner_published" would see
+        # deactivations mixed in with actual publishes.
+        banner = SiteBanner.objects.create(title='Old news', family=None)
+        self.client.post(reverse('superadmin:banner_deactivate', args=[banner.id]))
+        entry = SuperAdminAuditLog.objects.latest('created_at')
+        self.assertEqual(entry.action, SuperAdminAuditLog.Action.BANNER_DEACTIVATED)
+
+    def test_publishing_a_site_wide_banner_rejects_an_unlisted_banner_type(self):
+        """A POST that bypasses the <select> must not smuggle an arbitrary
+        string onto SiteBanner.banner_type — only a value from BANNER_TYPES
+        (or the default) may be persisted."""
+        self.client.post(
+            reverse('superadmin:banner_publish'),
+            {'title': 'Sketchy type', 'banner_type': 'javascript:alert(1)'},
+        )
+        banner = SiteBanner.objects.get()
+        self.assertEqual(banner.banner_type, 'info')
+
     def test_stuck_game_anomaly_flags_a_game_in_progress_past_kickoff(self):
         """statusType is a normalized value ('inprogress'), not a raw ESPN code, and
         the kickoff-time field is startTimestamp (there is no gameTime/gameStatus)."""
