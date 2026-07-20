@@ -1629,6 +1629,59 @@ class UpdateGamesCommandTest(TestCase):
         self.assertEqual(row1.week_1_bonus, 0)
         self.assertFalse(row2.week_1_winner)
 
+    def test_winner_correction_reset_is_atomic(self):
+        # If the reset sequence (GamesAndScores.gameScored, GamePicks.pick_
+        # correct, userSeasonPoints winner/bonus) is interrupted partway
+        # through, it must roll back as a unit — otherwise a crash right
+        # after gameScored=False commits leaves the game permanently unable
+        # to re-trigger this reset (its "previous.gameScored" would already
+        # read False on the next run) while GamePicks/userSeasonPoints keep
+        # stale data forever.
+        from django.core.management import call_command
+        import copy
+
+        pool = Pool.objects.create(
+            family=Family.objects.create(name="Atomic Fam", slug="atomic-fam"),
+            name="Pool", slug="pool", season=2526,
+        )
+        game = GamesAndScores.objects.create(
+            id=401, slug="home-away", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=timezone.now(),
+            statusType="finished", statusTitle="Final", gameWinner="home",
+            gameScored=True, homeTeamId=1, homeTeamSlug="home",
+            homeTeamName="Home Team", awayTeamId=2, awayTeamSlug="away",
+            awayTeamName="Away Team",
+        )
+        pick = GamePicks.objects.create(
+            id=f"{pool.id}-1-401", pool=pool, pick_game_id=401, slug="home-away",
+            uid=1, userID="1", gameWeek="1", gameyear="2025", gameseason=2526,
+            competition="nfl", pick="home", pick_correct=True,
+        )
+
+        payload = copy.deepcopy(self.PAYLOAD)
+        payload["events"][0]["competitions"][0]["competitors"][0]["winner"] = False
+        payload["events"][0]["competitions"][0]["competitors"][1]["winner"] = True
+        payload["events"][0]["competitions"][0]["id"] = "401"
+
+        with patch(
+            "pickem_api.management.commands.update_games.fetch_scoreboard"
+        ) as mock_fetch, patch(
+            "pickem_api.management.commands.update_games.userSeasonPoints.objects.filter",
+            side_effect=RuntimeError("simulated crash"),
+        ):
+            mock_fetch.return_value = payload
+            with self.assertRaises(RuntimeError):
+                call_command("update_games", season=2526, week=1)
+
+        game.refresh_from_db()
+        pick.refresh_from_db()
+        self.assertTrue(
+            game.gameScored,
+            "an interrupted reset must roll back, not leave gameScored=False "
+            "with picks/standings still stale",
+        )
+        self.assertTrue(pick.pick_correct)
+
     def test_parse_scoreboard_maps_overtime_final_to_finished(self):
         from pickem_api.management.commands.update_games import parse_scoreboard
         import copy

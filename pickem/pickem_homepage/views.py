@@ -3278,7 +3278,7 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
         try:
             week_number = int(week)
         except (TypeError, ValueError):
-            raise Http404("Invalid week")
+            raise Http404("Invalid week") from None
         if not 1 <= week_number <= 18:
             raise Http404("Invalid week")
         # Normalize: a zero-padded URL segment ("007") passes the range check

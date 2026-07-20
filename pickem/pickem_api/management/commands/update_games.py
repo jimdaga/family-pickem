@@ -11,6 +11,7 @@ import logging
 
 import requests
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -326,23 +327,29 @@ class Command(BaseCommand):
                 and previous["gameScored"]
                 and previous["gameWinner"] != game.gameWinner
             ):
-                GamesAndScores.objects.filter(id=game_id).update(gameScored=False)
-                GamePicks.objects.filter(pick_game_id=game_id).update(
-                    pick_correct=False
-                )
-                # A winner already awarded for this week must also be
-                # reopened: award_weekly_winners only re-evaluates a week
-                # while its winner_field is False, so without this the
-                # bonus would stay pinned to the pre-correction winner
-                # forever. update_standings/update_weekly_winners run later
-                # in the same pipeline and will recompute points and
-                # re-award correctly.
-                if str(game.gameWeek).isdigit() and 1 <= int(game.gameWeek) <= 18:
-                    winner_field = f"week_{game.gameWeek}_winner"
-                    bonus_field = f"week_{game.gameWeek}_bonus"
-                    userSeasonPoints.objects.filter(
-                        gameseason=season, **{winner_field: True}
-                    ).update(**{winner_field: False, bonus_field: 0})
+                # Atomic: an interruption partway through must roll back the
+                # whole reset, not leave gameScored=False committed while
+                # picks/standings are still stale — a game whose gameScored
+                # already reads False on the next run can never re-trigger
+                # this block, so a partial write here would be permanent.
+                with transaction.atomic():
+                    GamesAndScores.objects.filter(id=game_id).update(gameScored=False)
+                    GamePicks.objects.filter(pick_game_id=game_id).update(
+                        pick_correct=False
+                    )
+                    # A winner already awarded for this week must also be
+                    # reopened: award_weekly_winners only re-evaluates a week
+                    # while its winner_field is False, so without this the
+                    # bonus would stay pinned to the pre-correction winner
+                    # forever. update_standings/update_weekly_winners run later
+                    # in the same pipeline and will recompute points and
+                    # re-award correctly.
+                    if str(game.gameWeek).isdigit() and 1 <= int(game.gameWeek) <= 18:
+                        winner_field = f"week_{game.gameWeek}_winner"
+                        bonus_field = f"week_{game.gameWeek}_bonus"
+                        userSeasonPoints.objects.filter(
+                            gameseason=season, **{winner_field: True}
+                        ).update(**{winner_field: False, bonus_field: 0})
                 self.stdout.write(
                     f"   winner corrected ({previous['gameWinner']!r} -> "
                     f"{game.gameWinner!r}); reopened for re-grading"
