@@ -25,14 +25,16 @@
       <a href="{{ u }}" class="sa-tab {% if request.path == u %}sa-tab-active{% endif %}">overview</a>
       {% url 'superadmin:users' as u_users %}
       <a href="{{ u_users }}" class="sa-tab {% if '/users' in request.path %}sa-tab-active{% endif %}">users</a>
-      {% url 'superadmin:email_settings' as u_email %}
-      <a href="{{ u_email }}" class="sa-tab {% if '/email' in request.path %}sa-tab-active{% endif %}">email</a>
       {% url 'superadmin:pools' as u_pools %}
       <a href="{{ u_pools }}" class="sa-tab {% if '/pools' in request.path %}sa-tab-active{% endif %}">pools</a>
       {% url 'superadmin:families' as u_families %}
       <a href="{{ u_families }}" class="sa-tab {% if '/families' in request.path %}sa-tab-active{% endif %}">families</a>
       {% url 'superadmin:teams' as u_teams %}
       <a href="{{ u_teams }}" class="sa-tab {% if '/teams' in request.path %}sa-tab-active{% endif %}">teams</a>
+      {% url 'superadmin:email_settings' as u_email %}
+      <a href="{{ u_email }}" class="sa-tab {% if '/email' in request.path %}sa-tab-active{% endif %}">email</a>
+      {% url 'superadmin:ai_settings' as u_ai %}
+      <a href="{{ u_ai }}" class="sa-tab {% if '/ai' in request.path %}sa-tab-active{% endif %}">AI</a>
       {% url 'superadmin:jobs' as u_jobs %}
       <a href="{{ u_jobs }}" class="sa-tab {% if '/jobs' in request.path %}sa-tab-active{% endif %}">jobs</a>
       {% url 'superadmin:logs' as u_logs %}

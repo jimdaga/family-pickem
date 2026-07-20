@@ -95,6 +95,7 @@ PIPELINE = [
     ('update_standings', 'Standings', UPDATE_INTERVAL_MINUTES),
     ('update_weekly_winners', 'Weekly winners', UPDATE_INTERVAL_MINUTES),
     ('update_rankings', 'Rankings', UPDATE_INTERVAL_MINUTES),
+    ('generate_weekly_summaries', 'AI weekly recaps', UPDATE_INTERVAL_MINUTES),
     ('update_season_winners', 'Season winners', UPDATE_INTERVAL_MINUTES),
     ('update_stats', 'User stats', 5),
 ]

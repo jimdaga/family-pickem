@@ -1583,24 +1583,34 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
             id=publication_pk, family=family, pool=pool
         ).first()
 
-    def publish_exclusively(message):
-        """Publish one message while atomically replacing the current one."""
+    def publish_exclusively(message, reviewed_by=None):
+        """Publish within the message's source slot without affecting the other."""
         try:
             with transaction.atomic():
                 FamilyPublication.objects.filter(
-                    family=family, pool=pool, is_published=True
+                    family=family, pool=pool, source=message.source, is_published=True
                 ).exclude(id=message.id).update(is_published=False, published_at=None)
                 message.is_published = True
                 message.published_at = timezone.now()
+                if (
+                    message.source == FamilyPublication.Source.AI_WEEKLY_SUMMARY
+                    and message.author_id is None and reviewed_by is not None
+                ):
+                    # For AI copy, author records the commissioner who approved
+                    # publication rather than implying the model is a user.
+                    message.author = reviewed_by
                 message.save()
         except IntegrityError:
             return False
         return True
 
     action = request.POST.get('action') if request.method == 'POST' else None
-    form = FamilyPublicationForm()
+    commissioner_publication = FamilyPublication.objects.filter(
+        family=family, pool=pool, source=FamilyPublication.Source.COMMISSIONER
+    ).first()
+    form = FamilyPublicationForm(instance=commissioner_publication)
     if action in {'create', 'create_publish', 'edit'}:
-        publication = get_publication() if action == 'edit' else None
+        publication = get_publication() if action == 'edit' else commissioner_publication
         if action == 'edit' and publication is None:
             messages.error(request, 'That lobby message could not be found.')
         else:
@@ -1612,9 +1622,9 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
                     message.family, message.pool = family, pool
                     message.author = request.user
                     message.source = FamilyPublication.Source.COMMISSIONER
-                    if action == 'create_publish':
-                        publish_succeeded = publish_exclusively(message)
-                if action != 'create_publish':
+                if action == 'create_publish':
+                    publish_succeeded = publish_exclusively(message, reviewed_by=request.user)
+                else:
                     message.save()
                 if publish_succeeded:
                     FamilyAuditLog.objects.create(
@@ -1644,7 +1654,7 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
             )
         else:
             if action == 'publish':
-                if not publish_exclusively(publication):
+                if not publish_exclusively(publication, reviewed_by=request.user):
                     messages.error(request, 'Another message was published at the same time. Please try again.')
                     return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)
             else:
@@ -1660,6 +1670,37 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
                 **get_invite_audit_context(request),
             )
         return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)
+    elif action == 'generate_ai_summary':
+        from django.conf import settings
+        from pickem_api.ai_weekly_summaries import generate_weekly_summary
+        from pickem_api.weekly_winners import latest_complete_week
+
+        week = latest_complete_week(pool.season or get_season())
+        preview = False
+        # Local-only escape hatch: lets commissioners inspect the visual and
+        # review flow before the first Monday-night final.  It is impossible in
+        # deployed mode because it requires both DEBUG and explicit mock mode.
+        if week is None and settings.DEBUG and settings.OPENAI_WEEKLY_SUMMARIES_MOCK:
+            available_weeks = [
+                int(value) for value in GamesAndScores.objects.filter(
+                    gameseason=pool.season or get_season(), gameWeek__regex=r'^\d+$'
+                ).values_list('gameWeek', flat=True)
+            ]
+            if available_weeks:
+                week, preview = max(available_weeks), True
+        if week is None:
+            messages.error(request, 'There is no fully scored week available to summarize yet.')
+        else:
+            run = generate_weekly_summary(
+                pool, pool.season or get_season(), week, force=True, preview=preview,
+            )
+            if run.status == 'success':
+                messages.success(request, f"Week {week} AI recap {'preview ' if preview else ''}draft created for review.")
+            elif run.status == 'disabled':
+                messages.error(request, 'AI weekly recaps are disabled for this environment.')
+            else:
+                messages.error(request, 'The recap was not generated. Please try again later.')
+        return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)
 
     publications = FamilyPublication.objects.filter(
         family=family, pool=pool
@@ -1670,9 +1711,6 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
         'gameseason': pool.season or get_season(),
         'publication_form': form,
         'publications': Paginator(publications, 10).get_page(request.GET.get('page')),
-        'active_publication': FamilyPublication.objects.filter(
-            family=family, pool=pool, is_published=True
-        ).first(),
     })
 
 

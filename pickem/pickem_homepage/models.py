@@ -137,9 +137,11 @@ class FamilyPublication(models.Model):
                 check=models.Q(source__in=['commissioner', 'ai_weekly_summary']),
                 name='publication_source_valid',
             ),
+            # Each pool has two intentional, separately managed slots: one
+            # commissioner announcement and one AI recap.  A source may be a
+            # draft or published, but never a growing stream of replacements.
             models.UniqueConstraint(
-                fields=['pool'], condition=models.Q(is_published=True),
-                name='one_published_publication_per_pool',
+                fields=['pool', 'source'], name='one_publication_per_pool_source',
             ),
         ]
 
@@ -150,6 +152,45 @@ class FamilyPublication(models.Model):
 
     def __str__(self):
         return f'{self.family.name} / {self.pool.name}: {self.title}'
+
+
+class AIWeeklySummaryRun(models.Model):
+    """Cost-safe operational record for one tenant-scoped recap attempt.
+
+    Prompts and provider responses are intentionally not stored.  The reviewed
+    publication is the only persisted generated content.
+    """
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        DISABLED = 'disabled', 'Disabled'
+        SUCCESS = 'success', 'Success'
+        ERROR = 'error', 'Error'
+        SKIPPED = 'skipped', 'Skipped'
+
+    family = models.ForeignKey('pickem_api.Family', on_delete=models.PROTECT)
+    pool = models.ForeignKey('pickem_api.Pool', on_delete=models.PROTECT)
+    season = models.IntegerField()
+    week = models.PositiveSmallIntegerField()
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    model = models.CharField(max_length=100, blank=True)
+    input_tokens = models.PositiveIntegerField(null=True, blank=True)
+    output_tokens = models.PositiveIntegerField(null=True, blank=True)
+    error_code = models.CharField(max_length=64, blank=True)
+    publication = models.ForeignKey(
+        FamilyPublication, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='ai_summary_runs',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['pool', 'season', 'week', 'created_at'], name='ai_summary_pool_week_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.pool} week {self.week}: {self.status}'
 
 
 class MessageBoardPost(models.Model):

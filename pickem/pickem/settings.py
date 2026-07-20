@@ -382,6 +382,31 @@ SUPERADMIN_LOG_ROOT_LEVEL = os.environ.get('SUPERADMIN_LOG_ROOT_LEVEL', 'WARNING
 LOG_RETENTION_DAYS = int(os.environ.get('LOG_RETENTION_DAYS', '14'))
 LOG_MAX_ROWS = int(os.environ.get('LOG_MAX_ROWS', '10000'))
 
+# AI weekly recaps use the encrypted, write-only Super Admin setting once it
+# exists. These environment values are a backwards-compatible bootstrap
+# fallback only; they are never exposed through templates, APIs, or logs.
+OPENAI_WEEKLY_SUMMARIES_ENABLED = os.environ.get(
+    'OPENAI_WEEKLY_SUMMARIES_ENABLED', 'false'
+).lower() == 'true'
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+OPENAI_WEEKLY_SUMMARIES_MODEL = os.environ.get(
+    'OPENAI_WEEKLY_SUMMARIES_MODEL', 'gpt-4o-mini'
+)
+OPENAI_WEEKLY_SUMMARIES_TIMEOUT_SECONDS = int(
+    os.environ.get('OPENAI_WEEKLY_SUMMARIES_TIMEOUT_SECONDS', '30')
+)
+OPENAI_WEEKLY_SUMMARIES_RETRIES = int(
+    os.environ.get('OPENAI_WEEKLY_SUMMARIES_RETRIES', '2')
+)
+OPENAI_WEEKLY_SUMMARIES_MAX_RUNS_PER_POOL_WEEK = int(
+    os.environ.get('OPENAI_WEEKLY_SUMMARIES_MAX_RUNS_PER_POOL_WEEK', '3')
+)
+# Development-only preview mode: generates a deterministic local draft and
+# never contacts OpenAI. Keep false in deployed environments.
+OPENAI_WEEKLY_SUMMARIES_MOCK = os.environ.get(
+    'OPENAI_WEEKLY_SUMMARIES_MOCK', 'false'
+).lower() == 'true'
+
 # 'django.job' is the per-step pipeline logger namespace (django.job.<step>).
 # It must be listed explicitly at app level — under 'django' it would otherwise
 # inherit the root WARNING threshold and INFO step output would be dropped.
