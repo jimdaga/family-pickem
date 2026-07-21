@@ -5,15 +5,17 @@ a failure in one step is logged and the pipeline continues so a transient
 error (e.g. ESPN hiccup) doesn't block the rest.
 
 Order matters:
-  1. update_records        - team win/loss records (independent)
-  2. update_games          - fetch scores + winners from ESPN
-  3. update_missed_picks   - apply missed-pick policies before grading
-  4. update_picks          - score picks against game winners
-  5. update_standings      - recompute per-pool weekly/total points
-  6. update_weekly_winners - award winner bonuses once the week completes
-  7. update_rankings       - rank pool members by total points (incl. bonus)
-  8. update_season_winners - flag the season champion once the season ends
-  9. update_stats          - recompute per-user userStats (replaces pickemctl)
+  1. update_records          - team win/loss records (independent)
+  2. update_games            - fetch scores + winners from ESPN
+  3. update_missed_picks     - apply missed-pick policies before grading
+  4. update_picks            - score picks against game winners
+  5. update_standings        - recompute per-pool weekly/total points
+  6. update_weekly_winners   - award winner bonuses once the week completes
+  7. update_rankings         - rank pool members by total points (incl. bonus)
+  8. update_season_winners   - flag the season champion once the season ends
+  9. generate_weekly_summaries - AI recap drafts (after winners are final,
+     so a week-18 recap can reference the just-crowned champion)
+  10. update_stats           - recompute per-user userStats (replaces pickemctl)
 """
 
 import logging
@@ -31,8 +33,8 @@ PIPELINE = [
     "update_standings",
     "update_weekly_winners",
     "update_rankings",
-    "generate_weekly_summaries",
     "update_season_winners",
+    "generate_weekly_summaries",
     "update_stats",
 ]
 

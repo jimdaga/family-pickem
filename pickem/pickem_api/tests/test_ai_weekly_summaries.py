@@ -3,11 +3,13 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
+from pickem_api import scheduler as pickem_scheduler
 from pickem_api import weekly_winners
 from pickem_api.ai_weekly_summaries import (
     SummarySettings, _output_text_from_response, build_summary_facts, generate_weekly_summary,
 )
 from pickem_api.management.commands import update_season_winners as update_season_winners_cmd
+from pickem_api.management.commands.update_all import PIPELINE as UPDATE_ALL_PIPELINE
 from pickem_api.models import Family, FamilyMembership, GamesAndScores, Pool, userSeasonPoints
 from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
 from pickem_superadmin.models import AIProviderSettings
@@ -119,3 +121,18 @@ class FinalWeekConstantTests(TestCase):
     def test_final_week_constant_is_shared(self):
         self.assertEqual(weekly_winners.FINAL_WEEK, 18)
         self.assertIs(update_season_winners_cmd.FINAL_WEEK, weekly_winners.FINAL_WEEK)
+
+
+class PipelineOrderTests(TestCase):
+    def test_update_all_generates_summaries_after_season_winners(self):
+        self.assertLess(
+            UPDATE_ALL_PIPELINE.index('update_season_winners'),
+            UPDATE_ALL_PIPELINE.index('generate_weekly_summaries'),
+        )
+
+    def test_scheduler_generates_summaries_after_season_winners(self):
+        job_ids = [job_id for job_id, _label, _mins in pickem_scheduler.PIPELINE]
+        self.assertLess(
+            job_ids.index('update_season_winners'),
+            job_ids.index('generate_weekly_summaries'),
+        )
