@@ -8,6 +8,13 @@ configs:
   params:
     # Run insecure (TLS terminated at ingress)
     server.insecure: true
+    # Default repo-content cache TTL is 24h, so the routine 3-minute
+    # reconciliation loop (timeout.reconciliation, argocd-cm) was comparing
+    # against day-old cached git content -- every release needed a manual
+    # `argocd.argoproj.io/refresh=hard` (which explicitly bypasses this
+    # cache) to actually notice a new commit. A short TTL here means normal
+    # reconciliation picks up new commits within about one cycle on its own.
+    reposerver.repo.cache.expiration: 60s
 
 server:
   ingress:
