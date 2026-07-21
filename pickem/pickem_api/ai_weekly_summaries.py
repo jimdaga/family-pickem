@@ -200,15 +200,15 @@ def _provider_request(config, facts):
             for game in results
         )
         champions = facts.get('season_champion') or []
-        if champions:
+        is_finale = bool(facts.get('is_final_week')) and bool(champions)
+        if is_finale:
             champion_line = (
                 f"## Week {facts['week']} recap (preview)\n\n"
                 f"Crown 'em. That's it, that's the recap. **{' and '.join(champions)}** just closed out "
                 f"the season as your champion — you saw the scores, you saw the standings, it was never "
                 f"really in doubt, was it? {scoreboard}. That's a fact.\n\n"
                 f"This is only a local preview, but the real recap brings this exact same loud, "
-                f"champion-crowning energy for a finale like this.\n\n"
-                f"*Results source: Family Pickem scored NFL game results.*"
+                f"champion-crowning energy for a finale like this."
             )
             return champion_line, {}
         leader_line = (
@@ -222,8 +222,7 @@ def _provider_request(config, facts):
             f"That's the kind of week that makes a good pick look like genius and a bad one look like a "
             f"crime scene. {leader_line}\n\n"
             f"This is only a local preview, but the real recap brings this same loud, unfiltered energy — "
-            f"real names, real numbers, zero robotic checklist.\n\n"
-            f"*Results source: Family Pickem scored NFL game results.*",
+            f"real names, real numbers, zero robotic checklist.",
             {},
         )
     payload = {
@@ -239,8 +238,9 @@ def _provider_request(config, facts):
                 'decides it, or splits/coin-flips per those values. `pool_rules.missed_pick_policy` '
                 'describes what happens to a member who didn\'t submit a pick. The season champion is '
                 'whichever member(s) have the most total points once the final week (`is_final_week`) is '
-                'done; `season_champion` lists them by name when that has just happened — if that list is '
-                'non-empty, this recap IS the season finale, and multiple people in it means co-champions.\n\n'
+                'done; `season_champion` lists them by name once that has happened. `season_champion` can '
+                'stay populated on recaps for earlier weeks too (it reflects the season\'s current state, '
+                'not just this week) — multiple people in it means co-champions.\n\n'
                 'Persona: write like a loud, supremely confident sports-radio hype man narrating the week '
                 '— not a neutral recap-bot. Short, punchy sentences that hit like declarations. Then, '
                 'sometimes, one that runs long and breathless when the moment calls for it. Open strong — '
@@ -253,13 +253,13 @@ def _provider_request(config, facts):
                 'scores, real numbers from the data with total conviction — never invent a detail that '
                 'isn\'t there. Rhetorical questions are fair game ("You seeing this?" "How does that '
                 'happen?"). Keep it fun and a little unhinged, but always good-natured.\n\n'
-                'If `season_champion` is non-empty, treat this as the season finale: close it as a bigger, '
-                'more celebratory moment that names and crowns the champion(s), same persona turned up for '
-                'the occasion.\n\n'
+                'If `is_final_week` is true AND `season_champion` is non-empty, treat this as the season '
+                'finale: close it as a bigger, more celebratory moment that names and crowns the '
+                'champion(s), same persona turned up for the occasion. Otherwise, write the normal weekly '
+                'recap even if `season_champion` happens to be populated.\n\n'
                 'Use 3–5 short prose paragraphs, not a scoreboard dump or bullet list. Do not invent inside '
                 'jokes, personal traits, private facts, or results; no profanity, insults, or demeaning '
-                'language. Never compare this pool with another. Include a short source line saying results '
-                'came from Family Pickem scored NFL game results.'
+                'language. Never compare this pool with another.'
             )}]},
             {'role': 'user', 'content': [{'type': 'input_text', 'text': json.dumps(facts, sort_keys=True, separators=(',', ':'))}]},
         ],

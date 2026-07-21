@@ -178,6 +178,24 @@ class AIWeeklySummaryTests(TestCase):
         self.assertIn('Sam', run.publication.body)
         self.assertIn('champion', run.publication.body.lower())
 
+    @override_settings(
+        OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
+        OPENAI_WEEKLY_SUMMARIES_MOCK=True,
+        OPENAI_API_KEY='',
+    )
+    def test_mock_preview_does_not_crown_a_champion_on_a_non_final_week(self):
+        # year_winner reflects season-wide state and can already be True
+        # (e.g. regenerating an earlier week's draft after the season ended).
+        # Only week 18's own recap should get the finale treatment.
+        userSeasonPoints.objects.filter(pool=self.pool, userID=str(self.user.id)).update(
+            year_winner=True,
+        )
+
+        run = generate_weekly_summary(self.pool, 2627, 1, force=True)
+
+        self.assertEqual(run.status, AIWeeklySummaryRun.Status.SUCCESS)
+        self.assertNotIn('champion', run.publication.body.lower())
+
 
 class FactsSeasonChampionTests(TestCase):
     def setUp(self):
