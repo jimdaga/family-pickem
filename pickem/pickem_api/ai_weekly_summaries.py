@@ -168,6 +168,23 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
     upset_calls.sort(key=lambda entry: entry['member'])
     bad_beats.sort(key=lambda entry: entry['member'])
 
+    # A member with zero rows in picks_by_user submitted no picks at all this
+    # week -- otherwise invisible to the model, since it only ever sees rows
+    # that exist.
+    missed_picks = sorted(
+        name for user_id, name in membership_names.items() if user_id not in picks_by_user
+    )
+
+    total_games = len(games)
+    perfect_weeks, near_perfect_weeks = [], []
+    for user_id, data in picks_by_user.items():
+        if data['correct'] == total_games:
+            perfect_weeks.append(membership_names[user_id])
+        elif data['correct'] == total_games - 1:
+            near_perfect_weeks.append(membership_names[user_id])
+    perfect_weeks.sort()
+    near_perfect_weeks.sort()
+
     week_field = f'week_{week}_points'
     week_bonus_field = f'week_{week}_bonus'
     standings_rows = [
@@ -200,6 +217,21 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
             'points_behind_next': (standings[-1]['total_points'] - (row.total_points or 0)) if standings else 0,
         })
 
+    # A hot streak: consecutive weekly-bonus wins ending at this week, using
+    # the week_N_winner flags already stored on the standings row -- no
+    # extra historical query needed.
+    hot_streaks = []
+    for row in standings_rows:
+        if not getattr(row, f'week_{week}_winner', False):
+            continue
+        streak, streak_week = 0, week
+        while streak_week >= 1 and getattr(row, f'week_{streak_week}_winner', False):
+            streak += 1
+            streak_week -= 1
+        if streak >= 2:
+            hot_streaks.append({'member': membership_names[str(row.userID)], 'weeks': streak})
+    hot_streaks.sort(key=lambda entry: (-entry['weeks'], entry['member']))
+
     pool_settings = PoolSettings.objects.filter(pool=pool).first() or PoolSettings(pool=pool)
     champion_rows = [row for row in standings_rows if row.year_winner]
 
@@ -222,6 +254,10 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
             'lonely_correct': lonely_correct,
             'upset_calls': upset_calls,
             'bad_beats': bad_beats,
+            'perfect_weeks': perfect_weeks,
+            'near_perfect_weeks': near_perfect_weeks,
+            'missed_picks': missed_picks,
+            'hot_streaks': hot_streaks,
         },
         'pool_rules': {
             'weekly_winner_points': pool_settings.weekly_winner_points,
@@ -312,7 +348,12 @@ def _provider_request(config, facts):
             movement_line = f" {mover['member']} {verb} {spots} spot{'s' if spots != 1 else ''} in the standings."
         notable = facts.get('notable_picks') or {}
         notable_line = ''
-        if notable.get('lonely_correct'):
+        if notable.get('perfect_weeks'):
+            notable_line = f" {notable['perfect_weeks'][0]} went PERFECT this week. Every single pick. Unreal."
+        elif notable.get('hot_streaks'):
+            streak = notable['hot_streaks'][0]
+            notable_line = f" {streak['member']} is on a {streak['weeks']}-week win streak. Somebody stop them."
+        elif notable.get('lonely_correct'):
             pick = notable['lonely_correct'][0]
             notable_line = f" {pick['member']} was the ONLY one who called the {pick['team']} correctly."
         elif notable.get('upset_calls'):
@@ -321,6 +362,8 @@ def _provider_request(config, facts):
         elif notable.get('bad_beats'):
             pick = notable['bad_beats'][0]
             notable_line = f" {pick['member']} rode the {pick['team']} as a lock and got burned."
+        elif notable.get('missed_picks'):
+            notable_line = f" {notable['missed_picks'][0]} ghosted the week entirely. Zero picks. We noticed."
         return (
             f"## Week {facts['week']} recap (preview)\n\n"
             f"Week {facts['week']}? Did NOT tiptoe in. Kicked the door down. {scoreboard}. You seeing this?\n\n"
@@ -355,8 +398,14 @@ def _provider_request(config, facts):
                 '`notable_picks.upset_calls` lists members who correctly picked a clear underdog to win (a '
                 'statement pick — hype it). `notable_picks.bad_beats` lists members who confidently picked '
                 'the clear favorite and got burned (the dud pick — rib them for it, still good-natured). '
-                'Any of these three lists can be empty; never invent an entry that isn\'t there, and don\'t '
-                'force all three in if the week didn\'t produce them.\n\n'
+                '`notable_picks.perfect_weeks` lists members who went perfect this week — every single pick '
+                'right; `notable_picks.near_perfect_weeks` lists members who missed by exactly one — both '
+                'deserve big praise. `notable_picks.hot_streaks` lists members on a current run of '
+                'consecutive weekly-bonus wins, with `weeks` giving the streak length — call out that '
+                'they\'re on fire. `notable_picks.missed_picks` lists members who did not submit any picks '
+                'this week at all — a light, good-natured ribbing for ghosting the week, never harsh. Any of '
+                'these lists can be empty; never invent an entry that isn\'t there, and don\'t force all of '
+                'them in if the week didn\'t produce them.\n\n'
                 'Persona: write like a loud, supremely confident sports-radio hype man narrating the week '
                 '— not a neutral recap-bot. Short, punchy sentences that hit like declarations. Then, '
                 'sometimes, one that runs long and breathless when the moment calls for it. Open strong — '
