@@ -381,7 +381,10 @@ def _provider_request(config, facts):
             )}]},
             {'role': 'user', 'content': [{'type': 'input_text', 'text': json.dumps(facts, sort_keys=True, separators=(',', ':'))}]},
         ],
-        'max_output_tokens': 700,
+        # Raised from 700: the standings-movement and notable-picks callouts
+        # this prompt now asks for reliably push a full recap past that cap,
+        # cutting it off mid-sentence.
+        'max_output_tokens': 1000,
     }
     last_error = None
     for attempt in range(config.retries + 1):
