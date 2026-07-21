@@ -30,6 +30,10 @@ from pickem_api.models import (
 
 logger = logging.getLogger(__name__)
 
+# The last regular-season week. Playoff scoring (PoolSettings.include_playoffs)
+# is not yet implemented, so every pool's season currently ends here.
+FINAL_WEEK = 18
+
 ESPN_SUMMARY_URL = (
     "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary"
 )
