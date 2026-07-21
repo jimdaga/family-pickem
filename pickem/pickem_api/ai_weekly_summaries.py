@@ -264,15 +264,25 @@ def _output_text_from_response(data):
     return ''
 
 
+_SCOREBOARD_VERBS = ('TOOK DOWN', 'STORMED PAST', 'OUTLASTED', 'RAN OVER', 'HANDLED', 'PUT AWAY')
+
+
+def _scoreboard_line(week, index, game):
+    if game['home_score'] is None:
+        return f"{game['away_team']} visits {game['home_team']}"
+    # Deterministic (not random, so mock output stays test-stable) but the
+    # verb still varies both within one recap and week to week.
+    verb = _SCOREBOARD_VERBS[(week + index) % len(_SCOREBOARD_VERBS)]
+    return f"{game['home_team']} {verb} {game['away_team']} {game['home_score']}-{game['away_score']}"
+
+
 @sensitive_variables('config')
 def _provider_request(config, facts):
     if config.mock:
         leader = facts['pool']['standings'][0] if facts['pool']['standings'] else None
         results = facts['results'][:3]
         scoreboard = '; '.join(
-            (f"{game['home_team']} TOOK DOWN {game['away_team']} {game['home_score']}-{game['away_score']}"
-             if game['home_score'] is not None else f"{game['away_team']} visits {game['home_team']}")
-            for game in results
+            _scoreboard_line(facts['week'], index, game) for index, game in enumerate(results)
         )
         champions = facts.get('season_champion') or []
         is_finale = bool(facts.get('is_final_week')) and bool(champions)
@@ -358,7 +368,9 @@ def _provider_request(config, facts):
                 'family, never cruel, never personal, no profanity or real insults. Use real names, real '
                 'scores, real numbers from the data with total conviction — never invent a detail that '
                 'isn\'t there. Rhetorical questions are fair game ("You seeing this?" "How does that '
-                'happen?"). Keep it fun and a little unhinged, but always good-natured.\n\n'
+                'happen?"). Keep it fun and a little unhinged, but always good-natured. Vary your verbs and '
+                'phrasing when describing scores and outcomes — don\'t lean on the same word (e.g. "beat," '
+                '"took down") for every result, in this recap or across different weeks.\n\n'
                 'If `is_final_week` is true AND `season_champion` is non-empty, treat this as the season '
                 'finale: close it as a bigger, more celebratory moment that names and crowns the '
                 'champion(s), same persona turned up for the occasion. Otherwise, write the normal weekly '
