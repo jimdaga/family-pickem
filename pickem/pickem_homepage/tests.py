@@ -5010,7 +5010,8 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertNotContains(response, "OTHER-FAMILY-CODE")
         self.assertNotContains(response, "Jones Family")
 
-    def test_admin_and_owner_can_create_member_invites_with_one_time_link_display(self):
+    @patch("pickem_homepage.views.resend_invite_email_is_configured", return_value=False)
+    def test_admin_and_owner_can_create_member_invites_with_one_time_link_display(self, configured_mock):
         for user in (self.owner, self.admin_user):
             with self.subTest(user=user.username):
                 self.client.force_login(user)
@@ -5079,6 +5080,9 @@ class FamilyAdminExperienceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Invite email will be sent to target@example.com.")
+        self.assertContains(response, "Invite created.")
+        self.assertNotContains(response, "Share the invite link now")
+        self.assertIsNone(response.context.get("invite_link"))
         configured_mock.assert_called_once_with()
         on_commit_mock.assert_called_once()
         send_mock.assert_called_once_with(
@@ -5110,6 +5114,7 @@ class FamilyAdminExperienceTests(TestCase):
             response,
             "Invite saved for target@example.com, but Resend is not configured yet so no email was sent. Use the invite link below.",
         )
+        self.assertIsNotNone(response.context.get("invite_link"))
         configured_mock.assert_called_once_with()
         send_mock.assert_not_called()
 
@@ -5128,8 +5133,10 @@ class FamilyAdminExperienceTests(TestCase):
         response = self.client.post(self._invite_replace_url(invite))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Invite replaced. Share the new invite link now.")
+        self.assertContains(response, "Invite replaced.")
+        self.assertNotContains(response, "Share the new invite link now.")
         self.assertContains(response, "Invite email will be sent to target@example.com.")
+        self.assertIsNone(response.context.get("invite_link"))
         configured_mock.assert_called_once_with()
         on_commit_mock.assert_called_once()
         send_mock.assert_called_once_with(
@@ -5155,6 +5162,7 @@ class FamilyAdminExperienceTests(TestCase):
             response,
             "Invite saved for target@example.com, but Resend is not configured yet so no email was sent. Use the invite link below.",
         )
+        self.assertIsNotNone(response.context.get("invite_link"))
         configured_mock.assert_called_once_with()
         send_mock.assert_not_called()
 
@@ -5955,6 +5963,35 @@ class BatchInviteTests(TestCase):
         self.assertIn("b@x.com", recipient_emails)
         self.assertContains(response, "Sent 2 invite(s).")
         # A multi-invite batch does not surface a one-time invite link.
+        self.assertIsNone(response.context.get("invite_link"))
+
+    @patch("pickem_homepage.views.transaction.on_commit", side_effect=lambda callback: callback())
+    @patch("pickem_homepage.views.send_family_invitation_email")
+    @patch("pickem_homepage.views.resend_invite_email_is_configured", return_value=True)
+    def test_multiple_emails_with_resend_configured_queues_each_delivery_once(
+        self,
+        configured_mock,
+        send_mock,
+        on_commit_mock,
+    ):
+        # resend_invite_email_is_configured() is hoisted out of the per-invite
+        # loop and reused, so it must be called exactly once per request even
+        # though two invites are created here - not once per invite.
+        response = self.client.post(
+            self._invites_url(),
+            {
+                "role": FamilyMembership.Role.MEMBER,
+                "recipient_email": ["a@x.com", "b@x.com"],
+                "expires_in_days": "14",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        configured_mock.assert_called_once_with()
+        self.assertEqual(send_mock.call_count, 2)
+        self.assertContains(response, "Invite email will be sent to a@x.com.")
+        self.assertContains(response, "Invite email will be sent to b@x.com.")
         self.assertIsNone(response.context.get("invite_link"))
 
     def test_invalid_email_skipped_valid_still_created(self):

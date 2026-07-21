@@ -2361,11 +2361,14 @@ def build_invite_audit_metadata(invitation, *, source, replacement_for=None):
     return metadata
 
 
-def handle_targeted_invite_email_feedback(request, *, invitation, raw_code):
+def handle_targeted_invite_email_feedback(request, *, invitation, raw_code, email_configured):
+    """Emits the create/replace feedback message and returns the raw invite
+    link, or None when Resend is configured (the link is only a fallback for
+    when it isn't - see GH #89)."""
     invite_link = request.build_absolute_uri(
         reverse('accept_invite_link', kwargs={'invite_code': raw_code})
     )
-    if resend_invite_email_is_configured():
+    if email_configured:
         transaction.on_commit(
             lambda: send_family_invitation_email(
                 invitation=invitation,
@@ -2377,14 +2380,15 @@ def handle_targeted_invite_email_feedback(request, *, invitation, raw_code):
             request,
             f"Invite email will be sent to {invitation.recipient_email}.",
         )
-    else:
-        messages.warning(
-            request,
-            (
-                f"Invite saved for {invitation.recipient_email}, but Resend is not "
-                "configured yet so no email was sent. Use the invite link below."
-            ),
-        )
+        return None
+    messages.warning(
+        request,
+        (
+            f"Invite saved for {invitation.recipient_email}, but Resend is not "
+            "configured yet so no email was sent. Use the invite link below."
+        ),
+    )
+    return invite_link
 
 
 def create_admin_invitation(
@@ -2520,13 +2524,6 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
                 )
                 created.append((invitation, raw_code))
 
-        for invitation, raw_code in created:
-            handle_targeted_invite_email_feedback(
-                request,
-                invitation=invitation,
-                raw_code=raw_code,
-            )
-
         if not created:
             messages.error(
                 request,
@@ -2537,16 +2534,29 @@ def family_pool_admin_invites(request, family_slug, pool_slug):
             )
             return render_family_admin_invites(request, tenant_context, form, status=400)
 
+        email_configured = resend_invite_email_is_configured()
+        invite_links = {
+            raw_code: handle_targeted_invite_email_feedback(
+                request,
+                invitation=invitation,
+                raw_code=raw_code,
+                email_configured=email_configured,
+            )
+            for invitation, raw_code in created
+        }
+
         if len(created) == 1 and not skipped_invalid:
             _invitation, raw_code = created[0]
-            messages.success(request, "Invite created. Share the invite link now; it will not be shown again.")
+            invite_link = invite_links[raw_code]
+            if invite_link:
+                messages.success(request, "Invite created. Share the invite link now; it will not be shown again.")
+            else:
+                messages.success(request, "Invite created.")
             return render_family_admin_invites(
                 request,
                 tenant_context,
                 form,
-                invite_link=request.build_absolute_uri(
-                    reverse('accept_invite_link', kwargs={'invite_code': raw_code})
-                ),
+                invite_link=invite_link,
             )
 
         summary = f"Sent {len(created)} invite(s)."
@@ -2652,19 +2662,21 @@ def family_pool_admin_invite_replace(request, family_slug, pool_slug, invitation
             'expires_in_days': 14,
         },
     )
-    handle_targeted_invite_email_feedback(
+    invite_link = handle_targeted_invite_email_feedback(
         request,
         invitation=new_invitation,
         raw_code=raw_code,
+        email_configured=resend_invite_email_is_configured(),
     )
-    messages.success(request, "Invite replaced. Share the new invite link now.")
+    if invite_link:
+        messages.success(request, "Invite replaced. Share the new invite link now.")
+    else:
+        messages.success(request, "Invite replaced.")
     return render_family_admin_invites(
         request,
         tenant_context,
         form,
-        invite_link=request.build_absolute_uri(
-            reverse('accept_invite_link', kwargs={'invite_code': raw_code})
-        ),
+        invite_link=invite_link,
     )
 
 
