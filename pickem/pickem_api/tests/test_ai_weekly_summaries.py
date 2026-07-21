@@ -1,18 +1,26 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+import requests
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
 from pickem_api import scheduler as pickem_scheduler
 from pickem_api import weekly_winners
 from pickem_api.ai_weekly_summaries import (
-    SummarySettings, _output_text_from_response, build_summary_facts, generate_weekly_summary,
+    SummarySettings, _output_text_from_response, _provider_request, build_summary_facts, generate_weekly_summary,
 )
 from pickem_api.management.commands import update_season_winners as update_season_winners_cmd
 from pickem_api.management.commands.update_all import PIPELINE as UPDATE_ALL_PIPELINE
 from pickem_api.models import Family, FamilyMembership, GamesAndScores, Pool, userSeasonPoints
 from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
 from pickem_superadmin.models import AIProviderSettings
+
+
+def _make_config(retries=2):
+    return SummarySettings(
+        enabled=True, api_key='sk-test', model='gpt-4o-mini',
+        timeout=30, retries=retries, max_runs=3, mock=False,
+    )
 
 
 class AIWeeklySummaryTests(TestCase):
@@ -115,6 +123,38 @@ class AIWeeklySummaryTests(TestCase):
 
         self.assertEqual(run.status, AIWeeklySummaryRun.Status.SUCCESS)
         self.assertEqual(run.publication.title, 'Week 1 recap (preview)')
+
+
+class ProviderRetryTests(TestCase):
+    @patch('pickem_api.ai_weekly_summaries.requests.post')
+    def test_4xx_response_is_not_retried(self, post):
+        response = MagicMock(status_code=401)
+        response.raise_for_status.side_effect = requests.HTTPError(response=response)
+        post.return_value = response
+
+        with self.assertRaises(RuntimeError):
+            _provider_request(_make_config(retries=2), {'week': 1})
+
+        self.assertEqual(post.call_count, 1)
+
+    @patch('pickem_api.ai_weekly_summaries.requests.post')
+    def test_5xx_response_is_retried_up_to_the_configured_limit(self, post):
+        response = MagicMock(status_code=503)
+        post.return_value = response
+
+        with self.assertRaises(RuntimeError):
+            _provider_request(_make_config(retries=2), {'week': 1})
+
+        self.assertEqual(post.call_count, 3)  # 1 initial + 2 retries
+
+    @patch('pickem_api.ai_weekly_summaries.requests.post')
+    def test_network_error_is_retried(self, post):
+        post.side_effect = requests.ConnectionError('boom')
+
+        with self.assertRaises(RuntimeError):
+            _provider_request(_make_config(retries=1), {'week': 1})
+
+        self.assertEqual(post.call_count, 2)  # 1 initial + 1 retry
 
 
 class FinalWeekConstantTests(TestCase):

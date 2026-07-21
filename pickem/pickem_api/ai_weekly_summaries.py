@@ -7,6 +7,7 @@ is included in a request or retained in the run record.
 
 import json
 import logging
+import time
 from dataclasses import dataclass
 from urllib.parse import quote
 
@@ -22,6 +23,9 @@ from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
 logger = logging.getLogger(__name__)
 OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 OPENAI_MODELS_URL = 'https://api.openai.com/v1/models'
+# Capped backoff between retries, in seconds — bounded low because a
+# synchronous "Regenerate" button call runs this inline in a web request.
+_RETRY_BACKOFF_SECONDS = (0.5, 1.0)
 
 
 @dataclass(frozen=True)
@@ -212,7 +216,8 @@ def _provider_request(config, facts):
         'max_output_tokens': 700,
     }
     last_error = None
-    for _attempt in range(config.retries + 1):
+    for attempt in range(config.retries + 1):
+        retryable = False
         try:
             response = requests.post(
                 OPENAI_RESPONSES_URL, json=payload,
@@ -221,16 +226,25 @@ def _provider_request(config, facts):
             )
             if response.status_code >= 500:
                 last_error = 'provider_5xx'
-                continue
-            response.raise_for_status()
-            data = response.json()
-            text = _output_text_from_response(data)
-            if not text:
-                raise ValueError('provider_empty_output')
-            return text, data.get('usage', {})
+                retryable = True
+            else:
+                response.raise_for_status()
+                data = response.json()
+                text = _output_text_from_response(data)
+                if not text:
+                    raise ValueError('provider_empty_output')
+                return text, data.get('usage', {})
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            last_error = 'provider_request_failed'
+            retryable = True
+            logger.warning('Weekly summary provider attempt failed: %s', type(exc).__name__)
         except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
+            # A 4xx or malformed response will not succeed on retry.
             last_error = 'provider_request_failed'
             logger.warning('Weekly summary provider attempt failed: %s', type(exc).__name__)
+            break
+        if retryable and attempt < config.retries:
+            time.sleep(_RETRY_BACKOFF_SECONDS[min(attempt, len(_RETRY_BACKOFF_SECONDS) - 1)])
     raise RuntimeError(last_error or 'provider_request_failed')
 
 
