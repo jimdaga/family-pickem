@@ -167,7 +167,12 @@
                     {% endif %}
                     <div><div class="flex flex-wrap items-center gap-2"><h3 class="text-lg font-bold text-text-dark dark:text-white">{{ publication.title }}</h3>{% if publication.source == 'ai_weekly_summary' %}<span class="ai-recap-badge"><i class="fas fa-sparkles" aria-hidden="true"></i> AI weekly recap</span>{% else %}<span class="commissioner-message-badge">Commissioner note</span>{% endif %}</div><p class="text-xs text-text-secondary-light dark:text-text-secondary">{{ publication.get_source_display }}{% if publication.author %} · {% if publication.source == 'ai_weekly_summary' %}Reviewed by{% else %}{{ publication.author|display_name }}{% endif %}{% if publication.source == 'ai_weekly_summary' %} {{ publication.author|display_name }}{% endif %}{% endif %} · {{ publication.published_at|date:"M j, Y" }}</p></div>
                 </div>
+                {% if publication.source == 'ai_weekly_summary' %}
+                <div class="mt-3 max-h-12 overflow-hidden text-sm leading-6 text-text-dark dark:text-white/90" data-ai-recap-body>{{ publication.body|safe_markdown }}</div>
+                <button type="button" class="mt-2 hidden text-xs font-semibold text-primary hover:underline" data-ai-recap-toggle aria-expanded="false">Read more</button>
+                {% else %}
                 <div class="mt-3 text-sm leading-6 text-text-dark dark:text-white/90">{{ publication.body|safe_markdown }}</div>
+                {% endif %}
                 {% if publication.source == 'ai_weekly_summary' %}<p class="ai-recap-provenance"><i class="fas fa-shield-halved" aria-hidden="true"></i> Generated from scored NFL results and this pool’s picks</p></div>{% endif %}
                 {% if publication.source == 'commissioner' %}<p class="commissioner-message-provenance">A note from your Commissioner</p></div>{% endif %}
             </article>
@@ -569,6 +574,29 @@
             });
         });
     }
+})();
+</script>
+<script>
+(function () {
+    // AI recap body starts clamped to 2 lines (mobile scroll-length complaints);
+    // the toggle only appears when the content actually overflows that clamp.
+    document.querySelectorAll('[data-ai-recap-body]').forEach(function (body) {
+        var toggle = body.parentElement.querySelector('[data-ai-recap-toggle]');
+        if (!toggle) {
+            return;
+        }
+        if (body.scrollHeight <= body.clientHeight + 1) {
+            return;
+        }
+        toggle.classList.remove('hidden');
+        toggle.addEventListener('click', function () {
+            var expanded = toggle.getAttribute('aria-expanded') === 'true';
+            body.classList.toggle('max-h-12', expanded);
+            body.classList.toggle('overflow-hidden', expanded);
+            toggle.setAttribute('aria-expanded', String(!expanded));
+            toggle.textContent = expanded ? 'Read more' : 'Show less';
+        });
+    });
 })();
 </script>
 {% endblock %}
