@@ -124,6 +124,76 @@ class AIWeeklySummaryTests(TestCase):
         self.assertEqual(run.status, AIWeeklySummaryRun.Status.SUCCESS)
         self.assertEqual(run.publication.title, 'Week 1 recap (preview)')
 
+    def test_facts_include_pool_rules_from_pool_settings(self):
+        from pickem_api.models import PoolSettings
+
+        PoolSettings.objects.create(
+            pool=self.pool,
+            weekly_winner_points=7,
+            primary_tiebreaker=PoolSettings.PrimaryTiebreaker.COMBINED_YARDS,
+            secondary_tiebreaker=PoolSettings.SecondaryTiebreaker.COIN_FLIP,
+            allow_tiebreaker=True,
+            missed_pick_policy=PoolSettings.MissedPickPolicy.AUTO_HOME,
+            pick_type=PoolSettings.PickType.STRAIGHT_UP,
+        )
+
+        facts = build_summary_facts(self.pool, 2627, 1)
+
+        self.assertEqual(facts['pool_rules'], {
+            'weekly_winner_points': 7,
+            'primary_tiebreaker': 'combined_yards',
+            'secondary_tiebreaker': 'coin_flip',
+            'allow_tiebreaker': True,
+            'missed_pick_policy': 'auto_home',
+            'pick_type': 'straight_up',
+        })
+
+    def test_facts_use_default_pool_rules_when_unconfigured(self):
+        facts = build_summary_facts(self.pool, 2627, 1)
+
+        self.assertEqual(facts['pool_rules']['weekly_winner_points'], 2)
+        self.assertFalse(facts['is_final_week'])
+        self.assertEqual(facts['season_champion'], [])
+
+
+class FactsSeasonChampionTests(TestCase):
+    def setUp(self):
+        self.family = Family.objects.create(name='Smith', slug='smith')
+        self.pool = Pool.objects.create(family=self.family, name='2026', slug='2026', season=2627)
+        self.user = User.objects.create_user('sam', 'sam@example.com', 'password', first_name='Sam')
+        FamilyMembership.objects.create(family=self.family, user=self.user)
+        GamesAndScores.objects.create(
+            id=20001, slug='a-at-h', competition='1', gameWeek='18', gameyear='2026', gameseason=2627,
+            startTimestamp='2026-12-30T17:00:00Z', statusType='finished', statusTitle='Final',
+            homeTeamId=1, homeTeamSlug='home', homeTeamName='Home', homeTeamScore=21,
+            awayTeamId=2, awayTeamSlug='away', awayTeamName='Away', awayTeamScore=17,
+            gameWinner='Home', gameScored=True,
+        )
+
+    def test_season_champion_present_when_year_winner_flagged(self):
+        userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(self.user.id), gameseason=2627,
+            total_points=100, week_18_points=10, week_18_winner=True,
+            year_winner=True, current_rank=1,
+        )
+
+        facts = build_summary_facts(self.pool, 2627, 18)
+
+        self.assertTrue(facts['is_final_week'])
+        self.assertEqual(facts['season_champion'], ['Sam'])
+
+    def test_season_champion_empty_before_year_winner_is_flagged(self):
+        userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(self.user.id), gameseason=2627,
+            total_points=100, week_18_points=10, week_18_winner=True,
+            year_winner=False, current_rank=1,
+        )
+
+        facts = build_summary_facts(self.pool, 2627, 18)
+
+        self.assertTrue(facts['is_final_week'])
+        self.assertEqual(facts['season_champion'], [])
+
 
 class ProviderRetryTests(TestCase):
     @patch('pickem_api.ai_weekly_summaries.requests.post')

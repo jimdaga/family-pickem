@@ -17,7 +17,8 @@ from django.db import transaction
 from django.utils import timezone
 from django.views.decorators.debug import sensitive_variables
 
-from pickem_api.models import FamilyMembership, GamePicks, GamesAndScores, userSeasonPoints
+from pickem_api.models import FamilyMembership, GamePicks, GamesAndScores, PoolSettings, userSeasonPoints
+from pickem_api.weekly_winners import FINAL_WEEK
 from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
 
 logger = logging.getLogger(__name__)
@@ -126,10 +127,18 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
                 'week_winner': getattr(row, f'week_{week}_winner'),
             })
 
+    pool_settings = PoolSettings.objects.filter(pool=pool).first() or PoolSettings(pool=pool)
+    champion_rows = [
+        row for row in userSeasonPoints.objects.filter(pool=pool, gameseason=season, year_winner=True)
+        if str(row.userID) in membership_names
+    ]
+
     return {
         'season': season,
         'week': week,
-            'nfl_results_source': ('Family Pickem schedule preview' if allow_unscored else 'Family Pickem scored NFL game results'),
+        'nfl_results_source': ('Family Pickem schedule preview' if allow_unscored else 'Family Pickem scored NFL game results'),
+        'is_final_week': week == FINAL_WEEK,
+        'season_champion': sorted(membership_names[str(row.userID)] for row in champion_rows),
         'results': results,
         'pool': {
             'name': pool.name,
@@ -138,6 +147,14 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
                 for user_id, data in sorted(picks_by_user.items(), key=lambda item: membership_names[item[0]])
             ],
             'standings': standings,
+        },
+        'pool_rules': {
+            'weekly_winner_points': pool_settings.weekly_winner_points,
+            'primary_tiebreaker': pool_settings.primary_tiebreaker,
+            'secondary_tiebreaker': pool_settings.secondary_tiebreaker,
+            'allow_tiebreaker': pool_settings.allow_tiebreaker,
+            'missed_pick_policy': pool_settings.missed_pick_policy,
+            'pick_type': pool_settings.pick_type,
         },
     }
 
