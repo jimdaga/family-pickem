@@ -11,7 +11,7 @@ from pickem_api.ai_weekly_summaries import (
 )
 from pickem_api.management.commands import update_season_winners as update_season_winners_cmd
 from pickem_api.management.commands.update_all import PIPELINE as UPDATE_ALL_PIPELINE
-from pickem_api.models import Family, FamilyMembership, GamesAndScores, Pool, userSeasonPoints
+from pickem_api.models import Family, FamilyMembership, GamePicks, GamesAndScores, Pool, userSeasonPoints
 from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
 from pickem_superadmin.models import AIProviderSettings
 
@@ -47,7 +47,10 @@ class AIWeeklySummaryTests(TestCase):
 
         facts = build_summary_facts(self.pool, 2627, 1)
 
-        self.assertEqual(facts['pool']['standings'], [{'member': 'Sam', 'rank': 1, 'total_points': 8, 'week_points': 4, 'week_winner': False}])
+        self.assertEqual(facts['pool']['standings'], [{
+            'member': 'Sam', 'rank': 1, 'previous_rank': 1, 'rank_change': 0,
+            'total_points': 8, 'week_points': 4, 'week_winner': False, 'points_behind_next': 0,
+        }])
         self.assertEqual(facts['results'][0]['winner'], 'Home')
         self.assertNotIn('Jo', str(facts))
 
@@ -287,3 +290,108 @@ class PipelineOrderTests(TestCase):
             job_ids.index('update_season_winners'),
             job_ids.index('generate_weekly_summaries'),
         )
+
+
+class NotablePicksAndStandingsMovementTests(TestCase):
+    def setUp(self):
+        self.family = Family.objects.create(name='Rivals', slug='rivals')
+        self.pool = Pool.objects.create(family=self.family, name='2026', slug='2026', season=2627)
+        self.alice = User.objects.create_user('alice', 'alice@example.com', 'password', first_name='Alice')
+        self.bob = User.objects.create_user('bob', 'bob@example.com', 'password', first_name='Bob')
+        self.carol = User.objects.create_user('carol', 'carol@example.com', 'password', first_name='Carol')
+        for user in (self.alice, self.bob, self.carol):
+            FamilyMembership.objects.create(family=self.family, user=user)
+
+        GamesAndScores.objects.create(
+            id=20001, slug='raiders-at-chiefs', competition='1', gameWeek='2', gameyear='2026', gameseason=2627,
+            startTimestamp='2026-09-17T17:00:00Z', statusType='finished', statusTitle='Final',
+            homeTeamId=1, homeTeamSlug='chiefs', homeTeamName='Kansas City Chiefs', homeTeamScore=17,
+            awayTeamId=2, awayTeamSlug='raiders', awayTeamName='Las Vegas Raiders', awayTeamScore=20,
+            gameWinner='raiders', gameScored=True, spread=7.0,
+        )
+        GamesAndScores.objects.create(
+            id=20002, slug='dolphins-at-jets', competition='1', gameWeek='2', gameyear='2026', gameseason=2627,
+            startTimestamp='2026-09-17T20:00:00Z', statusType='finished', statusTitle='Final',
+            homeTeamId=3, homeTeamSlug='jets', homeTeamName='New York Jets', homeTeamScore=24,
+            awayTeamId=4, awayTeamSlug='dolphins', awayTeamName='Miami Dolphins', awayTeamScore=10,
+            gameWinner='jets', gameScored=True, spread=2.0,
+        )
+
+        picks = [
+            (self.alice, 20001, 'chiefs', False),   # picked the favorite; favorite lost -> bad beat
+            (self.bob, 20001, 'raiders', True),      # picked the underdog correctly -> upset call
+            (self.carol, 20001, 'raiders', True),    # also correct -- not a lonely correct pick
+            (self.alice, 20002, 'dolphins', False),
+            (self.bob, 20002, 'dolphins', False),
+            (self.carol, 20002, 'jets', True),        # only correct pick on this game -> lonely correct
+        ]
+        for user, game_id, pick, correct in picks:
+            GamePicks.objects.create(
+                id=f'{self.pool.id}-{user.id}-{game_id}', pool=self.pool, pick_game_id=game_id,
+                slug=str(game_id), userID=str(user.id), uid=user.id, userEmail=user.email,
+                gameWeek='2', gameyear='2026', gameseason=2627, competition='1',
+                pick=pick, pick_correct=correct,
+            )
+
+        userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(self.alice.id), gameseason=2627, current_rank=3,
+            total_points=10, week_2_points=3, week_2_bonus=0,
+        )
+        userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(self.bob.id), gameseason=2627, current_rank=1,
+            total_points=12, week_2_points=1, week_2_bonus=0,
+        )
+        userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(self.carol.id), gameseason=2627, current_rank=2,
+            total_points=11, week_2_points=6, week_2_bonus=0,
+        )
+
+    def test_results_and_picks_resolve_team_slugs_to_display_names(self):
+        facts = build_summary_facts(self.pool, 2627, 2)
+
+        winners = {f"{r['home_team']}-{r['away_team']}": r['winner'] for r in facts['results']}
+        self.assertEqual(winners['Kansas City Chiefs-Las Vegas Raiders'], 'Las Vegas Raiders')
+        self.assertEqual(winners['New York Jets-Miami Dolphins'], 'New York Jets')
+
+        alice_picks = next(m for m in facts['pool']['member_pick_results'] if m['member'] == 'Alice')
+        picked_teams = {p['game_id']: p['pick_team'] for p in alice_picks['picks']}
+        self.assertEqual(picked_teams[20001], 'Kansas City Chiefs')
+        self.assertEqual(picked_teams[20002], 'Miami Dolphins')
+
+    def test_standings_include_rank_movement_and_gap_to_next(self):
+        facts = build_summary_facts(self.pool, 2627, 2)
+
+        by_member = {s['member']: s for s in facts['pool']['standings']}
+        self.assertEqual(by_member['Bob'], {
+            'member': 'Bob', 'rank': 1, 'previous_rank': 1, 'rank_change': 0,
+            'total_points': 12, 'week_points': 1, 'week_winner': False, 'points_behind_next': 0,
+        })
+        self.assertEqual(by_member['Carol']['rank_change'], 1)
+        self.assertEqual(by_member['Carol']['points_behind_next'], 1)
+        self.assertEqual(by_member['Alice']['rank_change'], -1)
+        self.assertEqual(by_member['Alice']['points_behind_next'], 1)
+
+    def test_notable_picks_identify_lonely_correct_and_upset_patterns(self):
+        facts = build_summary_facts(self.pool, 2627, 2)
+
+        notable = facts['notable_picks']
+        self.assertEqual(notable['lonely_correct'], [
+            {'member': 'Carol', 'team': 'New York Jets', 'total_pickers': 3},
+        ])
+        self.assertEqual(notable['upset_calls'], [
+            {'member': 'Bob', 'team': 'Las Vegas Raiders', 'spread': 7.0},
+            {'member': 'Carol', 'team': 'Las Vegas Raiders', 'spread': 7.0},
+        ])
+        self.assertEqual(notable['bad_beats'], [
+            {'member': 'Alice', 'team': 'Kansas City Chiefs', 'spread': 7.0},
+        ])
+
+    def test_small_spread_does_not_produce_upset_signals(self):
+        # The jets/dolphins game has a 2.0 spread, below the 3.0 threshold,
+        # even though jets (the favorite) won -- no upset either way here,
+        # but this confirms a small spread never contributes bad_beats/upset_calls.
+        facts = build_summary_facts(self.pool, 2627, 2)
+
+        teams_in_upsets = {entry['team'] for entry in facts['notable_picks']['upset_calls'] + facts['notable_picks']['bad_beats']}
+        self.assertNotIn('New York Jets', teams_in_upsets)
+        self.assertNotIn('Miami Dolphins', teams_in_upsets)

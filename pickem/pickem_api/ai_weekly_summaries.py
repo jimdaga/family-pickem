@@ -91,9 +91,23 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
         ).select_related('user')
     }
 
+    # Team names, keyed by the slug used everywhere else (gameWinner, pick).
+    team_by_slug = {}
+    game_by_id = {}
+    for game in games:
+        team_by_slug[game.homeTeamSlug] = game.homeTeamName
+        team_by_slug[game.awayTeamSlug] = game.awayTeamName
+        game_by_id[game.id] = game
+
     results = []
     for game in games:
-        winner = game.gameWinner or ('Tie' if game.homeTeamScore == game.awayTeamScore else '')
+        winner_slug = game.gameWinner
+        if winner_slug:
+            winner = team_by_slug.get(winner_slug, winner_slug)
+        elif game.homeTeamScore == game.awayTeamScore:
+            winner = 'Tie'
+        else:
+            winner = ''
         results.append({
             'away_team': game.awayTeamName,
             'away_score': game.awayTeamScore,
@@ -106,32 +120,88 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
         pool=pool, gameseason=season, gameWeek=str(week),
     ).values('userID', 'pick', 'pick_correct', 'pick_game_id')
     picks_by_user = {}
+    picks_by_game = {}
     for row in pick_rows:
         user_id = str(row['userID'])
         if user_id not in membership_names:
             continue
+        pick_team = team_by_slug.get(row['pick'], row['pick'])
         entry = picks_by_user.setdefault(user_id, {'correct': 0, 'incorrect': 0, 'picks': []})
         entry['correct' if row['pick_correct'] else 'incorrect'] += 1
-        entry['picks'].append({'game_id': row['pick_game_id'], 'pick': row['pick'], 'correct': row['pick_correct']})
+        entry['picks'].append({'game_id': row['pick_game_id'], 'pick_team': pick_team, 'correct': row['pick_correct']})
+        picks_by_game.setdefault(row['pick_game_id'], []).append(
+            (user_id, row['pick'], pick_team, row['pick_correct'])
+        )
 
-    week_field = f'week_{week}_points'
-    standings = []
-    for row in userSeasonPoints.objects.filter(pool=pool, gameseason=season).order_by('current_rank', 'userID'):
-        user_id = str(row.userID)
-        if user_id in membership_names:
-            standings.append({
-                'member': membership_names[user_id],
-                'rank': row.current_rank,
-                'total_points': row.total_points or 0,
-                'week_points': getattr(row, week_field) or 0,
-                'week_winner': getattr(row, f'week_{week}_winner'),
+    # Notable picks are pre-computed here rather than left for the model to
+    # find: spotting "only one person got this right" or "everyone confident
+    # in the favorite got burned" requires pivoting every member's picks
+    # across every game, which is unreliable for a small model working from
+    # a compact JSON blob inside a tight token budget.
+    lonely_correct, upset_calls, bad_beats = [], [], []
+    upset_spread_threshold = 3.0
+    for game_id, entries in picks_by_game.items():
+        correct_entries = [entry for entry in entries if entry[3]]
+        if len(correct_entries) == 1 and len(entries) > 1:
+            user_id, _pick_slug, pick_team, _correct = correct_entries[0]
+            lonely_correct.append({
+                'member': membership_names[user_id], 'team': pick_team, 'total_pickers': len(entries),
             })
 
-    pool_settings = PoolSettings.objects.filter(pool=pool).first() or PoolSettings(pool=pool)
-    champion_rows = [
-        row for row in userSeasonPoints.objects.filter(pool=pool, gameseason=season, year_winner=True)
+        game = game_by_id.get(game_id)
+        if game is None or game.spread is None or abs(game.spread) < upset_spread_threshold:
+            continue
+        favorite_slug = game.homeTeamSlug if game.spread > 0 else game.awayTeamSlug
+        underdog_slug = game.awayTeamSlug if game.spread > 0 else game.homeTeamSlug
+        if game.gameWinner == favorite_slug:
+            continue  # favorite won -- no upset, nothing notable about these picks
+        for user_id, pick_slug, pick_team, correct in entries:
+            if pick_slug == favorite_slug and not correct:
+                bad_beats.append({
+                    'member': membership_names[user_id], 'team': pick_team, 'spread': abs(game.spread),
+                })
+            elif pick_slug == underdog_slug and correct:
+                upset_calls.append({
+                    'member': membership_names[user_id], 'team': pick_team, 'spread': abs(game.spread),
+                })
+    lonely_correct.sort(key=lambda entry: entry['member'])
+    upset_calls.sort(key=lambda entry: entry['member'])
+    bad_beats.sort(key=lambda entry: entry['member'])
+
+    week_field = f'week_{week}_points'
+    week_bonus_field = f'week_{week}_bonus'
+    standings_rows = [
+        row for row in userSeasonPoints.objects.filter(pool=pool, gameseason=season).order_by('current_rank', 'userID')
         if str(row.userID) in membership_names
     ]
+    previous_totals = {
+        str(row.userID): (row.total_points or 0) - (getattr(row, week_field) or 0) - (getattr(row, week_bonus_field) or 0)
+        for row in standings_rows
+    }
+    previous_ranks = {
+        user_id: rank
+        for rank, user_id in enumerate(
+            sorted(previous_totals, key=lambda uid: (-previous_totals[uid], uid)), start=1,
+        )
+    }
+    standings = []
+    for row in standings_rows:
+        user_id = str(row.userID)
+        previous_rank = previous_ranks[user_id]
+        standings.append({
+            'member': membership_names[user_id],
+            'rank': row.current_rank,
+            'previous_rank': previous_rank,
+            'rank_change': previous_rank - row.current_rank,
+            'total_points': row.total_points or 0,
+            'week_points': getattr(row, week_field) or 0,
+            'week_winner': getattr(row, f'week_{week}_winner'),
+            # Points needed to catch the member one rank better (0 for the leader).
+            'points_behind_next': (standings[-1]['total_points'] - (row.total_points or 0)) if standings else 0,
+        })
+
+    pool_settings = PoolSettings.objects.filter(pool=pool).first() or PoolSettings(pool=pool)
+    champion_rows = [row for row in standings_rows if row.year_winner]
 
     return {
         'season': season,
@@ -147,6 +217,11 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
                 for user_id, data in sorted(picks_by_user.items(), key=lambda item: membership_names[item[0]])
             ],
             'standings': standings,
+        },
+        'notable_picks': {
+            'lonely_correct': lonely_correct,
+            'upset_calls': upset_calls,
+            'bad_beats': bad_beats,
         },
         'pool_rules': {
             'weekly_winner_points': pool_settings.weekly_winner_points,
@@ -216,11 +291,31 @@ def _provider_request(config, facts):
             f"said, that lead is NOT as safe as it looks."
             if leader else 'Nobody has separated from the pack yet. Somebody make a move.'
         )
+        standings = facts['pool']['standings']
+        movers = [entry for entry in standings if entry.get('rank_change')]
+        movement_line = ''
+        if movers:
+            mover = max(movers, key=lambda entry: abs(entry['rank_change']))
+            change = mover['rank_change']
+            verb = 'climbed' if change > 0 else 'slid'
+            spots = abs(change)
+            movement_line = f" {mover['member']} {verb} {spots} spot{'s' if spots != 1 else ''} in the standings."
+        notable = facts.get('notable_picks') or {}
+        notable_line = ''
+        if notable.get('lonely_correct'):
+            pick = notable['lonely_correct'][0]
+            notable_line = f" {pick['member']} was the ONLY one who called the {pick['team']} correctly."
+        elif notable.get('upset_calls'):
+            pick = notable['upset_calls'][0]
+            notable_line = f" {pick['member']} called the {pick['team']} upset before anyone believed it."
+        elif notable.get('bad_beats'):
+            pick = notable['bad_beats'][0]
+            notable_line = f" {pick['member']} rode the {pick['team']} as a lock and got burned."
         return (
             f"## Week {facts['week']} recap (preview)\n\n"
             f"Week {facts['week']}? Did NOT tiptoe in. Kicked the door down. {scoreboard}. You seeing this?\n\n"
             f"That's the kind of week that makes a good pick look like genius and a bad one look like a "
-            f"crime scene. {leader_line}\n\n"
+            f"crime scene. {leader_line}{movement_line}{notable_line}\n\n"
             f"This is only a local preview, but the real recap brings this same loud, unfiltered energy — "
             f"real names, real numbers, zero robotic checklist.",
             {},
@@ -241,6 +336,17 @@ def _provider_request(config, facts):
                 'done; `season_champion` lists them by name once that has happened. `season_champion` can '
                 'stay populated on recaps for earlier weeks too (it reflects the season\'s current state, '
                 'not just this week) — multiple people in it means co-champions.\n\n'
+                'Player-level depth is expected, not a scoreboard dump. Each `pool.standings` entry has '
+                '`rank_change` (positive = moved up that many spots since last week, negative = dropped, 0 '
+                '= held) and `points_behind_next` (points that member needs to catch whoever is one rank '
+                'better, 0 for the leader) — use these for real movement and rivalry lines: someone closing '
+                'in, someone free-falling, a razor-thin gap. `notable_picks.lonely_correct` lists members '
+                'who were the ONLY one to correctly pick a game\'s winner — name them and the team. '
+                '`notable_picks.upset_calls` lists members who correctly picked a clear underdog to win (a '
+                'statement pick — hype it). `notable_picks.bad_beats` lists members who confidently picked '
+                'the clear favorite and got burned (the dud pick — rib them for it, still good-natured). '
+                'Any of these three lists can be empty; never invent an entry that isn\'t there, and don\'t '
+                'force all three in if the week didn\'t produce them.\n\n'
                 'Persona: write like a loud, supremely confident sports-radio hype man narrating the week '
                 '— not a neutral recap-bot. Short, punchy sentences that hit like declarations. Then, '
                 'sometimes, one that runs long and breathless when the moment calls for it. Open strong — '
