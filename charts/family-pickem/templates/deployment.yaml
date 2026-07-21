@@ -66,6 +66,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
+          - name: APP_RELEASE
+            value: "{{ .Values.image.tag | default .Chart.AppVersion }}"
           {{- if and .Values.scheduler.enabled .Values.autoscaling.enabled }}
           {{ fail "scheduler.enabled requires autoscaling.enabled=false" }}
           {{- end }}
