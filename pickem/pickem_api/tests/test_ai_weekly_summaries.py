@@ -84,7 +84,7 @@ class AIWeeklySummaryTests(TestCase):
             1,
         )
         self.assertEqual(second.publication_id, first.publication_id)
-        self.assertIn('did not tiptoe into the room', second.publication.body)
+        self.assertIn('Did NOT tiptoe in', second.publication.body)
 
     @override_settings(
         OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
@@ -154,6 +154,29 @@ class AIWeeklySummaryTests(TestCase):
         self.assertEqual(facts['pool_rules']['weekly_winner_points'], 2)
         self.assertFalse(facts['is_final_week'])
         self.assertEqual(facts['season_champion'], [])
+
+    @override_settings(
+        OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
+        OPENAI_WEEKLY_SUMMARIES_MOCK=True,
+        OPENAI_API_KEY='',
+    )
+    def test_mock_preview_calls_out_season_champion_when_present(self):
+        userSeasonPoints.objects.filter(pool=self.pool, userID=str(self.user.id)).update(
+            week_18_points=10, week_18_winner=True, year_winner=True,
+        )
+        GamesAndScores.objects.create(
+            id=10002, slug='b-at-h', competition='1', gameWeek='18', gameyear='2026', gameseason=2627,
+            startTimestamp='2026-12-30T17:00:00Z', statusType='finished', statusTitle='Final',
+            homeTeamId=3, homeTeamSlug='home2', homeTeamName='Home2', homeTeamScore=14,
+            awayTeamId=4, awayTeamSlug='away2', awayTeamName='Away2', awayTeamScore=10,
+            gameWinner='Home2', gameScored=True,
+        )
+
+        run = generate_weekly_summary(self.pool, 2627, 18, force=True)
+
+        self.assertEqual(run.status, AIWeeklySummaryRun.Status.SUCCESS)
+        self.assertIn('Sam', run.publication.body)
+        self.assertIn('champion', run.publication.body.lower())
 
 
 class FactsSeasonChampionTests(TestCase):
