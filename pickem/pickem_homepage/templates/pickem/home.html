@@ -53,9 +53,9 @@
                     <span class="flex items-center gap-2 text-xs font-bold text-emerald-300"><span class="h-2 w-2 rounded-full bg-emerald-300"></span>Live</span>
                 </div>
                 <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                    <span class="text-3xl font-black text-white">NE</span>
+                    <img src="{% static 'images/new-england-patriots.svg' %}" alt="New England Patriots" class="h-11 w-11 object-contain">
                     <span class="rounded-xl bg-white/10 px-3 py-2 text-lg font-black text-emerald-200">41-10</span>
-                    <span class="text-right text-3xl font-black text-slate-400">DAL</span>
+                    <img src="{% static 'images/dallas-cowboys.svg' %}" alt="Dallas Cowboys" class="ml-auto h-11 w-11 object-contain opacity-80">
                 </div>
             </div>
             <div class="landing-actions mt-9 flex flex-col gap-3 sm:flex-row">
@@ -86,7 +86,7 @@
             <div class="absolute left-1/2 top-0 h-[480px] w-[320px] -translate-x-1/2 rounded-full border border-white/10 opacity-40"></div>
             <div class="absolute left-1/2 top-12 h-[390px] w-[260px] -translate-x-1/2 rounded-full border border-emerald-300/20 opacity-60"></div>
 
-            <div class="broadcast-scoreboard absolute left-1/2 top-2 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
+            <div class="broadcast-scoreboard absolute left-1/2 -top-6 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
                 <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
                     <div class="text-xs font-black uppercase tracking-[0.28em] text-slate-400">Sunday board</div>
                     <div class="flex items-center gap-2 text-xs font-bold text-emerald-300">
@@ -96,7 +96,7 @@
                 </div>
                 <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-8">
                     <div class="text-left">
-                        <div class="text-5xl font-black text-white">NE</div>
+                        <img src="{% static 'images/new-england-patriots.svg' %}" alt="New England Patriots" class="h-16 w-16 object-contain">
                         <div class="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Picked by 9</div>
                     </div>
                     <div class="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center">
@@ -104,7 +104,7 @@
                         <div class="mt-1 text-2xl font-black text-emerald-200">41-10</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-5xl font-black text-slate-400">DAL</div>
+                        <img src="{% static 'images/dallas-cowboys.svg' %}" alt="Dallas Cowboys" class="ml-auto h-16 w-16 object-contain opacity-75">
                         <div class="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Picked by 1</div>
                     </div>
                 </div>
@@ -117,11 +117,11 @@
                 </div>
                 <div class="mt-5 space-y-3">
                     <div class="flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-3 text-white">
-                        <span class="font-black">NE</span>
+                        <img src="{% static 'images/new-england-patriots.svg' %}" alt="New England Patriots" class="h-7 w-7 object-contain">
                         <span class="text-sm font-bold text-emerald-300">+31</span>
                     </div>
                     <div class="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3 text-slate-500">
-                        <span class="font-black">DAL</span>
+                        <img src="{% static 'images/dallas-cowboys.svg' %}" alt="Dallas Cowboys" class="h-7 w-7 object-contain opacity-70">
                         <span class="text-sm font-bold">0</span>
                     </div>
                 </div>
@@ -176,24 +176,25 @@
         </div>
     </section>
 
-    <section class="landing-section relative z-10 bg-slate-950 px-5 py-20 sm:px-8 lg:px-10">
+    <section id="why-family-pickem" class="landing-section relative z-10 bg-slate-950 px-5 py-20 sm:px-8 lg:px-10">
         <div class="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-[0.8fr_1fr]">
             <div>
+                <div class="text-sm font-black uppercase tracking-[0.24em] text-sky-300">A league that feels like yours</div>
                 <h2 class="text-4xl font-black leading-tight text-white sm:text-5xl">Built for family rivalries, not public noise.</h2>
-                <p class="mt-5 max-w-xl text-lg leading-8 text-slate-300">Create a pool, invite your people, and keep picks, standings, rules, and admin control inside your family.</p>
+                <p class="mt-5 max-w-xl text-lg leading-8 text-slate-300">Create a pool, invite your people, and keep picks, standings, rules, and commissioner control inside your family. It is the game-day ritual without the group-text chaos.</p>
             </div>
             <div class="grid gap-3">
-                <div class="family-proof-row flex items-center justify-between border-t border-white/10 py-5">
-                    <span class="text-lg font-bold text-white">Private family pools</span>
-                    <i class="fas fa-lock text-emerald-300" aria-hidden="true"></i>
+                <div class="family-proof-row flex gap-4 border-t border-white/10 py-5">
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-300/10 text-emerald-300"><i class="fas fa-user-shield" aria-hidden="true"></i></span>
+                    <div><div class="text-lg font-bold text-white">Commissioner control without the spreadsheet</div><p class="mt-1 text-sm leading-6 text-slate-300">Set the rules, manage members, publish updates, and send invite links from one home base.</p></div>
                 </div>
-                <div class="family-proof-row flex items-center justify-between border-t border-white/10 py-5">
-                    <span class="text-lg font-bold text-white">Live game-day context</span>
-                    <i class="fas fa-bolt text-sky-300" aria-hidden="true"></i>
+                <div class="family-proof-row flex gap-4 border-t border-white/10 py-5">
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-300/10 text-sky-300"><i class="fas fa-bolt" aria-hidden="true"></i></span>
+                    <div><div class="text-lg font-bold text-white">The whole Sunday in one glance</div><p class="mt-1 text-sm leading-6 text-slate-300">Follow live scores, compare picks, and watch weekly and season standings change as games finish.</p></div>
                 </div>
-                <div class="family-proof-row flex items-center justify-between border-y border-white/10 py-5">
-                    <span class="text-lg font-bold text-white">Weekly and season bragging rights</span>
-                    <i class="fas fa-trophy text-yellow-300" aria-hidden="true"></i>
+                <div class="family-proof-row flex gap-4 border-y border-white/10 py-5">
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-yellow-300/10 text-yellow-300"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i></span>
+                    <div><div class="text-lg font-bold text-white">Give the week a personality</div><p class="mt-1 text-sm leading-6 text-slate-300">Keep commissioner messages separate from the optional AI recap, then let the family carry the conversation on the message board.</p></div>
                 </div>
             </div>
         </div>
@@ -221,13 +222,13 @@
         <div class="mx-auto flex max-w-7xl flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <div class="text-sm font-black uppercase tracking-[0.24em] text-text-secondary-light dark:text-text-secondary">Family Pick'em</div>
-                <p class="mt-2 max-w-xl text-sm leading-6 text-text-secondary-light dark:text-text-secondary">Public site footer for future company and policy pages.</p>
+                <p class="mt-2 max-w-xl text-sm leading-6 text-text-secondary-light dark:text-text-secondary">Private pools, live NFL context, and a little more family bragging rights.</p>
             </div>
             <div class="flex flex-wrap gap-3 text-sm font-bold text-text-dark dark:text-text-primary">
-                <span class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2">About Us</span>
-                <span class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2">Terms of Use</span>
-                <span class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2">Privacy Policy</span>
-                <span class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2">Contact Us</span>
+                <a href="#why-family-pickem" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">About Family Pick'em</a>
+                <a href="#how-it-works" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">How it works</a>
+                <a href="{% url 'global_leaderboard' %}" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">Leaderboard</a>
+                <a href="{% url 'account_login' %}" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">Sign in</a>
             </div>
         </div>
     </footer>
