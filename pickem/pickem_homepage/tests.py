@@ -1233,7 +1233,7 @@ class TenantPickFlowIsolationTests(TestCase):
         for game in GamesAndScores.objects.filter(
             gameseason=2526, gameWeek="1", competition="nfl",
         ):
-            self._create_pick(user=self.member, pool=self.smith_pool, pick=self.game.homeTeamSlug, game=game)
+            self._create_pick(user=self.member, pool=self.smith_pool, pick=game.homeTeamSlug, game=game)
         self.client.force_login(self.member)
 
         from pickem import utils as pickem_utils
