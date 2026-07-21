@@ -3,9 +3,11 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
+from pickem_api import weekly_winners
 from pickem_api.ai_weekly_summaries import (
     SummarySettings, _output_text_from_response, build_summary_facts, generate_weekly_summary,
 )
+from pickem_api.management.commands import update_season_winners as update_season_winners_cmd
 from pickem_api.models import Family, FamilyMembership, GamesAndScores, Pool, userSeasonPoints
 from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
 from pickem_superadmin.models import AIProviderSettings
@@ -111,3 +113,9 @@ class AIWeeklySummaryTests(TestCase):
 
         self.assertEqual(run.status, AIWeeklySummaryRun.Status.SUCCESS)
         self.assertEqual(run.publication.title, 'Week 1 recap (preview)')
+
+
+class FinalWeekConstantTests(TestCase):
+    def test_final_week_constant_is_shared(self):
+        self.assertEqual(weekly_winners.FINAL_WEEK, 18)
+        self.assertIs(update_season_winners_cmd.FINAL_WEEK, weekly_winners.FINAL_WEEK)

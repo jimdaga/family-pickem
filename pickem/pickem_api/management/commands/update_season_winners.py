@@ -19,11 +19,9 @@ from django.core.management.base import BaseCommand
 
 from pickem.utils import get_season
 from pickem_api.models import FamilyAuditLog, Pool, userSeasonPoints
-from pickem_api.weekly_winners import week_is_complete
+from pickem_api.weekly_winners import FINAL_WEEK, week_is_complete
 
 logger = logging.getLogger(__name__)
-
-FINAL_WEEK = 18
 
 
 class Command(BaseCommand):
