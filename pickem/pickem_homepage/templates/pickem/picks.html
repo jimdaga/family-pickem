@@ -400,6 +400,7 @@
                     {% if pick_slugs and not auth_required %}
                         {% for game in game_list %}
                         {% if game.slug in pick_slugs %}
+                        {% with locked=game|is_game_locked_for_pool:pool %}
                             {% with pool.id|addstr:"-"|addstr:user.id|addstr:"-"|addstr:game.id as template %}
                                 {% if template in pick_ids %}
                                 <div data-submitted-game="{{ game.id }}" class="bg-surface-light dark:bg-surface rounded-xl p-5 border border-border-light dark:border-border-subtle hover:border-primary/50 transition-all duration-200 space-y-4">
@@ -508,7 +509,7 @@
 
                                     <!-- Edit/Lock Actions -->
                                     <div class="pt-3 border-t border-border-light dark:border-border-subtle">
-                                        {% if not game|is_game_locked_for_pool:pool %}
+                                        {% if not locked %}
                                         {% for p in picks %}
                                             {% if p.slug == game.slug %}
                                         {% for away_team in wins_losses %}
@@ -568,6 +569,7 @@
                                 </div>
                                 {% endif %}
                             {% endwith %}
+                        {% endwith %}
                         {% endif %}
                         {% endfor %}
                     {% else %}
