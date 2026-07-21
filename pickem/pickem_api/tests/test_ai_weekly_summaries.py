@@ -262,6 +262,16 @@ class ProviderRetryTests(TestCase):
         self.assertEqual(post.call_count, 3)  # 1 initial + 2 retries
 
     @patch('pickem_api.ai_weekly_summaries.requests.post')
+    def test_429_rate_limit_is_retried_up_to_the_configured_limit(self, post):
+        response = MagicMock(status_code=429)
+        post.return_value = response
+
+        with self.assertRaises(RuntimeError):
+            _provider_request(_make_config(retries=2), {'week': 1})
+
+        self.assertEqual(post.call_count, 3)  # 1 initial + 2 retries
+
+    @patch('pickem_api.ai_weekly_summaries.requests.post')
     def test_network_error_is_retried(self, post):
         post.side_effect = requests.ConnectionError('boom')
 

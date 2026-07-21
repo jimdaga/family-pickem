@@ -395,9 +395,14 @@ def _provider_request(config, facts):
                 headers={'Authorization': f'Bearer {config.api_key}', 'Content-Type': 'application/json'},
                 timeout=config.timeout,
             )
-            if response.status_code >= 500:
-                last_error = 'provider_5xx'
+            if response.status_code >= 500 or response.status_code == 429:
+                # 5xx and 429 (rate limited) are transient -- retry with backoff.
+                # Any other 4xx is a permanent client error and won't self-resolve.
+                last_error = 'provider_5xx' if response.status_code >= 500 else 'provider_rate_limited'
                 retryable = True
+                logger.warning(
+                    'Weekly summary provider attempt failed: status=%s', response.status_code,
+                )
             else:
                 response.raise_for_status()
                 data = response.json()
@@ -410,7 +415,7 @@ def _provider_request(config, facts):
             retryable = True
             logger.warning('Weekly summary provider attempt failed: %s', type(exc).__name__)
         except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
-            # A 4xx or malformed response will not succeed on retry.
+            # A 4xx (other than 429) or malformed response will not succeed on retry.
             last_error = 'provider_request_failed'
             logger.warning('Weekly summary provider attempt failed: %s', type(exc).__name__)
             break
