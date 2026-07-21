@@ -405,3 +405,85 @@ class NotablePicksAndStandingsMovementTests(TestCase):
         teams_in_upsets = {entry['team'] for entry in facts['notable_picks']['upset_calls'] + facts['notable_picks']['bad_beats']}
         self.assertNotIn('New York Jets', teams_in_upsets)
         self.assertNotIn('Miami Dolphins', teams_in_upsets)
+
+
+class PerfectWeeksStreaksAndMissedPicksTests(TestCase):
+    def setUp(self):
+        self.family = Family.objects.create(name='Streaks', slug='streaks')
+        self.pool = Pool.objects.create(family=self.family, name='2026', slug='2026', season=2627)
+        self.alice = User.objects.create_user('alice', 'alice@example.com', 'password', first_name='Alice')
+        self.bob = User.objects.create_user('bob', 'bob@example.com', 'password', first_name='Bob')
+        self.carol = User.objects.create_user('carol', 'carol@example.com', 'password', first_name='Carol')
+        self.dave = User.objects.create_user('dave', 'dave@example.com', 'password', first_name='Dave')
+        for user in (self.alice, self.bob, self.carol, self.dave):
+            FamilyMembership.objects.create(family=self.family, user=user)
+
+        for game_id, home_slug, home_name, away_slug, away_name, hs, as_, winner in [
+            (30001, 'chiefs', 'Kansas City Chiefs', 'raiders', 'Las Vegas Raiders', 20, 10, 'chiefs'),
+            (30002, 'jets', 'New York Jets', 'dolphins', 'Miami Dolphins', 24, 20, 'jets'),
+        ]:
+            GamesAndScores.objects.create(
+                id=game_id, slug=f'{away_slug}-at-{home_slug}', competition='1', gameWeek='3',
+                gameyear='2026', gameseason=2627, startTimestamp='2026-09-24T17:00:00Z',
+                statusType='finished', statusTitle='Final',
+                homeTeamId=game_id * 10 + 1, homeTeamSlug=home_slug, homeTeamName=home_name, homeTeamScore=hs,
+                awayTeamId=game_id * 10 + 2, awayTeamSlug=away_slug, awayTeamName=away_name, awayTeamScore=as_,
+                gameWinner=winner, gameScored=True,
+            )
+
+        picks = [
+            (self.alice, 30001, 'chiefs', True),   # Alice: perfect week (2/2)
+            (self.alice, 30002, 'jets', True),
+            (self.bob, 30001, 'chiefs', True),      # Bob: near-perfect (1/2)
+            (self.bob, 30002, 'dolphins', False),
+            (self.dave, 30001, 'raiders', False),   # Dave: neither perfect nor near-perfect (0/2)
+            (self.dave, 30002, 'dolphins', False),
+            # Carol has no picks at all this week.
+        ]
+        for user, game_id, pick, correct in picks:
+            GamePicks.objects.create(
+                id=f'{self.pool.id}-{user.id}-{game_id}', pool=self.pool, pick_game_id=game_id,
+                slug=str(game_id), userID=str(user.id), uid=user.id, userEmail=user.email,
+                gameWeek='3', gameyear='2026', gameseason=2627, competition='1',
+                pick=pick, pick_correct=correct,
+            )
+
+        userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(self.alice.id), gameseason=2627, current_rank=1,
+            total_points=30, week_1_winner=True, week_2_winner=True, week_3_winner=True,
+        )
+        userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(self.bob.id), gameseason=2627, current_rank=2, total_points=20,
+        )
+        userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(self.carol.id), gameseason=2627, current_rank=3, total_points=10,
+        )
+        userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(self.dave.id), gameseason=2627, current_rank=4, total_points=5,
+            week_1_winner=False, week_2_winner=False, week_3_winner=True,
+        )
+
+    def test_perfect_and_near_perfect_weeks(self):
+        facts = build_summary_facts(self.pool, 2627, 3)
+
+        notable = facts['notable_picks']
+        self.assertEqual(notable['perfect_weeks'], ['alice'])
+        self.assertEqual(notable['near_perfect_weeks'], ['bob'])
+
+    def test_missed_picks_lists_members_with_zero_picks(self):
+        facts = build_summary_facts(self.pool, 2627, 3)
+
+        self.assertEqual(facts['notable_picks']['missed_picks'], ['carol'])
+
+    def test_hot_streak_counts_consecutive_weekly_wins(self):
+        facts = build_summary_facts(self.pool, 2627, 3)
+
+        self.assertEqual(facts['notable_picks']['hot_streaks'], [{'member': 'alice', 'weeks': 3}])
+
+    def test_hot_streak_excludes_a_single_week_win_below_threshold(self):
+        # Dave won week 3 but not week 1 or 2 -- a streak of 1, below the
+        # 2-week threshold for being "notable."
+        facts = build_summary_facts(self.pool, 2627, 3)
+
+        members_with_streaks = {entry['member'] for entry in facts['notable_picks']['hot_streaks']}
+        self.assertNotIn('dave', members_with_streaks)

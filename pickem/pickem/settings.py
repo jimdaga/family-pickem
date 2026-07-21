@@ -28,6 +28,26 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL='https'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
+# --- Sentry error tracking & performance tracing ---------------------------
+# Disabled unless SENTRY_DSN is set, so local dev/tests never enable it. The
+# DSN comes from AWS Secrets Manager -> ESO -> K8s Secret, same as every
+# other deployment secret in this app -- never hardcode it here.
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '').strip()
+if SENTRY_DSN:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        # Family member IP/request data is not sent to a third party by
+        # default -- flip this on only if that visibility is deliberately wanted.
+        send_default_pii=False,
+        traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        # Tags events with the deployed chart/image version (APP_RELEASE is
+        # set in the Helm chart's deployment template) so an error spike can
+        # be traced back to the release that introduced it.
+        release=os.environ.get('APP_RELEASE', ''),
+    )
+
 # Allowed Host(s). Dev-only hosts (ngrok tunnel) are gated behind DEBUG so
 # they never widen the accepted Host set in production.
 ALLOWED_HOSTS = ['localhost']
