@@ -85,7 +85,7 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
         raise ValueError('week_not_complete')
 
     membership_names = {
-        str(membership.user_id): membership.user.get_full_name().strip() or membership.user.username
+        str(membership.user_id): membership.user.username
         for membership in FamilyMembership.objects.filter(
             family=pool.family, status=FamilyMembership.Status.ACTIVE,
         ).select_related('user')

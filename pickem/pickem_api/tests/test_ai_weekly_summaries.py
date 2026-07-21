@@ -48,11 +48,11 @@ class AIWeeklySummaryTests(TestCase):
         facts = build_summary_facts(self.pool, 2627, 1)
 
         self.assertEqual(facts['pool']['standings'], [{
-            'member': 'Sam', 'rank': 1, 'previous_rank': 1, 'rank_change': 0,
+            'member': 'sam', 'rank': 1, 'previous_rank': 1, 'rank_change': 0,
             'total_points': 8, 'week_points': 4, 'week_winner': False, 'points_behind_next': 0,
         }])
         self.assertEqual(facts['results'][0]['winner'], 'Home')
-        self.assertNotIn('Jo', str(facts))
+        self.assertNotIn('jo', str(facts))
 
     def test_reads_standard_responses_output_content(self):
         self.assertEqual(
@@ -178,7 +178,7 @@ class AIWeeklySummaryTests(TestCase):
         run = generate_weekly_summary(self.pool, 2627, 18, force=True)
 
         self.assertEqual(run.status, AIWeeklySummaryRun.Status.SUCCESS)
-        self.assertIn('Sam', run.publication.body)
+        self.assertIn('sam', run.publication.body)
         self.assertIn('champion', run.publication.body.lower())
 
     @override_settings(
@@ -224,7 +224,7 @@ class FactsSeasonChampionTests(TestCase):
         facts = build_summary_facts(self.pool, 2627, 18)
 
         self.assertTrue(facts['is_final_week'])
-        self.assertEqual(facts['season_champion'], ['Sam'])
+        self.assertEqual(facts['season_champion'], ['sam'])
 
     def test_season_champion_empty_before_year_winner_is_flagged(self):
         userSeasonPoints.objects.create(
@@ -353,7 +353,7 @@ class NotablePicksAndStandingsMovementTests(TestCase):
         self.assertEqual(winners['Kansas City Chiefs-Las Vegas Raiders'], 'Las Vegas Raiders')
         self.assertEqual(winners['New York Jets-Miami Dolphins'], 'New York Jets')
 
-        alice_picks = next(m for m in facts['pool']['member_pick_results'] if m['member'] == 'Alice')
+        alice_picks = next(m for m in facts['pool']['member_pick_results'] if m['member'] == 'alice')
         picked_teams = {p['game_id']: p['pick_team'] for p in alice_picks['picks']}
         self.assertEqual(picked_teams[20001], 'Kansas City Chiefs')
         self.assertEqual(picked_teams[20002], 'Miami Dolphins')
@@ -362,28 +362,28 @@ class NotablePicksAndStandingsMovementTests(TestCase):
         facts = build_summary_facts(self.pool, 2627, 2)
 
         by_member = {s['member']: s for s in facts['pool']['standings']}
-        self.assertEqual(by_member['Bob'], {
-            'member': 'Bob', 'rank': 1, 'previous_rank': 1, 'rank_change': 0,
+        self.assertEqual(by_member['bob'], {
+            'member': 'bob', 'rank': 1, 'previous_rank': 1, 'rank_change': 0,
             'total_points': 12, 'week_points': 1, 'week_winner': False, 'points_behind_next': 0,
         })
-        self.assertEqual(by_member['Carol']['rank_change'], 1)
-        self.assertEqual(by_member['Carol']['points_behind_next'], 1)
-        self.assertEqual(by_member['Alice']['rank_change'], -1)
-        self.assertEqual(by_member['Alice']['points_behind_next'], 1)
+        self.assertEqual(by_member['carol']['rank_change'], 1)
+        self.assertEqual(by_member['carol']['points_behind_next'], 1)
+        self.assertEqual(by_member['alice']['rank_change'], -1)
+        self.assertEqual(by_member['alice']['points_behind_next'], 1)
 
     def test_notable_picks_identify_lonely_correct_and_upset_patterns(self):
         facts = build_summary_facts(self.pool, 2627, 2)
 
         notable = facts['notable_picks']
         self.assertEqual(notable['lonely_correct'], [
-            {'member': 'Carol', 'team': 'New York Jets', 'total_pickers': 3},
+            {'member': 'carol', 'team': 'New York Jets', 'total_pickers': 3},
         ])
         self.assertEqual(notable['upset_calls'], [
-            {'member': 'Bob', 'team': 'Las Vegas Raiders', 'spread': 7.0},
-            {'member': 'Carol', 'team': 'Las Vegas Raiders', 'spread': 7.0},
+            {'member': 'bob', 'team': 'Las Vegas Raiders', 'spread': 7.0},
+            {'member': 'carol', 'team': 'Las Vegas Raiders', 'spread': 7.0},
         ])
         self.assertEqual(notable['bad_beats'], [
-            {'member': 'Alice', 'team': 'Kansas City Chiefs', 'spread': 7.0},
+            {'member': 'alice', 'team': 'Kansas City Chiefs', 'spread': 7.0},
         ])
 
     def test_small_spread_does_not_produce_upset_signals(self):
