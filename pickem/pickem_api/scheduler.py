@@ -78,7 +78,7 @@ def _run_command_step(job_id):
     call_command_logged(job_id, logger_name=f'django.job.{job_id}')
 
 
-def _run_email_campaigns(job_id):
+def _run_email_campaigns():
     from pickem_homepage.emailing import send_due_email_campaigns
 
     send_due_email_campaigns()

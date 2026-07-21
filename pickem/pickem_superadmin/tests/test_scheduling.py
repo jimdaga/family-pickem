@@ -86,6 +86,21 @@ class RunJobOnceTests(TestCase):
         self.assertEqual(job_id, 'update_stats')
         self.assertEqual(scheduler.current_log_context(), (None, None))
 
+    @patch('pickem_homepage.emailing.send_due_email_campaigns')
+    def test_scheduled_email_campaign_runner_needs_no_job_argument(self, send_campaigns):
+        from pickem_api import scheduler
+
+        scheduler.run_job_once(
+            'send_scheduled_email_campaigns',
+            run=scheduler._RUN_BY_ID['send_scheduled_email_campaigns'],
+        )
+
+        send_campaigns.assert_called_once_with()
+        self.assertEqual(
+            JobRun.objects.get(job_id='send_scheduled_email_campaigns').status,
+            JobRun.Status.SUCCESS,
+        )
+
 
 class PipelineTickTests(TestCase):
     def setUp(self):
