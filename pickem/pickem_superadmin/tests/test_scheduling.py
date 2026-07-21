@@ -86,6 +86,19 @@ class RunJobOnceTests(TestCase):
         self.assertEqual(job_id, 'update_stats')
         self.assertEqual(scheduler.current_log_context(), (None, None))
 
+    @patch('pickem_api.scheduler.metrics')
+    def test_emits_bounded_sentry_metrics_for_job_runs(self, sentry_metrics):
+        from pickem_api import scheduler
+
+        scheduler.run_job_once('update_picks', run=lambda: None)
+
+        attributes = {'job_id': 'update_picks', 'status': JobRun.Status.SUCCESS}
+        sentry_metrics.count.assert_called_once_with('scheduler.job_runs', 1, attributes=attributes)
+        metric_name, duration_ms = sentry_metrics.distribution.call_args.args
+        self.assertEqual(metric_name, 'scheduler.job_duration_ms')
+        self.assertGreaterEqual(duration_ms, 0)
+        self.assertEqual(sentry_metrics.distribution.call_args.kwargs['attributes'], attributes)
+
     @patch('pickem_homepage.emailing.send_due_email_campaigns')
     def test_scheduled_email_campaign_runner_needs_no_job_argument(self, send_campaigns):
         from pickem_api import scheduler

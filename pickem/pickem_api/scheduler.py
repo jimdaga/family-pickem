@@ -22,6 +22,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from django.conf import settings
 from django.core.management import call_command
+from sentry_sdk import metrics
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,18 @@ _current_job_id = contextvars.ContextVar('pickem_job_id', default=None)
 def current_log_context():
     """(run_id, job_id) for the job running in this context, or (None, None)."""
     return _current_run_id.get(), _current_job_id.get()
+
+
+def _record_job_metrics(job_id, status, duration_ms):
+    """Emit bounded scheduler metrics without risking the job itself."""
+    attributes = {'job_id': job_id, 'status': status}
+    try:
+        metrics.count('scheduler.job_runs', 1, attributes=attributes)
+        metrics.distribution('scheduler.job_duration_ms', duration_ms, attributes=attributes)
+    except Exception:
+        # Sentry metrics are observability-only. A telemetry outage must never
+        # make a scheduled scoring or email job look like it failed.
+        logger.debug('Unable to emit scheduler metrics', exc_info=True)
 
 
 def _run_command_step(job_id):
@@ -149,12 +162,14 @@ def run_job_once(job_id, run=None):
         logging.getLogger(f'django.job.{job_id}').exception('Job %s failed', job_id)
     finally:
         finished = timezone.now()
+        duration_ms = int((finished - job_run.started_at).total_seconds() * 1000)
         JobRun.objects.filter(pk=job_run.pk).update(
             finished_at=finished,
             status=status,
-            duration_ms=int((finished - job_run.started_at).total_seconds() * 1000),
+            duration_ms=duration_ms,
             exception=exc_text,
         )
+        _record_job_metrics(job_id, status, duration_ms)
         ScheduledJobConfig.objects.filter(job_id=job_id).update(last_run_at=finished)
         mark_job_finished(job_id)
         _current_job_id.reset(token_job)
