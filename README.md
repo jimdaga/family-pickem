@@ -166,6 +166,7 @@ User → userStats (One-to-One)
 |----------|-------------|----------|
 | `SECRET_KEY` | Django secret key | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
+| `DATABASE_CONN_MAX_AGE` | Seconds to reuse a database connection before reconnecting (defaults to `60`) | No |
 | `GOOGLE_OAUTH2_KEY` | Google OAuth client ID | Yes |
 | `GOOGLE_OAUTH2_SECRET` | Google OAuth client secret | Yes |
 | `DEBUG` | Enable debug mode | No |

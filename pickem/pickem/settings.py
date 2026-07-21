@@ -205,6 +205,16 @@ else:
         }
     }
 
+# Reuse PostgreSQL connections across requests to avoid a new TCP/database
+# handshake for every page load. Django verifies a reused connection once per
+# request, which lets it recover cleanly after a database restart or failover.
+# The lifetime remains configurable for deployment environments that need a
+# shorter pool window.
+DATABASES['default'].update({
+    'CONN_MAX_AGE': int(os.environ.get('DATABASE_CONN_MAX_AGE', '60')),
+    'CONN_HEALTH_CHECKS': True,
+})
+
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
 
