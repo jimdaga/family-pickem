@@ -907,6 +907,13 @@
   text-transform: uppercase; color: #6d28d9; background: rgba(237, 233, 254, 0.9); border: 1px solid rgba(139, 92, 246, 0.28);
 }
 .dark .ai-recap-badge { color: #ddd6fe; background: rgba(109, 40, 217, 0.2); border-color: rgba(196, 181, 253, 0.3); }
+/* The card's own title above already shows "Week N recap"; a leading heading
+   in the generated body is redundant and, when the body is clamped to a
+   2-line preview, eats the whole clamp box leaving no actual recap text
+   visible. */
+[data-ai-recap-body] > h1:first-child,
+[data-ai-recap-body] > h2:first-child,
+[data-ai-recap-body] > h3:first-child { display: none; }
 .ai-recap-provenance {
   margin-top: 0.9rem; padding-top: 0.65rem; border-top: 1px solid rgba(139, 92, 246, 0.2);
   font-size: 0.7rem; color: #6b7280;
