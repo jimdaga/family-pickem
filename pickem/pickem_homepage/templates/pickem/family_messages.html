@@ -24,8 +24,6 @@
      data-is-moderator="{{ is_moderator|yesno:'1,0' }}"
      class="mx-auto w-full max-w-7xl overflow-x-hidden px-3 sm:px-4 lg:px-6 py-6">
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
-    <div class="min-w-0">
     <!-- Header -->
     <div class="messages-scoreboard-header mb-5 px-1 py-2 sm:px-0 sm:py-3">
         <div class="flex items-center justify-between gap-3">
@@ -44,6 +42,8 @@
         </div>
     </div>
 
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+    <div class="min-w-0">
     <!-- Composer -->
     <div class="w-full min-w-0 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface shadow-sm mb-5 overflow-hidden">
         <div class="flex items-center gap-3 border-b border-border-light dark:border-border-subtle px-4 py-3">
