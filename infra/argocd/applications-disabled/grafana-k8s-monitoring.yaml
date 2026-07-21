@@ -1,3 +1,18 @@
+# PAUSED 2026-07-21: moved out of infra/argocd/applications/ (the root
+# app-of-apps only watches that directory, non-recursively) so the root app
+# prunes this Application on next sync -- cascade-deleting the k8s-monitoring
+# Helm release and everything it owns in the `monitoring` namespace, via the
+# resources-finalizer below.
+#
+# Reason: the k8s node is too small for this stack right now; it was causing
+# noticeable performance degradation. Not deleted -- config is untouched, just
+# out of the reconciled path.
+#
+# To re-enable (e.g. after moving to bigger hardware):
+#   git mv infra/argocd/applications-disabled/grafana-k8s-monitoring.yaml \
+#          infra/argocd/applications/grafana-k8s-monitoring.yaml
+# then commit + push to main; the root app will recreate it and ArgoCD will
+# reinstall the chart on its next sync.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
