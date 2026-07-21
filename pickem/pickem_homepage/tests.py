@@ -1227,6 +1227,13 @@ class TenantPickFlowIsolationTests(TestCase):
                 awayTeamSlug="ari",
                 awayTeamName="Arizona Cardinals",
             )
+        # Put every game into the submitted-picks loop too. The available-game
+        # loop is already protected by a `{% with locked=... %}`; this is the
+        # second render path issue #98 covers.
+        for game in GamesAndScores.objects.filter(
+            gameseason=2526, gameWeek="1", competition="nfl",
+        ):
+            self._create_pick(user=self.member, pool=self.smith_pool, pick=self.game.homeTeamSlug, game=game)
         self.client.force_login(self.member)
 
         from pickem import utils as pickem_utils
