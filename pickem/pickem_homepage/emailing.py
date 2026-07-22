@@ -316,7 +316,7 @@ def _week_window(target, campaign):
     return scheduled_at, closes_at
 
 
-def _weekly_picks_due(campaign, *, now=None, ignore_clock=False):
+def _campaign_due(campaign, *, now=None, ignore_clock=False):
     now = now or timezone.now()
     target = _get_weekly_target(now=now)
     if target is None:
@@ -430,7 +430,7 @@ def send_due_email_campaigns(*, now=None, force_weekly_picks=False):
     if not campaign.enabled and not force_weekly_picks:
         return {'campaigns': []}
 
-    target = _weekly_picks_due(
+    target = _campaign_due(
         campaign,
         now=now,
         ignore_clock=force_weekly_picks,
