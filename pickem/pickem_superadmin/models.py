@@ -249,6 +249,7 @@ class EmailNotificationCampaign(models.Model):
     }
     class CampaignKey(models.TextChoices):
         WEEKLY_PICKS_AVAILABLE = 'weekly_picks_available', 'Weekly picks available'
+        MISSED_PICKS_REMINDER = 'missed_picks_reminder', 'Missed picks reminder'
 
     class RolloutMode(models.TextChoices):
         ALLOWLIST = 'allowlist', 'Allowlist only'
@@ -301,6 +302,13 @@ class EmailNotificationCampaign(models.Model):
     def load_weekly_picks(cls):
         obj, _created = cls.objects.get_or_create(
             campaign_key=cls.CampaignKey.WEEKLY_PICKS_AVAILABLE,
+        )
+        return obj
+
+    @classmethod
+    def load_missed_picks_reminder(cls):
+        obj, _created = cls.objects.get_or_create(
+            campaign_key=cls.CampaignKey.MISSED_PICKS_REMINDER,
         )
         return obj
 

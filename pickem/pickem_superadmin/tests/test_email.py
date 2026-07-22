@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
@@ -7,9 +7,11 @@ from django.urls import reverse
 from django.utils import timezone
 
 from pickem_api.models import (
-    Family, FamilyInvitation, FamilyMembership, GameWeeks, GamesAndScores, Pool, Teams, UserProfile,
+    Family, FamilyInvitation, FamilyMembership, GamePicks, GameWeeks, GamesAndScores, Pool,
+    PoolSettings, Teams, UserProfile,
 )
 from pickem_homepage.emailing import (
+    _eligible_weekly_picks_users,
     resend_invite_email_is_configured,
     send_due_email_campaigns,
     send_family_invitation_email,
@@ -41,6 +43,18 @@ class EmailProviderSettingsModelTests(TestCase):
         self.assertEqual(settings_obj.get_api_key(), '')
         self.assertFalse(settings_obj.has_api_key)
         self.assertEqual(settings_obj.masked_api_key, '')
+
+
+class EmailNotificationCampaignModelTests(TestCase):
+    def test_load_missed_picks_reminder_is_a_distinct_singleton(self):
+        weekly = EmailNotificationCampaign.load_weekly_picks()
+        missed = EmailNotificationCampaign.load_missed_picks_reminder()
+
+        self.assertNotEqual(weekly.pk, missed.pk)
+        self.assertEqual(missed.campaign_key, EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER)
+        # Idempotent: loading again returns the same row, not a new one.
+        again = EmailNotificationCampaign.load_missed_picks_reminder()
+        self.assertEqual(missed.pk, again.pk)
 
 
 class EmailSettingsViewTests(TestCase):
@@ -220,6 +234,51 @@ class EmailSettingsViewTests(TestCase):
         response = self.client.post(
             reverse('superadmin:email_settings'),
             {'action': 'send_weekly_now'},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'not in an active NFL week window')
+
+    def test_page_renders_missed_picks_campaign_section(self):
+        response = self.client.get(reverse('superadmin:email_settings'))
+
+        self.assertContains(response, 'Missed picks reminder')
+        self.assertContains(response, 'save_missed_picks_campaign')
+
+    def test_missed_picks_campaign_save_audits(self):
+        response = self.client.post(
+            reverse('superadmin:email_settings'),
+            {
+                'action': 'save_missed_picks_campaign',
+                'missed_campaign-enabled': 'on',
+                'missed_campaign-weekday': '6',
+                'missed_campaign-hour': '11',
+                'missed_campaign-minute': '0',
+                'missed_campaign-timezone_name': 'America/New_York',
+                'missed_campaign-rollout_mode': EmailNotificationCampaign.RolloutMode.ALLOWLIST,
+                'missed_campaign-allowlist_emails': 'jdagostino2@gmail.com',
+                'missed_campaign-family_link_strategy': EmailNotificationCampaign.FamilyLinkStrategy.EARLIEST_MEMBERSHIP,
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        campaign = EmailNotificationCampaign.load_missed_picks_reminder()
+        campaign.refresh_from_db()
+        self.assertTrue(campaign.enabled)
+        self.assertEqual(campaign.weekday, 6)
+        self.assertEqual(campaign.hour, 11)
+        audit = SuperAdminAuditLog.objects.get(
+            action=SuperAdminAuditLog.Action.EMAIL_CAMPAIGN_UPDATED,
+            target_id=str(campaign.pk),
+        )
+        self.assertEqual(audit.summary, 'Updated missed picks reminder email campaign')
+
+    def test_running_missed_picks_campaign_now_outside_active_week_errors(self):
+        response = self.client.post(
+            reverse('superadmin:email_settings'),
+            {'action': 'send_missed_picks_now'},
             follow=True,
         )
 
@@ -514,6 +573,17 @@ class WeeklyPicksCampaignTests(TestCase):
 
         self.assertEqual(UserProfile.objects.count(), before)
 
+    def test_eligible_campaign_users_applies_same_filters_as_weekly_helper(self):
+        from pickem_homepage.emailing import _eligible_campaign_users
+
+        base = _eligible_campaign_users(self.campaign)
+        weekly = _eligible_weekly_picks_users(self.campaign)
+
+        self.assertEqual(
+            {u.id for u in base},
+            {u.id for u in weekly},
+        )
+
     def test_campaign_prefers_non_legacy_commissioner_family_for_multi_family_user(self):
         legacy_family, _ = Family.objects.get_or_create(
             slug='legacy-family-league',
@@ -559,6 +629,265 @@ class WeeklyPicksCampaignTests(TestCase):
             'https://family-pickem.test/families/test/pools/pickem-pool/picks/',
             params['html'],
         )
+
+
+class MissedPicksReminderTests(TestCase):
+    def setUp(self):
+        settings_obj = EmailProviderSettings.load()
+        settings_obj.invites_enabled = True
+        settings_obj.from_email = 'Family Pickem <invite@family-pickem.com>'
+        settings_obj.reply_to_email = 'reply@family-pickem.com'
+        settings_obj.set_api_key('re_configured_secret')
+        settings_obj.save()
+
+        self.campaign = EmailNotificationCampaign.load_missed_picks_reminder()
+        self.campaign.enabled = True
+        self.campaign.weekday = 2
+        self.campaign.hour = 9
+        self.campaign.minute = 0
+        self.campaign.timezone_name = 'America/New_York'
+        self.campaign.rollout_mode = EmailNotificationCampaign.RolloutMode.ALL_ENABLED_USERS
+        self.campaign.save()
+
+        self.family = Family.objects.create(name='Dagostino', slug='dagostino')
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name='Main Pool',
+            slug='main-pool',
+            season=2627,
+            is_default=True,
+        )
+        PoolSettings.objects.create(pool=self.pool)
+
+        self.user = User.objects.create_user(
+            username='jdag', email='jdagostino2@gmail.com', password='pw',
+        )
+        UserProfile.objects.create(user=self.user, email_notifications=True)
+        FamilyMembership.objects.create(
+            family=self.family, user=self.user, role=FamilyMembership.Role.MEMBER,
+        )
+
+        GameWeeks.objects.create(
+            weekNumber=1, competition='nfl', date=datetime(2026, 9, 10).date(), season=2627,
+        )
+        self.open_game = GamesAndScores.objects.create(
+            id=1, slug='bears-packers', competition='nfl', gameWeek='1', gameyear='2026',
+            gameseason=2627,
+            startTimestamp=timezone.make_aware(datetime(2026, 9, 13, 13, 0)),
+            statusType='notstarted', statusTitle='Scheduled',
+            homeTeamId=1, homeTeamSlug='packers', homeTeamName='Green Bay Packers',
+            awayTeamId=2, awayTeamSlug='bears', awayTeamName='Chicago Bears',
+        )
+        self.locked_game = GamesAndScores.objects.create(
+            id=2, slug='chiefs-bills', competition='nfl', gameWeek='1', gameyear='2026',
+            gameseason=2627,
+            startTimestamp=timezone.make_aware(datetime(2026, 9, 10, 20, 20)),
+            statusType='final', statusTitle='Final',
+            homeTeamId=3, homeTeamSlug='bills', homeTeamName='Buffalo Bills',
+            awayTeamId=4, awayTeamSlug='chiefs', awayTeamName='Kansas City Chiefs',
+        )
+        self.target = {'season': 2627, 'week': 1, 'competition': 'nfl'}
+
+    def test_pool_with_open_unpicked_game_is_included(self):
+        from pickem_homepage.emailing import _user_pools_with_missing_picks
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+
+        self.assertEqual(len(bundle), 1)
+        entry = bundle[0]
+        self.assertEqual(entry['pool'], self.pool)
+        self.assertEqual(entry['family'], self.family)
+        self.assertEqual([g.id for g in entry['missing_games']], [self.open_game.id])
+        self.assertIn('/families/dagostino/pools/main-pool/picks/', entry['picks_link'])
+
+    def test_already_locked_miss_does_not_trigger_reminder(self):
+        from pickem_homepage.emailing import _user_pools_with_missing_picks
+
+        GamePicks.objects.create(
+            id=f'{self.pool.id}-{self.user.id}-{self.open_game.id}',
+            pool=self.pool, userEmail=self.user.email, uid=self.user.id,
+            userID=str(self.user.id), slug=self.open_game.slug, competition='nfl',
+            gameWeek='1', gameyear='2026', gameseason=2627,
+            pick_game_id=self.open_game.id, pick='packers',
+        )
+        # Only the already-started/locked game is unpicked now.
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+
+        self.assertEqual(bundle, [])
+
+    def test_fully_picked_pool_is_excluded(self):
+        from pickem_homepage.emailing import _user_pools_with_missing_picks
+
+        for game in (self.open_game, self.locked_game):
+            GamePicks.objects.create(
+                id=f'{self.pool.id}-{self.user.id}-{game.id}',
+                pool=self.pool, userEmail=self.user.email, uid=self.user.id,
+                userID=str(self.user.id), slug=game.slug, competition='nfl',
+                gameWeek='1', gameyear='2026', gameseason=2627,
+                pick_game_id=game.id, pick=game.homeTeamSlug,
+            )
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+
+        self.assertEqual(bundle, [])
+
+    def test_second_pool_with_missing_picks_both_included(self):
+        from pickem_homepage.emailing import _user_pools_with_missing_picks
+
+        other_pool = Pool.objects.create(
+            family=self.family, name='Side Pool', slug='side-pool', season=2627,
+        )
+        PoolSettings.objects.create(pool=other_pool)
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+
+        self.assertEqual({entry['pool'].slug for entry in bundle}, {'main-pool', 'side-pool'})
+
+    def test_inactive_membership_pool_excluded(self):
+        from pickem_homepage.emailing import _user_pools_with_missing_picks
+
+        membership = FamilyMembership.objects.get(user=self.user, family=self.family)
+        membership.status = FamilyMembership.Status.INACTIVE
+        membership.save(update_fields=['status'])
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+
+        self.assertEqual(bundle, [])
+
+    def test_send_missed_picks_reminder_renders_all_pools_in_bundle(self):
+        from pickem_homepage.emailing import _send_missed_picks_reminder, _user_pools_with_missing_picks
+
+        other_pool = Pool.objects.create(
+            family=self.family, name='Side Pool', slug='side-pool', season=2627,
+        )
+        PoolSettings.objects.create(pool=other_pool)
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_1'}
+
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = _send_missed_picks_reminder(
+                user=self.user, recipient_email=self.user.email, bundle=bundle,
+            )
+
+        self.assertEqual(result['status'], 'sent')
+        params = resend_mock.Emails.send.call_args.args[0]
+        self.assertEqual(params['to'], [self.user.email])
+        self.assertIn('Main Pool', params['html'])
+        self.assertIn('Side Pool', params['html'])
+        self.assertIn('Chicago Bears', params['html'])
+
+    def test_send_missed_picks_preview_email_uses_sample_user(self):
+        from pickem_homepage.emailing import send_missed_picks_preview_email
+
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_preview'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_missed_picks_preview_email(
+                to_email='preview@example.com',
+                sample_user_email=self.user.email,
+                now=timezone.make_aware(datetime(2026, 9, 11, 12, 0)),
+            )
+
+        self.assertEqual(result['status'], 'sent')
+        params = resend_mock.Emails.send.call_args.args[0]
+        self.assertEqual(params['to'], ['preview@example.com'])
+        self.assertIn('This is a preview email', params['html'])
+
+    def test_send_missed_picks_preview_email_skips_when_no_one_has_missing_picks(self):
+        from pickem_homepage.emailing import send_missed_picks_preview_email
+
+        GamePicks.objects.create(
+            id=f'{self.pool.id}-{self.user.id}-{self.open_game.id}',
+            pool=self.pool, userEmail=self.user.email, uid=self.user.id,
+            userID=str(self.user.id), slug=self.open_game.slug, competition='nfl',
+            gameWeek='1', gameyear='2026', gameseason=2627,
+            pick_game_id=self.open_game.id, pick='packers',
+        )
+
+        result = send_missed_picks_preview_email(
+            to_email='preview@example.com',
+            now=timezone.make_aware(datetime(2026, 9, 11, 12, 0)),
+        )
+
+        self.assertEqual(result['status'], 'skipped')
+        self.assertEqual(result['reason'], 'no_sample_user')
+
+    def test_send_due_email_campaigns_includes_missed_picks_when_due(self):
+        september_9_2026 = timezone.make_aware(datetime(2026, 9, 9, 13, 5))
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_due'}
+
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_due_email_campaigns(now=september_9_2026)
+
+        campaign_keys = {row['campaign_key'] for row in result['campaigns']}
+        self.assertIn(EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER, campaign_keys)
+        missed_row = next(
+            row for row in result['campaigns']
+            if row['campaign_key'] == EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER
+        )
+        self.assertEqual(missed_row['sent_count'], 1)
+        self.campaign.refresh_from_db()
+        self.assertEqual(self.campaign.last_sent_season, 2627)
+        self.assertEqual(self.campaign.last_sent_week, 1)
+
+    def test_send_due_email_campaigns_does_not_resend_missed_picks_same_week(self):
+        september_9_2026 = timezone.make_aware(datetime(2026, 9, 9, 13, 5))
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_first'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            send_due_email_campaigns(now=september_9_2026)
+
+        resend_mock.Emails.send.reset_mock()
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_due_email_campaigns(now=september_9_2026 + timedelta(minutes=15))
+
+        missed_rows = [
+            row for row in result['campaigns']
+            if row['campaign_key'] == EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER
+        ]
+        self.assertEqual(missed_rows, [])
+        resend_mock.Emails.send.assert_not_called()
+
+    def test_send_due_email_campaigns_skips_users_with_nothing_outstanding(self):
+        # A user with every game picked must not receive an email at all.
+        GamePicks.objects.create(
+            id=f'{self.pool.id}-{self.user.id}-{self.open_game.id}',
+            pool=self.pool, userEmail=self.user.email, uid=self.user.id,
+            userID=str(self.user.id), slug=self.open_game.slug, competition='nfl',
+            gameWeek='1', gameyear='2026', gameseason=2627,
+            pick_game_id=self.open_game.id, pick='packers',
+        )
+        september_9_2026 = timezone.make_aware(datetime(2026, 9, 9, 13, 5))
+        resend_mock = Mock()
+
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_due_email_campaigns(now=september_9_2026)
+
+        # The campaign row is still reported (it was due and evaluated), same
+        # as the weekly-picks campaign reports a sent_count=0 row rather than
+        # disappearing on a zero-send tick (see test_failed_send_does_not_mark_week_as_sent) —
+        # but the one eligible user has nothing outstanding, so no email goes out.
+        missed_row = next(
+            row for row in result['campaigns']
+            if row['campaign_key'] == EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER
+        )
+        self.assertEqual(missed_row['sent_count'], 0)
+        resend_mock.Emails.send.assert_not_called()
+
+    def test_force_missed_picks_bypasses_schedule_and_enabled_flag(self):
+        self.campaign.enabled = False
+        self.campaign.save(update_fields=['enabled'])
+        july_17_2026 = timezone.make_aware(datetime(2026, 7, 17, 12, 0))
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'forced'}
+
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_due_email_campaigns(now=july_17_2026, force_missed_picks=True)
+
+        campaign_keys = {row['campaign_key'] for row in result['campaigns']}
+        self.assertIn(EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER, campaign_keys)
 
 
 class EmailEnvironmentFallbackTests(TestCase):

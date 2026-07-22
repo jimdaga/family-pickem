@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<body style="margin:0; padding:0; background:#f3f6fb; font-family:'Segoe UI',Helvetica,Arial,sans-serif; color:#111827;">
+  <div style="max-width:700px; margin:0 auto; padding:24px 16px;">
+    <div style="background:linear-gradient(135deg,#92400e,#c2410c); border-radius:20px 20px 0 0; padding:28px 28px 20px; color:#ffffff;">
+      <img src="{{ logo_url }}" alt="Family Pick'em" style="height:48px; width:auto; display:block; margin:0 0 16px;">
+      <div style="font-size:13px; letter-spacing:0.08em; text-transform:uppercase; opacity:0.8;">Family Pick'em</div>
+      <h1 style="margin:8px 0 10px; font-size:30px; line-height:1.15;">You still have picks to make</h1>
+      <p style="margin:0; font-size:16px; line-height:1.6; color:rgba(255,255,255,0.88);">
+        Kickoff is coming up and a few games are still missing your pick.
+      </p>
+    </div>
+
+    <div style="background:#ffffff; border:1px solid #dbe4f0; border-top:0; border-radius:0 0 20px 20px; padding:24px 28px 28px;">
+      {% for entry in bundle %}
+      <div style="margin-bottom:22px; padding:18px 20px; border-radius:16px; background:#fff7ed; border:1px solid #fed7aa;">
+        <div style="font-size:14px; color:#9a3412; font-weight:700; margin-bottom:6px;">
+          {{ entry.family.name }} &middot; {{ entry.pool.name }}
+        </div>
+        <div style="font-size:15px; color:#334155; line-height:1.6; margin-bottom:14px;">
+          {{ entry.missing_games|length }} game{{ entry.missing_games|length|pluralize }} still open — pick before kickoff:
+        </div>
+        <ul style="margin:0 0 14px; padding-left:18px; font-size:14px; color:#475569; line-height:1.8;">
+          {% for game in entry.missing_games %}
+          <li>{{ game.awayTeamName }} at {{ game.homeTeamName }} &mdash; {{ game.startTimestamp|date:"D, M j g:i A T" }}</li>
+          {% endfor %}
+        </ul>
+        <a href="{{ entry.picks_link }}" style="display:inline-block; background:#9a3412; color:#ffffff; text-decoration:none; font-weight:700; padding:12px 18px; border-radius:999px;">Open picks page</a>
+      </div>
+      {% endfor %}
+
+      <div style="margin-top:22px; font-size:13px; line-height:1.7; color:#64748b;">
+        You are receiving this because email notifications are enabled on your profile and your account is active.
+        {% if preview %}This is a preview email generated from the superadmin console.{% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
