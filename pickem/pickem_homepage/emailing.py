@@ -8,9 +8,9 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 
-from pickem.utils import get_season
+from pickem.utils import get_season, is_pick_locked_for_pool
 from pickem_api.authz import LEGACY_FAMILY_SLUG
-from pickem_api.models import FamilyMembership, GameWeeks, GamesAndScores, Pool, Teams, UserProfile
+from pickem_api.models import Family, FamilyMembership, GamePicks, GameWeeks, GamesAndScores, Pool, Teams, UserProfile
 from pickem_superadmin.models import EmailNotificationCampaign
 from pickem_superadmin.models import EmailProviderSettings
 
@@ -235,6 +235,73 @@ def _build_picks_link(user, *, season=None, competition=None):
             kwargs={'family_slug': membership.family.slug, 'pool_slug': pool.slug},
         )
     ), membership.family, pool
+
+
+def _user_pools_with_missing_picks(user, *, target):
+    """Active pools (via this user's active memberships in active families)
+    for the target season/competition where 1+ of the week's games are still
+    open (not yet locked per that pool's own lock mode) and unpicked by this
+    user. Returns [{'pool', 'family', 'missing_games', 'picks_link'}, ...]
+    for pools with at least one such game; pools with nothing outstanding are
+    omitted entirely."""
+    memberships = FamilyMembership.objects.select_related('family').filter(
+        user=user,
+        status=FamilyMembership.Status.ACTIVE,
+        family__status=Family.Status.ACTIVE,
+    )
+    families_by_id = {m.family_id: m.family for m in memberships}
+    if not families_by_id:
+        return []
+
+    pools = list(
+        Pool.objects.filter(
+            family_id__in=families_by_id.keys(),
+            status=Pool.Status.ACTIVE,
+            season=target['season'],
+            competition=target['competition'],
+        )
+    )
+    if not pools:
+        return []
+
+    week_games = _get_week_games(
+        season=target['season'],
+        week=target['week'],
+        competition=target['competition'],
+    )
+    if not week_games:
+        return []
+    game_ids = [game.id for game in week_games]
+
+    bundle = []
+    for pool in pools:
+        picked_game_ids = set(
+            GamePicks.objects.filter(
+                pool=pool,
+                userID=str(user.id),
+                pick_game_id__in=game_ids,
+            ).values_list('pick_game_id', flat=True)
+        )
+        missing_games = [
+            game for game in week_games
+            if game.id not in picked_game_ids
+            and not is_pick_locked_for_pool(game, pool, week_games)[0]
+        ]
+        if not missing_games:
+            continue
+        family = families_by_id[pool.family_id]
+        bundle.append({
+            'pool': pool,
+            'family': family,
+            'missing_games': missing_games,
+            'picks_link': _absolute_url(
+                reverse(
+                    'family_pool_game_picks',
+                    kwargs={'family_slug': family.slug, 'pool_slug': pool.slug},
+                )
+            ),
+        })
+    return bundle
 
 
 def _campaign_safety_allowlist():

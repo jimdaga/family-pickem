@@ -7,7 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from pickem_api.models import (
-    Family, FamilyInvitation, FamilyMembership, GameWeeks, GamesAndScores, Pool, Teams, UserProfile,
+    Family, FamilyInvitation, FamilyMembership, GamePicks, GameWeeks, GamesAndScores, Pool,
+    PoolSettings, Teams, UserProfile,
 )
 from pickem_homepage.emailing import (
     _eligible_weekly_picks_users,
@@ -583,6 +584,130 @@ class WeeklyPicksCampaignTests(TestCase):
             'https://family-pickem.test/families/test/pools/pickem-pool/picks/',
             params['html'],
         )
+
+
+class MissedPicksReminderTests(TestCase):
+    def setUp(self):
+        settings_obj = EmailProviderSettings.load()
+        settings_obj.invites_enabled = True
+        settings_obj.from_email = 'Family Pickem <invite@family-pickem.com>'
+        settings_obj.reply_to_email = 'reply@family-pickem.com'
+        settings_obj.set_api_key('re_configured_secret')
+        settings_obj.save()
+
+        self.campaign = EmailNotificationCampaign.load_missed_picks_reminder()
+        self.campaign.enabled = True
+        self.campaign.weekday = 2
+        self.campaign.hour = 9
+        self.campaign.minute = 0
+        self.campaign.timezone_name = 'America/New_York'
+        self.campaign.rollout_mode = EmailNotificationCampaign.RolloutMode.ALL_ENABLED_USERS
+        self.campaign.save()
+
+        self.family = Family.objects.create(name='Dagostino', slug='dagostino')
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name='Main Pool',
+            slug='main-pool',
+            season=2627,
+            is_default=True,
+        )
+        PoolSettings.objects.create(pool=self.pool)
+
+        self.user = User.objects.create_user(
+            username='jdag', email='jdagostino2@gmail.com', password='pw',
+        )
+        UserProfile.objects.create(user=self.user, email_notifications=True)
+        FamilyMembership.objects.create(
+            family=self.family, user=self.user, role=FamilyMembership.Role.MEMBER,
+        )
+
+        GameWeeks.objects.create(
+            weekNumber=1, competition='nfl', date=datetime(2026, 9, 10).date(), season=2627,
+        )
+        self.open_game = GamesAndScores.objects.create(
+            id=1, slug='bears-packers', competition='nfl', gameWeek='1', gameyear='2026',
+            gameseason=2627,
+            startTimestamp=timezone.make_aware(datetime(2026, 9, 13, 13, 0)),
+            statusType='notstarted', statusTitle='Scheduled',
+            homeTeamId=1, homeTeamSlug='packers', homeTeamName='Green Bay Packers',
+            awayTeamId=2, awayTeamSlug='bears', awayTeamName='Chicago Bears',
+        )
+        self.locked_game = GamesAndScores.objects.create(
+            id=2, slug='chiefs-bills', competition='nfl', gameWeek='1', gameyear='2026',
+            gameseason=2627,
+            startTimestamp=timezone.make_aware(datetime(2026, 9, 10, 20, 20)),
+            statusType='final', statusTitle='Final',
+            homeTeamId=3, homeTeamSlug='bills', homeTeamName='Buffalo Bills',
+            awayTeamId=4, awayTeamSlug='chiefs', awayTeamName='Kansas City Chiefs',
+        )
+        self.target = {'season': 2627, 'week': 1, 'competition': 'nfl'}
+
+    def test_pool_with_open_unpicked_game_is_included(self):
+        from pickem_homepage.emailing import _user_pools_with_missing_picks
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+
+        self.assertEqual(len(bundle), 1)
+        entry = bundle[0]
+        self.assertEqual(entry['pool'], self.pool)
+        self.assertEqual(entry['family'], self.family)
+        self.assertEqual([g.id for g in entry['missing_games']], [self.open_game.id])
+        self.assertIn('/families/dagostino/pools/main-pool/picks/', entry['picks_link'])
+
+    def test_already_locked_miss_does_not_trigger_reminder(self):
+        from pickem_homepage.emailing import _user_pools_with_missing_picks
+
+        GamePicks.objects.create(
+            id=f'{self.pool.id}-{self.user.id}-{self.open_game.id}',
+            pool=self.pool, userEmail=self.user.email, uid=self.user.id,
+            userID=str(self.user.id), slug=self.open_game.slug, competition='nfl',
+            gameWeek='1', gameyear='2026', gameseason=2627,
+            pick_game_id=self.open_game.id, pick='packers',
+        )
+        # Only the already-started/locked game is unpicked now.
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+
+        self.assertEqual(bundle, [])
+
+    def test_fully_picked_pool_is_excluded(self):
+        from pickem_homepage.emailing import _user_pools_with_missing_picks
+
+        for game in (self.open_game, self.locked_game):
+            GamePicks.objects.create(
+                id=f'{self.pool.id}-{self.user.id}-{game.id}',
+                pool=self.pool, userEmail=self.user.email, uid=self.user.id,
+                userID=str(self.user.id), slug=game.slug, competition='nfl',
+                gameWeek='1', gameyear='2026', gameseason=2627,
+                pick_game_id=game.id, pick=game.homeTeamSlug,
+            )
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+
+        self.assertEqual(bundle, [])
+
+    def test_second_pool_with_missing_picks_both_included(self):
+        from pickem_homepage.emailing import _user_pools_with_missing_picks
+
+        other_pool = Pool.objects.create(
+            family=self.family, name='Side Pool', slug='side-pool', season=2627,
+        )
+        PoolSettings.objects.create(pool=other_pool)
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+
+        self.assertEqual({entry['pool'].slug for entry in bundle}, {'main-pool', 'side-pool'})
+
+    def test_inactive_membership_pool_excluded(self):
+        from pickem_homepage.emailing import _user_pools_with_missing_picks
+
+        membership = FamilyMembership.objects.get(user=self.user, family=self.family)
+        membership.status = FamilyMembership.Status.INACTIVE
+        membership.save(update_fields=['status'])
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+
+        self.assertEqual(bundle, [])
 
 
 class EmailEnvironmentFallbackTests(TestCase):
