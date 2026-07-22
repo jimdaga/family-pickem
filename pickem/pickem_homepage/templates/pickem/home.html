@@ -11,9 +11,6 @@
     <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_70%_18%,rgba(14,165,233,0.22),transparent_32%),linear-gradient(135deg,#020617_0%,#07111f_44%,#0f172a_100%)]"></div>
         <div class="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-sky-400/10 to-transparent"></div>
-        <div class="absolute left-1/2 top-0 h-[720px] w-px bg-white/10"></div>
-        <div class="absolute left-1/4 top-0 h-[720px] w-px bg-white/5"></div>
-        <div class="absolute right-1/4 top-0 h-[720px] w-px bg-white/5"></div>
         <div class="absolute -top-24 left-8 h-[560px] w-28 -rotate-12 bg-gradient-to-b from-sky-300/20 to-transparent blur-xl"></div>
         <div class="absolute -top-24 right-10 h-[560px] w-28 rotate-12 bg-gradient-to-b from-emerald-300/20 to-transparent blur-xl"></div>
     </div>
@@ -86,7 +83,7 @@
             <div class="absolute left-1/2 top-0 h-[480px] w-[320px] -translate-x-1/2 rounded-full border border-white/10 opacity-40"></div>
             <div class="absolute left-1/2 top-12 h-[390px] w-[260px] -translate-x-1/2 rounded-full border border-emerald-300/20 opacity-60"></div>
 
-            <div class="broadcast-scoreboard absolute left-1/2 -top-24 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
+            <div class="broadcast-scoreboard absolute left-1/2 -top-12 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
                 <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
                     <div class="text-xs font-black uppercase tracking-[0.28em] text-slate-400">Sunday board</div>
                     <div class="flex items-center gap-2 text-xs font-bold text-emerald-300">
@@ -200,7 +197,7 @@
         </div>
     </section>
 
-    <section class="landing-section relative z-10 bg-slate-100 px-5 py-20 text-slate-950 sm:px-8 lg:px-10">
+    <section class="landing-section landing-rhythm relative z-10 bg-slate-100 px-5 py-20 text-slate-950 sm:px-8 lg:px-10">
         <div class="mx-auto max-w-7xl">
             <div class="max-w-3xl">
                 <div class="text-sm font-black uppercase tracking-[0.24em] text-sky-600">More than a weekly form</div>
@@ -208,22 +205,22 @@
                 <p class="mt-5 text-lg leading-8 text-slate-600">Family Pick'em keeps the season moving before, during, and after the games—without asking the commissioner to run a second job.</p>
             </div>
             <div class="mt-12 grid gap-5 lg:grid-cols-3">
-                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-sky-700"><i class="fas fa-clipboard-check text-xl" aria-hidden="true"></i></div>
-                    <div class="mt-8 text-xs font-black uppercase tracking-[0.22em] text-sky-600">Before kickoff</div>
-                    <h3 class="mt-3 text-2xl font-black">Pick with purpose.</h3>
+                <article data-rhythm-card class="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl sm:p-7">
+                    <div class="flex items-center justify-between"><span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-sky-700"><i class="fas fa-football text-xl" aria-hidden="true"></i></span><span class="text-sm font-black tracking-[0.18em] text-slate-300">01</span></div>
+                    <div class="mt-6 text-xs font-black uppercase tracking-[0.22em] text-sky-600">Before kickoff</div>
+                    <h3 class="mt-3 text-2xl font-black leading-tight">Pick with purpose.</h3>
                     <p class="mt-3 leading-7 text-slate-600">Private pools, clear deadlines, and league rules make every selection feel like it matters.</p>
                 </article>
-                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><i class="fas fa-chart-line text-xl" aria-hidden="true"></i></div>
-                    <div class="mt-8 text-xs font-black uppercase tracking-[0.22em] text-emerald-600">On Sunday</div>
-                    <h3 class="mt-3 text-2xl font-black">Watch the room move.</h3>
+                <article data-rhythm-card class="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl sm:p-7">
+                    <div class="flex items-center justify-between"><span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><i class="fas fa-chart-line text-xl" aria-hidden="true"></i></span><span class="text-sm font-black tracking-[0.18em] text-slate-300">02</span></div>
+                    <div class="mt-6 text-xs font-black uppercase tracking-[0.22em] text-emerald-600">On Sunday</div>
+                    <h3 class="mt-3 text-2xl font-black leading-tight">Watch the room move.</h3>
                     <p class="mt-3 leading-7 text-slate-600">Live scores, submitted picks, and standings turn every touchdown into a new conversation.</p>
                 </article>
-                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><i class="fas fa-bullhorn text-xl" aria-hidden="true"></i></div>
-                    <div class="mt-8 text-xs font-black uppercase tracking-[0.22em] text-amber-600">After the final whistle</div>
-                    <h3 class="mt-3 text-2xl font-black">Make the week memorable.</h3>
+                <article data-rhythm-card class="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl sm:p-7">
+                    <div class="flex items-center justify-between"><span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><i class="fas fa-bullhorn text-xl" aria-hidden="true"></i></span><span class="text-sm font-black tracking-[0.18em] text-slate-300">03</span></div>
+                    <div class="mt-6 text-xs font-black uppercase tracking-[0.22em] text-amber-600">After the final whistle</div>
+                    <h3 class="mt-3 text-2xl font-black leading-tight">Make the week memorable.</h3>
                     <p class="mt-3 leading-7 text-slate-600">Post the commissioner’s take, share an optional AI recap, and let the family message board handle the rest.</p>
                 </article>
             </div>
@@ -310,6 +307,18 @@
     });
 
     if (window.ScrollTrigger) {
+        gsap.from('[data-rhythm-card]', {
+            autoAlpha: 0,
+            y: 24,
+            duration: 0.55,
+            stagger: 0.12,
+            ease: 'power2.out',
+            scrollTrigger: {
+                trigger: '.landing-rhythm',
+                start: 'top 72%',
+                once: true
+            }
+        });
         document.querySelectorAll('.landing-section, .family-proof-row').forEach(function (section) {
             gsap.from(section, {
                 autoAlpha: 0,
