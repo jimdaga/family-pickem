@@ -130,6 +130,88 @@
         </form>
       </div>
     </div>
+
+    <div class="sa-card p-4">
+      <div class="sa-h2 mb-1">Missed picks reminder</div>
+      <p class="mb-4 text-[12px] text-[#667085]">
+        Sends one consolidated email per user listing every pool where they
+        still have open (not yet locked), unsubmitted picks for the active week.
+      </p>
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_missed_picks_campaign">
+        <div class="flex items-center gap-2">
+          {{ missed_campaign_form.enabled }}
+          <label for="{{ missed_campaign_form.enabled.id_for_label }}" class="text-[13px] font-medium text-[#1b212b]">Enable missed picks email</label>
+        </div>
+        <div class="grid gap-4 md:grid-cols-3">
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Weekday</label>
+            {{ missed_campaign_form.weekday }}
+          </div>
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Hour</label>
+            {{ missed_campaign_form.hour }}
+            <div class="mt-1 text-[12px] text-[#667085]">{{ missed_campaign_form.hour.help_text }}</div>
+          </div>
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Minute</label>
+            {{ missed_campaign_form.minute }}
+          </div>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Timezone</label>
+            {{ missed_campaign_form.timezone_name }}
+          </div>
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Rollout mode</label>
+            {{ missed_campaign_form.rollout_mode }}
+          </div>
+        </div>
+        <div>
+          <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Allowlist emails</label>
+          {{ missed_campaign_form.allowlist_emails }}
+          <div class="mt-1 text-[12px] text-[#667085]">
+            Comma-separated recipients for safe testing. Production safety guard still limits sends to the global allowlist.
+          </div>
+        </div>
+        <button type="submit" class="sa-btn sa-btn-primary">Save missed picks campaign</button>
+      </form>
+
+      <div class="mt-5 border-t border-slate-200 pt-4">
+        <div class="sa-h2 mb-2">Preview missed picks email</div>
+        <form method="post" class="space-y-3">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="send_missed_picks_preview">
+          <div class="grid gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Recipient email</label>
+              {{ missed_preview_form.to_email }}
+              <div class="mt-1 text-[12px] text-[#667085]">{{ missed_preview_form.to_email.help_text }}</div>
+            </div>
+            <div>
+              <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Sample user email</label>
+              {{ missed_preview_form.sample_user_email }}
+              <div class="mt-1 text-[12px] text-[#667085]">{{ missed_preview_form.sample_user_email.help_text }}</div>
+            </div>
+          </div>
+          <button type="submit" class="sa-btn sa-btn-default">Send missed picks preview</button>
+        </form>
+      </div>
+
+      <div class="mt-5 border-t border-slate-200 pt-4">
+        <div class="sa-h2 mb-2">Run live campaign now</div>
+        <p class="mb-3 text-[12px] text-[#667085]">
+          This still respects the active NFL week check, user opt-in, active-user filter, and the production safety allowlist.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="send_missed_picks_now">
+          <button type="submit" class="sa-btn sa-btn-default">Run missed picks campaign now</button>
+        </form>
+      </div>
+    </div>
     </div>
 
     <div class="sa-card p-4">
@@ -182,6 +264,35 @@
           <span class="sa-mono">
             {% if weekly_campaign.last_sent_at %}
               season {{ weekly_campaign.last_sent_season }} · week {{ weekly_campaign.last_sent_week }} · {{ weekly_campaign.last_sent_count }} emails
+            {% else %}
+              never
+            {% endif %}
+          </span>
+        </div>
+        <div class="pt-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#667085]">Missed picks reminder</div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[#667085]">Campaign</span>
+          <span class="sa-mono">{{ missed_campaign.get_campaign_key_display }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[#667085]">State</span>
+          <span class="sa-pill {% if missed_campaign.enabled %}sa-pill-ok{% else %}sa-pill-muted{% endif %}">
+            {% if missed_campaign.enabled %}enabled{% else %}disabled{% endif %}
+          </span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[#667085]">Schedule</span>
+          <span class="sa-mono">{{ missed_campaign.weekday_label }} {{ missed_campaign.hour|stringformat:"02d" }}:{{ missed_campaign.minute|stringformat:"02d" }} {{ missed_campaign.timezone_name }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[#667085]">Rollout</span>
+          <span class="sa-mono">{{ missed_campaign.get_rollout_mode_display }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-[#667085]">Last sent</span>
+          <span class="sa-mono">
+            {% if missed_campaign.last_sent_at %}
+              season {{ missed_campaign.last_sent_season }} · week {{ missed_campaign.last_sent_week }} · {{ missed_campaign.last_sent_count }} emails
             {% else %}
               never
             {% endif %}

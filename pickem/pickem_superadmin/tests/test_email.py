@@ -240,6 +240,51 @@ class EmailSettingsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'not in an active NFL week window')
 
+    def test_page_renders_missed_picks_campaign_section(self):
+        response = self.client.get(reverse('superadmin:email_settings'))
+
+        self.assertContains(response, 'Missed picks reminder')
+        self.assertContains(response, 'save_missed_picks_campaign')
+
+    def test_missed_picks_campaign_save_audits(self):
+        response = self.client.post(
+            reverse('superadmin:email_settings'),
+            {
+                'action': 'save_missed_picks_campaign',
+                'missed_campaign-enabled': 'on',
+                'missed_campaign-weekday': '6',
+                'missed_campaign-hour': '11',
+                'missed_campaign-minute': '0',
+                'missed_campaign-timezone_name': 'America/New_York',
+                'missed_campaign-rollout_mode': EmailNotificationCampaign.RolloutMode.ALLOWLIST,
+                'missed_campaign-allowlist_emails': 'jdagostino2@gmail.com',
+                'missed_campaign-family_link_strategy': EmailNotificationCampaign.FamilyLinkStrategy.EARLIEST_MEMBERSHIP,
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        campaign = EmailNotificationCampaign.load_missed_picks_reminder()
+        campaign.refresh_from_db()
+        self.assertTrue(campaign.enabled)
+        self.assertEqual(campaign.weekday, 6)
+        self.assertEqual(campaign.hour, 11)
+        audit = SuperAdminAuditLog.objects.get(
+            action=SuperAdminAuditLog.Action.EMAIL_CAMPAIGN_UPDATED,
+            target_id=str(campaign.pk),
+        )
+        self.assertEqual(audit.summary, 'Updated missed picks reminder email campaign')
+
+    def test_running_missed_picks_campaign_now_outside_active_week_errors(self):
+        response = self.client.post(
+            reverse('superadmin:email_settings'),
+            {'action': 'send_missed_picks_now'},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'not in an active NFL week window')
+
 
 class InviteEmailSendingTests(TestCase):
     def setUp(self):

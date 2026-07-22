@@ -4,6 +4,7 @@ from django.views.decorators.http import require_http_methods
 
 from pickem_homepage.emailing import (
     send_due_email_campaigns,
+    send_missed_picks_preview_email,
     send_test_email,
     send_weekly_picks_preview_email,
 )
@@ -50,17 +51,22 @@ def _campaign_snapshot(campaign):
 def email_settings(request):
     settings_obj = EmailProviderSettings.load()
     weekly_campaign = EmailNotificationCampaign.load_weekly_picks()
+    missed_campaign = EmailNotificationCampaign.load_missed_picks_reminder()
     before = _settings_snapshot(settings_obj)
     campaign_before = _campaign_snapshot(weekly_campaign)
+    missed_campaign_before = _campaign_snapshot(missed_campaign)
     test_form = EmailTestSendForm()
     campaign_form = EmailNotificationCampaignForm(instance=weekly_campaign, prefix='campaign')
     preview_form = WeeklyPicksPreviewForm(prefix='preview')
+    missed_campaign_form = EmailNotificationCampaignForm(instance=missed_campaign, prefix='missed_campaign')
+    missed_preview_form = WeeklyPicksPreviewForm(prefix='missed_preview')
 
     if request.method == 'POST':
         action = request.POST.get('action', 'save_settings')
         if action == 'send_test_email':
             form = EmailProviderSettingsForm(instance=settings_obj)
             campaign_form = EmailNotificationCampaignForm(instance=weekly_campaign, prefix='campaign')
+            missed_campaign_form = EmailNotificationCampaignForm(instance=missed_campaign, prefix='missed_campaign')
             test_form = EmailTestSendForm(request.POST)
             if test_form.is_valid():
                 to_email = test_form.cleaned_data['to_email']
@@ -81,6 +87,7 @@ def email_settings(request):
                     messages.error(request, f'Failed to send test email to {to_email}.')
         elif action == 'save_weekly_campaign':
             form = EmailProviderSettingsForm(instance=settings_obj)
+            missed_campaign_form = EmailNotificationCampaignForm(instance=missed_campaign, prefix='missed_campaign')
             campaign_form = EmailNotificationCampaignForm(
                 request.POST, instance=weekly_campaign, prefix='campaign',
             )
@@ -97,9 +104,29 @@ def email_settings(request):
                     )
                 messages.success(request, 'Weekly picks campaign saved.')
                 return redirect('superadmin:email_settings')
+        elif action == 'save_missed_picks_campaign':
+            form = EmailProviderSettingsForm(instance=settings_obj)
+            campaign_form = EmailNotificationCampaignForm(instance=weekly_campaign, prefix='campaign')
+            missed_campaign_form = EmailNotificationCampaignForm(
+                request.POST, instance=missed_campaign, prefix='missed_campaign',
+            )
+            if missed_campaign_form.is_valid():
+                missed_campaign = missed_campaign_form.save()
+                changes = diff_fields(missed_campaign_before, _campaign_snapshot(missed_campaign))
+                if changes:
+                    log_action(
+                        request,
+                        action=SuperAdminAuditLog.Action.EMAIL_CAMPAIGN_UPDATED,
+                        target=missed_campaign,
+                        summary='Updated missed picks reminder email campaign',
+                        changes=changes,
+                    )
+                messages.success(request, 'Missed picks reminder campaign saved.')
+                return redirect('superadmin:email_settings')
         elif action == 'send_weekly_preview':
             form = EmailProviderSettingsForm(instance=settings_obj)
             campaign_form = EmailNotificationCampaignForm(instance=weekly_campaign, prefix='campaign')
+            missed_campaign_form = EmailNotificationCampaignForm(instance=missed_campaign, prefix='missed_campaign')
             preview_form = WeeklyPicksPreviewForm(request.POST, prefix='preview')
             if preview_form.is_valid():
                 to_email = preview_form.cleaned_data['to_email']
@@ -129,11 +156,48 @@ def email_settings(request):
                     messages.error(request, 'No active NFL week is available from game data yet.')
                 else:
                     messages.error(request, f'Failed to send preview to {to_email}.')
+        elif action == 'send_missed_picks_preview':
+            form = EmailProviderSettingsForm(instance=settings_obj)
+            campaign_form = EmailNotificationCampaignForm(instance=weekly_campaign, prefix='campaign')
+            missed_campaign_form = EmailNotificationCampaignForm(instance=missed_campaign, prefix='missed_campaign')
+            missed_preview_form = WeeklyPicksPreviewForm(request.POST, prefix='missed_preview')
+            if missed_preview_form.is_valid():
+                to_email = missed_preview_form.cleaned_data['to_email']
+                sample_user_email = missed_preview_form.cleaned_data.get('sample_user_email', '')
+                result = send_missed_picks_preview_email(
+                    to_email=to_email,
+                    sample_user_email=sample_user_email,
+                )
+                if result['status'] == 'sent':
+                    log_action(
+                        request,
+                        action=SuperAdminAuditLog.Action.EMAIL_PREVIEW_SENT,
+                        target=missed_campaign,
+                        summary=f'Sent missed picks reminder preview to {to_email}',
+                        changes={
+                            'to_email': [None, to_email],
+                            'sample_user_email': [None, sample_user_email or None],
+                        },
+                    )
+                    messages.success(request, f'Missed picks reminder preview sent to {to_email}.')
+                    return redirect('superadmin:email_settings')
+                if result['reason'] == 'not_configured':
+                    messages.error(request, 'Email provider is not fully configured yet.')
+                elif result['reason'] == 'no_sample_user':
+                    messages.error(request, 'No eligible member with outstanding picks exists to render the preview.')
+                elif result['reason'] == 'no_upcoming_week':
+                    messages.error(request, 'No active NFL week is available from game data yet.')
+                else:
+                    messages.error(request, f'Failed to send preview to {to_email}.')
         elif action == 'send_weekly_now':
             form = EmailProviderSettingsForm(instance=settings_obj)
             campaign_form = EmailNotificationCampaignForm(instance=weekly_campaign, prefix='campaign')
+            missed_campaign_form = EmailNotificationCampaignForm(instance=missed_campaign, prefix='missed_campaign')
             result = send_due_email_campaigns(force_weekly_picks=True)
-            campaign_rows = result.get('campaigns', [])
+            campaign_rows = [
+                row for row in result.get('campaigns', [])
+                if row['campaign_key'] == EmailNotificationCampaign.CampaignKey.WEEKLY_PICKS_AVAILABLE
+            ]
             if campaign_rows:
                 row = campaign_rows[0]
                 log_action(
@@ -153,6 +217,35 @@ def email_settings(request):
             messages.error(
                 request,
                 'Weekly picks campaign is not in an active NFL week window from game data.',
+            )
+        elif action == 'send_missed_picks_now':
+            form = EmailProviderSettingsForm(instance=settings_obj)
+            campaign_form = EmailNotificationCampaignForm(instance=weekly_campaign, prefix='campaign')
+            missed_campaign_form = EmailNotificationCampaignForm(instance=missed_campaign, prefix='missed_campaign')
+            result = send_due_email_campaigns(force_missed_picks=True)
+            campaign_rows = [
+                row for row in result.get('campaigns', [])
+                if row['campaign_key'] == EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER
+            ]
+            if campaign_rows:
+                row = campaign_rows[0]
+                log_action(
+                    request,
+                    action=SuperAdminAuditLog.Action.EMAIL_CAMPAIGN_SENT,
+                    target=missed_campaign,
+                    summary=(
+                        f"Ran missed picks reminder campaign for {row['season']} week {row['week']}"
+                    ),
+                    changes={'sent_count': [None, row['sent_count']]},
+                )
+                messages.success(
+                    request,
+                    f"Missed picks reminder ran for week {row['week']} and sent {row['sent_count']} email(s).",
+                )
+                return redirect('superadmin:email_settings')
+            messages.error(
+                request,
+                'Missed picks reminder is not in an active NFL week window from game data.',
             )
         else:
             form = EmailProviderSettingsForm(request.POST, instance=settings_obj)
@@ -188,5 +281,8 @@ def email_settings(request):
         'campaign_form': campaign_form,
         'preview_form': preview_form,
         'weekly_campaign': weekly_campaign,
+        'missed_campaign_form': missed_campaign_form,
+        'missed_preview_form': missed_preview_form,
+        'missed_campaign': missed_campaign,
         'email_settings': settings_obj,
     })
