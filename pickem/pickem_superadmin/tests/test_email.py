@@ -10,6 +10,7 @@ from pickem_api.models import (
     Family, FamilyInvitation, FamilyMembership, GameWeeks, GamesAndScores, Pool, Teams, UserProfile,
 )
 from pickem_homepage.emailing import (
+    _eligible_weekly_picks_users,
     resend_invite_email_is_configured,
     send_due_email_campaigns,
     send_family_invitation_email,
@@ -525,6 +526,17 @@ class WeeklyPicksCampaignTests(TestCase):
         _eligible_weekly_picks_users(self.campaign)
 
         self.assertEqual(UserProfile.objects.count(), before)
+
+    def test_eligible_campaign_users_applies_same_filters_as_weekly_helper(self):
+        from pickem_homepage.emailing import _eligible_campaign_users
+
+        base = _eligible_campaign_users(self.campaign)
+        weekly = _eligible_weekly_picks_users(self.campaign)
+
+        self.assertEqual(
+            {u.id for u in base},
+            {u.id for u in weekly},
+        )
 
     def test_campaign_prefers_non_legacy_commissioner_family_for_multi_family_user(self):
         legacy_family, _ = Family.objects.get_or_create(

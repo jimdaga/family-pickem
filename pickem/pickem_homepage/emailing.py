@@ -245,7 +245,11 @@ def _campaign_safety_allowlist():
     }
 
 
-def _eligible_weekly_picks_users(campaign):
+def _eligible_campaign_users(campaign):
+    """Base filter shared by every email campaign: active user, has email,
+    opted into notifications, not blocked, campaign rollout/allowlist, and
+    the global safety allowlist. Campaign-specific steps (like building a
+    picks link) happen in each campaign's own wrapper."""
     base_qs = (
         User.objects.select_related('profile')
         .filter(
@@ -274,6 +278,13 @@ def _eligible_weekly_picks_users(campaign):
         if getattr(settings, 'EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY', True):
             if email_value not in safety_allowlist:
                 continue
+        users.append(user)
+    return users
+
+
+def _eligible_weekly_picks_users(campaign):
+    users = []
+    for user in _eligible_campaign_users(campaign):
         link, family, pool = _build_picks_link(user)
         if not link:
             continue
