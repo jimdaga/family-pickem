@@ -307,21 +307,6 @@
         yoyo: true
     });
 
-    if (window.ScrollTrigger) {
-        document.querySelectorAll('.landing-section, .family-proof-row').forEach(function (section) {
-            gsap.from(section, {
-                autoAlpha: 0,
-                y: 34,
-                duration: 0.7,
-                ease: 'power2.out',
-                scrollTrigger: {
-                    trigger: section,
-                    start: 'top 86%',
-                    once: true
-                }
-            });
-        });
-    }
 })();
 </script>
 {% endblock %}
