@@ -899,6 +899,7 @@
 .ai-recap-sparkle {
   display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
   width: 1.75rem; height: 1.75rem; border-radius: 9999px; color: #fff;
+  font-size: 0.95rem; line-height: 1;
   background: linear-gradient(135deg, #7c3aed, #d946ef); box-shadow: 0 0 18px rgba(168, 85, 247, 0.55);
 }
 .ai-recap-badge {

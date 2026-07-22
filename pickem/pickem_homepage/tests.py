@@ -516,12 +516,13 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, "Smith Family")
         self.assertContains(response, "Main Pickem")
         self.assertContains(response, "Smith-player")
-        # The message board moved to its own page; the lobby no longer
-        # surfaces post content (neither this family's nor another's).
-        self.assertNotContains(response, "Smith family update")
+        # The lobby's Message Board tile previews this family's own recent
+        # posts only -- it must never leak another family's thread titles.
+        self.assertContains(response, "Smith family update")
         self.assertContains(response, "1 of 1")
         self.assertNotContains(response, "Jones Family")
         self.assertNotContains(response, "Jones-player")
+        self.assertNotContains(response, "Jones family secret")
 
     def test_dashboard_shows_condensed_week_points_for_current_pool_only(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")

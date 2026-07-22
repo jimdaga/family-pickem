@@ -1,454 +1,151 @@
-# Family Pickem
-
-A comprehensive NFL pick'em league web application built with Django. Compete with friends and family by predicting NFL game winners throughout the season.
-
-## 🏈 Features
-
-### Core Functionality
-- **NFL Pick'em League**: Submit weekly picks for NFL games
-- **Real-time Scoring**: Automatic game updates and score calculations
-- **Multi-Season Support**: Track performance across multiple NFL seasons
-- **Google OAuth Integration**: Secure authentication via Google accounts
-- **Responsive Design**: Optimized for desktop and mobile devices
-
-### User Experience
-- **Weekly Pick Submission**: Easy-to-use interface for making game predictions
-- **Live Standings**: Real-time leaderboard with season rankings
-- **Score Tracking**: Detailed weekly and season-long performance metrics
-- **Game Schedules**: Up-to-date NFL schedules and results
-- **User Profiles**: Customizable profiles with taglines and preferences
-
-### Advanced Statistics
-- **Pick Accuracy**: Season and lifetime correct pick percentages
-- **Perfect Weeks**: Track weeks with 100% correct picks
-- **Missed Picks**: Monitor engagement and participation
-- **Team Preferences**: Most and least picked teams analysis
-- **Week Winners**: Champions for each week of the season
-- **Season Champions**: Overall season winners and historical records
-
-### Administrative Features
-- **Automated Updates**: Integration with external NFL data sources
-- **Bulk Operations**: Administrative tools for managing seasons and users
-- **Data Analytics**: Comprehensive statistics via pickemctl integration
-- **Flexible Scoring**: Configurable point systems and tiebreakers
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.8+
-- PostgreSQL
-- Django 4.0+
-- Google OAuth credentials
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/family-pickem.git
-   cd family-pickem
-   ```
-
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   cd pickem
-   pip install -r requirements.txt
-   ```
-
-4. **Set up environment variables**
-   ```bash
-   export SECRET_KEY="your-secret-key"
-   export DATABASE_URL="postgresql://user:password@localhost/pickem"
-   export GOOGLE_OAUTH2_KEY="your-google-oauth-key"
-   export GOOGLE_OAUTH2_SECRET="your-google-oauth-secret"
-   ```
-
-5. **Run migrations**
-   ```bash
-   python manage.py migrate
-   ```
-
-6. **Create superuser**
-   ```bash
-   python manage.py createsuperuser
-   ```
-
-7. **Start development server**
-   ```bash
-   python manage.py runserver
-   ```
-
-Visit `http://localhost:8000` to access the application.
-
-## 📱 Usage
-
-### For Players
-
-1. **Sign In**: Use Google OAuth to authenticate
-2. **Make Picks**: Navigate to the picks page and select winners for upcoming games
-3. **View Standings**: Check your ranking on the leaderboard
-4. **Track Stats**: Monitor your performance in the statistics section
-5. **Check Scores**: Follow live game results and your pick accuracy
-
-### For Administrators
-
-1. **Admin Panel**: Access Django admin at `/admin/`
-2. **Manage Users**: Add/remove users and manage permissions
-3. **Update Games**: Import NFL schedules and update scores
-4. **Monitor Stats**: Use pickemctl for advanced analytics
-5. **Season Management**: Configure new seasons and scoring rules
-
-## 🏗️ Project Structure
-
-```
-family-pickem/
-├── pickem/                     # Main Django project
-│   ├── pickem/                 # Project settings
-│   │   ├── settings.py         # Django configuration
-│   │   ├── urls.py            # Main URL routing
-│   │   └── utils.py           # Utility functions
-│   ├── pickem_api/            # Core API and models
-│   │   ├── models.py          # Database models
-│   │   ├── views.py           # API views
-│   │   ├── serializers.py     # DRF serializers
-│   │   └── admin.py          # Admin configuration
-│   ├── pickem_homepage/       # Frontend views and templates
-│   │   ├── views.py           # Page views
-│   │   ├── forms.py           # Django forms
-│   │   ├── templates/         # HTML templates
-│   │   ├── static/            # CSS, JS, images
-│   │   └── templatetags/      # Custom template tags
-│   └── requirements.txt       # Python dependencies
-├── pickemctl/                 # Analytics CLI tool
-├── charts/                    # Kubernetes Helm charts
-├── docker/                    # Docker configuration
-└── infra/                     # Infrastructure as code
-```
-
-## 🗄️ Database Models
-
-### Core Models
-
-- **`GamesAndScores`**: NFL game data, scores, and metadata
-- **`GamePicks`**: User predictions for individual games
-- **`userSeasonPoints`**: Season-long point totals and weekly winners
-- **`userStats`**: Comprehensive user performance statistics
-- **`Teams`**: NFL team information and logos
-- **`GameWeeks`**: Week definitions and scheduling
-- **`UserProfile`**: Extended user information and preferences
-
-### Key Relationships
-
-```python
-# User makes many GamePicks
-User → GamePicks (One-to-Many)
-
-# Each GamePick relates to a Game
-GamePicks → GamesAndScores (Many-to-One)
-
-# Users have season point records
-User → userSeasonPoints (One-to-Many)
-
-# Users have comprehensive statistics
-User → userStats (One-to-One)
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `SECRET_KEY` | Django secret key | Yes |
-| `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `DATABASE_CONN_MAX_AGE` | Seconds to reuse a database connection before reconnecting (defaults to `60`) | No |
-| `SENTRY_TRACES_SAMPLE_RATE` | Fraction of transactions sent to Sentry traces (defaults to `0.1`) | No |
-| `SENTRY_PROFILE_SESSION_SAMPLE_RATE` | Fraction of sampled trace sessions profiled by Sentry (defaults to `0.1`) | No |
-| `GOOGLE_OAUTH2_KEY` | Google OAuth client ID | Yes |
-| `GOOGLE_OAUTH2_SECRET` | Google OAuth client secret | Yes |
-| `DEBUG` | Enable debug mode | No |
-| `ALLOWED_HOSTS` | Comma-separated allowed hosts | No |
-| `OPENAI_WEEKLY_SUMMARIES_ENABLED` | Bootstrap fallback: enable recaps until database settings are saved | No (defaults to `false`) |
-| `OPENAI_API_KEY` | Bootstrap fallback key until database settings are saved | No |
-| `OPENAI_WEEKLY_SUMMARIES_MODEL` | Bootstrap fallback model (defaults to `gpt-4o-mini`) | No |
-| `OPENAI_WEEKLY_SUMMARIES_TIMEOUT_SECONDS` | Bootstrap fallback timeout (defaults to `30`) | No |
-| `OPENAI_WEEKLY_SUMMARIES_RETRIES` | Bootstrap fallback retry count (defaults to `2`) | No |
-| `OPENAI_WEEKLY_SUMMARIES_MAX_RUNS_PER_POOL_WEEK` | Bootstrap fallback generation cap per pool/week (defaults to `3`) | No |
-| `OPENAI_WEEKLY_SUMMARIES_MOCK` | Creates deterministic local preview drafts; never calls OpenAI | No (development only) |
-
-### AI weekly recap operations
-
-AI recaps are disabled by default. Configure them in **Super Admin → AI**. The
-OpenAI key is a write-only field: it is encrypted before being stored, never
-rendered again, excluded from API responses and audit records, and used only
-while the server submits a provider request. A saved database setting takes
-precedence over environment values, including when it is disabled. Environment
-variables remain available only as a migration/bootstrap fallback; do not put
-keys in Helm values, logs, templates, or source control.
-
-After scoring and rankings complete, the pipeline creates one unpublished
-recap draft per pool for the latest completed week. Commissioners can generate
-a replacement draft from **Lobby Messages**, then edit, publish, unpublish, or
-remove it through the existing review flow. A provider failure is recorded as a
-safe status-only run record and is retried by the next scheduled pipeline run;
-no prompt or provider-response payload is retained.
-
-For a no-cost local preview, restart the development server with
-`OPENAI_WEEKLY_SUMMARIES_ENABLED=true OPENAI_WEEKLY_SUMMARIES_MOCK=true`.
-The **Generate weekly recap** button will create an unpublished, clearly marked
-mock draft once a fully scored week exists; no OpenAI key or network call is
-used.
-
-### Settings Configuration
-
-Key settings in `settings.py`:
-
-```python
-# Google OAuth
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'SCOPE': ['profile', 'email'],
-        'AUTH_PARAMS': {'access_type': 'online'}
-    }
-}
-
-# Current season configuration
-CURRENT_SEASON = "2425"  # 2024-2025 NFL season
-
-# Database
-DATABASES = {
-    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
-}
-```
-
-## 🎯 API Endpoints
-
-### Public Endpoints
-- `GET /` - Homepage with league overview
-- `GET /scores/` - Game scores and results
-- `GET /standings/` - Current standings
-- `GET /stats/` - Player statistics
-- `GET /rules/` - League rules
-
-### Authenticated Endpoints
-- `GET/POST /picks/` - Submit and view picks
-- `GET /profile/` - User profile management
-
-### Admin API
-- `GET /api/games/` - Game data API
-- `POST /api/update-scores/` - Score update webhook
-
-## 📊 Statistics Features
-
-The application tracks comprehensive user statistics:
-
-### Performance Metrics
-- **Pick Accuracy**: Percentage of correct predictions
-- **Weeks Won**: Number of weekly championships
-- **Perfect Weeks**: Weeks with 100% accuracy
-- **Seasons Won**: Number of season championships
-- **Missed Picks**: Games not predicted
-
-### Team Analysis
-- **Most Picked Teams**: Favorite teams by user
-- **Least Picked Teams**: Avoided teams by user
-- **Team Performance**: Success rate by team picked
-
-### Historical Data
-- **Season Comparisons**: Year-over-year performance
-- **Lifetime Records**: All-time statistics
-- **Trend Analysis**: Performance patterns over time
-
-## 🐳 Docker Deployment
-
-### Using Docker Compose
-
-```yaml
-version: '3.8'
-services:
-  web:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/pickem
-    depends_on:
-      - db
-  
-  db:
-    image: postgres:13
-    environment:
-      - POSTGRES_DB=pickem
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-```
-
-### Kubernetes Deployment
-
-Helm charts are provided in the `charts/` directory:
-
-```bash
-helm install family-pickem ./charts/family-pickem
-```
-
-## 🔧 Development
-
-### Running Tests
-
-```bash
-python manage.py test
-```
-
-### Code Style
-
-```bash
-# Format code
-black .
-
-# Lint code
-flake8 .
-
-# Sort imports
-isort .
-```
-
-### Database Operations
-
-```bash
-# Create migrations
-python manage.py makemigrations
-
-# Apply migrations
-python manage.py migrate
-
-# Load sample data
-python manage.py loaddata fixtures/sample_data.json
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow PEP 8 style guidelines
-- Write tests for new features
-- Update documentation for API changes
-- Use meaningful commit messages
-- Keep PRs focused and atomic
-
-## 🛠️ Tools and Technologies
-
-### Backend
-- **Django 4.0+**: Web framework
-- **Django REST Framework**: API development
-- **PostgreSQL**: Primary database
-- **Celery**: Background task processing
-- **Redis**: Caching and session storage
-
-### Frontend
-- **Bootstrap 5**: CSS framework
-- **JavaScript (ES6+)**: Dynamic interactions
-- **Chart.js**: Statistics visualization
-- **Font Awesome**: Icons
-
-### Authentication
-- **django-allauth**: Social authentication
-- **Google OAuth 2.0**: Primary login method
-
-### DevOps
-- **Docker**: Containerization
-- **Kubernetes**: Orchestration
-- **Helm**: Package management
-- **GitHub Actions**: CI/CD pipeline
-
-### Analytics
-- **pickemctl**: Custom Go-based analytics tool
-- **PostgreSQL**: Advanced queries and statistics
-
-## 📈 Performance
-
-### Optimization Features
-- Database query optimization with select_related/prefetch_related
-- Redis caching for frequently accessed data
-- Static file compression and CDN integration
-- Lazy loading for large datasets
-- Efficient pagination for standings and statistics
-
-### Monitoring
-- Django debug toolbar for development
-- Application performance monitoring
-- Database query analysis
-- Error tracking and logging
-
-## 🔒 Security
-
-### Security Measures
-- CSRF protection on all forms
-- SQL injection prevention via ORM
-- XSS protection with template escaping
-- Secure session management
-- HTTPS enforcement in production
-- Rate limiting on API endpoints
-
-### Authentication Security
-- OAuth 2.0 implementation
-- Session-based authentication
-- Secure password requirements for admin users
-- Account lockout protection
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙋 Support
-
-### Getting Help
-- **Issues**: Report bugs via GitHub Issues
-- **Discussions**: Ask questions in GitHub Discussions
-- **Documentation**: Check the wiki for detailed guides
-- **Email**: Contact maintainers for urgent issues
-
-### Common Issues
-- **OAuth Setup**: Ensure Google OAuth credentials are correctly configured
-- **Database Connection**: Verify PostgreSQL connection settings
-- **Static Files**: Run `collectstatic` for production deployments
-- **Migrations**: Always run migrations after updates
-
-## 🚀 Roadmap
-
-### Upcoming Features
-- [ ] Mobile app development
-- [ ] Real-time notifications
-- [ ] Advanced analytics dashboard
-- [ ] Multi-league support
-- [ ] Playoff bracket predictions
-- [ ] Social features and messaging
-- [ ] API rate limiting and versioning
-- [ ] Enhanced mobile responsive design
-
-### Version History
-- **v2.0.0**: Advanced statistics and perfect weeks tracking
-- **v1.5.0**: Missed picks tracking and engagement metrics
-- **v1.4.0**: Season winner tracking and championships
-- **v1.3.0**: Enhanced user statistics and analytics
-- **v1.2.0**: Multi-season support
-- **v1.1.0**: Real-time scoring updates
-- **v1.0.0**: Initial release with core pick'em functionality
+<p align="center">
+  <img src="pickem/pickem_homepage/static/images/logo.png" alt="Family Pickem" width="120">
+</p>
+
+<h1 align="center">Family Pickem</h1>
+
+<p align="center">
+  A Django-based NFL pick'em platform for running a private league: weekly picks, live scoring,
+  standings, and season-long statistics.
+</p>
+
+<p align="center">
+  <a href="https://github.com/jimdaga/family-pickem/actions/workflows/pull-request-tests.yaml"><img src="https://github.com/jimdaga/family-pickem/actions/workflows/pull-request-tests.yaml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/jimdaga/family-pickem/actions/workflows/publish-artifacts.yaml"><img src="https://github.com/jimdaga/family-pickem/actions/workflows/publish-artifacts.yaml/badge.svg" alt="Release"></a>
+</p>
 
 ---
 
-**Built with ❤️ for family and friends who love NFL football!** 🏈
+## Overview
+
+Family Pickem runs a multi-family, multi-season NFL pick'em league. Users authenticate with
+Google, submit weekly picks against a synced NFL schedule, and track results through standings,
+per-user statistics, and a league message board. A superadmin console provides cross-family
+operator tooling — job scheduling, audit logging, settings management — on top of the player-facing
+site.
+
+The backend is a standard Django + Django REST Framework application backed by PostgreSQL. Game
+data, scores, and odds are synced on a schedule from ESPN via APScheduler-driven jobs. The frontend
+is server-rendered Django templates styled with Tailwind CSS.
+
+## Architecture
+
+| Component | Responsibility |
+|---|---|
+| `pickem_api` | Core data models, DRF serializers/viewsets, and the cron jobs that sync scores, odds, and standings from external NFL data sources |
+| `pickem_homepage` | Player-facing views, forms, templates, and static assets (picks, standings, stats, message board) |
+| `pickem_superadmin` | Superuser-only operator console — pool/family/team administration, job queueing, audit log, banners |
+| `pickem` | Project settings, root URL routing, and shared utilities (season resolution, context processors) |
+
+Scheduled work (game syncs, standings recomputation, one-off admin jobs) runs through APScheduler
+against a Django-backed job store rather than as ad hoc scripts, so the same pipeline serves both
+automated cron behavior and on-demand jobs queued from the superadmin console.
+
+## Getting Started
+
+### Requirements
+
+- Python 3.11+
+- PostgreSQL 15
+- Node.js (for the Tailwind build)
+- Google OAuth client credentials
+
+### Setup
+
+```bash
+git clone https://github.com/jimdaga/family-pickem.git
+cd family-pickem
+
+python -m venv venv
+source venv/bin/activate
+
+cd pickem
+pip install -r requirements.txt
+```
+
+Configure environment variables (see [Configuration](#configuration)), then:
+
+```bash
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+Build the Tailwind stylesheet from the repo root:
+
+```bash
+npm install
+npm run build:css      # watch mode
+npm run build:prod     # minified, for commit
+```
+
+The app is served at `http://localhost:8000`.
+
+### Docker
+
+```bash
+docker-compose up --build
+```
+
+This starts PostgreSQL and the Django app together, reading configuration from `.env.app`.
+
+## Configuration
+
+Core settings are provided via environment variables; see `pickem/pickem/settings.py` for the full
+list. Notable ones:
+
+| Variable | Purpose |
+|---|---|
+| `SECRET_KEY` | Django secret key |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `GOOGLE_OAUTH2_KEY` / `GOOGLE_OAUTH2_SECRET` | Google OAuth credentials |
+| `DEBUG` | Enable/disable debug mode |
+| `DJANGO_ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` | Host and CSRF allowlists |
+| `AWS_STORAGE_BUCKET_NAME` | S3 bucket for static/media files in production |
+
+**Sideline**, the league's AI recap persona, and its OpenAI integration are configured at runtime
+through **Super Admin → Sideline**, not environment variables — a saved database setting always
+takes precedence. Environment variables for that feature exist only as a bootstrap fallback prior
+to first configuration.
+
+## Development
+
+```bash
+cd pickem
+python manage.py test              # run the test suite
+python manage.py makemigrations    # after model changes
+python manage.py shell             # Django shell
+```
+
+Custom management commands: `createsu` (scripted superuser creation), `manage_banners`
+(site-wide banner management).
+
+Cron scripts can also be run manually against a target environment:
+
+```bash
+cd pickem/pickem_api
+python cron_update_games_v2.py --url localhost
+python cron_update_picks.py --url localhost
+python cron_update_standings.py --url localhost
+```
+
+## Deployment
+
+Production and dev environments run on Kubernetes via ArgoCD, driven entirely by GitOps:
+
+- **Dev** deploys automatically on every push to `main`.
+- **Production** deploys automatically when a GitHub Release is published.
+
+Helm charts live in `charts/family-pickem`; environment-specific values are in
+`infra/app/values-{prd,dev}.yaml`. Secrets are managed through External Secrets Operator against
+AWS Secrets Manager — Kubernetes secrets are never edited directly.
+
+## Contributing
+
+1. Create a feature branch off `main`
+2. Make your changes, with tests where applicable
+3. Open a pull request — CI runs the test suite automatically
+
+---
+
+<p align="center"><sub>Built for a family and friends NFL pick'em league.</sub></p>

@@ -107,7 +107,26 @@
         }
     </style>
 
-        
+    <!-- Sideline's Weekly Recap -->
+    {% if week_recap %}
+    <article class="ai-recap-card lobby-section mb-6" data-testid="ai-weekly-recap">
+        <div class="ai-recap-card__inner">
+            <div class="flex items-center gap-2">
+                <span class="ai-recap-sparkle" role="img" aria-label="Sideline">🤖</span>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="text-lg font-bold text-text-dark dark:text-white">{{ week_recap.title }}</h3>
+                        <span class="ai-recap-badge"><i class="fas fa-sparkles" aria-hidden="true"></i> Sideline</span>
+                    </div>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">{{ week_recap.get_source_display }}{% if week_recap.author %} · Reviewed by {{ week_recap.author|display_name }}{% endif %} · {{ week_recap.published_at|date:"M j, Y" }}</p>
+                </div>
+            </div>
+            <div class="mt-3 max-h-12 overflow-hidden text-sm leading-6 text-text-dark dark:text-white/90" data-ai-recap-body>{{ week_recap.body|safe_markdown }}</div>
+            <button type="button" class="mt-2 hidden text-xs font-semibold text-primary hover:underline" data-ai-recap-toggle aria-expanded="false">Read more</button>
+            <p class="ai-recap-provenance"><i class="fas fa-shield-halved" aria-hidden="true"></i> Sideline wrote this from scored NFL results and this pool’s picks</p>
+        </div>
+    </article>
+    {% endif %}
 
     <!-- Week Winner Card -->
     {% if show_week_stats_sidebar %}
@@ -1669,5 +1688,28 @@
 
     <!-- Alpine.js for collapsible sections -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js" integrity="sha384-pb6hrQvo4s23cEUFtj0CZkzGE3jyK3pj26RIupXXxhSrrcUA/Cn0lZgcCrGH0t6L" crossorigin="anonymous"></script>
+
+    <!-- Sideline's recap starts clamped to 2 lines; only reveal "Read more" when it overflows -->
+    <script>
+    (function () {
+        document.querySelectorAll('[data-ai-recap-body]').forEach(function (body) {
+            var toggle = body.parentElement.querySelector('[data-ai-recap-toggle]');
+            if (!toggle) {
+                return;
+            }
+            if (body.scrollHeight <= body.clientHeight + 1) {
+                return;
+            }
+            toggle.classList.remove('hidden');
+            toggle.addEventListener('click', function () {
+                var expanded = toggle.getAttribute('aria-expanded') === 'true';
+                body.classList.toggle('max-h-12', expanded);
+                body.classList.toggle('overflow-hidden', expanded);
+                toggle.setAttribute('aria-expanded', String(!expanded));
+                toggle.textContent = expanded ? 'Read more' : 'Show less';
+            });
+        });
+    })();
+    </script>
 
 {% endblock %}
