@@ -53,9 +53,9 @@
                     <span class="flex items-center gap-2 text-xs font-bold text-emerald-300"><span class="h-2 w-2 rounded-full bg-emerald-300"></span>Live</span>
                 </div>
                 <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                    <img src="{% static 'images/new-england-patriots.svg' %}" alt="New England Patriots" class="h-11 w-11 object-contain">
+                    <img src="{% static 'images/new-england-patriots.svg' %}" alt="New England Patriots" class="h-14 w-14 object-contain">
                     <span class="rounded-xl bg-white/10 px-3 py-2 text-lg font-black text-emerald-200">41-10</span>
-                    <img src="{% static 'images/dallas-cowboys.svg' %}" alt="Dallas Cowboys" class="ml-auto h-11 w-11 object-contain opacity-80">
+                    <img src="{% static 'images/dallas-cowboys.svg' %}" alt="Dallas Cowboys" class="ml-auto h-14 w-14 object-contain opacity-80">
                 </div>
             </div>
             <div class="landing-actions mt-9 flex flex-col gap-3 sm:flex-row">
@@ -86,7 +86,7 @@
             <div class="absolute left-1/2 top-0 h-[480px] w-[320px] -translate-x-1/2 rounded-full border border-white/10 opacity-40"></div>
             <div class="absolute left-1/2 top-12 h-[390px] w-[260px] -translate-x-1/2 rounded-full border border-emerald-300/20 opacity-60"></div>
 
-            <div class="broadcast-scoreboard absolute left-1/2 -top-6 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
+            <div class="broadcast-scoreboard absolute left-1/2 -top-24 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
                 <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
                     <div class="text-xs font-black uppercase tracking-[0.28em] text-slate-400">Sunday board</div>
                     <div class="flex items-center gap-2 text-xs font-bold text-emerald-300">
@@ -94,9 +94,9 @@
                         Live
                     </div>
                 </div>
-                <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-8">
+                <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-6">
                     <div class="text-left">
-                        <img src="{% static 'images/new-england-patriots.svg' %}" alt="New England Patriots" class="h-16 w-16 object-contain">
+                        <img src="{% static 'images/new-england-patriots.svg' %}" alt="New England Patriots" class="h-20 w-20 object-contain">
                         <div class="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Picked by 9</div>
                     </div>
                     <div class="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center">
@@ -104,7 +104,7 @@
                         <div class="mt-1 text-2xl font-black text-emerald-200">41-10</div>
                     </div>
                     <div class="text-right">
-                        <img src="{% static 'images/dallas-cowboys.svg' %}" alt="Dallas Cowboys" class="ml-auto h-16 w-16 object-contain opacity-75">
+                        <img src="{% static 'images/dallas-cowboys.svg' %}" alt="Dallas Cowboys" class="ml-auto h-20 w-20 object-contain opacity-75">
                         <div class="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Picked by 1</div>
                     </div>
                 </div>
@@ -117,11 +117,11 @@
                 </div>
                 <div class="mt-5 space-y-3">
                     <div class="flex items-center justify-between rounded-2xl bg-slate-950 px-4 py-3 text-white">
-                        <img src="{% static 'images/new-england-patriots.svg' %}" alt="New England Patriots" class="h-7 w-7 object-contain">
+                        <img src="{% static 'images/new-england-patriots.svg' %}" alt="New England Patriots" class="h-10 w-10 object-contain">
                         <span class="text-sm font-bold text-emerald-300">+31</span>
                     </div>
                     <div class="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3 text-slate-500">
-                        <img src="{% static 'images/dallas-cowboys.svg' %}" alt="Dallas Cowboys" class="h-7 w-7 object-contain opacity-70">
+                        <img src="{% static 'images/dallas-cowboys.svg' %}" alt="Dallas Cowboys" class="h-10 w-10 object-contain opacity-70">
                         <span class="text-sm font-bold">0</span>
                     </div>
                 </div>
@@ -196,6 +196,36 @@
                     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-yellow-300/10 text-yellow-300"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i></span>
                     <div><div class="text-lg font-bold text-white">Give the week a personality</div><p class="mt-1 text-sm leading-6 text-slate-300">Keep commissioner messages separate from the optional AI recap, then let the family carry the conversation on the message board.</p></div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="landing-section relative z-10 bg-slate-100 px-5 py-20 text-slate-950 sm:px-8 lg:px-10">
+        <div class="mx-auto max-w-7xl">
+            <div class="max-w-3xl">
+                <div class="text-sm font-black uppercase tracking-[0.24em] text-sky-600">More than a weekly form</div>
+                <h2 class="mt-4 text-4xl font-black leading-tight sm:text-5xl">The game-day rhythm is already built in.</h2>
+                <p class="mt-5 text-lg leading-8 text-slate-600">Family Pick'em keeps the season moving before, during, and after the games—without asking the commissioner to run a second job.</p>
+            </div>
+            <div class="mt-12 grid gap-5 lg:grid-cols-3">
+                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-sky-700"><i class="fas fa-clipboard-check text-xl" aria-hidden="true"></i></div>
+                    <div class="mt-8 text-xs font-black uppercase tracking-[0.22em] text-sky-600">Before kickoff</div>
+                    <h3 class="mt-3 text-2xl font-black">Pick with purpose.</h3>
+                    <p class="mt-3 leading-7 text-slate-600">Private pools, clear deadlines, and league rules make every selection feel like it matters.</p>
+                </article>
+                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><i class="fas fa-chart-line text-xl" aria-hidden="true"></i></div>
+                    <div class="mt-8 text-xs font-black uppercase tracking-[0.22em] text-emerald-600">On Sunday</div>
+                    <h3 class="mt-3 text-2xl font-black">Watch the room move.</h3>
+                    <p class="mt-3 leading-7 text-slate-600">Live scores, submitted picks, and standings turn every touchdown into a new conversation.</p>
+                </article>
+                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><i class="fas fa-bullhorn text-xl" aria-hidden="true"></i></div>
+                    <div class="mt-8 text-xs font-black uppercase tracking-[0.22em] text-amber-600">After the final whistle</div>
+                    <h3 class="mt-3 text-2xl font-black">Make the week memorable.</h3>
+                    <p class="mt-3 leading-7 text-slate-600">Post the commissioner’s take, share an optional AI recap, and let the family message board handle the rest.</p>
+                </article>
             </div>
         </div>
     </section>
