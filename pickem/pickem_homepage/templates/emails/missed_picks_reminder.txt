@@ -1,0 +1,12 @@
+Family Pick'em
+
+You still have picks to make before kickoff.
+{% for entry in bundle %}
+{{ entry.family.name }} - {{ entry.pool.name }} ({{ entry.missing_games|length }} game{{ entry.missing_games|length|pluralize }} still open)
+Picks page: {{ entry.picks_link }}
+{% for game in entry.missing_games %}
+- {{ game.startTimestamp|date:"D, M j g:i A T" }}: {{ game.awayTeamName }} at {{ game.homeTeamName }}
+{% endfor %}
+{% endfor %}
+You are receiving this because email notifications are enabled on your profile and your account is active.
+{% if preview %}This is a preview email generated from the superadmin console.{% endif %}
