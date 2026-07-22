@@ -565,19 +565,28 @@ def send_missed_picks_preview_email(*, to_email, sample_user_email='', now=None)
     )
 
 
-def send_due_email_campaigns(*, now=None, force_weekly_picks=False):
-    now = now or timezone.now()
-    campaign = EmailNotificationCampaign.load_weekly_picks()
-    if not campaign.enabled and not force_weekly_picks:
-        return {'campaigns': []}
+def _mark_campaign_sent(campaign, *, target, now, sent_count):
+    """Record a successful evaluation so the campaign doesn't re-fire for the
+    same week. Only called when sent_count > 0 — a zero-send tick (provider
+    outage, empty eligible set) must leave the campaign retryable within the
+    window, never permanently suppress it."""
+    campaign.last_sent_season = target['season']
+    campaign.last_sent_week = target['week']
+    campaign.last_sent_at = now
+    campaign.last_sent_count = sent_count
+    campaign.save(update_fields=[
+        'last_sent_season', 'last_sent_week', 'last_sent_at', 'last_sent_count', 'updated_at',
+    ])
 
-    target = _campaign_due(
-        campaign,
-        now=now,
-        ignore_clock=force_weekly_picks,
-    )
+
+def _run_weekly_picks_campaign(*, now, force):
+    campaign = EmailNotificationCampaign.load_weekly_picks()
+    if not campaign.enabled and not force:
+        return None
+
+    target = _campaign_due(campaign, now=now, ignore_clock=force)
     if target is None:
-        return {'campaigns': []}
+        return None
 
     recipients = _eligible_weekly_picks_users(campaign)
     sent = 0
@@ -593,18 +602,8 @@ def send_due_email_campaigns(*, now=None, force_weekly_picks=False):
         else:
             skipped.append({'email': user.email, 'reason': result.get('reason', 'unknown')})
 
-    # Only mark the week sent when at least one email actually went out:
-    # marking it on a zero-send (provider outage, empty eligible set) would
-    # permanently suppress the week's reminder. While sent == 0 the campaign
-    # stays due and retries on the next scheduler tick until the window closes.
     if sent > 0:
-        campaign.last_sent_season = target['season']
-        campaign.last_sent_week = target['week']
-        campaign.last_sent_at = now
-        campaign.last_sent_count = sent
-        campaign.save(update_fields=[
-            'last_sent_season', 'last_sent_week', 'last_sent_at', 'last_sent_count', 'updated_at',
-        ])
+        _mark_campaign_sent(campaign, target=target, now=now, sent_count=sent)
 
     logger.info(
         'Weekly picks campaign evaluated.',
@@ -614,18 +613,81 @@ def send_due_email_campaigns(*, now=None, force_weekly_picks=False):
             'week': target['week'],
             'sent_count': sent,
             'skipped': skipped,
-            'forced': force_weekly_picks,
+            'forced': force,
         },
     )
     return {
-        'campaigns': [{
+        'campaign_key': campaign.campaign_key,
+        'season': target['season'],
+        'week': target['week'],
+        'sent_count': sent,
+        'skipped': skipped,
+    }
+
+
+def _run_missed_picks_campaign(*, now, force):
+    campaign = EmailNotificationCampaign.load_missed_picks_reminder()
+    if not campaign.enabled and not force:
+        return None
+
+    target = _campaign_due(campaign, now=now, ignore_clock=force)
+    if target is None:
+        return None
+
+    recipients = _eligible_campaign_users(campaign)
+    sent = 0
+    skipped = []
+    for user in recipients:
+        bundle = _user_pools_with_missing_picks(user, target=target)
+        if not bundle:
+            continue
+        result = _send_missed_picks_reminder(
+            user=user,
+            recipient_email=user.email,
+            bundle=bundle,
+        )
+        if result['status'] == 'sent':
+            sent += 1
+        else:
+            skipped.append({'email': user.email, 'reason': result.get('reason', 'unknown')})
+
+    if sent > 0:
+        _mark_campaign_sent(campaign, target=target, now=now, sent_count=sent)
+
+    logger.info(
+        'Missed picks reminder campaign evaluated.',
+        extra={
             'campaign_key': campaign.campaign_key,
             'season': target['season'],
             'week': target['week'],
             'sent_count': sent,
             'skipped': skipped,
-        }],
+            'forced': force,
+        },
+    )
+    return {
+        'campaign_key': campaign.campaign_key,
+        'season': target['season'],
+        'week': target['week'],
+        'sent_count': sent,
+        'skipped': skipped,
     }
+
+
+def send_due_email_campaigns(*, now=None, force_weekly_picks=False, force_missed_picks=False):
+    now = now or timezone.now()
+    campaigns = []
+
+    weekly_result = _run_weekly_picks_campaign(now=now, force=force_weekly_picks)
+    if weekly_result is not None:
+        campaigns.append(weekly_result)
+
+    missed_picks_result = _run_missed_picks_campaign(now=now, force=force_missed_picks)
+    if missed_picks_result is not None:
+        campaigns.append(missed_picks_result)
+
+    return {'campaigns': campaigns}
+
 
 def resend_invite_email_is_configured():
     config = _invite_email_config()

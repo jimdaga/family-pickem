@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
@@ -767,6 +767,82 @@ class MissedPicksReminderTests(TestCase):
 
         self.assertEqual(result['status'], 'skipped')
         self.assertEqual(result['reason'], 'no_sample_user')
+
+    def test_send_due_email_campaigns_includes_missed_picks_when_due(self):
+        september_9_2026 = timezone.make_aware(datetime(2026, 9, 9, 13, 5))
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_due'}
+
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_due_email_campaigns(now=september_9_2026)
+
+        campaign_keys = {row['campaign_key'] for row in result['campaigns']}
+        self.assertIn(EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER, campaign_keys)
+        missed_row = next(
+            row for row in result['campaigns']
+            if row['campaign_key'] == EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER
+        )
+        self.assertEqual(missed_row['sent_count'], 1)
+        self.campaign.refresh_from_db()
+        self.assertEqual(self.campaign.last_sent_season, 2627)
+        self.assertEqual(self.campaign.last_sent_week, 1)
+
+    def test_send_due_email_campaigns_does_not_resend_missed_picks_same_week(self):
+        september_9_2026 = timezone.make_aware(datetime(2026, 9, 9, 13, 5))
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_first'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            send_due_email_campaigns(now=september_9_2026)
+
+        resend_mock.Emails.send.reset_mock()
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_due_email_campaigns(now=september_9_2026 + timedelta(minutes=15))
+
+        missed_rows = [
+            row for row in result['campaigns']
+            if row['campaign_key'] == EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER
+        ]
+        self.assertEqual(missed_rows, [])
+        resend_mock.Emails.send.assert_not_called()
+
+    def test_send_due_email_campaigns_skips_users_with_nothing_outstanding(self):
+        # A user with every game picked must not receive an email at all.
+        GamePicks.objects.create(
+            id=f'{self.pool.id}-{self.user.id}-{self.open_game.id}',
+            pool=self.pool, userEmail=self.user.email, uid=self.user.id,
+            userID=str(self.user.id), slug=self.open_game.slug, competition='nfl',
+            gameWeek='1', gameyear='2026', gameseason=2627,
+            pick_game_id=self.open_game.id, pick='packers',
+        )
+        september_9_2026 = timezone.make_aware(datetime(2026, 9, 9, 13, 5))
+        resend_mock = Mock()
+
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_due_email_campaigns(now=september_9_2026)
+
+        # The campaign row is still reported (it was due and evaluated), same
+        # as the weekly-picks campaign reports a sent_count=0 row rather than
+        # disappearing on a zero-send tick (see test_failed_send_does_not_mark_week_as_sent) —
+        # but the one eligible user has nothing outstanding, so no email goes out.
+        missed_row = next(
+            row for row in result['campaigns']
+            if row['campaign_key'] == EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER
+        )
+        self.assertEqual(missed_row['sent_count'], 0)
+        resend_mock.Emails.send.assert_not_called()
+
+    def test_force_missed_picks_bypasses_schedule_and_enabled_flag(self):
+        self.campaign.enabled = False
+        self.campaign.save(update_fields=['enabled'])
+        july_17_2026 = timezone.make_aware(datetime(2026, 7, 17, 12, 0))
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'forced'}
+
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_due_email_campaigns(now=july_17_2026, force_missed_picks=True)
+
+        campaign_keys = {row['campaign_key'] for row in result['campaigns']}
+        self.assertIn(EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER, campaign_keys)
 
 
 class EmailEnvironmentFallbackTests(TestCase):
