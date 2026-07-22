@@ -3051,13 +3051,9 @@ def public_info(request, page):
     if page_context is None:
         raise Http404('Public page not found')
 
-    from pickem_superadmin.models import EmailProviderSettings
-
-    email_settings = EmailProviderSettings.current()
-    contact_email = (email_settings.reply_to_email or '').strip() if email_settings else ''
     return render(request, 'pickem/public_info.html', {
         'page': page,
-        'contact_email': contact_email,
+        'contact_email': 'familypickem@gmail.com',
         **page_context,
     })
 
