@@ -43,6 +43,18 @@ class EmailProviderSettingsModelTests(TestCase):
         self.assertEqual(settings_obj.masked_api_key, '')
 
 
+class EmailNotificationCampaignModelTests(TestCase):
+    def test_load_missed_picks_reminder_is_a_distinct_singleton(self):
+        weekly = EmailNotificationCampaign.load_weekly_picks()
+        missed = EmailNotificationCampaign.load_missed_picks_reminder()
+
+        self.assertNotEqual(weekly.pk, missed.pk)
+        self.assertEqual(missed.campaign_key, EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER)
+        # Idempotent: loading again returns the same row, not a new one.
+        again = EmailNotificationCampaign.load_missed_picks_reminder()
+        self.assertEqual(missed.pk, again.pk)
+
+
 class EmailSettingsViewTests(TestCase):
     def setUp(self):
         self.root = User.objects.create_superuser(
