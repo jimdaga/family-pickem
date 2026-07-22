@@ -83,7 +83,7 @@
             <div class="absolute left-1/2 top-0 h-[480px] w-[320px] -translate-x-1/2 rounded-full border border-white/10 opacity-40"></div>
             <div class="absolute left-1/2 top-12 h-[390px] w-[260px] -translate-x-1/2 rounded-full border border-emerald-300/20 opacity-60"></div>
 
-            <div class="broadcast-scoreboard absolute left-1/2 -top-12 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
+            <div class="broadcast-scoreboard absolute left-1/2 -top-10 w-[min(92vw,460px)] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/15 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl">
                 <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
                     <div class="text-xs font-black uppercase tracking-[0.28em] text-slate-400">Sunday board</div>
                     <div class="flex items-center gap-2 text-xs font-bold text-emerald-300">
@@ -253,10 +253,11 @@
                 <p class="mt-2 max-w-xl text-sm leading-6 text-text-secondary-light dark:text-text-secondary">Private pools, live NFL context, and a little more family bragging rights.</p>
             </div>
             <div class="flex flex-wrap gap-3 text-sm font-bold text-text-dark dark:text-text-primary">
-                <a href="#why-family-pickem" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">About Family Pick'em</a>
-                <a href="#how-it-works" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">How it works</a>
+                <a href="{% url 'public_about' %}" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">About Us</a>
+                <a href="{% url 'public_terms' %}" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">Terms of Use</a>
                 <a href="{% url 'global_leaderboard' %}" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">Leaderboard</a>
-                <a href="{% url 'account_login' %}" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">Sign in</a>
+                <a href="{% url 'public_privacy' %}" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">Privacy Policy</a>
+                <a href="{% url 'public_contact' %}" class="rounded-full border border-border-light dark:border-border-subtle px-4 py-2 transition hover:border-primary hover:text-primary">Contact Us</a>
             </div>
         </div>
     </footer>

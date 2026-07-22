@@ -41,6 +41,10 @@ class RequireLoginForInternalPagesMiddleware:
     PUBLIC_EXACT_PATHS = {
         "/",
         "/public/",
+        "/about/",
+        "/contact/",
+        "/terms/",
+        "/privacy/",
         "/leaderboard/",
         "/favicon.ico",
         "/robots.txt",
