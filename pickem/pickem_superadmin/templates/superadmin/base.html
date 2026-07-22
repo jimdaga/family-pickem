@@ -34,7 +34,7 @@
       {% url 'superadmin:email_settings' as u_email %}
       <a href="{{ u_email }}" class="sa-tab {% if '/email' in request.path %}sa-tab-active{% endif %}">email</a>
       {% url 'superadmin:ai_settings' as u_ai %}
-      <a href="{{ u_ai }}" class="sa-tab {% if '/ai' in request.path %}sa-tab-active{% endif %}">AI</a>
+      <a href="{{ u_ai }}" class="sa-tab {% if '/ai' in request.path %}sa-tab-active{% endif %}">sideline</a>
       {% url 'superadmin:jobs' as u_jobs %}
       <a href="{{ u_jobs }}" class="sa-tab {% if '/jobs' in request.path %}sa-tab-active{% endif %}">jobs</a>
       {% url 'superadmin:logs' as u_logs %}

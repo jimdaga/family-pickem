@@ -104,7 +104,7 @@ class FamilyPublication(models.Model):
 
     class Source(models.TextChoices):
         COMMISSIONER = 'commissioner', 'Commissioner'
-        AI_WEEKLY_SUMMARY = 'ai_weekly_summary', 'AI weekly summary'
+        AI_WEEKLY_SUMMARY = 'ai_weekly_summary', 'Sideline'
 
     family = models.ForeignKey(
         'pickem_api.Family', on_delete=models.PROTECT, related_name='publications'

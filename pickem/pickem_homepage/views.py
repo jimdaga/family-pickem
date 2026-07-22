@@ -23,7 +23,7 @@ from .forms import (
     PickSubmissionForm,
     QuickCommentForm,
 )
-from .models import FamilyPublication, MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner
+from .models import AIWeeklySummaryRun, FamilyPublication, MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db import IntegrityError, transaction
@@ -1166,8 +1166,8 @@ def family_pool_home(request, family_slug, pool_slug):
     else:
         user_pick_status = 'complete'
 
-    # active_members feeds the lobby's member-count badge (its list section and
-    # the message-board teaser were removed; the board now has its own page).
+    # active_members feeds the lobby's member-count badge; the full roster
+    # list lives on its own page.
     active_members = (
         FamilyMembership.objects.filter(
             family=family,
@@ -1181,6 +1181,12 @@ def family_pool_home(request, family_slug, pool_slug):
         FamilyPublication.objects.filter(
             family=family, pool=pool, is_published=True
         ).select_related('author')[:5]
+    )
+    recent_message_posts = (
+        MessageBoardPost.objects.filter(family=family, is_active=True)
+        .select_related('user')
+        .prefetch_related('user__socialaccount_set')
+        .order_by('-is_pinned', '-created_at')[:4]
     )
 
     # The viewer's favorite-team logo for the lobby welcome badge.
@@ -1212,6 +1218,7 @@ def family_pool_home(request, family_slug, pool_slug):
         'user_pick_status': user_pick_status,
         'active_members': active_members,
         'publications': publications,
+        'recent_message_posts': recent_message_posts,
     }
     return render(request, 'pickem/family_pool_home.html', context)
 
@@ -3497,6 +3504,27 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
             'accuracy': accuracy,
             'weekly_points': weekly_points if weekly_points is not None else 0,
         }
+
+    # Sideline's recap is pool-scoped and keyed by week, so it's only ever
+    # shown on tenant pages -- there's no pool to look it up against on the
+    # public (non-tenant) scores view.
+    week_recap = None
+    if tenant_context and str(game_week).isdigit():
+        recap_run = (
+            AIWeeklySummaryRun.objects.filter(
+                pool=tenant_context.pool,
+                season=gameseason,
+                week=int(game_week),
+                status=AIWeeklySummaryRun.Status.SUCCESS,
+                publication__isnull=False,
+                publication__is_published=True,
+            )
+            .select_related('publication', 'publication__author')
+            .order_by('-created_at')
+            .first()
+        )
+        week_recap = recap_run.publication if recap_run else None
+
     template = loader.get_template('pickem/scores.html')
 
     context = {
@@ -3519,6 +3547,7 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
         'gameseason': gameseason,
         'user_weekly_stats': user_weekly_stats,
         'is_default_week': is_default_week,
+        'week_recap': week_recap,
         'family': tenant_context.family if tenant_context else None,
         'pool': tenant_context.pool if tenant_context else None,
         'membership': tenant_context.membership if tenant_context else None,
