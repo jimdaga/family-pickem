@@ -3019,6 +3019,49 @@ def public_home(request):
     return render(request, 'pickem/home.html', {'gameseason': get_season()})
 
 
+def public_info(request, page):
+    """Render the public information pages without requiring a league login."""
+    pages = {
+        'about': {
+            'title': "About Family Pick'em",
+            'eyebrow': 'About Family Pick\'em',
+            'heading': 'A better home for family football rivalries.',
+            'intro': "Family Pick'em brings the picks, scores, standings, and banter into one private place—so game day feels like a shared ritual instead of a spreadsheet and a frantic group chat.",
+        },
+        'terms': {
+            'title': 'Terms of Use',
+            'eyebrow': 'Terms of Use',
+            'heading': 'Simple rules for using Family Pick\'em.',
+            'intro': 'These terms explain the expectations for everyone who uses Family Pick\'em.',
+        },
+        'privacy': {
+            'title': 'Privacy Policy',
+            'eyebrow': 'Privacy Policy',
+            'heading': 'Your league should stay your league.',
+            'intro': 'This page explains what information Family Pick\'em uses to run private pools and how it is handled.',
+        },
+        'contact': {
+            'title': 'Contact Family Pick\'em',
+            'eyebrow': 'Contact',
+            'heading': 'Need a hand with Family Pick\'em?',
+            'intro': 'For a pool-specific question, your commissioner is usually the fastest person to help. For a site or account question, reach the Family Pick\'em team below.',
+        },
+    }
+    page_context = pages.get(page)
+    if page_context is None:
+        raise Http404('Public page not found')
+
+    from pickem_superadmin.models import EmailProviderSettings
+
+    email_settings = EmailProviderSettings.current()
+    contact_email = (email_settings.reply_to_email or '').strip() if email_settings else ''
+    return render(request, 'pickem/public_info.html', {
+        'page': page,
+        'contact_email': contact_email,
+        **page_context,
+    })
+
+
 def global_leaderboard(request):
     """Public site-wide leaderboard blending every pool for the current season.
 

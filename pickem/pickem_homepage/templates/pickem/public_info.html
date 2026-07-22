@@ -1,0 +1,69 @@
+{% extends 'pickem/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} — Family Pick'em{% endblock %}
+{% block main_navigation %}{% endblock %}
+{% block main_class %}min-h-screen bg-slate-950 text-white{% endblock %}
+{% block banner %}{% endblock %}
+
+{% block content %}
+<div class="relative isolate min-h-screen overflow-hidden bg-slate-950 text-white">
+    <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_76%_4%,rgba(14,165,233,0.22),transparent_30%),linear-gradient(145deg,#020617_0%,#07111f_48%,#0f172a_100%)]"></div>
+        <div class="absolute -left-32 top-40 h-96 w-96 rounded-full bg-emerald-300/10 blur-3xl"></div>
+    </div>
+
+    <header class="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
+        <a href="{% url 'public_home' %}" class="inline-flex items-center gap-3" aria-label="Family Pick'em public home">
+            <img src="{% static 'images/logo.png' %}" alt="Family Pick'em" class="h-10 w-10 rounded-xl object-contain shadow-lg shadow-sky-950/40">
+            <span class="hidden text-sm font-black uppercase tracking-[0.28em] text-slate-200 sm:inline">Family Pick'em</span>
+        </a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'index' %}" class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-slate-100"><i class="fas fa-users" aria-hidden="true"></i>Lobby</a>
+        {% else %}
+        <a href="{% url 'account_login' %}" class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-slate-100"><i class="fas fa-sign-in-alt" aria-hidden="true"></i>Sign in</a>
+        {% endif %}
+    </header>
+
+    <main class="relative z-10 mx-auto w-full max-w-5xl px-5 pb-20 pt-12 sm:px-8 sm:pt-20 lg:px-10">
+        <div class="max-w-3xl">
+            <div class="text-sm font-black uppercase tracking-[0.24em] text-sky-300">{{ eyebrow }}</div>
+            <h1 class="mt-5 text-4xl font-black leading-tight text-white sm:text-6xl">{{ heading }}</h1>
+            <p class="mt-6 text-lg leading-8 text-slate-300 sm:text-xl">{{ intro }}</p>
+        </div>
+
+        {% if page == 'about' %}
+        <div class="mt-14 grid gap-5 md:grid-cols-3">
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur"><i class="fas fa-lock text-2xl text-emerald-300" aria-hidden="true"></i><h2 class="mt-5 text-xl font-black">Private by design</h2><p class="mt-3 leading-7 text-slate-300">Every family has its own space for members, picks, messages, and standings.</p></section>
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur"><i class="fas fa-bolt text-2xl text-sky-300" aria-hidden="true"></i><h2 class="mt-5 text-xl font-black">Built for game day</h2><p class="mt-3 leading-7 text-slate-300">Scores, pick status, and league movement are easy to follow when the games are on.</p></section>
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur"><i class="fas fa-comments text-2xl text-amber-300" aria-hidden="true"></i><h2 class="mt-5 text-xl font-black">A league with a voice</h2><p class="mt-3 leading-7 text-slate-300">Commissioners can run the league while messages and recaps give each week a story.</p></section>
+        </div>
+        <section class="mt-12 rounded-3xl border border-white/15 bg-slate-900/70 p-8 sm:p-10"><h2 class="text-2xl font-black">What Family Pick'em is for</h2><p class="mt-4 max-w-3xl leading-8 text-slate-300">It is for the annual family league, the group that argues over upsets, and the commissioner who wants more fun with less manual work. Create a pool, invite your people, set the rules, and let the season unfold in one place.</p></section>
+
+        {% elif page == 'terms' %}
+        <div class="mt-14 space-y-5">
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-7"><h2 class="text-2xl font-black">Using the service</h2><p class="mt-3 leading-8 text-slate-300">Use Family Pick'em lawfully, respectfully, and only with an account you are authorized to use. Keep your sign-in credentials private and do not try to interfere with another family or pool.</p></section>
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-7"><h2 class="text-2xl font-black">Private leagues and content</h2><p class="mt-3 leading-8 text-slate-300">Commissioners and family administrators manage their own memberships, rules, announcements, and moderation. You remain responsible for the picks, posts, comments, and profile information you add.</p></section>
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-7"><h2 class="text-2xl font-black">For friendly competition</h2><p class="mt-3 leading-8 text-slate-300">Family Pick'em is a recreational pick'em service. It does not take bets, hold funds, or operate as a sportsbook. Any prizes or side arrangements in a private league are the responsibility of that league’s members.</p></section>
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-7"><h2 class="text-2xl font-black">Availability and changes</h2><p class="mt-3 leading-8 text-slate-300">We work to keep the service available and accurate, but game data, third-party services, and feature availability can change. We may update the service or these terms as it evolves.</p></section>
+        </div>
+
+        {% elif page == 'privacy' %}
+        <div class="mt-14 space-y-5">
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-7"><h2 class="text-2xl font-black">Information used to run your league</h2><p class="mt-3 leading-8 text-slate-300">When you sign in, Family Pick'em uses account information supplied through Google sign-in, such as your name, email address, and profile image. It also stores the picks, posts, comments, profile details, and family membership information needed to operate your pool.</p></section>
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-7"><h2 class="text-2xl font-black">How information is used</h2><p class="mt-3 leading-8 text-slate-300">Information is used to authenticate you, show your picks and standings, deliver invitations or league emails when enabled, maintain private family spaces, and protect the service. We do not sell personal information.</p></section>
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-7"><h2 class="text-2xl font-black">Service providers and optional AI recaps</h2><p class="mt-3 leading-8 text-slate-300">Family Pick'em relies on service providers for sign-in, hosting, game data, and email delivery. If a commissioner enables AI recaps, relevant pool results and standings may be sent to the configured AI provider to create that recap. The recap remains a separate, commissioner-controlled pool publication.</p></section>
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-7"><h2 class="text-2xl font-black">Your choices</h2><p class="mt-3 leading-8 text-slate-300">You can update your profile details and should contact your commissioner for pool membership questions. For site-level privacy questions, use the contact information on the Contact page.</p></section>
+        </div>
+
+        {% else %}
+        <div class="mt-14 grid gap-5 md:grid-cols-[1.25fr_0.75fr]">
+            <section class="rounded-3xl border border-white/15 bg-white/10 p-8"><h2 class="text-2xl font-black">Start with your commissioner</h2><p class="mt-4 leading-8 text-slate-300">Questions about an invitation, rules, picks, standings, or another member are usually best handled by the commissioner for that family pool.</p><h2 class="mt-8 text-2xl font-black">Contact the site team</h2>{% if contact_email %}<p class="mt-4 leading-8 text-slate-300">For account access, site reliability, or privacy questions, email us at:</p><a href="mailto:{{ contact_email }}" class="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 font-bold text-slate-950 transition hover:bg-slate-100"><i class="fas fa-envelope" aria-hidden="true"></i>{{ contact_email }}</a>{% else %}<p class="mt-4 leading-8 text-slate-300">A site support address has not been configured yet. Please contact your pool commissioner for help.</p>{% endif %}</section>
+            <aside class="rounded-3xl border border-sky-300/20 bg-sky-950/70 p-8"><div class="text-sm font-black uppercase tracking-[0.22em] text-sky-200">Helpful details</div><ul class="mt-5 space-y-4 text-slate-200"><li>Include the email address you use to sign in.</li><li>Include the family or pool name, if relevant.</li><li>Never send passwords, API keys, or invite codes you do not want shared.</li></ul></aside>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer class="relative z-10 border-t border-white/10 px-5 py-10 sm:px-8 lg:px-10"><div class="mx-auto flex max-w-5xl flex-wrap gap-3 text-sm font-bold text-slate-200"><a href="{% url 'public_about' %}" class="hover:text-sky-300">About Us</a><a href="{% url 'public_terms' %}" class="hover:text-sky-300">Terms of Use</a><a href="{% url 'public_privacy' %}" class="hover:text-sky-300">Privacy Policy</a><a href="{% url 'public_contact' %}" class="hover:text-sky-300">Contact Us</a><a href="{% url 'public_home' %}" class="hover:text-sky-300">Public home</a></div></footer>
+</div>
+{% endblock %}

@@ -8,6 +8,10 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('', views.index, name='index'),
     path('public/', views.public_home, name='public_home'),
+    path('about/', views.public_info, {'page': 'about'}, name='public_about'),
+    path('contact/', views.public_info, {'page': 'contact'}, name='public_contact'),
+    path('terms/', views.public_info, {'page': 'terms'}, name='public_terms'),
+    path('privacy/', views.public_info, {'page': 'privacy'}, name='public_privacy'),
     path('leaderboard/', views.global_leaderboard, name='global_leaderboard'),
     path('onboarding/', views.onboarding, name='onboarding'),
     path('families/create/', views.create_family, name='create_family'),
