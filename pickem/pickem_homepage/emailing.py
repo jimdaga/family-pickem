@@ -491,6 +491,80 @@ def _send_weekly_picks_email(*, user, recipient_email, target, preview=False):
     return {'status': 'sent', 'response': response}
 
 
+def _missed_picks_context(*, user, bundle, preview=False):
+    return {
+        'user': user,
+        'bundle': bundle,
+        'site_url': _site_base_url(),
+        'logo_url': _weekly_picks_email_logo_url(),
+        'preview': preview,
+    }
+
+
+def _send_missed_picks_reminder(*, user, recipient_email, bundle, preview=False):
+    config = _notification_email_config()
+    if not resend or not config or config['provider'] != EmailProviderSettings.Provider.RESEND:
+        return {'status': 'skipped', 'reason': 'not_configured'}
+
+    context = _missed_picks_context(user=user, bundle=bundle, preview=preview)
+    total_games = sum(len(entry['missing_games']) for entry in bundle)
+    params = {
+        'api_key': config['api_key'],
+        'from': config['from_email'],
+        'to': [recipient_email],
+        'subject': f"You have {total_games} pick(s) left before kickoff",
+        'html': render_to_string('emails/missed_picks_reminder.html', context),
+        'text': render_to_string('emails/missed_picks_reminder.txt', context),
+    }
+    if config['reply_to']:
+        params['reply_to'] = config['reply_to']
+    try:
+        response = _send_via_resend(params)
+    except Exception:
+        logger.exception(
+            'Failed to send missed picks reminder email.',
+            extra={'to_email': recipient_email, 'user_id': user.id, 'pool_count': len(bundle)},
+        )
+        return {'status': 'error', 'reason': 'send_failed'}
+    return {'status': 'sent', 'response': response}
+
+
+def send_missed_picks_preview_email(*, to_email, sample_user_email='', now=None):
+    now = now or timezone.now()
+    target = _get_weekly_target(now=now)
+    if target is None:
+        return {'status': 'skipped', 'reason': 'no_upcoming_week'}
+
+    sample_user, bundle = None, None
+    if sample_user_email:
+        candidate = User.objects.filter(email__iexact=sample_user_email.strip()).first()
+        if candidate is not None:
+            candidate_bundle = _user_pools_with_missing_picks(candidate, target=target)
+            if candidate_bundle:
+                sample_user, bundle = candidate, candidate_bundle
+
+    if sample_user is None:
+        # No explicit sample user, or they have nothing outstanding: fall back
+        # to the first eligible user who actually has a bundle to render, so
+        # the preview always shows real content.
+        campaign = EmailNotificationCampaign.load_missed_picks_reminder()
+        for candidate in _eligible_campaign_users(campaign):
+            candidate_bundle = _user_pools_with_missing_picks(candidate, target=target)
+            if candidate_bundle:
+                sample_user, bundle = candidate, candidate_bundle
+                break
+
+    if sample_user is None or not bundle:
+        return {'status': 'skipped', 'reason': 'no_sample_user'}
+
+    return _send_missed_picks_reminder(
+        user=sample_user,
+        recipient_email=to_email,
+        bundle=bundle,
+        preview=True,
+    )
+
+
 def send_due_email_campaigns(*, now=None, force_weekly_picks=False):
     now = now or timezone.now()
     campaign = EmailNotificationCampaign.load_weekly_picks()

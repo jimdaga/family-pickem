@@ -709,6 +709,65 @@ class MissedPicksReminderTests(TestCase):
 
         self.assertEqual(bundle, [])
 
+    def test_send_missed_picks_reminder_renders_all_pools_in_bundle(self):
+        from pickem_homepage.emailing import _send_missed_picks_reminder, _user_pools_with_missing_picks
+
+        other_pool = Pool.objects.create(
+            family=self.family, name='Side Pool', slug='side-pool', season=2627,
+        )
+        PoolSettings.objects.create(pool=other_pool)
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_1'}
+
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = _send_missed_picks_reminder(
+                user=self.user, recipient_email=self.user.email, bundle=bundle,
+            )
+
+        self.assertEqual(result['status'], 'sent')
+        params = resend_mock.Emails.send.call_args.args[0]
+        self.assertEqual(params['to'], [self.user.email])
+        self.assertIn('Main Pool', params['html'])
+        self.assertIn('Side Pool', params['html'])
+        self.assertIn('Chicago Bears', params['html'])
+
+    def test_send_missed_picks_preview_email_uses_sample_user(self):
+        from pickem_homepage.emailing import send_missed_picks_preview_email
+
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_preview'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            result = send_missed_picks_preview_email(
+                to_email='preview@example.com',
+                sample_user_email=self.user.email,
+                now=timezone.make_aware(datetime(2026, 9, 11, 12, 0)),
+            )
+
+        self.assertEqual(result['status'], 'sent')
+        params = resend_mock.Emails.send.call_args.args[0]
+        self.assertEqual(params['to'], ['preview@example.com'])
+        self.assertIn('This is a preview email', params['html'])
+
+    def test_send_missed_picks_preview_email_skips_when_no_one_has_missing_picks(self):
+        from pickem_homepage.emailing import send_missed_picks_preview_email
+
+        GamePicks.objects.create(
+            id=f'{self.pool.id}-{self.user.id}-{self.open_game.id}',
+            pool=self.pool, userEmail=self.user.email, uid=self.user.id,
+            userID=str(self.user.id), slug=self.open_game.slug, competition='nfl',
+            gameWeek='1', gameyear='2026', gameseason=2627,
+            pick_game_id=self.open_game.id, pick='packers',
+        )
+
+        result = send_missed_picks_preview_email(
+            to_email='preview@example.com',
+            now=timezone.make_aware(datetime(2026, 9, 11, 12, 0)),
+        )
+
+        self.assertEqual(result['status'], 'skipped')
+        self.assertEqual(result['reason'], 'no_sample_user')
+
 
 class EmailEnvironmentFallbackTests(TestCase):
     def test_send_test_email_skips_when_not_configured(self):
