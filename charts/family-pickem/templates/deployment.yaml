@@ -84,7 +84,7 @@ spec:
           {{- if .Values.healthchecks.enabled }}
           livenessProbe:
             httpGet:
-              path: /healthz/
+              path: /livez/
               port: http
             initialDelaySeconds: 25
           readinessProbe:

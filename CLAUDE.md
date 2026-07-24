@@ -314,7 +314,8 @@ Key routes (see `pickem/urls.py` and `pickem_homepage/views.py`):
 - `/stats/` - Player statistics
 - `/profile/<userid>/` - User profiles
 - `/rules/` - League rules
-- `/healthz/` - Liveness/readiness probe (DB connectivity check, no auth)
+- `/livez/` - Liveness probe (no DB dependency, no auth)
+- `/healthz/` - Readiness probe (DB connectivity check, no auth)
 - `/admin/` - Django admin panel
 
 ## Code Style Notes

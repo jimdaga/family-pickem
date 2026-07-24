@@ -49,6 +49,7 @@ class RequireLoginForInternalPagesMiddleware:
         "/favicon.ico",
         "/robots.txt",
         "/healthz/",
+        "/livez/",
     }
 
     def __init__(self, get_response):

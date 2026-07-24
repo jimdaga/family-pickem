@@ -25,6 +25,14 @@ services:
       # Set POSTGRES_PASSWORD in your shell or a top-level .env file before
       # running `docker-compose up`. An empty DB password is reachable from
       # any container on the `django` network.
+      #
+      # NOTE: Bitnami's image only applies POSTGRESQL_PASSWORD when it
+      # initializes an EMPTY postgresql_data volume. If you already have
+      # one from before this change (ALLOW_EMPTY_PASSWORD=yes), Postgres
+      # keeps its existing (no) password regardless of this var — either
+      # run `docker-compose down -v` once to reinitialize, or set the
+      # password on the running instance yourself (`ALTER USER postgres
+      # WITH PASSWORD ...`).
       - 'POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD (see docker-compose.yml)}'
     restart: unless-stopped
 

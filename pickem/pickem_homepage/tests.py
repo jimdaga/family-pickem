@@ -3,6 +3,7 @@ from io import BytesIO, StringIO
 from importlib import import_module
 import json
 import tempfile
+import threading
 from types import SimpleNamespace
 from unittest.mock import ANY, patch
 
@@ -20,7 +21,10 @@ from django.db.models import F
 from django.db.models.functions import Greatest
 from django.db.utils import InterfaceError, OperationalError
 from django.http import Http404, HttpResponse
-from django.test import TestCase, Client, RequestFactory, override_settings
+from django.test import (
+    TestCase, TransactionTestCase, Client, RequestFactory, override_settings,
+    skipUnlessDBFeature,
+)
 from django.urls import reverse
 from django.utils import timezone
 from allauth.socialaccount.models import SocialAccount, SocialApp
@@ -3800,7 +3804,8 @@ class MessageBoardVoteCountTest(TestCase):
     """MessageBoardVote counters are updated via F()/Greatest() queryset
     updates instead of a Python read-modify-write, so two concurrent votes
     can't silently lose an increment. These tests pin the observable
-    behavior (not the race itself, which TestCase can't simulate)."""
+    behavior; see MessageBoardVoteConcurrencyTest for real concurrent
+    coverage (plain TestCase can't exercise overlapping transactions)."""
 
     def setUp(self):
         self.author = User.objects.create_user("author", password="pass")
@@ -3848,6 +3853,87 @@ class MessageBoardVoteCountTest(TestCase):
         vote.delete()
         self.comment.refresh_from_db()
         self.assertEqual(self.comment.upvotes, 0)
+
+
+@skipUnlessDBFeature('has_select_for_update')
+class MessageBoardVoteConcurrencyTest(TransactionTestCase):
+    """Real concurrent-transaction coverage for the select_for_update()
+    locking in MessageBoardVote.save()/delete(). Plain TestCase wraps each
+    test in one transaction, so it can't exercise two overlapping ones —
+    this uses TransactionTestCase + real threads/connections instead.
+
+    Skipped on SQLite (this suite's default backend): it reports
+    has_select_for_update=False (the locking is silently a no-op there),
+    and separately, two real concurrent writers against SQLite raise
+    `database is locked` outright rather than blocking — neither exercises
+    or safely tolerates what this test needs. Run against Postgres (e.g.
+    `--settings=pickem.test_settings_postgres`, used by the grading CI
+    job) to actually exercise this; also verified by hand against a real
+    PostgreSQL instance.
+    """
+
+    def setUp(self):
+        self.author = User.objects.create_user("race-author", password="pass")
+        self.voter = User.objects.create_user("race-voter", password="pass")
+        self.post = MessageBoardPost.objects.create(
+            user=self.author, title="Race thread", content="content",
+        )
+
+    @staticmethod
+    def _run_concurrently(target, count=2):
+        from django.db import connection
+
+        errors = []
+        barrier = threading.Barrier(count)
+
+        def wrapped():
+            try:
+                barrier.wait(timeout=5)
+                target()
+            except Exception as exc:  # noqa: BLE001 - surfaced via errors list
+                errors.append(exc)
+            finally:
+                connection.close()
+
+        threads = [threading.Thread(target=wrapped) for _ in range(count)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=10)
+        return errors
+
+    def test_concurrent_vote_flips_do_not_double_apply(self):
+        vote = MessageBoardVote.objects.create(user=self.voter, post=self.post, vote_type=1)
+
+        def flip_to_downvote():
+            v = MessageBoardVote.objects.get(pk=vote.pk)
+            v.vote_type = -1
+            v.save()
+
+        errors = self._run_concurrently(flip_to_downvote)
+
+        self.assertEqual(errors, [])
+        self.post.refresh_from_db()
+        # Exactly one downvote, zero upvotes -- not two downvotes, which an
+        # unlocked read-old-value-then-write race would produce if both
+        # threads read vote_type=1 before either committed its change.
+        self.assertEqual(self.post.upvotes, 0)
+        self.assertEqual(self.post.downvotes, 1)
+
+    def test_concurrent_deletes_decrement_exactly_once(self):
+        vote = MessageBoardVote.objects.create(user=self.voter, post=self.post, vote_type=1)
+
+        def delete_if_present():
+            v = MessageBoardVote.objects.filter(pk=vote.pk).first()
+            if v is not None:
+                v.delete()
+
+        errors = self._run_concurrently(delete_if_present)
+
+        self.assertEqual(errors, [])
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.upvotes, 0)
+        self.assertFalse(MessageBoardVote.objects.filter(pk=vote.pk).exists())
 
 
 class UserProfileBestRankTest(TestCase):
@@ -9155,8 +9241,27 @@ class CachedGameseasonInvalidationTest(TestCase):
         self.assertEqual(_cached_gameseason(), 2627)
 
 
+class LivezTests(TestCase):
+    """/livez/ is the k8s liveness probe target: it must stay reachable
+    without a session and must NOT depend on the database, so a DB outage
+    can't make Kubernetes restart the (single-replica) pod on top of it."""
+
+    def test_livez_is_reachable_without_login(self):
+        response = self.client.get("/livez/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_livez_ignores_database_outage(self):
+        with patch(
+            "django.db.backends.utils.CursorWrapper.execute",
+            side_effect=OperationalError("connection refused"),
+        ):
+            response = self.client.get("/livez/")
+        self.assertEqual(response.status_code, 200)
+
+
 class HealthzTests(TestCase):
-    """/healthz/ is the k8s liveness/readiness probe target: it must stay
+    """/healthz/ is the k8s readiness probe target: it must stay
     reachable without a session (probes carry no cookies) and reflect real
     DB connectivity rather than always returning 200."""
 

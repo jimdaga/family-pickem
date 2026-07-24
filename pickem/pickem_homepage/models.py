@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.db.models import F
 from django.db.models.functions import Greatest
 from django.utils import timezone
@@ -333,21 +333,30 @@ class MessageBoardVote(models.Model):
     
     def save(self, *args, **kwargs):
         """Update vote counts when saving"""
-        # Check if this is an update to existing vote
         is_new = self.pk is None
-        old_vote = None
-        
-        if not is_new:
-            old_vote = MessageBoardVote.objects.get(pk=self.pk)
-        
-        super().save(*args, **kwargs)
-        
-        # Update vote counts on the target object
-        if self.post:
-            self._update_post_votes(old_vote)
-        elif self.comment:
-            self._update_comment_votes(old_vote)
-    
+
+        if is_new:
+            super().save(*args, **kwargs)
+            if self.post:
+                self._update_post_votes(None)
+            elif self.comment:
+                self._update_comment_votes(None)
+            return
+
+        # An update (vote_type flip): lock the existing row for the whole
+        # read-old-value + write-new-value + adjust-counters sequence, so
+        # two concurrent saves of the SAME vote (e.g. a rapid double
+        # submit) can't both read the same pre-change vote_type and each
+        # apply their own delta — that would double-apply one transition
+        # (e.g. two decrements of upvotes for a single upvote->downvote).
+        with transaction.atomic():
+            old_vote = MessageBoardVote.objects.select_for_update().get(pk=self.pk)
+            super().save(*args, **kwargs)
+            if self.post:
+                self._update_post_votes(old_vote)
+            elif self.comment:
+                self._update_comment_votes(old_vote)
+
     @staticmethod
     def _clamped_decrement(field):
         """A -1 update expression for `field` that floors at 0."""
@@ -355,23 +364,32 @@ class MessageBoardVote(models.Model):
 
     def delete(self, *args, **kwargs):
         """Update vote counts when deleting"""
-        # Store reference before deletion
-        target_post = self.post
-        target_comment = self.comment
-        vote_type = self.vote_type
+        # Lock the row for the same reason as save(): two concurrent
+        # deletes of the same vote must not both decrement the aggregate.
+        # select_for_update().first() (not .get()) so a vote already
+        # deleted by a concurrent request resolves to None here instead of
+        # raising DoesNotExist — in that case there's nothing left to
+        # decrement, so skip it rather than double-counting.
+        with transaction.atomic():
+            locked = MessageBoardVote.objects.select_for_update().filter(pk=self.pk).first()
+            if locked is None:
+                return
 
-        super().delete(*args, **kwargs)
+            target_post = locked.post
+            target_comment = locked.comment
+            vote_type = locked.vote_type
 
-        # Update vote counts
-        field = 'upvotes' if vote_type == 1 else 'downvotes'
-        if target_post:
-            MessageBoardPost.objects.filter(pk=target_post.pk).update(
-                **{field: self._clamped_decrement(field)}
-            )
-        elif target_comment:
-            MessageBoardComment.objects.filter(pk=target_comment.pk).update(
-                **{field: self._clamped_decrement(field)}
-            )
+            super().delete(*args, **kwargs)
+
+            field = 'upvotes' if vote_type == 1 else 'downvotes'
+            if target_post:
+                MessageBoardPost.objects.filter(pk=target_post.pk).update(
+                    **{field: self._clamped_decrement(field)}
+                )
+            elif target_comment:
+                MessageBoardComment.objects.filter(pk=target_comment.pk).update(
+                    **{field: self._clamped_decrement(field)}
+                )
 
     def _vote_count_updates(self, old_vote):
         """Build the {field: expression} update kwargs for a vote save.

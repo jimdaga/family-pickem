@@ -276,8 +276,10 @@ Key packages:
 - **django-bootstrap-v5** - Bootstrap integration (being phased out)
 - **espn-api** - NFL data integration
 - **boto3/django-storages** - AWS S3 for static files (production)
-- **django-ratelimit** - Rate limiting (production)
 - **Tailwind CSS** - Modern CSS framework (in migration)
+
+Rate limiting is handled at the Cloudflare edge, not in the Django app
+(`django-ratelimit` was removed).
 
 See `requirements.txt` for complete list.
 
@@ -299,7 +301,8 @@ Key routes (see `pickem/urls.py` and `pickem_homepage/views.py`):
 - `/stats/` - Player statistics
 - `/profile/<userid>/` - User profiles
 - `/rules/` - League rules
-- `/healthz/` - Liveness/readiness probe (DB connectivity check, no auth)
+- `/livez/` - Liveness probe (no DB dependency, no auth)
+- `/healthz/` - Readiness probe (DB connectivity check, no auth)
 - `/admin/` - Django admin panel
 
 ## Code Style Notes

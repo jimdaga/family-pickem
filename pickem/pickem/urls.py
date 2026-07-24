@@ -24,8 +24,22 @@ from pickem_api.models import currentSeason
 
 
 @require_GET
+def livez(request):
+    """Liveness probe: the process can handle a request, nothing else.
+
+    Deliberately has no DB dependency. A transient DB outage must not fail
+    liveness — that would make Kubernetes restart the pod, which does
+    nothing to fix the DB and adds restart churn during exactly the
+    incident this should tolerate (this app runs single-replica whenever
+    the in-process scheduler is enabled, so a restart is a full outage,
+    not a rolling one). Use /healthz/ for a DB-backed readiness check.
+    """
+    return JsonResponse({'status': 'ok'})
+
+
+@require_GET
 def healthz(request):
-    """Liveness/readiness probe target: DB connectivity, nothing else.
+    """Readiness probe target: DB connectivity, nothing else.
 
     Deliberately does not render the homepage (probes hitting `/` were
     running the full context-processor/query stack every ~10s for no
@@ -42,6 +56,7 @@ def healthz(request):
 
 
 urlpatterns = [
+    path('livez/', livez, name='livez'),
     path('healthz/', healthz, name='healthz'),
     path('', include('pickem_homepage.urls')),
     path('admin/', admin.site.urls),

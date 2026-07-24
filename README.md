@@ -39,7 +39,7 @@ is server-rendered Django templates styled with Tailwind CSS.
 
 Scheduled work (game syncs, standings recomputation, one-off admin jobs) runs through APScheduler
 against a Django-backed job store rather than as ad hoc scripts, so the same pipeline serves both
-automated cron behavior and on-demand jobs queued from the superadmin console.
+scheduler-driven automation and on-demand jobs queued from the superadmin console.
 
 ## Getting Started
 
