@@ -27,7 +27,7 @@
             </div>
             {% if user.is_authenticated %}
             <p class="text-sm font-semibold text-text-dark dark:text-white">
-                Agent {{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }}
+                Agent {{ user|display_name }}
             </p>
             {% endif %}
         </div>
@@ -316,10 +316,7 @@
                         <option value="">Choose a user...</option>
                         {% for user in active_users %}
                             <option value="{{ user.id }}" data-username="{{ user.username }}" data-email="{{ user.email }}">
-                                {{ user.username }}
-                                {% if user.first_name or user.last_name %}
-                                    ({{ user.first_name }} {{ user.last_name }})
-                                {% endif %}
+                                {{ user.username }} ({{ user.email }})
                             </option>
                         {% endfor %}
                     </select>

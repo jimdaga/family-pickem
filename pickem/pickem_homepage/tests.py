@@ -3039,7 +3039,9 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pickem/user_profile.html")
-        self.assertContains(response, "smith-profile-player")
+        # display_name titles the username for display ("smith-profile-player"
+        # -> "Smith-profile-player").
+        self.assertContains(response, "Smith-profile-player")
         self.assertContains(response, "33")
         self.assertContains(response, "Smith Family")
         self.assertNotContains(response, "jones-profile-player")
@@ -8825,3 +8827,212 @@ class FamilyPublicationTests(FamilyAdminExperienceTests):
         )
         self.assertIsNone(publication.author)
         self.assertEqual(publication.generation_reference, 'run-123')
+
+
+class DisplayNameFilterTests(TestCase):
+    """The display_name filter is the single source of truth for player names,
+    and it must resolve to the username — never first_name or the OAuth given
+    name (issue #127)."""
+
+    @staticmethod
+    def _display_name(user):
+        from pickem_homepage.templatetags.pickem_homepage_extras import display_name
+        return display_name(user)
+
+    def test_returns_username_not_first_name(self):
+        # Distinct first name proves the filter never reaches for it. The site's
+        # capfirst display convention titles the first letter only.
+        user = User.objects.create_user(
+            "coolcat", email="c@example.com", password="x", first_name="Jim"
+        )
+        self.assertEqual(self._display_name(user), "Coolcat")
+
+    def test_ignores_oauth_given_name(self):
+        user = User.objects.create_user(
+            "coolcat", email="c@example.com", password="x", first_name="Jim"
+        )
+        SocialAccount.objects.create(
+            user=user, provider="google", uid="g-1",
+            extra_data={"given_name": "Jim"},
+        )
+        # Even with a social given_name present, the username wins.
+        self.assertEqual(self._display_name(user), "Coolcat")
+
+    def test_falls_back_to_email_prefix_when_username_blank(self):
+        user = User.objects.create_user(
+            "placeholder", email="someone@example.com", password="x"
+        )
+        user.username = ""
+        self.assertEqual(self._display_name(user), "Someone")
+
+    def test_empty_user_returns_empty_string(self):
+        self.assertEqual(self._display_name(None), "")
+
+
+class SignupUsernameFlagTests(TestCase):
+    """A brand-new signup is flagged as needing a username; ordinary user
+    creation (tests, management commands) is not."""
+
+    def test_signup_signal_flags_profile_unconfirmed(self):
+        from allauth.account.signals import user_signed_up
+        user = User.objects.create_user("jim-1", email="jim@example.com", password="x")
+
+        user_signed_up.send(sender=User, request=None, user=user)
+
+        profile = UserProfile.objects.get(user=user)
+        self.assertFalse(profile.username_confirmed)
+
+    def test_plain_user_creation_is_not_flagged(self):
+        # No signal fired => no profile, and the field default keeps them ungated.
+        user = User.objects.create_user("plainuser", email="p@example.com", password="x")
+        self.assertFalse(UserProfile.objects.filter(user=user).exists())
+        # A profile created later defaults to confirmed.
+        profile = UserProfile.objects.create(user=user)
+        self.assertTrue(profile.username_confirmed)
+
+
+class RequireUsernameGateTests(TestCase):
+    """Only users flagged as unconfirmed are forced to the username picker."""
+
+    def setUp(self):
+        self.client = Client()
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        self.choose_url = reverse("choose_username")
+
+    def _login(self, username, *, confirmed):
+        user = User.objects.create_user(
+            username, email=f"{username}@example.com", password="x"
+        )
+        UserProfile.objects.create(user=user, username_confirmed=confirmed)
+        self.client.force_login(user)
+        return user
+
+    def test_unconfirmed_user_is_redirected_to_picker(self):
+        self._login("jim-1", confirmed=False)
+        response = self.client.get(reverse("profile"))
+        self.assertRedirects(response, self.choose_url, fetch_redirect_response=False)
+
+    def test_confirmed_user_passes_through(self):
+        self._login("chosen", confirmed=True)
+        response = self.client.get(reverse("profile"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_user_without_profile_passes_through(self):
+        user = User.objects.create_user("noprofile", email="n@example.com", password="x")
+        self.client.force_login(user)
+        response = self.client.get(reverse("profile"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_picker_itself_is_reachable_while_unconfirmed(self):
+        self._login("jim-1", confirmed=False)
+        response = self.client.get(self.choose_url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_xhr_request_gets_403_not_redirect(self):
+        self._login("jim-1", confirmed=False)
+        response = self.client.get(
+            reverse("profile"), HTTP_X_REQUESTED_WITH="XMLHttpRequest"
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_unconfirmed_user_can_still_log_out(self):
+        # Logout must not be swallowed by the gate, or a new user could get
+        # stuck on the picker with no escape.
+        self._login("jim-1", confirmed=False)
+        response = self.client.post(reverse("logout"))
+        self.assertNotIn(self.choose_url, response.get("Location", ""))
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+
+
+class ChooseUsernameViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        self.choose_url = reverse("choose_username")
+
+    def _login_unconfirmed(self, username="jim-1"):
+        user = User.objects.create_user(
+            username, email=f"{username}@example.com", password="x"
+        )
+        UserProfile.objects.create(user=user, username_confirmed=False)
+        self.client.force_login(user)
+        return user
+
+    def test_get_renders_form(self):
+        self._login_unconfirmed()
+        response = self.client.get(self.choose_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pickem/choose_username.html")
+
+    def test_valid_username_is_saved_and_confirmed(self):
+        user = self._login_unconfirmed()
+        response = self.client.post(self.choose_url, {"username": "coolcat"})
+        self.assertRedirects(response, reverse("index"), fetch_redirect_response=False)
+        user.refresh_from_db()
+        self.assertEqual(user.username, "coolcat")
+        self.assertTrue(user.profile.username_confirmed)
+
+    def test_duplicate_username_is_rejected_case_insensitively(self):
+        User.objects.create_user("taken", email="t@example.com", password="x")
+        user = self._login_unconfirmed()
+        response = self.client.post(self.choose_url, {"username": "TAKEN"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "already taken")
+        user.refresh_from_db()
+        self.assertEqual(user.username, "jim-1")
+        self.assertFalse(user.profile.username_confirmed)
+
+    def test_invalid_characters_are_rejected(self):
+        user = self._login_unconfirmed()
+        response = self.client.post(self.choose_url, {"username": "bad name"})
+        self.assertEqual(response.status_code, 200)
+        user.refresh_from_db()
+        self.assertEqual(user.username, "jim-1")
+
+    def test_too_short_username_is_rejected(self):
+        self._login_unconfirmed()
+        response = self.client.post(self.choose_url, {"username": "ab"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "at least")
+
+    def test_already_confirmed_user_is_bounced_to_index(self):
+        user = User.objects.create_user("done", email="d@example.com", password="x")
+        UserProfile.objects.create(user=user, username_confirmed=True)
+        self.client.force_login(user)
+        response = self.client.get(self.choose_url)
+        self.assertRedirects(response, reverse("index"), fetch_redirect_response=False)
+
+
+class UsernameTemplateRegressionTests(TestCase):
+    """Rendered pages must show the username, never the first name (issue #127)."""
+
+    DISTINCT_FIRST_NAME = "Zzfirstnamedistinct"
+
+    def setUp(self):
+        self.client = Client()
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        # The player being viewed carries a distinct first name that must never
+        # surface as their public identity.
+        self.target = User.objects.create_user(
+            "coolcat", email="coolcat@example.com", password="x",
+            first_name=self.DISTINCT_FIRST_NAME, last_name="Lastnamedistinct",
+        )
+        UserProfile.objects.create(user=self.target, username_confirmed=True)
+        # A confirmed viewer so the username gate lets the request through.
+        self.viewer = User.objects.create_user(
+            "viewer", email="viewer@example.com", password="x",
+        )
+        UserProfile.objects.create(user=self.viewer, username_confirmed=True)
+
+    def test_public_profile_shows_username_not_real_name(self):
+        self.client.force_login(self.viewer)
+        response = self.client.get(reverse("user_profile", args=[self.target.id]))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        # capfirst titles the username for display ("coolcat" -> "Coolcat").
+        self.assertIn("Coolcat", content)
+        self.assertNotIn(self.DISTINCT_FIRST_NAME, content)
+        self.assertNotIn("Lastnamedistinct", content)

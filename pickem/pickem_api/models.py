@@ -25,6 +25,16 @@ class UserProfile(models.Model):
     # Role Settings
     is_commissioner = models.BooleanField(default=False, help_text="User has commissioner privileges")
 
+    # Whether the user has chosen their own username rather than keeping the
+    # auto-generated one allauth mints at signup (which produces collisions like
+    # "Jim-1"). Defaults True so every pre-existing account and all test users are
+    # grandfathered; the allauth ``user_signed_up`` signal flips genuinely new
+    # signups to False, which the RequireUsername gate then forces them to resolve.
+    username_confirmed = models.BooleanField(
+        default=True,
+        help_text="User has chosen their own username (vs the auto-generated signup one)",
+    )
+
     # Site-wide block. Distinct from FamilyMembership.status, which only removes a
     # user from one family. Blocking sets User.is_active = False (which Django's
     # auth backend already refuses to log in) and records who/why/when here.

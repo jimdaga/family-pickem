@@ -6,7 +6,7 @@
 
 {% block mobile_title %}
     <div class="mobile-subtitle">
-        <i class="fas fa-user-circle mr-2"></i>{{ profile_user.first_name|default:profile_user.username }}'s Profile
+        <i class="fas fa-user-circle mr-2"></i>{{ profile_user|display_name }}'s Profile
     </div>
 {% endblock %}
 
@@ -30,7 +30,7 @@
                 <div class="min-w-0">
                     <p class="text-xs font-black uppercase tracking-wide text-primary">Player Profile</p>
                     <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-text-dark dark:text-white truncate">
-                        {{ profile_user.first_name|default:profile_user.username }} {{ profile_user.last_name }}
+                        {{ profile_user|display_name }}
                     </h1>
                     <div class="mt-1 flex flex-wrap items-center gap-2">
                         {% if user_profile.tagline %}
@@ -468,7 +468,7 @@
     {% if stats.years_playing == 0 %}
     <div class="bg-surface-light dark:bg-surface rounded-xl shadow-sm border border-border-light dark:border-border-subtle p-12 text-center">
         <i class="fas fa-chart-line text-6xl text-text-secondary-light dark:text-text-secondary mb-4"></i>
-        <h4 class="text-text-secondary-light dark:text-text-secondary text-xl font-semibold mb-2">{{ profile_user.first_name|default:profile_user.username }} hasn't started playing yet!</h4>
+        <h4 class="text-text-secondary-light dark:text-text-secondary text-xl font-semibold mb-2">{{ profile_user|display_name }} hasn't started playing yet!</h4>
         <p class="text-text-secondary-light dark:text-text-secondary">Come back after they've submitted some picks to see their stats.</p>
     </div>
     {% endif %}

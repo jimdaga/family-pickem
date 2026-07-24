@@ -14,6 +14,7 @@ urlpatterns = [
     path('privacy/', views.public_info, {'page': 'privacy'}, name='public_privacy'),
     path('leaderboard/', views.global_leaderboard, name='global_leaderboard'),
     path('onboarding/', views.onboarding, name='onboarding'),
+    path('choose-username/', views.choose_username, name='choose_username'),
     path('families/create/', views.create_family, name='create_family'),
     path('families/join/', views.join_family, name='join_family'),
     path('families/', views.family_picker, name='family_picker'),

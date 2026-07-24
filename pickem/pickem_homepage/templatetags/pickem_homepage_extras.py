@@ -1,6 +1,6 @@
 from django import template
-from django.contrib.auth.models import User
 from django.utils.text import capfirst
+from django.contrib.auth.models import User
 from pickem_api.models import Teams, GamePicks, userSeasonPoints, userStats, UserProfile, GamesAndScores
 from django.shortcuts import render
 from allauth.socialaccount.models import SocialAccount
@@ -73,23 +73,27 @@ def safe_markdown(value):
 
 @register.filter
 def display_name(user):
-    """Return a consistent display name for a Django user-like object."""
+    """Return the public display name for a Django user-like object.
+
+    The username is the single source of truth for how a player is shown across
+    the site (issue #127). We deliberately do NOT fall back to the OAuth
+    ``given_name`` or ``User.first_name`` — those produced inconsistent labels and
+    auto-generated collisions like "Jim-1". New users are forced to choose a
+    username at first login, so ``user.username`` is always something they own.
+    """
     if not user:
         return ""
 
-    name = ""
-    try:
-        social_account = user.socialaccount_set.first()
-        if social_account:
-            name = social_account.extra_data.get("given_name") or ""
-    except Exception:
-        name = ""
-
+    name = getattr(user, "username", "") or ""
     if not name:
-        name = getattr(user, "first_name", "") or getattr(user, "username", "") or ""
+        # Defensive fallback for user-like objects without a username (e.g. an
+        # email-only record); never surface a raw empty string in the UI.
+        email = getattr(user, "email", "") or ""
+        name = email.split("@")[0] if email else ""
 
     # capfirst uppercases only the first character, leaving the rest intact so
-    # names like "McCoy" are not mangled while "smith-player" reads as "Smith-player".
+    # names like "McCoy" are not mangled while "smith-player" reads as
+    # "Smith-player" — preserving the site's long-standing display convention.
     return capfirst(str(name).strip())
 
 @register.filter

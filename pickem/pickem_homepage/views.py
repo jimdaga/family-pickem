@@ -8,6 +8,7 @@ from django import forms
 from pickem_api.models import GamePicks
 from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile
 from .forms import (
+    ChooseUsernameForm,
     CreateFamilyForm,
     FamilyInviteCreateForm,
     FamilyAdminSettingsForm,
@@ -737,6 +738,34 @@ def render_invalid_invite(request, form=None, *, invite_code='', message=None):
 def onboarding(request):
     context = {'gameseason': get_season()}
     return render(request, 'pickem/onboarding.html', context)
+
+
+@login_required
+def choose_username(request):
+    """First-login username picker (issue #127).
+
+    New accounts arrive here via RequireUsernameMiddleware carrying an
+    auto-generated username (e.g. "Jim-1"). Once they claim a real one we set it
+    on the User and flip ``username_confirmed`` so the gate lets them through.
+    Users who have already confirmed skip this page entirely.
+    """
+    profile, _created = UserProfile.objects.get_or_create(user=request.user)
+    if profile.username_confirmed:
+        return redirect('index')
+
+    form = ChooseUsernameForm(request.POST or None, user=request.user)
+    if request.method == 'POST' and form.is_valid():
+        request.user.username = form.cleaned_data['username']
+        request.user.save(update_fields=['username'])
+        profile.username_confirmed = True
+        profile.save(update_fields=['username_confirmed'])
+        messages.success(request, "Your username is set. Welcome aboard!")
+        return redirect('index')
+
+    return render(request, 'pickem/choose_username.html', {
+        'form': form,
+        'gameseason': get_season(),
+    })
 
 
 @login_required

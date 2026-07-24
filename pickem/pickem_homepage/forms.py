@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import validate_email
@@ -6,6 +8,56 @@ from .models import FamilyPublication, MessageBoardPost, MessageBoardComment, Si
 
 
 MAX_CREATE_FAMILY_INVITES = 20
+
+USERNAME_MIN_LENGTH = 3
+USERNAME_MAX_LENGTH = 20
+# Letters, digits, and single internal separators. Deliberately narrower than
+# Django's default username validator so chosen handles read cleanly on the
+# leaderboard and can't be blank/whitespace-only.
+USERNAME_PATTERN = re.compile(r'^[A-Za-z0-9](?:[A-Za-z0-9_-]*[A-Za-z0-9])?$')
+
+
+class ChooseUsernameForm(forms.Form):
+    """Let a user claim their own public username at first login (issue #127)."""
+
+    username = forms.CharField(
+        label="Username",
+        max_length=USERNAME_MAX_LENGTH,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-surface px-4 py-3 text-slate-900 dark:text-text-primary placeholder-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
+            'placeholder': 'Pick a username',
+            'autocomplete': 'off',
+            'autofocus': 'autofocus',
+        }),
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        # ``user`` is the account being named — needed so an unchanged username
+        # (e.g. re-submitting the same value) does not collide with itself.
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_username(self):
+        username = (self.cleaned_data.get('username') or '').strip()
+        if len(username) < USERNAME_MIN_LENGTH:
+            raise forms.ValidationError(
+                f"Username must be at least {USERNAME_MIN_LENGTH} characters."
+            )
+        if not USERNAME_PATTERN.match(username):
+            raise forms.ValidationError(
+                "Use letters, numbers, hyphens, or underscores — no spaces, and "
+                "start and end with a letter or number."
+            )
+
+        # Case-insensitive uniqueness so "Jim" and "jim" can't both exist.
+        clash = User.objects.filter(username__iexact=username)
+        if self.user is not None:
+            clash = clash.exclude(pk=self.user.pk)
+        if clash.exists():
+            raise forms.ValidationError("That username is already taken.")
+
+        return username
 
 
 class JoinFamilyForm(forms.Form):
