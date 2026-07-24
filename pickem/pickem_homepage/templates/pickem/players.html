@@ -1,5 +1,6 @@
 {% extends 'pickem/base.html' %}
 {% load static %}
+{% load pickem_homepage_extras %}
 
 {% block title %}Players{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
 
@@ -44,7 +45,7 @@
                              alt="{{ player.username }}"
                              class="w-9 h-9 rounded-full border border-border-light dark:border-border-subtle group-hover:border-primary">
                         <div class="min-w-0">
-                            <div class="font-bold text-text-dark dark:text-white truncate">{{ player.first_name|default:player.username }} {{ player.last_name }}</div>
+                            <div class="font-bold text-text-dark dark:text-white truncate">{{ player|display_name }}</div>
                             <div class="text-sm text-text-secondary-light dark:text-text-secondary truncate">@{{ player.username }}</div>
                         </div>
                     </div>

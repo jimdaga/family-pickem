@@ -1,5 +1,6 @@
 {% extends 'pickem/base.html' %}
 {% load static %}
+{% load pickem_homepage_extras %}
 
 {% block title %}My Profile{% if family %} — {{ family.name }}{% else %} — Family Pick'em{% endif %}{% endblock %}
 
@@ -30,7 +31,7 @@
                 <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-surface rounded-full"></div>
             </div>
             <div>
-                <h1 class="text-xl font-bold text-text-dark dark:text-white">{{ user.socialaccount_set.all.0.extra_data.given_name|default:user.username }} {{ user.socialaccount_set.all.0.extra_data.family_name }}</h1>
+                <h1 class="text-xl font-bold text-text-dark dark:text-white">{{ user|display_name }}</h1>
                 <p class="text-sm text-text-secondary-light dark:text-text-secondary">{{ user.email }}</p>
             </div>
         </div>
