@@ -28,7 +28,7 @@ from pickem_api.models import (
 )
 
 #: Fixed synthetic season (YYZZ). Every factory and pipeline call pins this so
-#: ``get_season()`` (which hits the /api/currentseason endpoint) is never used.
+#: ``get_season()`` (which queries the ``currentSeason`` model) is never used.
 SEASON = 2526
 GAMEYEAR = "2025"
 

@@ -32,7 +32,7 @@ is server-rendered Django templates styled with Tailwind CSS.
 
 | Component | Responsibility |
 |---|---|
-| `pickem_api` | Core data models, DRF serializers/viewsets, and the cron jobs that sync scores, odds, and standings from external NFL data sources |
+| `pickem_api` | Core data models and the management-command pipeline that syncs scores, odds, and standings from external NFL data sources |
 | `pickem_homepage` | Player-facing views, forms, templates, and static assets (picks, standings, stats, message board) |
 | `pickem_superadmin` | Superuser-only operator console — pool/family/team administration, job queueing, audit log, banners |
 | `pickem` | Project settings, root URL routing, and shared utilities (season resolution, context processors) |
@@ -120,13 +120,14 @@ python manage.py shell             # Django shell
 Custom management commands: `createsu` (scripted superuser creation), `manage_banners`
 (site-wide banner management).
 
-Cron scripts can also be run manually against a target environment:
+The data pipeline's management commands can also be run manually:
 
 ```bash
-cd pickem/pickem_api
-python cron_update_games_v2.py --url localhost
-python cron_update_picks.py --url localhost
-python cron_update_standings.py --url localhost
+cd pickem
+python manage.py update_all         # full pipeline, in dependency order
+python manage.py update_games
+python manage.py update_picks
+python manage.py update_standings
 ```
 
 ## Deployment

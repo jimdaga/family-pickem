@@ -84,12 +84,12 @@ spec:
           {{- if .Values.healthchecks.enabled }}
           livenessProbe:
             httpGet:
-              path: /
+              path: /healthz/
               port: http
             initialDelaySeconds: 25
           readinessProbe:
             httpGet:
-              path: /
+              path: /healthz/
               port: http
             initialDelaySeconds: 25
           {{- end }}

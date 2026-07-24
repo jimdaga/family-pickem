@@ -7,6 +7,7 @@ to all templates for consistent dark mode functionality.
 
 from datetime import date
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import F, Q
 from django.urls import reverse
 from django.utils import timezone
@@ -216,6 +217,52 @@ def site_banner_context(request):
     }
 
 
+def _current_week_for_today():
+    """(current_week, competition) for today's date, per GameWeeks.
+
+    This only changes once per calendar day (a new week starts), so it's
+    cached for 60s instead of hitting GameWeeks on every single page load.
+    has_live_games / season_has_scored_games are deliberately NOT cached
+    here: they can change mid-Sunday (a game goes live, a score posts) and
+    the footer's rank/live-game display should reflect that promptly rather
+    than being up to 60s stale.
+    """
+    today_date = date.today().strftime("%Y-%m-%d")
+    cache_key = f'footer_stats:current_week:{today_date}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        week_obj = GameWeeks.objects.get(date=today_date)
+        result = (week_obj.weekNumber, week_obj.competition)
+    except GameWeeks.DoesNotExist:
+        result = ('1', 'nfl')
+
+    cache.set(cache_key, result, 60)
+    return result
+
+
+def _cached_gameseason():
+    """get_season() result, cached until the currentSeason row changes.
+
+    footer_stats_context runs on every request (it's a global context
+    processor), so this avoids a currentSeason query per page load. The
+    cache is invalidated immediately on write via a post_save/post_delete
+    signal on `currentSeason` (see PickemApiConfig.ready()), so a season
+    switch from the superadmin console takes effect right away rather than
+    waiting out a blind TTL — the 60s below is only a safety net.
+    """
+    cache_key = 'footer_stats:gameseason'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    result = get_season()
+    cache.set(cache_key, result, 60)
+    return result
+
+
 def footer_stats_context(request):
     """
     Context processor to inject footer stats into all templates.
@@ -233,18 +280,8 @@ def footer_stats_context(request):
     }
 
     try:
-        # Get current week
-        today = date.today()
-        today_date = today.strftime("%Y-%m-%d")
-        gameseason = get_season()
-
-        try:
-            week_obj = GameWeeks.objects.get(date=today_date)
-            current_week = week_obj.weekNumber
-            game_competition = week_obj.competition
-        except GameWeeks.DoesNotExist:
-            current_week = '1'
-            game_competition = 'nfl'
+        gameseason = _cached_gameseason()
+        current_week, game_competition = _current_week_for_today()
 
         context['current_week'] = current_week
         context['has_live_games'] = GamesAndScores.objects.filter(

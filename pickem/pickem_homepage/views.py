@@ -1,7 +1,7 @@
 from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.template import loader
 from django.core.validators import validate_email
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.exceptions import FieldError, ValidationError as DjangoValidationError
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from django import forms
@@ -2836,7 +2836,8 @@ def index(request):
     winner_object = f"week_{current_week}_winner"
     try:
         current_week_winner = userSeasonPoints.objects.filter(**{winner_object: True}, gameseason=gameseason).first()
-    except:
+    except FieldError:
+        logger.warning("index(): no such week-winner field %r", winner_object)
         current_week_winner = None
     
     # Get current week games
@@ -2852,11 +2853,6 @@ def index(request):
         gameseason=gameseason,
         startTimestamp__date=today
     ).order_by('startTimestamp')
-
-    # Get team records for today's games
-    wins_losses = []
-    if today_games.exists():
-        wins_losses = Teams.objects.filter(gameseason=gameseason)
 
     # Get total players count
     total_players = User.objects.filter(is_active=True, is_superuser=False).count()
@@ -2917,8 +2913,8 @@ def index(request):
                     'week': week_num,
                     'winner': winner
                 })
-        except:
-            pass
+        except FieldError:
+            logger.warning("index(): no such week-winner field %r", winner_field)
     
     # Check if user has submitted picks for current week
     user_has_picks = False
@@ -3025,7 +3021,6 @@ def index(request):
         'current_week_winner': current_week_winner,
         'current_games': current_games,
         'today_games': today_games,
-        'wins_losses': wins_losses,
         'total_players': total_players,
         'total_picks': total_picks,
         'total_correct_picks': total_correct_picks,
@@ -4277,16 +4272,28 @@ def render_user_profile(request, user_id, *, tenant_context=None):
         stats['total_lifetime_points'] = all_season_points.aggregate(
             total=Coalesce(Sum('total_points'), 0)
         )['total']
-        best_season = all_season_points.order_by('-total_points').first()
+        # Coalesce nulls to 0: Postgres sorts NULL total_points FIRST under
+        # DESC (SQLite sorts it last), so an unscored current-season row
+        # would otherwise outrank a real prior-season total in production.
+        best_season = all_season_points.annotate(
+            _total_points=Coalesce('total_points', 0)
+        ).order_by('-_total_points').first()
         if best_season:
-            stats['best_season_points'] = best_season.total_points or 0
-            season_standings = points_scope.filter(
+            best_points = best_season.total_points or 0
+            stats['best_season_points'] = best_points
+            # Rank via COUNT instead of fetching every standings row into
+            # Python: count rows that sort ahead under the same
+            # ('-total_points', 'userID') ordering (nulls treated as 0),
+            # then +1.
+            better_count = points_scope.filter(
                 gameseason=best_season.gameseason,
-            ).order_by('-total_points', 'userID')
-            for rank, standing in enumerate(season_standings, 1):
-                if standing.userID == str(user_id):
-                    stats['best_rank'] = rank
-                    break
+            ).annotate(
+                _points=Coalesce('total_points', 0)
+            ).filter(
+                Q(_points__gt=best_points)
+                | Q(_points=best_points, userID__lt=str(user_id))
+            ).count()
+            stats['best_rank'] = better_count + 1
         stats['weeks_won_total'] = sum(
             1
             for season in all_season_points
@@ -4317,6 +4324,17 @@ def render_user_profile(request, user_id, *, tenant_context=None):
         count=Count('pick')
     ).order_by('-count')
     total_picks = user_picks.count()
+    # -id: the dict comprehension keeps whichever row iterates LAST for a
+    # given slug, so descending order makes the lowest-id row win — matching
+    # the old per-slug `.first()` lookup this replaced (unordered .first()
+    # implicitly orders by pk ascending). Defensive: every current Teams
+    # write path upserts by id, so a slug collision shouldn't occur today.
+    teams_by_slug = {
+        team.teamNameSlug: team
+        for team in Teams.objects.filter(
+            teamNameSlug__in=[row['pick'] for row in team_pick_stats]
+        ).order_by('-id')
+    }
     modern_colors = [
         'rgba(99, 102, 241, 0.8)',
         'rgba(168, 85, 247, 0.8)',
@@ -4340,7 +4358,7 @@ def render_user_profile(request, user_id, *, tenant_context=None):
         team_slug = team_stat['pick']
         pick_count = team_stat['count']
         percentage = round((pick_count / total_picks) * 100, 1) if total_picks else 0
-        team = Teams.objects.filter(teamNameSlug=team_slug).first()
+        team = teams_by_slug.get(team_slug)
         display_name = team_abbreviations.get(team_slug, team_slug.replace('-', ' ').title())
         team_chart_data.append(percentage)
         team_chart_labels.append(display_name)

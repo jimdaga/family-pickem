@@ -7,7 +7,6 @@ from unittest.mock import patch
 from django.apps import apps
 from django.contrib import admin
 from django.core.management.base import CommandError
-from django.test import Client
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.db import IntegrityError
@@ -18,9 +17,6 @@ from pickem_api.models import (
     PoolSettings,
     UserProfile, Teams, GamesAndScores, GamePicks,
     userSeasonPoints, userPoints, GameWeeks, userStats, currentSeason,
-)
-from pickem_api.serializers import (
-    GameSerializer, currentSeasonSerializer, TeamsSerializer, GamePicksSerializer,
 )
 from pickem_api.authz import (
     AuthenticationRequired,
@@ -392,101 +388,6 @@ class TenantAuthorizationHelperTest(TestCase):
         self.assertEqual(get_legacy_default_pool(), legacy_pool)
 
 
-class TenantAuthorizationApiTest(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.family = Family.objects.create(name='Smith Family', slug='smith-family')
-        self.other_family = Family.objects.create(name='Jones Family', slug='jones-family')
-        self.pool = Pool.objects.create(
-            family=self.family,
-            name='Main Pickem',
-            slug='main',
-            season=2526,
-        )
-        self.member = User.objects.create_user('member', email='member@example.com', password='pass')
-        self.admin_user = User.objects.create_user('admin-member', email='admin@example.com', password='pass')
-        self.owner = User.objects.create_user('owner-member', email='owner@example.com', password='pass')
-        self.outsider = User.objects.create_user('outsider', email='outsider@example.com', password='pass')
-
-        FamilyMembership.objects.create(
-            family=self.family,
-            user=self.member,
-            role=FamilyMembership.Role.MEMBER,
-            status=FamilyMembership.Status.ACTIVE,
-        )
-        FamilyMembership.objects.create(
-            family=self.family,
-            user=self.admin_user,
-            role=FamilyMembership.Role.ADMIN,
-            status=FamilyMembership.Status.ACTIVE,
-        )
-        FamilyMembership.objects.create(
-            family=self.family,
-            user=self.owner,
-            role=FamilyMembership.Role.OWNER,
-            status=FamilyMembership.Status.ACTIVE,
-        )
-
-    def _url(self, family_slug='smith-family', pool_slug='main'):
-        return f'/api/families/{family_slug}/pools/{pool_slug}/authz-check/'
-
-    def test_api_authz_check_requires_authentication(self):
-        response = self.client.get(self._url())
-
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json()['detail'], 'Authentication required.')
-
-    def test_api_authz_check_returns_404_for_non_member(self):
-        self.client.force_login(self.outsider)
-
-        response = self.client.get(self._url())
-
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json()['detail'], 'Not found.')
-
-    def test_api_authz_check_returns_member_context_for_member(self):
-        self.client.force_login(self.member)
-
-        response = self.client.get(self._url())
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.json(),
-            {
-                'family': 'smith-family',
-                'pool': 'main',
-                'role': FamilyMembership.Role.MEMBER,
-            },
-        )
-
-    def test_api_authz_check_returns_403_for_wrong_role(self):
-        self.client.force_login(self.member)
-
-        response = self.client.get(self._url() + '?minimum_role=admin')
-
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['detail'], 'Permission denied.')
-
-    def test_api_authz_check_allows_admin_and_owner_for_admin_role(self):
-        for user in [self.admin_user, self.owner]:
-            self.client.force_login(user)
-            response = self.client.get(self._url() + '?minimum_role=admin')
-
-            self.assertEqual(response.status_code, 200)
-
-    def test_api_authz_check_returns_404_for_pool_family_mismatch(self):
-        Pool.objects.create(
-            family=self.other_family,
-            name='Other Main',
-            slug='other-main',
-            season=2526,
-        )
-        self.client.force_login(self.member)
-
-        response = self.client.get(self._url(pool_slug='other-main'))
-
-        self.assertEqual(response.status_code, 404)
-
 
 class LegacyPoolScopeModelTest(TestCase):
     def setUp(self):
@@ -823,78 +724,6 @@ class CurrentSeasonModelTest(TestCase):
     def test_get_display_season_none(self):
         cs = currentSeason.objects.create()
         self.assertEqual(cs.get_display_season(), 'None')
-
-
-class GameSerializerTest(TestCase):
-    def test_valid_data(self):
-        now = timezone.now()
-        game = GamesAndScores.objects.create(
-            id=200,
-            slug='bears-packers',
-            competition='nfl',
-            gameWeek='2',
-            gameyear='2025',
-            startTimestamp=now,
-            statusType='pre',
-            statusTitle='Scheduled',
-            homeTeamId=3,
-            homeTeamSlug='bears',
-            homeTeamName='Chicago Bears',
-            awayTeamId=4,
-            awayTeamSlug='packers',
-            awayTeamName='Green Bay Packers',
-        )
-        serializer = GameSerializer(game)
-        data = serializer.data
-        self.assertEqual(data['id'], 200)
-        self.assertEqual(data['slug'], 'bears-packers')
-        self.assertEqual(data['homeTeamName'], 'Chicago Bears')
-        self.assertEqual(data['awayTeamName'], 'Green Bay Packers')
-
-
-class UserProfileSerializerTest(TestCase):
-    def test_phone_number_is_not_serialized(self):
-        # Not wired to any view today, but attaching it later to a list/detail
-        # endpoint must not leak other users' phone numbers as a side effect.
-        from pickem_api.serializers import UserProfileSerializer
-
-        self.assertNotIn('phone_number', UserProfileSerializer.Meta.fields)
-
-
-class CurrentSeasonSerializerTest(TestCase):
-    def test_valid_data(self):
-        cs = currentSeason.objects.create(season=2526, display_name='2025-2026')
-        serializer = currentSeasonSerializer(cs)
-        data = serializer.data
-        self.assertEqual(data['season'], 2526)
-        self.assertEqual(data['display_name'], '2025-2026')
-
-
-class TeamsSerializerTest(TestCase):
-    def test_valid_data(self):
-        team = Teams.objects.create(
-            id=10, teamNameSlug='ravens', teamNameName='Baltimore Ravens',
-        )
-        serializer = TeamsSerializer(team)
-        data = serializer.data
-        self.assertEqual(data['id'], 10)
-        self.assertEqual(data['teamNameSlug'], 'ravens')
-        self.assertEqual(data['teamNameName'], 'Baltimore Ravens')
-        self.assertEqual(data['teamWins'], 0)
-
-
-class GamePicksSerializerTest(TestCase):
-    def test_valid_data(self):
-        pick = GamePicks.objects.create(
-            id='pick-ser-1', pick_game_id=300, userID='user1',
-            gameWeek='3', gameyear='2025', pick='eagles',
-        )
-        serializer = GamePicksSerializer(pick)
-        data = serializer.data
-        self.assertEqual(data['id'], 'pick-ser-1')
-        self.assertEqual(data['pick_game_id'], 300)
-        self.assertEqual(data['pick'], 'eagles')
-        self.assertNotIn('userEmail', data)
 
 
 class UpdateRecordsCommandTest(TestCase):
@@ -1721,93 +1550,14 @@ class UpdateAllCommandTest(TestCase):
         self.assertEqual(mock_call_command.call_count, len(PIPELINE))
 
 
-class VestigialApiWriteRemovalTests(TestCase):
-    def setUp(self):
-        self.client = Client()
-        currentSeason.objects.create(season=2526, display_name="2025-2026")
-        self.staff = User.objects.create_user(
-            username="api-staff", email="api-staff@example.com", password="pass", is_staff=True
-        )
-        self.client.force_login(self.staff)
-        self.game = GamesAndScores.objects.create(
-            id=1234,
-            slug="away-home-week-1",
-            competition="nfl",
-            gameWeek="1",
-            gameyear="2025",
-            gameseason=2526,
-            startTimestamp=timezone.now(),
-            statusType="notstarted",
-            statusTitle="Scheduled",
-            homeTeamId=1,
-            homeTeamSlug="home",
-            homeTeamName="Home",
-            awayTeamId=2,
-            awayTeamSlug="away",
-            awayTeamName="Away",
-        )
-        self.week = GameWeeks.objects.create(
-            weekNumber=1,
-            date=date(2025, 9, 7),
-            season=2526,
-        )
-
-    def test_games_api_is_read_only(self):
-        post = self.client.post(
-            "/api/games",
-            data="{}",
-            content_type="application/json",
-        )
-        delete = self.client.delete("/api/games")
-        put = self.client.put(
-            f"/api/games/{self.game.id}",
-            data="{}",
-            content_type="application/json",
-        )
-        patch_response = self.client.patch(
-            f"/api/games/{self.game.id}",
-            data="{}",
-            content_type="application/json",
-        )
-        detail_delete = self.client.delete(f"/api/games/{self.game.id}")
-
-        self.assertEqual(post.status_code, 405)
-        self.assertEqual(delete.status_code, 405)
-        self.assertEqual(put.status_code, 405)
-        self.assertEqual(patch_response.status_code, 405)
-        self.assertEqual(detail_delete.status_code, 405)
-
-    def test_weeks_api_is_read_only(self):
-        post = self.client.post(
-            "/api/weeks",
-            data="{}",
-            content_type="application/json",
-        )
-        delete = self.client.delete("/api/weeks")
-        detail_delete = self.client.delete(f"/api/weeks/{self.week.date.isoformat()}")
-
-        self.assertEqual(post.status_code, 405)
-        self.assertEqual(delete.status_code, 405)
-        self.assertEqual(detail_delete.status_code, 405)
-
 
 class UserSeasonPointsIntegrityTest(TestCase):
-    """Season points must be unique per (pool, userID, gameseason), and the
-    admin userpoints API must resolve multi-pool users without 500ing."""
+    """Season points must be unique per (pool, userID, gameseason)."""
 
     def setUp(self):
-        self.client = Client()
-        currentSeason.objects.create(season=2526, display_name="2025-2026")
-        self.staff = User.objects.create_user(
-            username="api-staff", email="api-staff@example.com",
-            password="pass", is_staff=True,
-        )
-        self.client.force_login(self.staff)
         self.family = Family.objects.create(name="Fam", slug="fam")
         self.pool_a = Pool.objects.create(
             family=self.family, name="Pool A", slug="pool-a", season=2526)
-        self.pool_b = Pool.objects.create(
-            family=self.family, name="Pool B", slug="pool-b", season=2526)
 
     def test_duplicate_pool_user_season_rejected(self):
         userSeasonPoints.objects.create(pool=self.pool_a, userID="7", gameseason=2526)
@@ -1818,94 +1568,6 @@ class UserSeasonPointsIntegrityTest(TestCase):
         userSeasonPoints.objects.create(pool=None, userID="7", gameseason=2526)
         with self.assertRaises(IntegrityError):
             userSeasonPoints.objects.create(pool=None, userID="7", gameseason=2526)
-
-    def test_user_points_get_disambiguates_multi_pool_user(self):
-        userSeasonPoints.objects.create(
-            pool=self.pool_a, userID="7", gameseason=2526, total_points=10)
-        userSeasonPoints.objects.create(
-            pool=self.pool_b, userID="7", gameseason=2526, total_points=20)
-
-        ambiguous = self.client.get("/api/userpoints/2526/7")
-        self.assertEqual(ambiguous.status_code, 400)
-
-        scoped = self.client.get(f"/api/userpoints/2526/7?pool={self.pool_a.id}")
-        self.assertEqual(scoped.status_code, 200)
-        self.assertEqual(scoped.json()["total_points"], 10)
-
-    def test_delete_user_record_missing_returns_404(self):
-        response = self.client.delete("/api/userpointsdel/2526/999")
-        self.assertEqual(response.status_code, 404)
-
-    def test_delete_user_record_requires_pool_when_ambiguous(self):
-        userSeasonPoints.objects.create(pool=self.pool_a, userID="7", gameseason=2526)
-        userSeasonPoints.objects.create(pool=self.pool_b, userID="7", gameseason=2526)
-
-        ambiguous = self.client.delete("/api/userpointsdel/2526/7")
-        self.assertEqual(ambiguous.status_code, 400)
-
-        scoped = self.client.delete(f"/api/userpointsdel/2526/7?pool={self.pool_a.id}")
-        self.assertEqual(scoped.status_code, 204)
-        remaining = userSeasonPoints.objects.filter(userID="7", gameseason=2526)
-        self.assertEqual(remaining.count(), 1)
-        self.assertEqual(remaining.first().pool_id, self.pool_b.id)
-
-
-class UserPicksPatchTest(TestCase):
-    """The admin PATCH endpoint must honor the request body (it used to
-    hard-code pick_correct=true, making a pick impossible to un-mark) and
-    must route modern pool-scoped pick ids ("{pool}-{user}-{game}")."""
-
-    def setUp(self):
-        self.client = Client()
-        self.staff = User.objects.create_user(
-            username="picks-staff", email="picks-staff@example.com",
-            password="pass", is_staff=True,
-        )
-        self.client.force_login(self.staff)
-        family = Family.objects.create(name="Picks Fam", slug="picks-fam")
-        self.pool = Pool.objects.create(
-            family=family, name="Pool", slug="picks-pool", season=2526)
-        self.pick = GamePicks.objects.create(
-            id=f"{self.pool.id}-7-100", pool=self.pool, pick_game_id=100,
-            slug="home-away", uid=7, userID="7", gameWeek="1", gameyear="2025",
-            gameseason=2526, competition="nfl", pick="home", pick_correct=True,
-        )
-
-    def test_patch_honors_request_body(self):
-        response = self.client.patch(
-            f"/api/userpicks/{self.pick.id}",
-            data='{"pick_correct": false}',
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 200)
-        self.pick.refresh_from_db()
-        self.assertFalse(self.pick.pick_correct)
-
-    def test_patch_missing_pick_returns_404(self):
-        response = self.client.patch(
-            "/api/userpicks/9-9-999",
-            data='{"pick_correct": true}',
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 404)
-
-    def test_patch_colliding_with_another_pick_returns_400_not_500(self):
-        # Honoring the request body means userID/pick_game_id are now
-        # editable; a PATCH that collides with another pick's (pool, userID,
-        # pick_game_id) must be a handled 400, not an unhandled IntegrityError.
-        GamePicks.objects.create(
-            id=f"{self.pool.id}-8-100", pool=self.pool, pick_game_id=100,
-            slug="home-away", uid=8, userID="8", gameWeek="1", gameyear="2025",
-            gameseason=2526, competition="nfl", pick="away",
-        )
-        response = self.client.patch(
-            f"/api/userpicks/{self.pick.id}",
-            data='{"userID": "8"}',
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 400)
-        self.pick.refresh_from_db()
-        self.assertEqual(self.pick.userID, "7")
 
 
 class GamePicksIntegrityTest(TestCase):
@@ -2576,64 +2238,6 @@ class UpdateStatsCommandTest(TestCase):
             f"expected picked_game_ids + played_seasons combined into one "
             f"query, got {len(raw_gamepicks_queries)}: {raw_gamepicks_queries}",
         )
-
-
-class ApiEndpointAuthorizationTests(TestCase):
-    """The vestigial DRF API must not leak picks/points/PII to anonymous or
-    non-staff callers (the legacy cron scripts that used it are retired)."""
-
-    def setUp(self):
-        self.client = Client()
-        self.member = User.objects.create_user("api-member", email="m@x.com", password="p")
-        self.staff = User.objects.create_user(
-            "api-staff", email="s@x.com", password="p", is_staff=True
-        )
-        family = Family.objects.create(name="Fam", slug="fam", status=Family.Status.ACTIVE)
-        pool = Pool.objects.create(
-            family=family, name="Pool", slug="main", season=2526,
-            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
-        )
-        GamePicks.objects.create(
-            id="1-1-100", pool=pool, pick_game_id=100, slug="g", userID="1",
-            userEmail="victim@example.com", gameWeek="1", gameyear="2025",
-            gameseason=2526, competition="nfl", pick="eagles", pick_correct=True,
-        )
-        userSeasonPoints.objects.create(
-            pool=pool, userID="1", userEmail="victim@example.com",
-            gameseason=2526, gameyear="2025", total_points=10,
-        )
-
-    LEAKY_ENDPOINTS = [
-        "/api/userpickids/2526/1",
-        "/api/userpicks/2526/1/1",
-        "/api/userpicks/1-1",
-        "/api/picks/100",
-        "/api/userpoints/",
-        "/api/userpoints/2526/1",
-        "/api/userinfo/1",
-    ]
-
-    def test_anonymous_cannot_read_picks_points_or_user_info(self):
-        for path in self.LEAKY_ENDPOINTS:
-            with self.subTest(path=path):
-                response = self.client.get(path)
-                self.assertIn(response.status_code, (401, 403))
-
-    def test_ordinary_member_cannot_read_them_either(self):
-        self.client.force_login(self.member)
-        for path in self.LEAKY_ENDPOINTS:
-            with self.subTest(path=path):
-                response = self.client.get(path)
-                self.assertEqual(response.status_code, 403)
-
-    def test_no_response_body_leaks_the_victim_email(self):
-        self.client.force_login(self.member)
-        for path in self.LEAKY_ENDPOINTS:
-            with self.subTest(path=path):
-                self.assertNotContains(
-                    self.client.get(path), "victim@example.com",
-                    status_code=403,
-                )
 
 
 class PicksLockModeTests(TestCase):

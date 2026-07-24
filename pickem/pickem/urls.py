@@ -16,11 +16,34 @@ Including another URLconf
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
+from django.db import Error as DBError
+from django.http import JsonResponse
 from django.urls import include, path
+from django.views.decorators.http import require_GET
+from pickem_api.models import currentSeason
+
+
+@require_GET
+def healthz(request):
+    """Liveness/readiness probe target: DB connectivity, nothing else.
+
+    Deliberately does not render the homepage (probes hitting `/` were
+    running the full context-processor/query stack every ~10s for no
+    diagnostic benefit). `.exists()` forces a real round-trip through the
+    ORM rather than a hand-written query, and `django.db.Error` (rather
+    than just OperationalError) also catches a stale/closed persistent
+    connection (InterfaceError) surfacing as a probe failure.
+    """
+    try:
+        currentSeason.objects.exists()
+    except DBError:
+        return JsonResponse({'status': 'error', 'database': 'unreachable'}, status=503)
+    return JsonResponse({'status': 'ok'})
+
 
 urlpatterns = [
+    path('healthz/', healthz, name='healthz'),
     path('', include('pickem_homepage.urls')),
-    path('api/', include('pickem_api.urls')),
     path('admin/', admin.site.urls),
     path('superadmin/', include('pickem_superadmin.urls')),
 ]
