@@ -473,6 +473,12 @@ class Teams(models.Model):
         help_text="Controls the admin-selected logo contrast treatment for scorecards and other branded surfaces.",
     )
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['teamNameSlug'], name='teams_slug_idx'),
+            models.Index(fields=['gameseason'], name='teams_gameseason_idx'),
+        ]
+
 class GamesAndScores(models.Model):
     id = models.IntegerField(primary_key=True)
     slug = models.SlugField(max_length=250)
@@ -524,6 +530,14 @@ class GamesAndScores(models.Model):
 
     class Meta:
         ordering = ['startTimestamp']
+        indexes = [
+            models.Index(
+                fields=['gameseason', 'gameWeek', 'competition'],
+                name='games_season_week_comp_idx',
+            ),
+            models.Index(fields=['gameseason', 'statusType'], name='games_season_status_idx'),
+            models.Index(fields=['startTimestamp'], name='games_start_ts_idx'),
+        ]
 
 
 class GamePicks(models.Model):

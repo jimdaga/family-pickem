@@ -1,4 +1,6 @@
-from django.db import models
+from django.db import models, transaction
+from django.db.models import F
+from django.db.models.functions import Greatest
 from django.utils import timezone
 from django.contrib.auth.models import User
 
@@ -331,76 +333,90 @@ class MessageBoardVote(models.Model):
     
     def save(self, *args, **kwargs):
         """Update vote counts when saving"""
-        # Check if this is an update to existing vote
         is_new = self.pk is None
-        old_vote = None
-        
-        if not is_new:
-            old_vote = MessageBoardVote.objects.get(pk=self.pk)
-        
-        super().save(*args, **kwargs)
-        
-        # Update vote counts on the target object
-        if self.post:
-            self._update_post_votes(old_vote)
-        elif self.comment:
-            self._update_comment_votes(old_vote)
-    
+
+        if is_new:
+            super().save(*args, **kwargs)
+            if self.post:
+                self._update_post_votes(None)
+            elif self.comment:
+                self._update_comment_votes(None)
+            return
+
+        # An update (vote_type flip): lock the existing row for the whole
+        # read-old-value + write-new-value + adjust-counters sequence, so
+        # two concurrent saves of the SAME vote (e.g. a rapid double
+        # submit) can't both read the same pre-change vote_type and each
+        # apply their own delta — that would double-apply one transition
+        # (e.g. two decrements of upvotes for a single upvote->downvote).
+        with transaction.atomic():
+            old_vote = MessageBoardVote.objects.select_for_update().get(pk=self.pk)
+            super().save(*args, **kwargs)
+            if self.post:
+                self._update_post_votes(old_vote)
+            elif self.comment:
+                self._update_comment_votes(old_vote)
+
+    @staticmethod
+    def _clamped_decrement(field):
+        """A -1 update expression for `field` that floors at 0."""
+        return Greatest(F(field) - 1, 0)
+
     def delete(self, *args, **kwargs):
         """Update vote counts when deleting"""
-        # Store reference before deletion
-        target_post = self.post
-        target_comment = self.comment
-        vote_type = self.vote_type
-        
-        super().delete(*args, **kwargs)
-        
-        # Update vote counts
-        if target_post:
-            if vote_type == 1:
-                target_post.upvotes = max(0, target_post.upvotes - 1)
-            else:
-                target_post.downvotes = max(0, target_post.downvotes - 1)
-            target_post.save()
-        elif target_comment:
-            if vote_type == 1:
-                target_comment.upvotes = max(0, target_comment.upvotes - 1)
-            else:
-                target_comment.downvotes = max(0, target_comment.downvotes - 1)
-            target_comment.save()
-    
+        # Lock the row for the same reason as save(): two concurrent
+        # deletes of the same vote must not both decrement the aggregate.
+        # select_for_update().first() (not .get()) so a vote already
+        # deleted by a concurrent request resolves to None here instead of
+        # raising DoesNotExist — in that case there's nothing left to
+        # decrement, so skip it rather than double-counting.
+        with transaction.atomic():
+            locked = MessageBoardVote.objects.select_for_update().filter(pk=self.pk).first()
+            if locked is None:
+                return
+
+            target_post = locked.post
+            target_comment = locked.comment
+            vote_type = locked.vote_type
+
+            super().delete(*args, **kwargs)
+
+            field = 'upvotes' if vote_type == 1 else 'downvotes'
+            if target_post:
+                MessageBoardPost.objects.filter(pk=target_post.pk).update(
+                    **{field: self._clamped_decrement(field)}
+                )
+            elif target_comment:
+                MessageBoardComment.objects.filter(pk=target_comment.pk).update(
+                    **{field: self._clamped_decrement(field)}
+                )
+
+    def _vote_count_updates(self, old_vote):
+        """Build the {field: expression} update kwargs for a vote save.
+
+        Uses F()/Greatest() so the counter change is a single atomic UPDATE
+        instead of a Python read-modify-write, which two concurrent votes
+        could otherwise race (one increment silently lost).
+        """
+        updates = {}
+        if old_vote and old_vote.vote_type != self.vote_type:
+            dec_field = 'upvotes' if old_vote.vote_type == 1 else 'downvotes'
+            updates[dec_field] = self._clamped_decrement(dec_field)
+
+        if not old_vote or old_vote.vote_type != self.vote_type:
+            inc_field = 'upvotes' if self.vote_type == 1 else 'downvotes'
+            updates[inc_field] = F(inc_field) + 1
+
+        return updates
+
     def _update_post_votes(self, old_vote):
         """Update vote counts for posts"""
-        if old_vote and old_vote.vote_type != self.vote_type:
-            # Vote changed, adjust both counters
-            if old_vote.vote_type == 1:
-                self.post.upvotes = max(0, self.post.upvotes - 1)
-            else:
-                self.post.downvotes = max(0, self.post.downvotes - 1)
-        
-        if not old_vote or old_vote.vote_type != self.vote_type:
-            # New vote or changed vote
-            if self.vote_type == 1:
-                self.post.upvotes += 1
-            else:
-                self.post.downvotes += 1
-        
-        self.post.save()
-    
+        updates = self._vote_count_updates(old_vote)
+        if updates:
+            MessageBoardPost.objects.filter(pk=self.post.pk).update(**updates)
+
     def _update_comment_votes(self, old_vote):
         """Update vote counts for comments"""
-        if old_vote and old_vote.vote_type != self.vote_type:
-            # Vote changed, adjust both counters
-            if old_vote.vote_type == 1:
-                self.comment.upvotes = max(0, self.comment.upvotes - 1)
-            else:
-                self.comment.downvotes = max(0, self.comment.downvotes - 1)
-        
-        if not old_vote or old_vote.vote_type != self.vote_type:
-            # New vote or changed vote
-            if self.vote_type == 1:
-                self.comment.upvotes += 1
-            else:
-                self.comment.downvotes += 1
-        
-        self.comment.save()
+        updates = self._vote_count_updates(old_vote)
+        if updates:
+            MessageBoardComment.objects.filter(pk=self.comment.pk).update(**updates)

@@ -36,7 +36,6 @@ class RequireLoginForInternalPagesMiddleware:
         "/accounts/",
         "/static/",
         "/media/",
-        "/api/",
         "/admin/",
     )
     PUBLIC_EXACT_PATHS = {
@@ -49,6 +48,8 @@ class RequireLoginForInternalPagesMiddleware:
         "/leaderboard/",
         "/favicon.ico",
         "/robots.txt",
+        "/healthz/",
+        "/livez/",
     }
 
     def __init__(self, get_response):

@@ -70,10 +70,12 @@ npm run build:prod
 
 **`pickem/pickem_api/`** - Core backend logic and data models
 - `models.py` - Database models for games, picks, teams, user stats
-- `views.py` - DRF API views
-- `serializers.py` - DRF serializers
 - `admin.py` - Django admin configuration
-- `cron_*.py` - Automated data update scripts (see Cron Jobs section)
+- `management/commands/update_*.py` - Data-update pipeline (see Data Pipeline section)
+- `scheduler.py` - APScheduler wiring that runs the pipeline in-process
+
+There is no REST API app anymore — it was removed (nothing internal called it
+over HTTP; the data pipeline below already talks to the ORM directly).
 
 **`pickem/pickem_homepage/`** - Frontend views and templates
 - `views.py` - Template views for all user-facing pages
@@ -116,27 +118,28 @@ season = get_season()
 season_display = get_season(display_name=True)
 ```
 
-Season transitions occur in April. The `get_season()` utility fetches from the API `/api/currentseason/` with fallback logic.
+Season transitions occur in April. The `get_season()` utility (`pickem/pickem/utils.py`) reads the `currentSeason` model directly via the ORM, with a fallback default if no row exists.
 
-### Cron Jobs & Automated Updates
+### Data Pipeline & Automated Updates
 
-The app uses several Python scripts to sync with external NFL data sources:
+Data updates run as ORM-direct Django management commands (`pickem/pickem_api/management/commands/`), not HTTP calls or standalone cron scripts. `update_all` is the single entry point and runs every step in dependency order:
 
-**`cron_update_games_v2.py`** - Fetches and updates game data including:
-- Scores and game status
-- Betting odds (spread, over/under, win probability)
-- Weather conditions and venue information
-- Uses ESPN API for data
+1. `update_records` - team win/loss records (independent)
+2. `update_games` - fetch scores + winners from ESPN
+3. `update_missed_picks` - apply missed-pick policies before grading
+4. `update_picks` - score picks against game winners
+5. `update_standings` - recompute per-pool weekly/total points
+6. `update_weekly_winners` - award winner bonuses once the week completes
+7. `update_rankings` - rank pool members by total points (incl. bonus)
+8. `update_season_winners` - flag the season champion once the season ends
+9. `generate_weekly_summaries` - AI recap drafts
+10. `update_stats` - recompute per-user `userStats`
 
-**`cron_update_picks.py`** - Scores user picks after games complete
-
-**`cron_update_standings.py`** - Updates leaderboard and season points
-
-**`cron_update_records.py`** - Updates team win/loss records
-
-**`cron_add_standings.py`** - Initializes season standings for new users
-
-These scripts accept `--url` parameter for the API endpoint (defaults to localhost).
+In production this pipeline runs on a tick via the in-process APScheduler
+(`pickem_api/scheduler.py`, enabled by `RUN_SCHEDULER=true` on a single web
+replica). The superadmin console's Jobs page (`/superadmin/jobs/`) can also
+queue a one-off run of any allowlisted command through the same scheduler;
+see `pickem_superadmin/jobs.py`.
 
 ### Authentication & Authorization
 
@@ -162,9 +165,8 @@ Commissioners are identified via `UserProfile.is_commissioner` flag or `is_super
 
 ### Rate Limiting
 
-Rate limiting is configured but **disabled in development** to avoid cache backend issues.
-- Production: Uses file-based cache backend
-- Configuration in `settings.py`: `RATELIMIT_ENABLE = False` when `DEBUG='True'`
+There is no application-level rate limiting in Django (`django-ratelimit` was
+removed). Request throttling is handled at the Cloudflare edge instead.
 
 ## Common Development Commands
 
@@ -215,21 +217,24 @@ docker-compose logs -f django
 
 Database runs on `postgresql:5432` within Docker network.
 
-### Cron Job Execution (Manual)
+### Data Pipeline Execution (Manual)
 ```bash
-cd pickem/pickem_api
+cd pickem
+
+# Run the full pipeline (records -> games -> picks -> standings -> ... -> stats)
+python manage.py update_all
 
 # Update games for current week
-python cron_update_games_v2.py --url localhost
+python manage.py update_games
 
-# Update specific week
-python cron_update_games_v2.py --url localhost --gameweek 5
+# Update a specific week
+python manage.py update_games --week 5
 
 # Update user picks
-python cron_update_picks.py --url localhost
+python manage.py update_picks
 
 # Update standings
-python cron_update_standings.py --url localhost
+python manage.py update_standings
 ```
 
 ## Important Notes from claude_instructions.md
@@ -260,20 +265,21 @@ Optional:
 
 ### Current Season Configuration
 
-The current season is managed via the database model `CurrentSeason`. Use the API endpoint or `get_season()` utility rather than hardcoding season values.
+The current season is managed via the database model `CurrentSeason`. Use the `get_season()` utility rather than hardcoding season values.
 
 ## Dependencies
 
 Key packages:
 - **Django 4.0.2** - Web framework
-- **djangorestframework** - API endpoints
 - **django-allauth** - Google OAuth
 - **psycopg2-binary** - PostgreSQL driver
 - **django-bootstrap-v5** - Bootstrap integration (being phased out)
 - **espn-api** - NFL data integration
 - **boto3/django-storages** - AWS S3 for static files (production)
-- **django-ratelimit** - Rate limiting (production)
 - **Tailwind CSS** - Modern CSS framework (in migration)
+
+Rate limiting is handled at the Cloudflare edge, not in the Django app
+(`django-ratelimit` was removed).
 
 See `requirements.txt` for complete list.
 
@@ -295,7 +301,8 @@ Key routes (see `pickem/urls.py` and `pickem_homepage/views.py`):
 - `/stats/` - Player statistics
 - `/profile/<userid>/` - User profiles
 - `/rules/` - League rules
-- `/api/` - DRF API endpoints
+- `/livez/` - Liveness probe (no DB dependency, no auth)
+- `/healthz/` - Readiness probe (DB connectivity check, no auth)
 - `/admin/` - Django admin panel
 
 ## Code Style Notes
@@ -303,7 +310,6 @@ Key routes (see `pickem/urls.py` and `pickem_homepage/views.py`):
 - Use Django ORM for database queries (avoid raw SQL)
 - Follow Django naming conventions (models: `CamelCase`, views/functions: `snake_case`)
 - Template files use Django template language with Bootstrap/Tailwind classes
-- API views use Django REST Framework serializers and viewsets
 - Custom template tags in `pickem_homepage/templatetags/`
 
 ## Testing & Debugging
