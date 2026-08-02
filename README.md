@@ -56,19 +56,16 @@ scheduler-driven automation and on-demand jobs queued from the superadmin consol
 git clone https://github.com/jimdaga/family-pickem.git
 cd family-pickem
 
-python -m venv venv
-source venv/bin/activate
-
-cd pickem
-pip install -r requirements.txt
+uv sync
 ```
 
 Configure environment variables (see [Configuration](#configuration)), then:
 
 ```bash
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver
+cd pickem
+uv run python manage.py migrate
+uv run python manage.py createsuperuser
+uv run python manage.py runserver
 ```
 
 Build the Tailwind stylesheet from the repo root:

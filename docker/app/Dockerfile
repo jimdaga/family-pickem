@@ -1,31 +1,31 @@
 FROM python:3.10
 
-# Setup Work Directory 
 ENV WORK_DIR=/code
 
-# Create user and group to run container as
 RUN useradd -ms /bin/bash django
 
-# Setup App
-COPY --chown=django:django pickem ${WORK_DIR}
-COPY --chown=django:django docker/app/docker-entrypoint.sh ${WORK_DIR}/bin/docker-entrypoint.sh 
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client && rm -rf /var/lib/apt/lists/*
 
-# Install Packages
-RUN apt update && apt install -y postgresql-client
-RUN pip install --upgrade pip
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Switch user/workdir 
-USER django
+# Use the base image's Python; don't let uv download its own into /root
+ENV UV_PYTHON_DOWNLOADS=0
+
+# Install Python dependencies in a cacheable layer before copying app code
 WORKDIR ${WORK_DIR}
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
-# Set environment variables  
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1 
+COPY --chown=django:django pickem ${WORK_DIR}
+COPY --chown=django:django docker/app/docker-entrypoint.sh ${WORK_DIR}/bin/docker-entrypoint.sh
 
-# Install Dependencies 
-COPY pickem/requirements.txt requirements.txt
-RUN pip3 install --no-cache-dir -r requirements.txt
+USER django
 
-# Expose App Port and run server
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV VIRTUAL_ENV=${WORK_DIR}/.venv
+ENV PATH="${WORK_DIR}/.venv/bin:${PATH}"
+
 EXPOSE 8000
 ENTRYPOINT ["/code/bin/docker-entrypoint.sh"]

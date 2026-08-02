@@ -51,13 +51,16 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Install dependencies
-        run: pip install -r pickem/requirements.txt
+        run: uv sync --frozen --no-dev
 
       - name: Run migrations against PostgreSQL
         # Validates the full migration chain on the production engine; the
         # test runner below migrates its own test_* database independently.
-        run: cd pickem && python manage.py migrate --settings=pickem.test_settings_postgres
+        run: cd pickem && uv run python manage.py migrate --settings=pickem.test_settings_postgres
 
       - name: Run grading integration tests
-        run: cd pickem && python manage.py test grading_tests --settings=pickem.test_settings_postgres --verbosity=2
+        run: cd pickem && uv run python manage.py test grading_tests --settings=pickem.test_settings_postgres --verbosity=2

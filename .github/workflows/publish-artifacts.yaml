@@ -17,11 +17,14 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Install dependencies
-        run: pip install -r pickem/requirements.txt
+        run: uv sync --frozen --no-dev
 
       - name: Run tests
-        run: cd pickem && python manage.py test --settings=pickem.test_settings --verbosity=2
+        run: cd pickem && uv run python manage.py test --settings=pickem.test_settings --verbosity=2
 
   publish_docker:
     needs: [run_tests]

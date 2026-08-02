@@ -18,13 +18,10 @@ Family Pickem is a Django-based NFL pick'em league web application where users p
 
 ### Starting the Development Server
 ```bash
-# From project root
-cd /Users/jim/git/family-pickem && source venv/bin/activate && cd pickem && python manage.py runserver
-
-# Or step by step:
-source venv/bin/activate
+# From project root — uv creates/updates .venv automatically
+uv sync
 cd pickem
-python manage.py runserver
+uv run python manage.py runserver
 ```
 
 ### Database
@@ -284,7 +281,7 @@ Key packages:
 Rate limiting is handled at the Cloudflare edge, not in the Django app
 (`django-ratelimit` was removed).
 
-See `requirements.txt` for complete list.
+See `pyproject.toml` for complete list.
 
 ## Tailwind CSS
 

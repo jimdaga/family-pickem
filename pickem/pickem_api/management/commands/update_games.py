@@ -8,6 +8,7 @@ season instead of the old hardcoded ``game_year = "2025"``.
 """
 
 import logging
+import time
 
 import requests
 from django.core.management.base import BaseCommand
@@ -25,6 +26,8 @@ ESPN_SCOREBOARD_URL = (
     "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
 )
 REQUEST_TIMEOUT = 30
+FETCH_RETRIES = 3
+FETCH_BACKOFF = 2.0  # seconds; doubles each attempt
 
 STATUS_MAP = {
     "STATUS_SCHEDULED": "notstarted",
@@ -275,14 +278,26 @@ def current_week_for_today(season=None):
 
 
 def fetch_scoreboard(week, game_year):
-    response = requests.get(
-        ESPN_SCOREBOARD_URL,
-        headers={"Content-Type": "application/json"},
-        params={"week": week, "dates": game_year},
-        timeout=REQUEST_TIMEOUT,
-    )
-    response.raise_for_status()
-    return response.json()
+    for attempt in range(FETCH_RETRIES):
+        try:
+            response = requests.get(
+                ESPN_SCOREBOARD_URL,
+                headers={"Content-Type": "application/json"},
+                params={"week": week, "dates": game_year},
+                timeout=REQUEST_TIMEOUT,
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as exc:
+            if attempt < FETCH_RETRIES - 1:
+                wait = FETCH_BACKOFF * (2 ** attempt)
+                logger.warning(
+                    "ESPN scoreboard fetch failed (attempt %d/%d): %s — retrying in %.0fs",
+                    attempt + 1, FETCH_RETRIES, exc, wait,
+                )
+                time.sleep(wait)
+            else:
+                raise
 
 
 class Command(BaseCommand):
