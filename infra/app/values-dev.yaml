@@ -35,6 +35,9 @@ postgresql:
       storageClass: "manual"
       size: 10Gi
 
+redis:
+  enabled: true
+
 # In-process scheduler replaces the legacy cron.sh CronJob (now removed).
 scheduler:
   enabled: true
