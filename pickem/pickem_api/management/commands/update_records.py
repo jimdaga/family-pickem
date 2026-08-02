@@ -113,6 +113,9 @@ class Command(BaseCommand):
             try:
                 wins, losses, ties = fetch_team_record(team["id"], year)
             except requests.exceptions.RequestException as exc:
+                # Per-team failures skip rather than retry: one bad team keeps
+                # its prior record until the next tick, which is acceptable
+                # degradation vs. aborting the entire command.
                 logger.warning("Skipping %s: record fetch failed: %s", slug, exc)
                 self.stderr.write(f" - {slug}: record fetch failed ({exc})")
                 continue
