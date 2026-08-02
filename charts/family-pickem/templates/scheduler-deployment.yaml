@@ -92,6 +92,8 @@ spec:
           {{- if .Values.redis.enabled }}
           # REDIS_PASSWORD interpolated into REDIS_URL by Kubernetes at pod start
           # (credential never rendered into a manifest). See templates/redis.yaml.
+          # NOTE: must be an explicit env entry (not just envFrom) — $(VAR)
+          # interpolation only sees vars declared in this container's env list.
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:

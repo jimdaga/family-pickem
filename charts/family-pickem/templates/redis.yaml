@@ -26,6 +26,15 @@ spec:
         - name: redis
           image: {{ .Values.redis.image | quote }}
           imagePullPolicy: IfNotPresent
+          # The `command:` below overrides the image entrypoint, which is what
+          # normally drops from root to the redis user (uid 999). Pin non-root
+          # explicitly so that hardening is preserved. (No persistence here, so
+          # no volume ownership to worry about.)
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
           # Require a password (REDIS_PASSWORD from the -envvars secret, sourced
           # from AWS Secrets Manager via ESO). Using `command` so the flag can
           # reference $REDIS_PASSWORD; the rest matches the ephemeral-cache config

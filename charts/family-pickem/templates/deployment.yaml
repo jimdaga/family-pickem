@@ -74,6 +74,8 @@ spec:
           # REDIS_URL by Kubernetes at pod start, so the credential never appears
           # in a rendered manifest. DB 1 is the Django cache; later phases use
           # other DB indexes for pub/sub.
+          # NOTE: this must be an explicit env entry (not just envFrom) — $(VAR)
+          # interpolation only sees vars declared in this container's env list.
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
