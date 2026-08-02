@@ -13,6 +13,7 @@ dependencies = [
     "charset-normalizer==2.1.1",
     "cryptography==48.0.1",
     "defusedxml==0.7.1",
+    "django-redis==5.4.0",
     "Django==5.2.16",
     "django-allauth==65.14.1",
     "django-apscheduler==0.7.0",

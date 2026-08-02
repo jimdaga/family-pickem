@@ -134,16 +134,11 @@ MIDDLEWARE = [
 # Default cache (file-based; also used by Django internals).
 # NOTE: application-level rate limiting was removed — request throttling is
 # handled at the edge by a Cloudflare rate-limiting rule instead.
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': '/tmp/django_cache',
-        'TIMEOUT': 300,  # 5 minutes
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-        }
-    }
-}
+from .cache import build_caches
+
+# Redis when REDIS_URL is set (see pickem/cache.py and issue #93); the
+# file-based cache otherwise, so local dev and tests need no external services.
+CACHES = build_caches(os.environ)
 
 ROOT_URLCONF = 'pickem.urls'
 

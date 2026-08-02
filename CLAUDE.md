@@ -275,6 +275,7 @@ Key packages:
 - **psycopg2-binary** - PostgreSQL driver
 - **espn-api** - NFL data integration
 - **boto3/django-storages** - AWS S3 for static files (production)
+- **django-redis** - Shared Redis cache backend (used when `REDIS_URL` is set; falls back to file-based cache locally)
 - **Tailwind CSS** - Modern CSS framework (in migration)
 
 Rate limiting is handled at the Cloudflare edge, not in the Django app
