@@ -146,7 +146,12 @@ jobs:
 
   update_argocd:
     name: Update ArgoCD production app version
-    needs: [publish_helm]
+    # Must wait on publish_docker too, not just publish_helm: if the Docker
+    # push fails (e.g. a transient registry timeout) while the Helm publish
+    # succeeds, this job would otherwise still bump prd's targetRevision to
+    # a version whose image doesn't exist yet, and ArgoCD would pull it
+    # immediately (production incident 2026-07-25, family-pickem-0.0.190).
+    needs: [publish_docker, publish_helm]
     permissions:
       contents: write
     runs-on: ubuntu-latest
