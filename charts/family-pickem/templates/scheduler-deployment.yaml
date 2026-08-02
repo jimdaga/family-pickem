@@ -1,24 +1,27 @@
+{{- if .Values.scheduler.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "family-pickem.fullname" . }}
+  name: {{ include "family-pickem.fullname" . }}-scheduler
   labels:
     {{- include "family-pickem.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
+  # Exactly one scheduler ever: single replica + Recreate guarantees a single
+  # writer to the APScheduler DjangoJobStore (preserves max_instances=1).
+  replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
-      {{- include "family-pickem.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/name: {{ include "family-pickem.name" . }}-scheduler
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       labels:
-        {{- include "family-pickem.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ include "family-pickem.name" . }}-scheduler
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: scheduler
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -28,12 +31,17 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       initContainers:
-        - name: {{ .Chart.Name }}-migrate
+        # The web Deployment owns migrations. The scheduler waits for them so
+        # the two Deployments never race to migrate on a deploy.
+        - name: {{ .Chart.Name }}-wait-migrations
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          args: ["migrate"]
+          command:
+            - sh
+            - -c
+            - 'until python manage.py migrate --check; do echo "waiting for migrations"; sleep 2; done'
           envFrom:
           - secretRef:
               name: {{ include "family-pickem.fullname" . }}-envvars
@@ -46,10 +54,14 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
+          {{- if .Values.redis.enabled }}
+          - name: REDIS_URL
+            value: "redis://{{ include "family-pickem.fullname" . }}-redis:6379/1"
+          {{- end }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.scheduler.resources | nindent 12 }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ .Chart.Name }}-scheduler
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -68,17 +80,22 @@ spec:
                 fieldPath: status.podIP
           - name: APP_RELEASE
             value: "{{ .Values.image.tag | default .Chart.AppVersion }}"
+          # This pod IS the scheduler: it runs the in-process APScheduler pipeline.
+          # PickemApiConfig.ready() starts the scheduler only when RUN_SCHEDULER
+          # AND RUN_WEB_SERVER are true under `manage.py runserver` (RUN_MAIN is
+          # set by runserver's reloader child). The image entrypoint already
+          # exports RUN_WEB_SERVER=true before runserver; we set it explicitly
+          # here too so the scheduler's start condition never silently depends on
+          # entrypoint internals (a mis-set value would pass health probes while
+          # running no pipeline).
+          - name: RUN_SCHEDULER
+            value: "true"
+          - name: RUN_WEB_SERVER
+            value: "true"
           {{- if .Values.redis.enabled }}
-          # Shared Redis cache/broker (self-managed; see templates/redis.yaml).
-          # DB 1 is the Django cache; later phases use other DB indexes for pub/sub.
           - name: REDIS_URL
             value: "redis://{{ include "family-pickem.fullname" . }}-redis:6379/1"
           {{- end }}
-          # The web tier never runs the pipeline — the dedicated scheduler
-          # Deployment does (templates/scheduler-deployment.yaml). Explicit
-          # RUN_SCHEDULER=false so the web pods stay stateless and can autoscale.
-          - name: RUN_SCHEDULER
-            value: "false"
           ports:
             - name: http
               containerPort: 8000
@@ -96,7 +113,7 @@ spec:
             initialDelaySeconds: 25
           {{- end }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.scheduler.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -109,3 +126,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}

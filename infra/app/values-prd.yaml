@@ -34,7 +34,8 @@ postgresql:
   primary:
     persistence:
       existingClaim: postgres-prd-pvc
-# In-process scheduler replaces the legacy cron.sh CronJob (now removed).
+# Runs the update pipeline in a dedicated single-replica scheduler Deployment
+# (RUN_SCHEDULER=true); the web tier runs RUN_SCHEDULER=false and can autoscale.
 scheduler:
   enabled: true
 
