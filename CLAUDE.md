@@ -270,10 +270,9 @@ The current season is managed via the database model `CurrentSeason`. Use the `g
 ## Dependencies
 
 Key packages:
-- **Django 4.0.2** - Web framework
+- **Django 5.2.x (LTS)** - Web framework (runs on Python 3.12)
 - **django-allauth** - Google OAuth
 - **psycopg2-binary** - PostgreSQL driver
-- **django-bootstrap-v5** - Bootstrap integration (being phased out)
 - **espn-api** - NFL data integration
 - **boto3/django-storages** - AWS S3 for static files (production)
 - **Tailwind CSS** - Modern CSS framework (in migration)

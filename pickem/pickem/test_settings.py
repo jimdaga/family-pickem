@@ -30,9 +30,12 @@ DEBUG = True
 # Disable rate limiting
 RATELIMIT_ENABLE = False
 
-# Use default local storage (no S3)
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+# Use default local storage (no S3). Django 5.x uses the STORAGES dict;
+# the legacy STATICFILES_STORAGE/DEFAULT_FILE_STORAGE settings were removed.
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
 
 # Silence password hashing for faster tests
 PASSWORD_HASHERS = [

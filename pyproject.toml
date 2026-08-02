@@ -1,7 +1,7 @@
 [project]
 name = "family-pickem"
 version = "0.1.0"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "APScheduler==3.10.4",
     "asgiref==3.8.1",
@@ -13,18 +13,16 @@ dependencies = [
     "charset-normalizer==2.1.1",
     "cryptography==48.0.1",
     "defusedxml==0.7.1",
-    "Django==4.2.30",
+    "Django==5.2.16",
     "django-allauth==65.14.1",
     "django-apscheduler==0.7.0",
-    "django-bootstrap-v5==1.0.11",
-    "django-crispy-forms==1.14.0",
     "django-storages==1.13.1",
     "django-tables2==2.4.1",
     "idna==3.15",
     "jmespath==1.0.1",
     "oauthlib==3.2.2",
     "Pillow==12.3.0",
-    "psycopg2-binary==2.9.3",
+    "psycopg2-binary==2.9.10",
     "pycparser==2.21",
     "PyJWT==2.13.0",
     "python-dateutil==2.8.2",
