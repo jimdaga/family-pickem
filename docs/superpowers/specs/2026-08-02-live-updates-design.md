@@ -42,8 +42,10 @@ Three sequential sub-projects, each with its own spec → plan → implementatio
 - Add Redis as a **self-managed** Deployment + Service in the Helm chart (dev +
   prd), using the official `redis` image. Deliberately *not* the Bitnami subchart:
   Bitnami deprecated its free catalog (Aug 2025), moving versioned image tags to
-  the frozen `bitnamilegacy` repo. In-cluster Redis runs without auth (network-
-  internal); add auth from AWS SM/ESO before ever exposing it.
+  the frozen `bitnamilegacy` repo. In-cluster Redis runs without auth for dev
+  (network-internal, private single-node cluster). **Before enabling prd**, add a
+  NetworkPolicy (web/scheduler pods → Redis:6379 only) and Redis auth from
+  AWS SM/ESO — a hard gate captured in the Phase 1 plan's Task 4.
 - Repoint `CACHES['default']` from `FileBasedCache` to `django-redis`.
 - Redis serves two roles henceforth: shared Django cache **and** pub/sub broker
   for live events.

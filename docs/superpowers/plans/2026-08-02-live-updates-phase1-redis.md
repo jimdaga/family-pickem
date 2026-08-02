@@ -430,8 +430,25 @@ Expected: the Redis pod is `Running`; the shell prints `CACHE: ok`; `redis-cli` 
 
 Only after dev is verified. This is the production rollout gate.
 
+**Hardening prerequisites (required before prd-enable — do NOT enable prd without these):**
+Redis in dev runs in-cluster with no auth, which is acceptable for a private,
+single-node, first-party dev cluster. Production must not. Before setting
+`redis.enabled: true` in prd, land both:
+1. **NetworkPolicy** — a default-deny ingress policy for the Redis pod that
+   allows TCP 6379 only from the web (and, post-#95, scheduler) pod selector.
+   Effective only if the cluster CNI enforces NetworkPolicy — confirm the CNI
+   (Calico/Cilium enforce; Flannel does not) or treat auth as the primary control.
+2. **Auth** — a Redis password sourced from AWS Secrets Manager via ESO, wired
+   into the Redis pod (`--requirepass` / config) and into `REDIS_URL`
+   (`redis://:<password>@…`). Follow the AWS-SM → ESO → K8s-secret pattern; never
+   hardcode. (Raised by CodeRabbit on PR #141; deliberately deferred from the
+   dev rollout.)
+Set Redis `resources` are already defined in `values.yaml`; review the maxmemory/
+limit sizing for prd load before enabling.
+
 **Files:**
 - Modify: `infra/app/values-prd.yaml` (set `redis.enabled: true`)
+- Create: NetworkPolicy template + auth wiring (see prerequisites above)
 
 - [ ] **Step 1: Enable redis in prd values**
 

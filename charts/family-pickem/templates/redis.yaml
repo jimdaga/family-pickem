@@ -26,8 +26,19 @@ spec:
         - name: redis
           image: {{ .Values.redis.image | quote }}
           imagePullPolicy: IfNotPresent
-          # Ephemeral cache/broker: disable RDB snapshots and AOF entirely.
-          args: ["--save", "", "--appendonly", "no"]
+          # Ephemeral cache/broker: disable RDB snapshots and AOF, and bound the
+          # dataset with LRU eviction so Redis can never grow past its container
+          # limit and OOM the node. (allkeys-lru is safe here: DB 1 is a pure
+          # cache and pub/sub messages don't live in the keyspace.)
+          args:
+            - "--save"
+            - ""
+            - "--appendonly"
+            - "no"
+            - "--maxmemory"
+            - {{ .Values.redis.maxmemory | quote }}
+            - "--maxmemory-policy"
+            - {{ .Values.redis.maxmemoryPolicy | quote }}
           ports:
             - name: redis
               containerPort: 6379

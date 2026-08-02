@@ -86,7 +86,17 @@ postgresql:
 redis:
   enabled: false
   image: "redis:7.4-alpine"
-  resources: {}
+  # Bound the dataset (maxmemory) below the container limit and evict LRU keys
+  # so Redis can never OOM the node. Keep maxmemory well under resources.limits
+  # memory to leave headroom for the Redis process + fragmentation.
+  maxmemory: "180mb"
+  maxmemoryPolicy: "allkeys-lru"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
 
 # In-process update scheduler (django-apscheduler). When enabled, sets
 # RUN_SCHEDULER=true on the single web replica so it runs the update_all
