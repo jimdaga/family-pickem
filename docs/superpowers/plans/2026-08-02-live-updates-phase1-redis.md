@@ -4,18 +4,18 @@
 
 **Goal:** Stand up a shared Redis instance and repoint Django's default cache at it, so the app has a cross-request/cross-replica cache and a broker that later phases use for live-update pub/sub.
 
-**Architecture:** Add a Bitnami Redis subchart to the Helm chart (opt-in per environment). The Django app selects its cache backend at startup: Redis when `REDIS_URL` is set, otherwise the existing file-based cache — so local dev and the test suite need no external services. The `REDIS_URL` is derived in the deployment template from the Helm release name, matching Bitnami's `{release}-redis-master` service.
+**Architecture:** Redis runs as a small self-managed Deployment + Service inside the Helm chart, using the official `redis` image (opt-in per environment). We deliberately do NOT use the Bitnami Redis subchart — Bitnami deprecated its free catalog (Aug 2025), moving versioned image tags to the frozen `bitnamilegacy` repo. The Django app selects its cache backend at startup: Redis when `REDIS_URL` is set, otherwise the existing file-based cache — so local dev and the test suite need no external services. `REDIS_URL` is derived in the deployment template from the chart fullname, matching our own `{fullname}-redis` service.
 
-**Tech Stack:** Django 5.2, django-redis, Bitnami Redis Helm subchart, Helm, ArgoCD GitOps, uv.
+**Tech Stack:** Django 5.2, django-redis, official Redis image (self-managed Deployment), Helm, ArgoCD GitOps, uv.
 
 ## Global Constraints
 
 - Python `>=3.12`; Django `5.2.16`. (`pyproject.toml`)
 - All Python deps are pinned to exact versions in `pyproject.toml` and locked in `uv.lock`; add deps with `uv add <pkg>==<version>` (never hand-edit the lock). (`pyproject.toml`)
 - Tests run against SQLite via `--settings=pickem.test_settings` from the `pickem/` directory. (`pickem/pickem/test_settings.py`)
-- Bitnami subchart resources are named `{release}-<subchart>` where release = `pickem-prd` / `pickem-dev` (NOT `fullnameOverride`). The Redis primary service is therefore `pickem-prd-redis-master` / `pickem-dev-redis-master`. (memory: Bitnami subchart naming; `infra/argocd/applications/pickem-prd.yaml`)
-- Do NOT hardcode ArgoCD chart `targetRevision` values; the release workflow manages them. Pinning a *subchart dependency version* inside `charts/family-pickem/Chart.yaml` is fine and expected.
-- Never edit K8s Secrets directly; secrets flow AWS Secrets Manager → ESO → K8s. (This phase needs NO new secret — see Task 2 note on auth.)
+- Postgres remains a Bitnami subchart named `{release}-postgresql` (release = `pickem-prd` / `pickem-dev`). Redis is a **self-managed** Deployment + Service named `{fullname}-redis`, where fullname = `fullnameOverride` = `family-pickem-prd` / `family-pickem-dev`. So the Redis service is `family-pickem-prd-redis` / `family-pickem-dev-redis`. (`infra/app/values-prd.yaml`; `charts/family-pickem/templates/_helpers.tpl`)
+- Do NOT hardcode ArgoCD chart `targetRevision` values; the release workflow manages them.
+- Never edit K8s Secrets directly; secrets flow AWS Secrets Manager → ESO → K8s. (This phase needs NO new secret — in-cluster Redis runs without auth; see Task 2.)
 - GitOps: dev tracks `main` automatically; prd tracks GitHub Releases. Enabling Redis in an environment happens by merging a values change, not by `kubectl` edits.
 
 ---
@@ -203,52 +203,106 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 ---
 
-### Task 2: Redis subchart + chart wiring (chart-side)
+### Task 2: Self-managed Redis Deployment + chart wiring (chart-side)
 
-Add the Bitnami Redis subchart to the Helm chart, default it off, and inject `REDIS_URL` into the web deployment when it is enabled.
+Add a small Redis Deployment + Service to the Helm chart using the official image, default it off, and inject `REDIS_URL` into the web deployment when it is enabled.
 
 **Files:**
-- Modify: `charts/family-pickem/Chart.yaml` (add `redis` dependency)
+- Create: `charts/family-pickem/templates/redis.yaml`
 - Modify: `charts/family-pickem/values.yaml` (add `redis:` block, default disabled)
 - Modify: `charts/family-pickem/templates/deployment.yaml` (add `REDIS_URL` env in the main container)
 
 **Interfaces:**
-- Produces: when `redis.enabled=true`, the web container gets env `REDIS_URL=redis://{{ .Release.Name }}-redis-master:6379/1`, consumed by `pickem.cache.build_caches` from Task 1.
+- Produces: when `redis.enabled=true`, a `{{ include "family-pickem.fullname" . }}-redis` Deployment + ClusterIP Service on port 6379, and the web container env `REDIS_URL=redis://{fullname}-redis:6379/1`, consumed by `pickem.cache.build_caches` from Task 1.
 
-- [ ] **Step 1: Add the Redis dependency to Chart.yaml**
-
-In `charts/family-pickem/Chart.yaml`, add to the `dependencies:` list (below the existing `postgresql` entry):
-
-```yaml
-  - name: "redis"
-    version: 17.11.3
-    repository: "https://charts.bitnami.com/bitnami"
-    condition: redis.enabled
-```
-
-- [ ] **Step 2: Add the redis values block**
+- [ ] **Step 1: Add the redis values block**
 
 In `charts/family-pickem/values.yaml`, add after the `postgresql:` block:
 
 ```yaml
 # Shared Redis: the Django cache now, and the pub/sub broker for live updates
-# later (#93). Disabled by default; enabled per environment in infra/app/.
-#
-# auth.enabled=false — Redis is only reachable inside the cluster network on
-# this private single-node cluster. Enable auth.enabled + an existingSecret
-# (sourced from AWS Secrets Manager) before ever exposing it beyond the cluster.
-#
-# persistence disabled — the cache is ephemeral; nothing here must survive a
-# restart. Bitnami names the primary service {release}-redis-master.
+# later (#93). Self-managed (NOT the Bitnami subchart — Bitnami deprecated its
+# free catalog in Aug 2025). Disabled by default; enabled per environment in
+# infra/app/. Ephemeral: no persistence, since it is only a cache/broker.
+# Reachable only inside the cluster network, so it runs without auth; add auth
+# (a password from AWS Secrets Manager via ESO) before ever exposing it.
 redis:
   enabled: false
-  architecture: standalone
-  auth:
-    enabled: false
-  master:
-    persistence:
-      enabled: false
+  image: "redis:7.4-alpine"
+  resources: {}
 ```
+
+- [ ] **Step 2: Create the Redis Deployment + Service template**
+
+Create `charts/family-pickem/templates/redis.yaml`:
+
+```yaml
+{{- if .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "family-pickem.fullname" . }}-redis
+  labels:
+    {{- include "family-pickem.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  replicas: 1
+  # Recreate: a single ephemeral cache instance; never run two at once.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "family-pickem.name" . }}-redis
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "family-pickem.name" . }}-redis
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: redis
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image | quote }}
+          imagePullPolicy: IfNotPresent
+          # Ephemeral cache/broker: disable RDB snapshots and AOF entirely.
+          args: ["--save", "", "--appendonly", "no"]
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: redis
+            initialDelaySeconds: 10
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "family-pickem.fullname" . }}-redis
+  labels:
+    {{- include "family-pickem.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  type: ClusterIP
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "family-pickem.name" . }}-redis
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+```
+
+> Why explicit `-redis` selector labels rather than the shared `selectorLabels` helper: the web Deployment/Service select on `name`+`instance` only. If the Redis pod carried those same two labels, the web Service would route traffic to it. The distinct `{{ name }}-redis` value keeps the two selectors from overlapping.
 
 - [ ] **Step 3: Inject REDIS_URL into the deployment**
 
@@ -256,39 +310,39 @@ In `charts/family-pickem/templates/deployment.yaml`, in the **main app container
 
 ```yaml
           {{- if .Values.redis.enabled }}
-          # Shared Redis cache/broker. Host follows Bitnami's
-          # {release}-redis-master service; DB 1 is the Django cache, later
-          # phases use other DB indexes for pub/sub.
+          # Shared Redis cache/broker (self-managed; see templates/redis.yaml).
+          # DB 1 is the Django cache; later phases use other DB indexes for pub/sub.
           - name: REDIS_URL
-            value: "redis://{{ .Release.Name }}-redis-master:6379/1"
+            value: "redis://{{ include "family-pickem.fullname" . }}-redis:6379/1"
           {{- end }}
 ```
 
-- [ ] **Step 4: Fetch the subchart and lint**
-
-Run:
-
-```bash
-helm repo add bitnami https://charts.bitnami.com/bitnami
-cd charts/family-pickem && helm dependency build
-helm lint . -f ../../infra/app/values-prd.yaml --set redis.enabled=true
-```
-
-Expected: `helm dependency build` downloads `redis-17.11.3.tgz` into `charts/family-pickem/charts/`; `helm lint` reports `0 chart(s) failed`.
-
-- [ ] **Step 5: Verify the rendered REDIS_URL and subchart**
+- [ ] **Step 4: Lint the chart**
 
 Run:
 
 ```bash
 cd charts/family-pickem
+helm lint . -f ../../infra/app/values-prd.yaml --set redis.enabled=true
+```
+
+Expected: `0 chart(s) failed`. (No `helm dependency build` needed — Redis is now a first-party template, not a subchart.)
+
+- [ ] **Step 5: Verify the rendered output**
+
+Run:
+
+```bash
+cd charts/family-pickem
+# REDIS_URL points at our own service
 helm template pickem-prd . -f ../../infra/app/values-prd.yaml --set redis.enabled=true | grep -A2 "name: REDIS_URL"
-helm template pickem-prd . -f ../../infra/app/values-prd.yaml --set redis.enabled=true | grep "kind: StatefulSet"
+# The Redis Deployment + Service render
+helm template pickem-prd . -f ../../infra/app/values-prd.yaml --set redis.enabled=true | grep -E "name: family-pickem-prd-redis"
 ```
 
 Expected:
-- The first command prints `value: "redis://pickem-prd-redis-master:6379/1"`.
-- The second shows the Bitnami Redis `StatefulSet` is rendered.
+- The first command prints `value: "redis://family-pickem-prd-redis:6379/1"`.
+- The second shows the `family-pickem-prd-redis` Deployment and Service names.
 
 Also confirm the default is still off:
 
@@ -301,17 +355,16 @@ Expected: prints `REDIS_URL absent by default — correct`.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add charts/family-pickem/Chart.yaml charts/family-pickem/Chart.lock charts/family-pickem/values.yaml charts/family-pickem/templates/deployment.yaml
-git commit -m "feat(chart): add optional Redis subchart and REDIS_URL wiring
+git add charts/family-pickem/values.yaml charts/family-pickem/templates/redis.yaml charts/family-pickem/templates/deployment.yaml
+git commit -m "feat(chart): add self-managed Redis Deployment and REDIS_URL wiring
 
-Bitnami Redis subchart gated on redis.enabled (default off). When enabled,
-the web deployment gets REDIS_URL pointing at the {release}-redis-master
-service. No new secret: in-cluster Redis runs with auth disabled. (#93)
+Small first-party Redis Deployment + Service on the official redis image,
+gated on redis.enabled (default off). Avoids the deprecated Bitnami subchart.
+When enabled, the web deployment gets REDIS_URL pointing at the
+{fullname}-redis service. In-cluster Redis runs without auth. (#93)
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
-
-> Note: `helm dependency build` may also create/update `charts/family-pickem/Chart.lock`. Do **not** commit the downloaded `charts/*.tgz` if a `.helmignore`/`.gitignore` already excludes them; check `git status` and add only `Chart.lock` if the tgz is ignored. If the tgz is normally committed in this repo, add it too.
 
 ---
 
@@ -340,7 +393,7 @@ cd charts/family-pickem
 helm template pickem-dev . -f ../../infra/app/values-dev.yaml | grep -A2 "name: REDIS_URL"
 ```
 
-Expected: `value: "redis://pickem-dev-redis-master:6379/1"`.
+Expected: `value: "redis://family-pickem-dev-redis:6379/1"`.
 
 - [ ] **Step 3: Commit and push (dev auto-deploys from main)**
 
@@ -365,13 +418,11 @@ kubectl exec -n pickem-dev deploy/family-pickem-dev -- \
   python pickem/manage.py shell -c \
   "from django.core.cache import cache; cache.set('livecheck','ok',30); print('CACHE:', cache.get('livecheck'))"
 # The key is visible in Redis DB 1
-kubectl exec -n pickem-dev statefulset/pickem-dev-redis-master -- \
+kubectl exec -n pickem-dev deploy/family-pickem-dev-redis -- \
   redis-cli -n 1 keys '*livecheck*'
 ```
 
-Expected: the Redis pod is `Running`; the shell prints `CACHE: ok`; `redis-cli` lists a `...livecheck` key.
-
-> **Risk to watch here (most likely failure point):** a 2-year-old Bitnami image tag may no longer be pullable after Bitnami's 2025 registry changes. If the Redis pod is `ImagePullBackOff`, override the image in `values.yaml`'s `redis:` block to the still-published location — e.g. set `redis.image.registry: docker.io` and `redis.image.repository: bitnamilegacy/redis` — or bump the subchart to a newer version whose images are published, then re-run Task 2 Steps 4-5. Resolve this in dev before Task 4.
+Expected: the Redis pod is `Running`; the shell prints `CACHE: ok`; `redis-cli` lists a `...livecheck` key. (The official `redis` image is upstream-maintained, so there is no image-pull deprecation risk here.)
 
 ---
 
@@ -400,7 +451,7 @@ cd charts/family-pickem
 helm template pickem-prd . -f ../../infra/app/values-prd.yaml | grep -A2 "name: REDIS_URL"
 ```
 
-Expected: `value: "redis://pickem-prd-redis-master:6379/1"`.
+Expected: `value: "redis://family-pickem-prd-redis:6379/1"`.
 
 - [ ] **Step 3: Commit**
 
@@ -422,7 +473,7 @@ kubectl get pods -n pickem-prd | grep redis
 kubectl exec -n pickem-prd deploy/family-pickem-prd -- \
   python pickem/manage.py shell -c \
   "from django.core.cache import cache; cache.set('livecheck','ok',30); print('CACHE:', cache.get('livecheck'))"
-kubectl exec -n pickem-prd statefulset/pickem-prd-redis-master -- \
+kubectl exec -n pickem-prd deploy/family-pickem-prd-redis -- \
   redis-cli -n 1 keys '*livecheck*'
 ```
 
@@ -433,13 +484,13 @@ Expected: Redis pod `Running`; `CACHE: ok`; the key is present in Redis DB 1.
 ## Self-Review
 
 **Spec coverage (Phase 1 of the design doc):**
-- "Add a Redis subchart to the Helm chart (dev + prd)" → Tasks 2, 3, 4. ✓
+- "Add a Redis subchart to the Helm chart (dev + prd)" → satisfied via a self-managed Deployment instead of the Bitnami subchart (Tasks 2, 3, 4), a deliberate deviation because Bitnami deprecated its free catalog. ✓
 - "Repoint `CACHES['default']` from `FileBasedCache` to `django-redis`" → Task 1. ✓
 - "Redis serves two roles: shared cache and pub/sub broker" → cache used now (Task 1); broker DBs reserved via the DB-index comment (Task 2 Step 3). ✓
 - "Done when: cache works cross-request/cross-pod and Redis reachable from pods" → Task 3/4 Step 4 verification. ✓
 
 **Placeholder scan:** No TBD/TODO; every code and command step is concrete. ✓
 
-**Type/name consistency:** `build_caches(environ)` is defined in Task 1 and consumed by settings in the same task; `REDIS_URL` env produced in Task 2 matches the key `build_caches` reads; service name `{release}-redis-master` is used consistently in the template and all verification commands. ✓
+**Type/name consistency:** `build_caches(environ)` is defined in Task 1 and consumed by settings in the same task; `REDIS_URL` env produced in Task 2 matches the key `build_caches` reads; the service name `{fullname}-redis` (= `family-pickem-{env}-redis`) is used consistently across the template, the `REDIS_URL` value, and all verification commands. Redis selector labels (`{name}-redis`) are deliberately distinct from the web selector to avoid overlap. ✓
 
-**Notable risk:** Bitnami image pullability (flagged in Task 3 Step 4) is the one item that may need real-cluster adjustment; it is gated in dev before prd.
+**Notable deviation from spec:** self-managed Redis instead of the Bitnami subchart, decided after confirming Bitnami's Aug 2025 free-catalog deprecation. This removes the previously-flagged image-pull risk entirely (official `redis` image is upstream-maintained).
