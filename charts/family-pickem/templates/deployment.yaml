@@ -70,9 +70,19 @@ spec:
             value: "{{ .Values.image.tag | default .Chart.AppVersion }}"
           {{- if .Values.redis.enabled }}
           # Shared Redis cache/broker (self-managed; see templates/redis.yaml).
-          # DB 1 is the Django cache; later phases use other DB indexes for pub/sub.
+          # REDIS_PASSWORD (from the -envvars secret via ESO) is interpolated into
+          # REDIS_URL by Kubernetes at pod start, so the credential never appears
+          # in a rendered manifest. DB 1 is the Django cache; later phases use
+          # other DB indexes for pub/sub.
+          # NOTE: this must be an explicit env entry (not just envFrom) — $(VAR)
+          # interpolation only sees vars declared in this container's env list.
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "family-pickem.fullname" . }}-envvars
+                key: REDIS_PASSWORD
           - name: REDIS_URL
-            value: "redis://{{ include "family-pickem.fullname" . }}-redis:6379/1"
+            value: "redis://:$(REDIS_PASSWORD)@{{ include "family-pickem.fullname" . }}-redis:6379/1"
           {{- end }}
           # The web tier never runs the pipeline — the dedicated scheduler
           # Deployment does (templates/scheduler-deployment.yaml). Explicit

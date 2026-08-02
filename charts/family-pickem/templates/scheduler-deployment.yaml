@@ -54,10 +54,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
-          {{- if .Values.redis.enabled }}
-          - name: REDIS_URL
-            value: "redis://{{ include "family-pickem.fullname" . }}-redis:6379/1"
-          {{- end }}
+          # The migrate-check init does not use Redis, so no REDIS_URL here.
           resources:
             {{- toYaml .Values.scheduler.resources | nindent 12 }}
       containers:
@@ -93,8 +90,17 @@ spec:
           - name: RUN_WEB_SERVER
             value: "true"
           {{- if .Values.redis.enabled }}
+          # REDIS_PASSWORD interpolated into REDIS_URL by Kubernetes at pod start
+          # (credential never rendered into a manifest). See templates/redis.yaml.
+          # NOTE: must be an explicit env entry (not just envFrom) — $(VAR)
+          # interpolation only sees vars declared in this container's env list.
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "family-pickem.fullname" . }}-envvars
+                key: REDIS_PASSWORD
           - name: REDIS_URL
-            value: "redis://{{ include "family-pickem.fullname" . }}-redis:6379/1"
+            value: "redis://:$(REDIS_PASSWORD)@{{ include "family-pickem.fullname" . }}-redis:6379/1"
           {{- end }}
           ports:
             - name: http
