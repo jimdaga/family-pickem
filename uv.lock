@@ -215,16 +215,16 @@ wheels = [
 
 [[package]]
 name = "django"
-version = "4.2.30"
+version = "5.2.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asgiref" },
     { name = "sqlparse" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/11/b5/f1a53dc68da6429d6e0345bb848161e2381a2e9f02700148911e8582c2b3/django-4.2.30.tar.gz", hash = "sha256:4ebc7a434e3819db6cf4b399fb5b3f536310a30e8486f08b66886840be84b37c", size = 10468707 }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/26/889449d521ae508b26de715954faecd8bcf3f740affb81b2d146a83b42a5/django-5.2.16.tar.gz", hash = "sha256:59ea02020c3136fce14bef0bbece21a10a4febef5eed1c51c22ae468efa22200", size = 10890894 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/b7/a7c96f239cf91313a6589233fed55111c7063b26683b226802732c455dbc/django-4.2.30-py3-none-any.whl", hash = "sha256:4d07aaf1c62f9984842b67c2874ebbf7056a17be253860299b93ae1881faad65", size = 7997231 },
+    { url = "https://files.pythonhosted.org/packages/4e/13/1e5e3e4c15dcecb04281b3cb2a46a4670e1cef131068e202f6040df19224/django-5.2.16-py3-none-any.whl", hash = "sha256:04f354bf9d807a86ad1a8392fe3808d362358a8eafc322848e0e43e59b24371d", size = 8311943 },
 ]
 
 [[package]]
@@ -251,28 +251,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/64/6b/873899c2da113187b74f0cccdf4c16660e07bfbbcae72621c4758e0958bf/django_apscheduler-0.7.0.tar.gz", hash = "sha256:30d61a2ba98615922fc2c9782f84bba342ec0c5ed63384d686d71ea90a1a4318", size = 473051 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e0/19/c3d2dea21a6afdc93689b9f769ff3694cac810e4a09c24ab423dd1613e6c/django_apscheduler-0.7.0-py3-none-any.whl", hash = "sha256:869d489775420245c9455d55e35f663c856a33ebfc996d92938f786ffb8730ce", size = 24690 },
-]
-
-[[package]]
-name = "django-bootstrap-v5"
-version = "1.0.11"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "django" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cc/ed/e02ed4a607f839726745c189d50f5b02cec30fe1fc1863a1ff1e2a899616/django-bootstrap-v5-1.0.11.tar.gz", hash = "sha256:2d431308859ce3cab7729bb09c76039059cd5fbdd34484da82c4c7f8d49da3a2", size = 32396 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cc/c3/24f9f53fd3b42c2a3f5ea2b2cb3c31c20a4eb938869740b38480dd3ccbd4/django_bootstrap_v5-1.0.11-py3-none-any.whl", hash = "sha256:a207aa804938164c8450bbbef4faaba6d2093b3236000557a50f3bd44b53d268", size = 24218 },
-]
-
-[[package]]
-name = "django-crispy-forms"
-version = "1.14.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/60/96/56854b9f0b437454cef5dd5e9977017a81c23e235eceb6f7ea9c7848d06d/django-crispy-forms-1.14.0.tar.gz", hash = "sha256:35887b8851a931374dd697207a8f56c57a9c5cb9dbf0b9fa54314da5666cea5b", size = 71229 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/34/f5240bcecb9c0d87fc339edf66f87d2ca5580e995ca966a93fdfb5ba7a66/django_crispy_forms-1.14.0-py3-none-any.whl", hash = "sha256:bc4d2037f6de602d39c0bc452ac3029d1f5d65e88458872cc4dbc01c3a400604", size = 133307 },
 ]
 
 [[package]]
@@ -317,8 +295,6 @@ dependencies = [
     { name = "django" },
     { name = "django-allauth" },
     { name = "django-apscheduler" },
-    { name = "django-bootstrap-v5" },
-    { name = "django-crispy-forms" },
     { name = "django-storages" },
     { name = "django-tables2" },
     { name = "idna" },
@@ -364,11 +340,9 @@ requires-dist = [
     { name = "charset-normalizer", specifier = "==2.1.1" },
     { name = "cryptography", specifier = "==48.0.1" },
     { name = "defusedxml", specifier = "==0.7.1" },
-    { name = "django", specifier = "==4.2.30" },
+    { name = "django", specifier = "==5.2.16" },
     { name = "django-allauth", specifier = "==65.14.1" },
     { name = "django-apscheduler", specifier = "==0.7.0" },
-    { name = "django-bootstrap-v5", specifier = "==1.0.11" },
-    { name = "django-crispy-forms", specifier = "==1.14.0" },
     { name = "django-storages", specifier = "==1.13.1" },
     { name = "django-tables2", specifier = "==2.4.1" },
     { name = "idna", specifier = "==3.15" },
