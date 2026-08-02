@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import os
 import requests
 
+from .cache import build_caches
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  
 
@@ -131,14 +133,17 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Default cache (file-based; also used by Django internals).
+# Cache backend: Redis when REDIS_URL is set (see pickem/cache.py and issue
+# #93); the file-based cache otherwise, so local dev and tests need no external
+# services.
 # NOTE: application-level rate limiting was removed — request throttling is
 # handled at the edge by a Cloudflare rate-limiting rule instead.
-from .cache import build_caches
-
-# Redis when REDIS_URL is set (see pickem/cache.py and issue #93); the
-# file-based cache otherwise, so local dev and tests need no external services.
 CACHES = build_caches(os.environ)
+
+# IGNORE_EXCEPTIONS makes a Redis outage degrade to "no cache" rather than
+# raising 500s; pair it with this so the swallowed connection errors are still
+# logged (console/superadmin/Sentry via the root logger) instead of vanishing.
+DJANGO_REDIS_LOG_IGNORED_EXCEPTIONS = True
 
 ROOT_URLCONF = 'pickem.urls'
 
