@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends postgresql-clie
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
+# Use the base image's Python; don't let uv download its own into /root
+ENV UV_PYTHON_DOWNLOADS=0
+
 # Install Python dependencies in a cacheable layer before copying app code
 WORKDIR ${WORK_DIR}
 COPY pyproject.toml uv.lock ./

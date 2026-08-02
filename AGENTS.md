@@ -281,7 +281,7 @@ Key packages:
 Rate limiting is handled at the Cloudflare edge, not in the Django app
 (`django-ratelimit` was removed).
 
-See `requirements.txt` for complete list.
+See `pyproject.toml` for complete list.
 
 ## Tailwind CSS
 
