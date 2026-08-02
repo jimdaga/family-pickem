@@ -34,6 +34,10 @@ postgresql:
   primary:
     persistence:
       existingClaim: postgres-prd-pvc
+# Shared Redis (auth via REDIS_PASSWORD from AWS Secrets Manager / ESO).
+redis:
+  enabled: true
+
 # Runs the update pipeline in a dedicated single-replica scheduler Deployment
 # (RUN_SCHEDULER=true); the web tier runs RUN_SCHEDULER=false and can autoscale.
 scheduler:

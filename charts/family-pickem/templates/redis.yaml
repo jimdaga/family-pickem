@@ -26,19 +26,27 @@ spec:
         - name: redis
           image: {{ .Values.redis.image | quote }}
           imagePullPolicy: IfNotPresent
-          # Ephemeral cache/broker: disable RDB snapshots and AOF, and bound the
-          # dataset with LRU eviction so Redis can never grow past its container
-          # limit and OOM the node. (allkeys-lru is safe here: DB 1 is a pure
-          # cache and pub/sub messages don't live in the keyspace.)
-          args:
-            - "--save"
-            - ""
-            - "--appendonly"
-            - "no"
-            - "--maxmemory"
-            - {{ .Values.redis.maxmemory | quote }}
-            - "--maxmemory-policy"
-            - {{ .Values.redis.maxmemoryPolicy | quote }}
+          # Require a password (REDIS_PASSWORD from the -envvars secret, sourced
+          # from AWS Secrets Manager via ESO). Using `command` so the flag can
+          # reference $REDIS_PASSWORD; the rest matches the ephemeral-cache config
+          # (no RDB/AOF; bounded memory with LRU eviction so Redis can't OOM the
+          # node — allkeys-lru is safe: DB 1 is a pure cache, pub/sub isn't keyed).
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "family-pickem.fullname" . }}-envvars
+                  key: REDIS_PASSWORD
+          command:
+            - sh
+            - -c
+            - >-
+              exec redis-server
+              --requirepass "$REDIS_PASSWORD"
+              --save ""
+              --appendonly no
+              --maxmemory {{ .Values.redis.maxmemory | quote }}
+              --maxmemory-policy {{ .Values.redis.maxmemoryPolicy | quote }}
           ports:
             - name: redis
               containerPort: 6379
@@ -49,7 +57,7 @@ spec:
             initialDelaySeconds: 10
           readinessProbe:
             exec:
-              command: ["redis-cli", "ping"]
+              command: ["sh", "-c", "redis-cli --no-auth-warning -a \"$REDIS_PASSWORD\" ping"]
             initialDelaySeconds: 5
           resources:
             {{- toYaml .Values.redis.resources | nindent 12 }}
