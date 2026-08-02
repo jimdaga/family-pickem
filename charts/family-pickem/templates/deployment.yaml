@@ -74,15 +74,11 @@ spec:
           - name: REDIS_URL
             value: "redis://{{ include "family-pickem.fullname" . }}-redis:6379/1"
           {{- end }}
-          {{- if and .Values.scheduler.enabled .Values.autoscaling.enabled }}
-          {{ fail "scheduler.enabled requires autoscaling.enabled=false" }}
-          {{- end }}
-          {{- if .Values.scheduler.enabled }}
-          # In-process APScheduler runs the update pipeline. Safe only because
-          # the web Deployment is single-replica; do not enable with replicaCount > 1.
+          # The web tier never runs the pipeline — the dedicated scheduler
+          # Deployment does (templates/scheduler-deployment.yaml). Explicit
+          # RUN_SCHEDULER=false so the web pods stay stateless and can autoscale.
           - name: RUN_SCHEDULER
-            value: "true"
-          {{- end }}
+            value: "false"
           ports:
             - name: http
               containerPort: 8000
