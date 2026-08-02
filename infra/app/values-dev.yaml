@@ -42,6 +42,9 @@ redis:
 scheduler:
   enabled: true
 
+autoscaling:
+  enabled: true
+
 # pickemctl retired — userStats is now computed by the in-process `update_stats`
 # management command (part of the update_all pipeline).
 
