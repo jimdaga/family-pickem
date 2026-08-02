@@ -8,6 +8,7 @@ Teams are global (not pool-scoped), so this command has no tenant awareness.
 """
 
 import logging
+import time
 
 import requests
 from django.core.management.base import BaseCommand, CommandError
@@ -25,6 +26,8 @@ ESPN_RECORD_URL = (
     "seasons/{year}/types/2/teams/{team_id}/record"
 )
 REQUEST_TIMEOUT = 30
+FETCH_RETRIES = 3
+FETCH_BACKOFF = 2.0  # seconds; doubles each attempt
 
 
 def season_start_year(season):
@@ -34,18 +37,30 @@ def season_start_year(season):
 
 def fetch_team_list():
     """Return the list of ESPN team dicts (id, slug, displayName, colors, logos)."""
-    response = requests.get(
-        ESPN_TEAMS_URL,
-        headers={"Content-Type": "application/json"},
-        timeout=REQUEST_TIMEOUT,
-    )
-    response.raise_for_status()
-    data = response.json()
-    return [
-        entry["team"]
-        for league in data["sports"][0]["leagues"]
-        for entry in league["teams"]
-    ]
+    for attempt in range(FETCH_RETRIES):
+        try:
+            response = requests.get(
+                ESPN_TEAMS_URL,
+                headers={"Content-Type": "application/json"},
+                timeout=REQUEST_TIMEOUT,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return [
+                entry["team"]
+                for league in data["sports"][0]["leagues"]
+                for entry in league["teams"]
+            ]
+        except requests.exceptions.RequestException as exc:
+            if attempt < FETCH_RETRIES - 1:
+                wait = FETCH_BACKOFF * (2 ** attempt)
+                logger.warning(
+                    "ESPN team list fetch failed (attempt %d/%d): %s — retrying in %.0fs",
+                    attempt + 1, FETCH_RETRIES, exc, wait,
+                )
+                time.sleep(wait)
+            else:
+                raise
 
 
 def fetch_team_record(team_id, year):
