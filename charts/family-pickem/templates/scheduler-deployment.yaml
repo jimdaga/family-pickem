@@ -81,7 +81,16 @@ spec:
           - name: APP_RELEASE
             value: "{{ .Values.image.tag | default .Chart.AppVersion }}"
           # This pod IS the scheduler: it runs the in-process APScheduler pipeline.
+          # PickemApiConfig.ready() starts the scheduler only when RUN_SCHEDULER
+          # AND RUN_WEB_SERVER are true under `manage.py runserver` (RUN_MAIN is
+          # set by runserver's reloader child). The image entrypoint already
+          # exports RUN_WEB_SERVER=true before runserver; we set it explicitly
+          # here too so the scheduler's start condition never silently depends on
+          # entrypoint internals (a mis-set value would pass health probes while
+          # running no pipeline).
           - name: RUN_SCHEDULER
+            value: "true"
+          - name: RUN_WEB_SERVER
             value: "true"
           {{- if .Values.redis.enabled }}
           - name: REDIS_URL
