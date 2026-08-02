@@ -68,6 +68,12 @@ spec:
                 fieldPath: status.podIP
           - name: APP_RELEASE
             value: "{{ .Values.image.tag | default .Chart.AppVersion }}"
+          {{- if .Values.redis.enabled }}
+          # Shared Redis cache/broker (self-managed; see templates/redis.yaml).
+          # DB 1 is the Django cache; later phases use other DB indexes for pub/sub.
+          - name: REDIS_URL
+            value: "redis://{{ include "family-pickem.fullname" . }}-redis:6379/1"
+          {{- end }}
           {{- if and .Values.scheduler.enabled .Values.autoscaling.enabled }}
           {{ fail "scheduler.enabled requires autoscaling.enabled=false" }}
           {{- end }}

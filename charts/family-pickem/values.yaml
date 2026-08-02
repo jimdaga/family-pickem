@@ -77,6 +77,17 @@ postgresql:
         # password: ""
         database: "pickem"
 
+# Shared Redis: the Django cache now, and the pub/sub broker for live updates
+# later (#93). Self-managed (NOT the Bitnami subchart — Bitnami deprecated its
+# free catalog in Aug 2025). Disabled by default; enabled per environment in
+# infra/app/. Ephemeral: no persistence, since it is only a cache/broker.
+# Reachable only inside the cluster network, so it runs without auth; add auth
+# (a password from AWS Secrets Manager via ESO) before ever exposing it.
+redis:
+  enabled: false
+  image: "redis:7.4-alpine"
+  resources: {}
+
 # In-process update scheduler (django-apscheduler). When enabled, sets
 # RUN_SCHEDULER=true on the single web replica so it runs the update_all
 # pipeline internally; the legacy cron CronJob below should be suspended.
