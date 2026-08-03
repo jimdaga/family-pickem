@@ -43,6 +43,7 @@ dependencies = [
     "tzlocal==4.2",
     "urllib3==2.7.0",
     "uvicorn[standard]==0.34.0",
+    "redis==8.1.0",
 ]
 
 [dependency-groups]

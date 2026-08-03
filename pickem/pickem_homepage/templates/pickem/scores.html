@@ -12,7 +12,7 @@
 
 {% block content %}
 
-<div data-scores-page class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
+<div data-scores-page data-live-week="{{ week }}" class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
 
     <!-- Scoreboard header + filters -->
     <div class="scores-top-panel mb-6">
@@ -356,7 +356,7 @@
                      class="games-grid pt-4 grid grid-cols-1 md:grid-cols-2 gap-6"
                      id="games-{{ time_group.grouper|date:'Y-m-d-Hi' }}">
                             {% for game in time_group.list %}
-                            <div class="scores-game-card game-score-card bg-surface-light dark:bg-slate-700 rounded-xl overflow-hidden border border-border-light dark:border-slate-600 hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 flex flex-col {% if game.statusType == 'inprogress' %}scores-live-game{% endif %}" data-game-status="{{ game.statusType|lower }}" data-scores-card>
+                            <div class="scores-game-card game-score-card bg-surface-light dark:bg-slate-700 rounded-xl overflow-hidden border border-border-light dark:border-slate-600 hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 flex flex-col {% if game.statusType == 'inprogress' %}scores-live-game{% endif %}" data-game-status="{{ game.statusType|lower }}" data-game-id="{{ game.id }}" data-scores-card>
                                 <!-- Game Status Header -->
                                 <div class="flex items-center justify-between px-3 py-1 text-sm font-semibold text-white {% if game.statusType == 'inprogress' %}bg-gradient-to-r from-green-600 to-green-700{% elif game.statusType == 'finished' %}bg-gradient-to-r from-blue-600 to-blue-700{% else %}bg-gradient-to-r from-gray-600 to-gray-700 dark:from-gray-700 dark:to-gray-800{% endif %}">
                                     <div class="flex items-center gap-2">
@@ -478,7 +478,7 @@
                                                     <span class="quarter-score">{{ game.awayTeamPeriod3|default:"—" }}</span>
                                                     <span class="quarter-score">{{ game.awayTeamPeriod4|default:"—" }}</span>
                                                 </div>
-                                                <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3">{{ game.awayTeamScore|default:"0" }}</div>
+                                                <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3" data-away-score>{{ game.awayTeamScore|default:"0" }}</div>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -535,7 +535,7 @@
                                                     <span class="quarter-score">{{ game.homeTeamPeriod3|default:"—" }}</span>
                                                     <span class="quarter-score">{{ game.homeTeamPeriod4|default:"—" }}</span>
                                                 </div>
-                                                <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3">{{ game.homeTeamScore|default:"0" }}</div>
+                                                <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3" data-home-score>{{ game.homeTeamScore|default:"0" }}</div>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -1606,7 +1606,72 @@
         };
         document.addEventListener('visibilitychange', window.visibilityHandler);
     }
-    
+
+    // Live score updates via Server-Sent Events (preferred). Falls back to
+    // the 30s poll above (startLiveUpdates) if EventSource is unavailable,
+    // the connection can't be established, or the week isn't known.
+    function applyScoreEvent(ev) {
+        let d;
+        try { d = JSON.parse(ev.data); } catch (e) { return; }
+        const card = document.querySelector(`.game-score-card[data-game-id="${d.game_id}"]`);
+        if (!card) return;
+        const statusChanged = card.getAttribute('data-game-status') !== d.status;
+        if (statusChanged) {
+            // A status transition (e.g. notstarted -> inprogress) can change
+            // which score-dependent markup the card has at all — a
+            // notstarted card has no [data-home-score]/[data-away-score]
+            // elements, so a score-only patch would silently do nothing and
+            // leave the card stale. Do a full refresh instead of patching.
+            //
+            // updateLiveScores() gates on hasLiveGames() (any card with
+            // data-game-status="inprogress"). To keep that gate true so the
+            // refresh actually runs, mark the card inprogress on kickoff; on a
+            // game FINISHING, leave the card as inprogress (do NOT set it to
+            // "finished" here) — otherwise the last live game finishing would
+            // flip hasLiveGames() false and the refresh would no-op, freezing
+            // the card. updateLiveScores() re-fetches and sets the correct
+            // (finished) status + markup itself.
+            if (d.status === 'inprogress') {
+                card.setAttribute('data-game-status', 'inprogress');
+            }
+            if (typeof updateLiveScores === 'function') updateLiveScores();
+            return;
+        }
+        const home = card.querySelector('[data-home-score]');
+        const away = card.querySelector('[data-away-score]');
+        if (home) home.textContent = d.home_score;
+        if (away) away.textContent = d.away_score;
+        // reuse existing update animation + completion handling
+        card.style.animation = 'none'; card.offsetHeight; card.style.animation = 'fadeIn 0.5s ease-in';
+        if (window.scoresLivePulse) window.scoresLivePulse();
+    }
+
+    let sseSource = null;
+    let sseErrorCount = 0;
+    function startSse() {
+        if (!window.EventSource) return false;
+        const el = document.querySelector('[data-live-week]');
+        const wk = el && el.dataset ? el.dataset.liveWeek : null;
+        if (!wk) return false;
+        try {
+            sseSource = new EventSource(`/events/scores/?week=${encodeURIComponent(wk)}`);
+        } catch (e) { return false; }
+        sseSource.onmessage = function (ev) { sseErrorCount = 0; applyScoreEvent(ev); };
+        sseSource.onerror = function () {
+            // EventSource auto-reconnects on transient drops; only give up (and
+            // fall back to the 30s poll) after repeated failures with no data —
+            // this also covers the graceful-stream-end / Redis-down case where
+            // readyState never reaches CLOSED.
+            sseErrorCount++;
+            if (sseErrorCount >= 3) {
+                try { sseSource.close(); } catch (e) {}
+                sseSource = null;
+                startLiveUpdates(); // existing 30s poll fallback
+            }
+        };
+        return true;
+    }
+
     // Debug function for manual testing
     window.testLiveUpdate = function() {
         console.log('Manual live update test initiated');
@@ -1615,15 +1680,17 @@
         updateLiveScores();
     };
     
-    // Start live updates when page loads if there are live games
-    if (hasLiveGames()) {
-        console.log('Live games detected on page load, starting updates in 2 seconds');
-        // Initial delay to let page fully load
-        setTimeout(startLiveUpdates, 2000);
-    } else {
-        console.log('No live games detected on page load');
+    // Prefer SSE for live updates; the 30s poll remains the fallback.
+    if (!startSse()) {
+        if (hasLiveGames()) {
+            console.log('Live games detected on page load, starting updates in 2 seconds');
+            // Initial delay to let page fully load
+            setTimeout(startLiveUpdates, 2000);
+        } else {
+            console.log('No live games detected on page load');
+        }
     }
-    
+
     // Restart live updates when filter changes to show live games
     const originalFilterGames = filterGames;
     filterGames = function(filterType) {

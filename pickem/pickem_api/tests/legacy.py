@@ -1338,17 +1338,20 @@ class UpdateGamesCommandTest(TestCase):
             mock_fetch.return_value = payload
             call_command("update_games", season=2526, week=1)
 
-        # `.values("gameScored", "gameWinner")` selects only those two
-        # columns; update_or_create's own internal lookup selects the full
-        # row (including hometeamscore, absent here), so this combination
-        # uniquely identifies the previous-state lookup this fix targets —
+        # The bulk previous-state lookup selects gameScored/gameWinner (plus
+        # the live-score fields, since the same query also feeds the SSE
+        # change-detection in maybe_publish_game_change) for every game with
+        # a single `id IN (...)` clause. update_or_create's own internal
+        # per-row lookup selects the full row but filters on `id = <n>`, not
+        # an IN-list — that's what uniquely identifies the bulk query here,
         # independent of Django-version-specific column-aliasing syntax in
         # the generated SQL (verified to differ between the 4.2/5.2 lines).
         previous_state_queries = [
             q for q in ctx.captured_queries
             if "gamesandscores" in q["sql"].lower()
             and "gamescored" in q["sql"].lower()
-            and "hometeamscore" not in q["sql"].lower()
+            and "gamewinner" in q["sql"].lower()
+            and " in (" in q["sql"].lower()
             and "select" in q["sql"].lower()
         ]
         self.assertEqual(
