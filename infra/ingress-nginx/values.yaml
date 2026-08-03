@@ -16,6 +16,10 @@ controller:
     type: NodePort
       #type: LoadBalancer
     externalTrafficPolicy: Local # This is needed to log client IPs
+    # HAProxy on the host forwards public traffic to these ports.
+    nodePorts:
+      http: 30585
+      https: 32681
 
   metrics:
     enabled: true

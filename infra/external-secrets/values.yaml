@@ -1,6 +1,5 @@
-# External Secrets Operator Helm chart values (v0.19.x)
+# External Secrets Operator Helm chart values
 # Managed by ArgoCD
-# Note: Pinned to 0.19.x due to K8s 1.28 compatibility (selectableFields CRD field)
 
 installCRDs: true
 
