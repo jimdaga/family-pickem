@@ -18,7 +18,7 @@ from django.utils.dateparse import parse_datetime
 
 from pickem.utils import get_season
 from pickem_api.live_events import (
-    LIVE_SCORE_FIELDS,
+    SCORE_TRIGGER_FIELDS,
     publish_score_event,
     score_event_payload,
 )
@@ -306,14 +306,16 @@ def fetch_scoreboard(week, game_year):
 
 
 def maybe_publish_game_change(before, after):
-    """Publish a live score event if any LIVE_SCORE_FIELD changed (or new game).
+    """Publish a live score event if any SCORE_TRIGGER_FIELD changed (or new game).
 
-    ``before`` is a dict of the row's LIVE_SCORE_FIELDS prior to the upsert, or
-    None if the row was just created. ``after`` is the saved GamesAndScores.
+    ``before`` is a dict of the row's SCORE_TRIGGER_FIELDS prior to the upsert, or
+    None if the row was just created. ``after`` is the saved GamesAndScores. The
+    trigger set includes statusTitle (clock/quarter) and the per-quarter period
+    fields, so the on-screen clock and line scores update live too, not just totals.
     """
     if before is not None:
         changed = any(
-            before.get(f) != getattr(after, f) for f in LIVE_SCORE_FIELDS
+            before.get(f) != getattr(after, f) for f in SCORE_TRIGGER_FIELDS
         )
         if not changed:
             return
@@ -346,7 +348,7 @@ class Command(BaseCommand):
             row["id"]: row
             for row in GamesAndScores.objects.filter(
                 id__in=[game_id for game_id, _ in parsed]
-            ).values("id", "gameScored", *LIVE_SCORE_FIELDS)
+            ).values("id", "gameScored", *SCORE_TRIGGER_FIELDS)
         }
         count = 0
         for game_id, defaults in parsed:
