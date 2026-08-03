@@ -1622,7 +1622,18 @@
             // notstarted card has no [data-home-score]/[data-away-score]
             // elements, so a score-only patch would silently do nothing and
             // leave the card stale. Do a full refresh instead of patching.
-            card.setAttribute('data-game-status', d.status);
+            //
+            // updateLiveScores() gates on hasLiveGames() (any card with
+            // data-game-status="inprogress"). To keep that gate true so the
+            // refresh actually runs, mark the card inprogress on kickoff; on a
+            // game FINISHING, leave the card as inprogress (do NOT set it to
+            // "finished" here) — otherwise the last live game finishing would
+            // flip hasLiveGames() false and the refresh would no-op, freezing
+            // the card. updateLiveScores() re-fetches and sets the correct
+            // (finished) status + markup itself.
+            if (d.status === 'inprogress') {
+                card.setAttribute('data-game-status', 'inprogress');
+            }
             if (typeof updateLiveScores === 'function') updateLiveScores();
             return;
         }
