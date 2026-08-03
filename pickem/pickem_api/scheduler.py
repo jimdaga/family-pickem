@@ -224,16 +224,37 @@ def live_window_active():
     ).exists()
 
 
+def finished_unscored_exists():
+    """True if any current-season game has finaled but hasn't been scored yet.
+
+    update_picks flips gameScored True once it scores a finished game, so this
+    check is idempotent: it drives the scoped downstream recompute below, and
+    once that recompute runs, subsequent ticks see nothing left to do."""
+    from pickem.utils import get_season
+    from pickem_api.models import GamesAndScores
+
+    return GamesAndScores.objects.filter(
+        gameseason=get_season(), statusType="finished", gameScored=False
+    ).exists()
+
+
 def run_live_scores_tick():
     """Fast score refresh: run update_games only during a live window.
 
     Off-window this is a single cheap EXISTS query and returns. On-window it
-    runs update_games (which publishes changed games to Redis)."""
+    runs update_games (which publishes changed games to Redis). If that leaves
+    a finished-but-unscored game, also run the scoped downstream chain
+    (picks -> standings -> rankings -> stats) so a final is reflected within
+    one live tick (~12s) instead of waiting for the next minute's pipeline
+    tick."""
     if not live_window_active():
         return
     if _update_games_running():
         return
     run_job_once("update_games")
+    if finished_unscored_exists():
+        for job_id in ("update_picks", "update_standings", "update_rankings", "update_stats"):
+            run_job_once(job_id)
 
 
 def run_prune_logs():
