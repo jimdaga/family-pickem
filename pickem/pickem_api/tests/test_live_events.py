@@ -34,3 +34,33 @@ class PublishTests(SimpleTestCase):
                 mock.patch.object(live_events, "_redis_client", return_value=mock.Mock(publish=boom)):
             # Best-effort: a Redis error must be swallowed (logged), not raised.
             live_events.publish_score_event(2627, "3", {"game_id": 1})
+
+
+class StandingsEventTests(SimpleTestCase):
+    def test_standings_channel(self):
+        self.assertEqual(live_events.standings_channel(7, 2627), "standings:7:2627")
+
+    def test_standings_payload(self):
+        from unittest import mock
+        row = mock.Mock(userID="u1", total_points=42, current_rank=2)
+        setattr(row, "week_3_points", 5)
+        p = live_events.standings_event_payload(row, 3)
+        self.assertEqual(p["user_id"], "u1")
+        self.assertEqual(p["total_points"], 42)
+        self.assertEqual(p["week"], 3)
+        self.assertEqual(p["week_points"], 5)
+
+
+class ScorePayloadPeriodsTests(SimpleTestCase):
+    def test_score_payload_includes_periods_and_status_title(self):
+        from unittest import mock
+        g = mock.Mock(id=1, homeTeamScore=7, awayTeamScore=0, statusType="inprogress",
+                      statusTitle="5:00 - 2nd Quarter", gameWinner="",
+                      homeTeamPeriod1=7, homeTeamPeriod2=0, homeTeamPeriod3=0,
+                      homeTeamPeriod4=0, homeTeamPeriodOT=0,
+                      awayTeamPeriod1=0, awayTeamPeriod2=0, awayTeamPeriod3=0,
+                      awayTeamPeriod4=0, awayTeamPeriodOT=0)
+        p = live_events.score_event_payload(g)
+        self.assertEqual(p["status_title"], "5:00 - 2nd Quarter")
+        self.assertEqual(p["home_periods"], [7, 0, 0, 0, 0])
+        self.assertEqual(p["away_periods"], [0, 0, 0, 0, 0])

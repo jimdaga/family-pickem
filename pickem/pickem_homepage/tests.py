@@ -9344,3 +9344,252 @@ class SseStreamShapeTests(TestCase):
             second = await gen.__anext__()
             self.assertIn('data: {"game_id": 1}', second)
             await gen.aclose()
+
+    async def test_stream_ends_gracefully_on_redis_error(self):
+        # If Redis subscribe()/get_message() raises (blip, auth failure,
+        # dropped connection), _event_stream's `except Exception: ... return`
+        # should end the generator gracefully (StopAsyncIteration) rather than
+        # propagating the error to the ASGI caller, and cleanup should still
+        # run via `finally`.
+        from unittest import mock
+        import redis.exceptions
+
+        from pickem_homepage import live_views
+
+        cleanup_calls = []
+
+        class FakePubSub:
+            async def subscribe(self, ch):
+                raise redis.exceptions.ConnectionError("connection refused")
+
+            async def get_message(self, ignore_subscribe_messages=True, timeout=0.0):
+                raise redis.exceptions.ConnectionError("connection refused")
+
+            async def unsubscribe(self, ch):
+                cleanup_calls.append("unsubscribe")
+
+            async def aclose(self):
+                cleanup_calls.append("pubsub_aclose")
+
+        class FakeClient:
+            def pubsub(self):
+                return FakePubSub()
+
+            async def aclose(self):
+                cleanup_calls.append("client_aclose")
+
+        with mock.patch.dict("os.environ", {"REDIS_URL": "redis://x:6379/1"}), \
+                mock.patch("redis.asyncio.from_url", return_value=FakeClient()):
+            gen = live_views._event_stream("scores:2627:3")
+            # The generator should end gracefully (StopAsyncIteration), not
+            # propagate the ConnectionError raised by subscribe().
+            with self.assertRaises(StopAsyncIteration):
+                await gen.__anext__()
+
+        # `finally` cleanup should have run even though subscribe() failed.
+        self.assertIn("unsubscribe", cleanup_calls)
+        self.assertIn("pubsub_aclose", cleanup_calls)
+        self.assertIn("client_aclose", cleanup_calls)
+
+
+class SseStandingsAuthTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.client = Client()
+        self.family = Family.objects.create(name="Smith Family", slug="smith-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="main",
+            season=2526,
+            competition="nfl",
+            is_default=True,
+        )
+        self.member = User.objects.create_user(
+            "standings-member", email="standings-member@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "standings-outsider", email="standings-outsider@example.com", password="pass"
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.member,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def test_url_reverses(self):
+        self.assertEqual(reverse("live_standings_events"), "/events/standings/")
+
+    def test_requires_login(self):
+        # RequireLoginForInternalPagesMiddleware should block anonymous access.
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": self.pool.slug},
+        )
+        self.assertIn(resp.status_code, (302, 401))
+
+    def test_missing_params_returns_400(self):
+        self.client.force_login(self.member)
+
+        resp = self.client.get("/events/standings/")
+
+        self.assertEqual(resp.status_code, 400)
+
+    def test_missing_pool_param_returns_400(self):
+        self.client.force_login(self.member)
+
+        resp = self.client.get(
+            "/events/standings/", {"family": self.family.slug}
+        )
+
+        self.assertEqual(resp.status_code, 400)
+
+    def test_non_member_gets_403(self):
+        self.client.force_login(self.outsider)
+
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": self.pool.slug},
+        )
+
+        self.assertEqual(resp.status_code, 403)
+
+    def test_unknown_pool_gets_403(self):
+        self.client.force_login(self.member)
+
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": "does-not-exist"},
+        )
+
+        self.assertEqual(resp.status_code, 403)
+
+    def test_member_gets_stream(self):
+        # No REDIS_URL in test env: _event_stream ends immediately, so the
+        # response is a valid (empty) SSE stream rather than a 403/400.
+        self.client.force_login(self.member)
+
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": self.pool.slug},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "text/event-stream")
+        self.assertEqual(resp["Cache-Control"], "no-cache")
+        self.assertEqual(resp["X-Accel-Buffering"], "no")
+
+    def test_member_of_soft_deleted_family_gets_403(self):
+        # family_pool_admin_delete_family flips Family.status to INACTIVE and
+        # the rest of the tenant surface 404s on it; the SSE endpoint must
+        # deny it too, even though the FamilyMembership row is untouched.
+        self.family.status = Family.Status.INACTIVE
+        self.family.save(update_fields=["status"])
+        self.client.force_login(self.member)
+
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": self.pool.slug},
+        )
+
+        self.assertEqual(resp.status_code, 403)
+
+    def test_member_of_archived_pool_gets_403(self):
+        self.pool.status = Pool.Status.ARCHIVED
+        self.pool.save(update_fields=["status"])
+        self.client.force_login(self.member)
+
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": self.pool.slug},
+        )
+
+        self.assertEqual(resp.status_code, 403)
+
+
+class ResolvePoolForMemberTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.family = Family.objects.create(name="Jones Family", slug="jones-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="main",
+            season=2526,
+            competition="nfl",
+            is_default=True,
+        )
+        self.member = User.objects.create_user(
+            "resolve-member", email="resolve-member@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "resolve-outsider", email="resolve-outsider@example.com", password="pass"
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.member,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def test_member_resolves_pool_id_and_season(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        result = _resolve_pool_for_member(self.member, self.family.slug, self.pool.slug)
+
+        self.assertEqual(result, (self.pool.id, self.pool.season))
+
+    def test_non_member_returns_none(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        result = _resolve_pool_for_member(self.outsider, self.family.slug, self.pool.slug)
+
+        self.assertIsNone(result)
+
+    def test_unknown_family_or_pool_returns_none(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        result = _resolve_pool_for_member(self.member, "no-such-family", self.pool.slug)
+
+        self.assertIsNone(result)
+
+    def test_inactive_family_returns_none_even_for_active_member(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        self.family.status = Family.Status.INACTIVE
+        self.family.save(update_fields=["status"])
+
+        result = _resolve_pool_for_member(self.member, self.family.slug, self.pool.slug)
+
+        self.assertIsNone(result)
+
+    def test_archived_pool_returns_none_even_for_active_member(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        self.pool.status = Pool.Status.ARCHIVED
+        self.pool.save(update_fields=["status"])
+
+        result = _resolve_pool_for_member(self.member, self.family.slug, self.pool.slug)
+
+        self.assertIsNone(result)
+
+    def test_inactive_membership_returns_none(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        FamilyMembership.objects.filter(family=self.family, user=self.member).update(
+            status=FamilyMembership.Status.INACTIVE
+        )
+
+        result = _resolve_pool_for_member(self.member, self.family.slug, self.pool.slug)
+
+        self.assertIsNone(result)

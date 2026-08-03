@@ -13,7 +13,7 @@
 
 {% block content %}
 
-<div data-standings-page class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
+<div data-standings-page{% if pool and selected_season == pool.season|stringformat:"s" %} data-family-slug="{{ family.slug }}" data-pool-slug="{{ pool.slug }}"{% endif %} class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
     <!-- Scoreboard Header -->
     <div class="standings-top-panel mb-5">
         <div class="standings-scoreboard-header px-1 py-2 sm:px-0 sm:py-3">
@@ -137,7 +137,8 @@
             {% for player in player_points %}
             <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}"
                class="standings-row block bg-white/60 dark:bg-bg-dark/30 rounded-lg px-3 py-2 border border-border-light dark:border-border-subtle hover:border-primary/50 dark:hover:border-primary/50 hover:shadow-card-hover transition-all duration-200"
-               style="animation-delay: {{ forloop.counter0|add:1|floatformat:2 }}s">
+               style="animation-delay: {{ forloop.counter0|add:1|floatformat:2 }}s"
+               data-user-id="{{ player.userID }}">
                 {% with usernames|lookup:player.userID as username %}
                 {% with avatars|lookup:player.userID as avatar %}
 
@@ -165,7 +166,7 @@
 
                     <!-- Points Display -->
                     <div class="text-right flex-shrink-0">
-                        <div class="text-xl font-black text-text-dark dark:text-white">{{ player.total_points|default:0 }}</div>
+                        <div class="text-xl font-black text-text-dark dark:text-white" data-user-total-points>{{ player.total_points|default:0 }}</div>
                         <div class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase tracking-wide">Points</div>
                     </div>
                 </div>
@@ -348,5 +349,66 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <!-- Alpine.js for dropdown (if not already included) -->
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js" integrity="sha384-pb6hrQvo4s23cEUFtj0CZkzGE3jyK3pj26RIupXXxhSrrcUA/Cn0lZgcCrGH0t6L" crossorigin="anonymous"></script>
+
+<!-- Live total points via Server-Sent Events (Phase 3c). Patches the
+     leaderboard's points cell in place from /events/standings/; never
+     reorders rows or touches rank badges. -->
+<script>
+(function () {
+    if (!window.EventSource) {
+        return;
+    }
+    var page = document.querySelector('[data-standings-page]');
+    var familySlug = page && page.dataset ? page.dataset.familySlug : '';
+    var poolSlug = page && page.dataset ? page.dataset.poolSlug : '';
+    if (!familySlug || !poolSlug) {
+        // Non-tenant (legacy global) standings page has no family/pool scope
+        // to subscribe to.
+        return;
+    }
+
+    function applyStandingsEvent(ev) {
+        var d;
+        try { d = JSON.parse(ev.data); } catch (e) { return; }
+        if (d.user_id === undefined || d.user_id === null) {
+            return;
+        }
+        var row = document.querySelector('[data-user-id="' + d.user_id + '"]');
+        if (!row) {
+            return;
+        }
+        if (d.total_points === null || d.total_points === undefined) {
+            return;
+        }
+        var totalPointsEl = row.querySelector('[data-user-total-points]');
+        if (totalPointsEl) {
+            totalPointsEl.textContent = d.total_points;
+        }
+    }
+
+    var sseSource = null;
+    var sseErrorCount = 0;
+    try {
+        sseSource = new EventSource(
+            '/events/standings/?family=' + encodeURIComponent(familySlug) +
+            '&pool=' + encodeURIComponent(poolSlug)
+        );
+    } catch (e) {
+        return;
+    }
+    sseSource.onmessage = function (ev) { sseErrorCount = 0; applyStandingsEvent(ev); };
+    sseSource.onerror = function () {
+        // EventSource auto-reconnects on transient drops; only give up after
+        // repeated failures with no data. There's no 30s poll fallback on
+        // this page, so give-up just means the leaderboard stops
+        // live-updating until the next full page load.
+        sseErrorCount++;
+        if (sseErrorCount >= 3) {
+            try { sseSource.close(); } catch (e) {}
+            sseSource = null;
+        }
+    };
+})();
+</script>
 
 {% endblock %}
