@@ -26,3 +26,9 @@ class ShouldStartSchedulerTests(SimpleTestCase):
                 {"RUN_SCHEDULER": "1", "RUN_WEB_SERVER": "true"}
             )
         )
+
+    def test_management_command_in_scheduler_pod_does_not_start(self):
+        # kubectl exec into the scheduler pod: it inherits the pod-spec env
+        # (RUN_SCHEDULER=true) but NOT the entrypoint's runtime RUN_WEB_SERVER
+        # export, so a management command must not start a second scheduler.
+        self.assertFalse(_should_start_scheduler({"RUN_SCHEDULER": "true"}))
