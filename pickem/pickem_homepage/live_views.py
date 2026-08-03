@@ -23,10 +23,14 @@ async def _event_stream(channel):
     if not url:
         # No broker: end the stream immediately; the client falls back to poll.
         return
-    client = aioredis.from_url(url)
-    pubsub = client.pubsub()
-    await pubsub.subscribe(channel)
+    # Created inside the try so a subscribe() failure (Redis blip/auth) still
+    # runs the finally cleanup instead of leaking the connection.
+    client = None
+    pubsub = None
     try:
+        client = aioredis.from_url(url)
+        pubsub = client.pubsub()
+        await pubsub.subscribe(channel)
         # Prime the connection so proxies flush headers immediately.
         yield ": connected\n\n"
         while True:
@@ -57,9 +61,18 @@ async def _event_stream(channel):
                     data = data.decode("utf-8")
                 yield f"data: {data}\n\n"
     finally:
-        await pubsub.unsubscribe(channel)
-        await pubsub.aclose()
-        await client.aclose()
+        # Best-effort cleanup; never raise from finally even if subscribe failed.
+        if pubsub is not None:
+            try:
+                await pubsub.unsubscribe(channel)
+                await pubsub.aclose()
+            except Exception:
+                pass
+        if client is not None:
+            try:
+                await client.aclose()
+            except Exception:
+                pass
 
 
 async def live_scores_events(request):
