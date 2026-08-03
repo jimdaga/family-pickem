@@ -3,7 +3,7 @@ from unittest import mock
 from django.test import TestCase
 
 from pickem_api import scheduler
-from pickem_api.models import GamesAndScores
+from pickem_api.models import GamesAndScores, ScheduledJobConfig
 
 
 class LiveWindowTests(TestCase):
@@ -96,3 +96,50 @@ class LiveWindowTests(TestCase):
                 mock.patch.object(scheduler, "run_job_once") as run:
             scheduler.run_live_scores_tick()
             run.assert_called_once_with("update_games")
+
+    def test_job_enabled_defaults_true_when_no_config_row(self):
+        self.assertTrue(scheduler._job_enabled("update_stats"))
+
+    def test_job_enabled_respects_disabled_config_row(self):
+        ScheduledJobConfig.objects.create(job_id="update_stats", enabled=False)
+        self.assertFalse(scheduler._job_enabled("update_stats"))
+        ScheduledJobConfig.objects.create(job_id="update_picks", enabled=True)
+        self.assertTrue(scheduler._job_enabled("update_picks"))
+
+    def test_tick_skips_update_games_when_disabled(self):
+        # Disabling update_games in the superadmin console must not be
+        # silently overridden by the fast live tick.
+        ScheduledJobConfig.objects.create(job_id="update_games", enabled=False)
+        with mock.patch.object(scheduler, "live_window_active", return_value=True), \
+                mock.patch.object(scheduler, "_update_games_running", return_value=False), \
+                mock.patch.object(scheduler, "finished_unscored_exists", return_value=True), \
+                mock.patch.object(scheduler, "run_job_once") as run:
+            scheduler.run_live_scores_tick()
+            self.assertEqual(
+                run.call_args_list,
+                [
+                    mock.call("update_picks"),
+                    mock.call("update_standings"),
+                    mock.call("update_rankings"),
+                    mock.call("update_stats"),
+                ],
+            )
+
+    def test_tick_skips_disabled_downstream_job(self):
+        # A disabled downstream step (e.g. update_stats disabled via the
+        # superadmin console) must be skipped, matching pipeline behavior.
+        ScheduledJobConfig.objects.create(job_id="update_stats", enabled=False)
+        with mock.patch.object(scheduler, "live_window_active", return_value=True), \
+                mock.patch.object(scheduler, "_update_games_running", return_value=False), \
+                mock.patch.object(scheduler, "finished_unscored_exists", return_value=True), \
+                mock.patch.object(scheduler, "run_job_once") as run:
+            scheduler.run_live_scores_tick()
+            self.assertEqual(
+                run.call_args_list,
+                [
+                    mock.call("update_games"),
+                    mock.call("update_picks"),
+                    mock.call("update_standings"),
+                    mock.call("update_rankings"),
+                ],
+            )

@@ -238,6 +238,16 @@ def finished_unscored_exists():
     ).exists()
 
 
+def _job_enabled(job_id):
+    """Respect the superadmin enable/disable toggle in the fast tick (but not
+    is_due — the live tick intentionally runs faster than the configured interval).
+    Missing config row => enabled (default)."""
+    from pickem_api.models import ScheduledJobConfig
+
+    cfg = ScheduledJobConfig.objects.filter(job_id=job_id).first()
+    return cfg is None or cfg.enabled
+
+
 def run_live_scores_tick():
     """Fast score refresh: run update_games only during a live window.
 
@@ -246,15 +256,19 @@ def run_live_scores_tick():
     a finished-but-unscored game, also run the scoped downstream chain
     (picks -> standings -> rankings -> stats) so a final is reflected within
     one live tick (~12s) instead of waiting for the next minute's pipeline
-    tick."""
+    tick. Each step still respects the superadmin enable/disable toggle
+    (though not its interval/is_due, since this tick intentionally runs
+    faster than the configured cadence)."""
     if not live_window_active():
         return
     if _update_games_running():
         return
-    run_job_once("update_games")
+    if _job_enabled("update_games"):
+        run_job_once("update_games")
     if finished_unscored_exists():
         for job_id in ("update_picks", "update_standings", "update_rankings", "update_stats"):
-            run_job_once(job_id)
+            if _job_enabled(job_id):
+                run_job_once(job_id)
 
 
 def run_prune_logs():
