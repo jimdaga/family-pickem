@@ -13,7 +13,7 @@
 
 {% block content %}
 
-<div data-standings-page data-family-slug="{{ family.slug }}" data-pool-slug="{{ pool.slug }}" class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
+<div data-standings-page{% if pool and selected_season == pool.season|stringformat:"s" %} data-family-slug="{{ family.slug }}" data-pool-slug="{{ pool.slug }}"{% endif %} class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
     <!-- Scoreboard Header -->
     <div class="standings-top-panel mb-5">
         <div class="standings-scoreboard-header px-1 py-2 sm:px-0 sm:py-3">
