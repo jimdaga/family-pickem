@@ -36,6 +36,12 @@ def score_event_payload(game):
         "status": game.statusType,
         "status_title": game.statusTitle,
         "winner": game.gameWinner,
+        "home_periods": [game.homeTeamPeriod1, game.homeTeamPeriod2,
+                         game.homeTeamPeriod3, game.homeTeamPeriod4,
+                         game.homeTeamPeriodOT],
+        "away_periods": [game.awayTeamPeriod1, game.awayTeamPeriod2,
+                         game.awayTeamPeriod3, game.awayTeamPeriod4,
+                         game.awayTeamPeriodOT],
     }
 
 
@@ -49,12 +55,42 @@ def _redis_client():
     return redis.from_url(url)
 
 
-def publish_score_event(season, week, payload):
-    """Best-effort publish of one score change. Never raises."""
+def publish_event(channel, payload):
+    """Best-effort publish of one event to a Redis channel. Never raises."""
     try:
         client = _redis_client()
         if client is None:
             return
-        client.publish(scores_channel(season, week), json.dumps(payload))
+        client.publish(channel, json.dumps(payload))
     except Exception:
-        logger.warning("live score publish failed", exc_info=True)
+        logger.warning("live event publish failed", exc_info=True)
+
+
+def publish_score_event(season, week, payload):
+    """Best-effort publish of one score change. Never raises."""
+    publish_event(scores_channel(season, week), payload)
+
+
+# Period fields also trigger a scores publish (clock/quarter live updates).
+_PERIOD_FIELDS = (
+    "homeTeamPeriod1", "homeTeamPeriod2", "homeTeamPeriod3", "homeTeamPeriod4",
+    "homeTeamPeriodOT", "awayTeamPeriod1", "awayTeamPeriod2", "awayTeamPeriod3",
+    "awayTeamPeriod4", "awayTeamPeriodOT",
+)
+SCORE_TRIGGER_FIELDS = LIVE_SCORE_FIELDS + _PERIOD_FIELDS
+
+
+def standings_channel(pool_id, season):
+    """Redis pub/sub channel for a pool+season's live standings."""
+    return f"standings:{pool_id}:{season}"
+
+
+def standings_event_payload(row, week):
+    """Compact JSON-serializable dict of a standings row's live fields."""
+    return {
+        "user_id": row.userID,
+        "total_points": row.total_points,
+        "week": week,
+        "week_points": getattr(row, f"week_{week}_points", None),
+        "current_rank": getattr(row, "current_rank", None),
+    }
