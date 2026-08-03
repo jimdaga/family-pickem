@@ -11,7 +11,7 @@ spec:
     # Helm chart source — tracks latest pre-release versions
     - repoURL: https://jimdaga.github.io/family-pickem
       chart: family-pickem
-      targetRevision: "0.0.196-latest"
+      targetRevision: ">=0.0.0-latest"
       helm:
         valueFiles:
           - $values/infra/app/values-dev.yaml
