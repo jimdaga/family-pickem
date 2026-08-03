@@ -1,0 +1,6 @@
+# Single-node Kubernetes resource metrics for HorizontalPodAutoscaler.
+replicas: 1
+
+# kubeadm's kubelet serving certificate is self-signed on this node.
+args:
+  - --kubelet-insecure-tls
