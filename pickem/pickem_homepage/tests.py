@@ -9440,6 +9440,33 @@ class SseStandingsAuthTests(TestCase):
         self.assertEqual(resp["Cache-Control"], "no-cache")
         self.assertEqual(resp["X-Accel-Buffering"], "no")
 
+    def test_member_of_soft_deleted_family_gets_403(self):
+        # family_pool_admin_delete_family flips Family.status to INACTIVE and
+        # the rest of the tenant surface 404s on it; the SSE endpoint must
+        # deny it too, even though the FamilyMembership row is untouched.
+        self.family.status = Family.Status.INACTIVE
+        self.family.save(update_fields=["status"])
+        self.client.force_login(self.member)
+
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": self.pool.slug},
+        )
+
+        self.assertEqual(resp.status_code, 403)
+
+    def test_member_of_archived_pool_gets_403(self):
+        self.pool.status = Pool.Status.ARCHIVED
+        self.pool.save(update_fields=["status"])
+        self.client.force_login(self.member)
+
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": self.pool.slug},
+        )
+
+        self.assertEqual(resp.status_code, 403)
+
 
 class ResolvePoolForMemberTests(TestCase):
     @classmethod
@@ -9487,5 +9514,36 @@ class ResolvePoolForMemberTests(TestCase):
         from pickem_homepage.live_views import _resolve_pool_for_member
 
         result = _resolve_pool_for_member(self.member, "no-such-family", self.pool.slug)
+
+        self.assertIsNone(result)
+
+    def test_inactive_family_returns_none_even_for_active_member(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        self.family.status = Family.Status.INACTIVE
+        self.family.save(update_fields=["status"])
+
+        result = _resolve_pool_for_member(self.member, self.family.slug, self.pool.slug)
+
+        self.assertIsNone(result)
+
+    def test_archived_pool_returns_none_even_for_active_member(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        self.pool.status = Pool.Status.ARCHIVED
+        self.pool.save(update_fields=["status"])
+
+        result = _resolve_pool_for_member(self.member, self.family.slug, self.pool.slug)
+
+        self.assertIsNone(result)
+
+    def test_inactive_membership_returns_none(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        FamilyMembership.objects.filter(family=self.family, user=self.member).update(
+            status=FamilyMembership.Status.INACTIVE
+        )
+
+        result = _resolve_pool_for_member(self.member, self.family.slug, self.pool.slug)
 
         self.assertIsNone(result)

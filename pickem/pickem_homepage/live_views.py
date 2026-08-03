@@ -108,18 +108,32 @@ async def live_scores_events(request):
 
 def _resolve_pool_for_member(user, family_slug, pool_slug):
     """(pool_id, season) if `user` is a member of the pool, else None. Sync — call
-    via sync_to_async from the async view."""
-    from pickem_api.models import FamilyMembership, Pool
+    via sync_to_async from the async view.
+
+    Mirrors the status filtering in pickem_api.authz (resolve_family /
+    resolve_pool_context / require_family_membership): an inactive Family
+    (soft-deleted — see family_pool_admin_delete_family), an inactive/archived
+    Pool, or an inactive membership must all be treated the same as "not a
+    member" here, matching how the rest of the tenant surface 404s them.
+    """
+    from pickem_api.models import Family, FamilyMembership, Pool
 
     pool = (
-        Pool.objects.filter(family__slug=family_slug, slug=pool_slug)
+        Pool.objects.filter(
+            family__slug=family_slug,
+            slug=pool_slug,
+            status=Pool.Status.ACTIVE,
+            family__status=Family.Status.ACTIVE,
+        )
         .values("id", "season", "family_id")
         .first()
     )
     if not pool:
         return None
     if not FamilyMembership.objects.filter(
-        user=user, family_id=pool["family_id"]
+        user=user,
+        family_id=pool["family_id"],
+        status=FamilyMembership.Status.ACTIVE,
     ).exists():
         return None
     return pool["id"], pool["season"]
