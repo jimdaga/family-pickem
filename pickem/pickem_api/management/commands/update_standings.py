@@ -27,13 +27,16 @@ from collections import Counter
 
 from django.core.management.base import BaseCommand
 from django.db.models import F
+from django.utils import timezone
 
 from pickem.utils import get_season
+from pickem_api.live_events import publish_event, standings_channel, standings_event_payload
 from pickem_api.models import (
     Family,
     FamilyMembership,
     GamePicks,
     GamesAndScores,
+    GameWeeks,
     Pool,
     PoolSettings,
     userSeasonPoints,
@@ -42,6 +45,20 @@ from pickem_api.models import (
 logger = logging.getLogger(__name__)
 
 WEEKS = range(1, 19)
+
+
+def maybe_publish_standings_change(old_total, row, week, season):
+    """Publish a live standings event if ``total_points`` changed (or new row).
+
+    ``old_total`` is ``row.total_points`` captured before the recompute, or
+    ``None`` if the row was just created. Best-effort via ``publish_event``
+    (which never raises) — a publish failure must never break the recompute.
+    """
+    if old_total is not None and old_total == row.total_points:
+        return
+    publish_event(
+        standings_channel(row.pool_id, season), standings_event_payload(row, week)
+    )
 
 
 class Command(BaseCommand):
@@ -65,6 +82,7 @@ class Command(BaseCommand):
         season = options["season"] or get_season()
         pool_id_filter = options.get("pool")
         self.stdout.write(f"Recomputing standings for season {season}")
+        current_week = self._current_week()
 
         pick_filter = {"gameseason": season}
         if pool_id_filter:
@@ -131,7 +149,7 @@ class Command(BaseCommand):
             if not user_id:
                 continue
             win_points, tie_points = pool_weights.get(pool_id, (1, 0))
-            row, _ = userSeasonPoints.objects.get_or_create(
+            row, created = userSeasonPoints.objects.get_or_create(
                 pool_id=pool_id,
                 userID=user_id,
                 gameseason=season,
@@ -139,6 +157,7 @@ class Command(BaseCommand):
                     "userEmail": self._email_for(season, pool_id, user_id),
                 },
             )
+            old_total = None if created else row.total_points
 
             correct_by_week = Counter()
             tied_by_week = Counter()
@@ -165,12 +184,29 @@ class Command(BaseCommand):
 
             row.total_points = total
             row.save()
+            maybe_publish_standings_change(old_total, row, current_week, season)
             updated += 1
             self.stdout.write(f" - pool {pool_id} user {user_id}: {total} points")
 
         self.stdout.write(
             self.style.SUCCESS(f"Recomputed standings for {updated} pool members.")
         )
+
+    @staticmethod
+    def _current_week():
+        """Best-effort current week number for today, or None.
+
+        Only used to enrich the live-standings publish payload, so any
+        lookup failure (e.g. no GameWeeks row for today) simply falls back
+        to ``None`` rather than raising — the payload handles week=None.
+        """
+        try:
+            today = timezone.localdate()
+            row = GameWeeks.objects.filter(date=today).first()
+            return row.weekNumber if row else None
+        except Exception:
+            logger.warning("current week lookup failed", exc_info=True)
+            return None
 
     @staticmethod
     def _email_for(season, pool_id, user_id):
