@@ -51,6 +51,8 @@ if [ "$1" = "migrate" ]; then
   exit 0
 fi
 
-# Start Server
+# Start Server (ASGI). exec so uvicorn is PID 1 for clean signal handling.
+# RUN_WEB_SERVER marks the server process (never set for the migrate init or
+# management commands) — apps.py uses it to gate scheduler startup.
 export RUN_WEB_SERVER=true
-python manage.py runserver 0.0.0.0:8000
+exec uvicorn pickem.asgi:application --host 0.0.0.0 --port 8000 --workers "${UVICORN_WORKERS:-1}"

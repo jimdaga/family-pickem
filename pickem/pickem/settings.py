@@ -170,6 +170,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'pickem.wsgi.application'
 
+# Served by uvicorn in deployed environments (see docker-entrypoint.sh); the
+# streaming SSE endpoints in a later sub-phase require ASGI. WSGI is kept for
+# tooling/back-compat.
+ASGI_APPLICATION = 'pickem.asgi.application'
+
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
