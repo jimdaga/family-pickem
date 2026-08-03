@@ -1,4 +1,4 @@
-# Live Updates — Phase 3c: Live Points / W-L + Lobby — Design
+# Live Updates — Phase 3c: Live Points + Lobby — Design
 
 **Date:** 2026-08-03
 **Status:** Approved (design); pending spec review
@@ -19,7 +19,7 @@ separate stats page, out of scope.) Live rank/reorder is a deferred fast-follow.
 ## Design
 
 ### A. Downstream-on-final (scheduler)
-Points/W-L change only when a game settles. Extend the fast `live_scores_tick`:
+Points change only when a game settles. Extend the fast `live_scores_tick`:
 after `update_games`, if the current week has any **finished-but-unscored** game
 (`GamesAndScores.statusType == "finished"` with `gameScored == False`), run the
 scoped downstream once — `update_picks → update_standings → update_rankings →
@@ -79,7 +79,7 @@ error); (3) the rare `notstarted→finished` direct-jump card refresh.
 - Full suite green.
 - Dev→prd (gated, dev verified first per the 3a/dev-autotrack lesson): standings
   route reachable + membership-scoped, `standings:` pub/sub round-trip on authed
-  Redis, and a settled game's points/W-L patching a lobby row live in a browser.
+  Redis, and a settled game's points patching a lobby row live in a browser.
 
 ## Risks
 - **Pool-scoped auth correctness** — a membership-check bug could leak another
