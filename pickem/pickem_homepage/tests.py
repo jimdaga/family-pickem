@@ -9345,6 +9345,52 @@ class SseStreamShapeTests(TestCase):
             self.assertIn('data: {"game_id": 1}', second)
             await gen.aclose()
 
+    async def test_stream_ends_gracefully_on_redis_error(self):
+        # If Redis subscribe()/get_message() raises (blip, auth failure,
+        # dropped connection), _event_stream's `except Exception: ... return`
+        # should end the generator gracefully (StopAsyncIteration) rather than
+        # propagating the error to the ASGI caller, and cleanup should still
+        # run via `finally`.
+        from unittest import mock
+        import redis.exceptions
+
+        from pickem_homepage import live_views
+
+        cleanup_calls = []
+
+        class FakePubSub:
+            async def subscribe(self, ch):
+                raise redis.exceptions.ConnectionError("connection refused")
+
+            async def get_message(self, ignore_subscribe_messages=True, timeout=0.0):
+                raise redis.exceptions.ConnectionError("connection refused")
+
+            async def unsubscribe(self, ch):
+                cleanup_calls.append("unsubscribe")
+
+            async def aclose(self):
+                cleanup_calls.append("pubsub_aclose")
+
+        class FakeClient:
+            def pubsub(self):
+                return FakePubSub()
+
+            async def aclose(self):
+                cleanup_calls.append("client_aclose")
+
+        with mock.patch.dict("os.environ", {"REDIS_URL": "redis://x:6379/1"}), \
+                mock.patch("redis.asyncio.from_url", return_value=FakeClient()):
+            gen = live_views._event_stream("scores:2627:3")
+            # The generator should end gracefully (StopAsyncIteration), not
+            # propagate the ConnectionError raised by subscribe().
+            with self.assertRaises(StopAsyncIteration):
+                await gen.__anext__()
+
+        # `finally` cleanup should have run even though subscribe() failed.
+        self.assertIn("unsubscribe", cleanup_calls)
+        self.assertIn("pubsub_aclose", cleanup_calls)
+        self.assertIn("client_aclose", cleanup_calls)
+
 
 class SseStandingsAuthTests(TestCase):
     @classmethod
