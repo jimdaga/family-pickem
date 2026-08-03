@@ -79,9 +79,9 @@ spec:
             value: "{{ .Values.image.tag | default .Chart.AppVersion }}"
           # This pod IS the scheduler: it runs the in-process APScheduler pipeline.
           # PickemApiConfig.ready() starts the scheduler only when RUN_SCHEDULER
-          # AND RUN_WEB_SERVER are true under `manage.py runserver` (RUN_MAIN is
-          # set by runserver's reloader child). The image entrypoint already
-          # exports RUN_WEB_SERVER=true before runserver; we set it explicitly
+          # AND RUN_WEB_SERVER are both "true" in the uvicorn server process. The
+          # image entrypoint exports RUN_WEB_SERVER for that server process only
+          # (not the migrate-check init container above); we set it explicitly
           # here too so the scheduler's start condition never silently depends on
           # entrypoint internals (a mis-set value would pass health probes while
           # running no pipeline).
@@ -89,6 +89,11 @@ spec:
             value: "true"
           - name: RUN_WEB_SERVER
             value: "true"
+          # Exactly one uvicorn worker so PickemApiConfig.ready() (and thus
+          # scheduler.start()) fires once — a second worker would run a duplicate
+          # scheduler (double scoring/emails). Do not raise this on this pod.
+          - name: UVICORN_WORKERS
+            value: "1"
           {{- if .Values.redis.enabled }}
           # REDIS_PASSWORD interpolated into REDIS_URL by Kubernetes at pod start
           # (credential never rendered into a manifest). See templates/redis.yaml.
