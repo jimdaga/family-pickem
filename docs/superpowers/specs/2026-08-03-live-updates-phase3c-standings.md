@@ -8,11 +8,13 @@
 
 ## Goal
 
-Make each player's **points and wins/losses** update live (no reload) on the
-lobby and standings views as games settle — completing the live experience for
-scores (3b) + points/W-L (3c). **Scope decision:** leaderboard *ordering* updates
-on the next natural page load, not via live row animation (points/W-L numbers
-patch in place). Live rank-reordering is a deferred fast-follow.
+Make each player's **points** (this week's `week_N_points` and season
+`total_points`) update live (no reload) on the lobby and standings views as games
+settle — completing the live experience for scores (3b) + points (3c). **Scope
+(confirmed):** points patch in place; the leaderboard *order* and the *rank
+number* update on the next natural page load, not live. (There is no W/L record
+in this app — standings metrics are points + rank; pick-accuracy stats are a
+separate stats page, out of scope.) Live rank/reorder is a deferred fast-follow.
 
 ## Design
 
@@ -28,12 +30,14 @@ transitions.
 
 ### B. Publish-on-write (standings)
 Add best-effort publish to `update_standings` (mirroring 3b's `update_games`):
-after recomputing a pool member's row, if points/wins/losses changed, publish a
-compact delta to the **pool-scoped** channel `standings:{pool}:{season}:{week}` —
-`{user_id, points, wins, losses, rank}` (rank included for a future fast-follow;
-the 3c client ignores it). Only changed rows publish. Reuse `live_events.py`
-(add `standings_channel()` + `standings_event_payload()` + reuse
-`publish_score_event`'s best-effort publisher, generalized to `publish_event`).
+after recomputing a pool member's `userSeasonPoints` row, if `total_points` (or
+the current week's `week_N_points`) changed, publish a compact delta to the
+**pool-scoped, season-scoped** channel `standings:{pool}:{season}` —
+`{user_id, total_points, week, week_points, current_rank}` for changed rows only.
+(`current_rank` is included for a future fast-follow; the 3c client patches only
+points.) Reuse `live_events.py` — add `standings_channel(pool, season)` +
+`standings_event_payload(row, week)`, and generalize the best-effort publisher to
+a `publish_event(channel, payload)` used by both scores and standings.
 
 ### C. SSE endpoint — pool-scoped auth (the key new piece)
 Scores are public; standings are not. Add `GET /events/standings/?pool=<slug>&week=<n>`
@@ -43,7 +47,7 @@ Scores are public; standings are not. Add `GET /events/standings/?pool=<slug>&we
   → pool) — all through `sync_to_async` (no sync ORM in the async path, per the
   3a lesson). Non-members get 403; anonymous is already blocked by
   `RequireLoginForInternalPagesMiddleware`.
-- Subscribes to `standings:{pool}:{season}:{week}` and streams like 3b (reuse the
+- Subscribes to `standings:{pool}:{season}` and streams like 3b (reuse the
   generalized `_event_stream(channel)` — keepalive, graceful Redis-error end,
   guarded cleanup).
 - The page keeps its own scores `EventSource` (3b) for game scores; standings is
@@ -51,13 +55,14 @@ Scores are public; standings are not. Add `GET /events/standings/?pool=<slug>&we
   this scale (per-connection subscribe, per 3b's decision).
 
 ### D. Client
-On the lobby (`home.html` / `family_pool_home.html`) and standings page, add an
+On the lobby (`family_pool_home.html`) and the standings page, add an
 `EventSource('/events/standings/?pool=<slug>&week=<n>')` that patches each
-player's points and W-L **in place** by `data-user-id` (add `data-user-id` +
-`data-user-points` / `data-user-record` attributes to the standings rows). Reuse
-the 3b client pattern (feature-check, patch, poll fallback after repeated errors,
-close on give-up). Do NOT reorder rows. Expose the pool slug + week to JS via
-data attributes.
+player's **points in place** by `data-user-id` (add `data-user-id` +
+`data-user-week-points` on the week-points-summary rows, and
+`data-user-total-points` on the standings-page rows). Reuse the 3b client pattern
+(feature-check, patch, poll fallback after repeated errors, close on give-up). Do
+NOT reorder rows or change rank numbers (those update on reload). Expose the pool
+slug + week to JS via data attributes.
 
 ### E. Fold in deferred 3b minors
 While in these files: (1) guard `filterGames` so it doesn't start the 30s poll
