@@ -48,4 +48,14 @@ class PickemApiConfig(AppConfig):
 
         from . import scheduler
 
-        scheduler.start()
+        # Start in a dedicated thread. Under uvicorn (ASGI) ready() runs with a
+        # running event loop, and scheduler.start() does synchronous DB access
+        # (ScheduledJobConfig.seed_from_pipeline + jobstore cleanup) which Django
+        # forbids from an async context (SynchronousOnlyOperation). A fresh
+        # thread has no running loop, so the sync ORM calls are allowed there.
+        # The BackgroundScheduler it creates runs its jobs in its own threads too.
+        import threading
+
+        threading.Thread(
+            target=scheduler.start, name="scheduler-start", daemon=True
+        ).start()
