@@ -51,6 +51,14 @@ if [ "$1" = "migrate" ]; then
   exit 0
 fi
 
-# Start Server
+# Start Server (ASGI). exec so uvicorn is PID 1 for clean signal handling.
+# RUN_WEB_SERVER marks the server process (never set for the migrate init or
+# management commands) — apps.py uses it to gate scheduler startup. This is
+# an intentional entrypoint-only runtime export, NOT a container-level env
+# var: it is inherited by this exec'd uvicorn process alone, not by
+# `kubectl exec` shells or management commands run against the pod, which
+# only see the pod-spec env. That asymmetry is what stops a rogue second
+# scheduler from starting when someone execs into the scheduler pod (which
+# does set RUN_SCHEDULER at the container level).
 export RUN_WEB_SERVER=true
-python manage.py runserver 0.0.0.0:8000
+exec uvicorn pickem.asgi:application --host 0.0.0.0 --port 8000 --workers "${UVICORN_WORKERS:-1}"

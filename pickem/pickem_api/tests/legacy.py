@@ -1627,8 +1627,12 @@ class UserStatsIntegrityTest(TestCase):
 
 
 class PickemApiConfigReadyTest(TestCase):
+    # Detailed truth-table coverage of the gating decision lives in
+    # pickem_api/tests/test_scheduler_gate.py (_should_start_scheduler unit
+    # tests). These two tests are a thin integration check that ready()
+    # actually wires that helper up to scheduler.start().
     @patch("pickem_api.scheduler.start")
-    def test_ready_starts_scheduler_only_for_runserver_child(self, mock_start):
+    def test_ready_starts_scheduler_when_gated(self, mock_start):
         from pickem_api.apps import PickemApiConfig
 
         config = PickemApiConfig("pickem_api", import_module("pickem_api"))
@@ -1638,17 +1642,15 @@ class PickemApiConfigReadyTest(TestCase):
             {
                 "RUN_SCHEDULER": "true",
                 "RUN_WEB_SERVER": "true",
-                "RUN_MAIN": "true",
             },
             clear=False,
         ):
-            with patch("sys.argv", ["manage.py", "runserver"]):
-                config.ready()
+            config.ready()
 
         mock_start.assert_called_once_with()
 
     @patch("pickem_api.scheduler.start")
-    def test_ready_skips_scheduler_for_non_web_or_parent_processes(self, mock_start):
+    def test_ready_skips_scheduler_when_not_gated(self, mock_start):
         from pickem_api.apps import PickemApiConfig
 
         config = PickemApiConfig("pickem_api", import_module("pickem_api"))
@@ -1657,14 +1659,10 @@ class PickemApiConfigReadyTest(TestCase):
             "os.environ",
             {
                 "RUN_SCHEDULER": "true",
-                "RUN_WEB_SERVER": "true",
             },
             clear=False,
         ):
-            with patch("sys.argv", ["manage.py", "migrate"]):
-                config.ready()
-            with patch("sys.argv", ["manage.py", "runserver"]):
-                config.ready()
+            config.ready()
 
         mock_start.assert_not_called()
 

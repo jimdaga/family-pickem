@@ -79,16 +79,23 @@ spec:
             value: "{{ .Values.image.tag | default .Chart.AppVersion }}"
           # This pod IS the scheduler: it runs the in-process APScheduler pipeline.
           # PickemApiConfig.ready() starts the scheduler only when RUN_SCHEDULER
-          # AND RUN_WEB_SERVER are true under `manage.py runserver` (RUN_MAIN is
-          # set by runserver's reloader child). The image entrypoint already
-          # exports RUN_WEB_SERVER=true before runserver; we set it explicitly
-          # here too so the scheduler's start condition never silently depends on
-          # entrypoint internals (a mis-set value would pass health probes while
-          # running no pipeline).
+          # (this container env) AND RUN_WEB_SERVER are both "true".
+          #
+          # RUN_WEB_SERVER is deliberately NOT set as a container env var here.
+          # docker-entrypoint.sh exports it at runtime only for the uvicorn
+          # server process (PID 1) it execs. `kubectl exec` into this pod, and
+          # any `manage.py` command run that way, inherits the pod-spec env
+          # (RUN_SCHEDULER=true) but not that entrypoint-local export, so it
+          # can never start a second in-process scheduler that would race the
+          # real one for the shared DjangoJobStore. The post-deploy JobRun
+          # check confirms the real (entrypoint-started) scheduler came up.
           - name: RUN_SCHEDULER
             value: "true"
-          - name: RUN_WEB_SERVER
-            value: "true"
+          # Exactly one uvicorn worker so PickemApiConfig.ready() (and thus
+          # scheduler.start()) fires once — a second worker would run a duplicate
+          # scheduler (double scoring/emails). Do not raise this on this pod.
+          - name: UVICORN_WORKERS
+            value: "1"
           {{- if .Values.redis.enabled }}
           # REDIS_PASSWORD interpolated into REDIS_URL by Kubernetes at pod start
           # (credential never rendered into a manifest). See templates/redis.yaml.
