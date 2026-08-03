@@ -1626,20 +1626,26 @@
     }
 
     let sseSource = null;
+    let sseErrorCount = 0;
     function startSse() {
         if (!window.EventSource) return false;
-        const wk = (document.querySelector('[data-live-week]') || {}).dataset
-            ? document.querySelector('[data-live-week]').dataset.liveWeek : null;
+        const el = document.querySelector('[data-live-week]');
+        const wk = el && el.dataset ? el.dataset.liveWeek : null;
         if (!wk) return false;
         try {
             sseSource = new EventSource(`/events/scores/?week=${encodeURIComponent(wk)}`);
         } catch (e) { return false; }
-        sseSource.onmessage = applyScoreEvent;
+        sseSource.onmessage = function (ev) { sseErrorCount = 0; applyScoreEvent(ev); };
         sseSource.onerror = function () {
-            // EventSource auto-reconnects; if it never opens, fall back to poll.
-            if (sseSource.readyState === EventSource.CLOSED) {
+            // EventSource auto-reconnects on transient drops; only give up (and
+            // fall back to the 30s poll) after repeated failures with no data —
+            // this also covers the graceful-stream-end / Redis-down case where
+            // readyState never reaches CLOSED.
+            sseErrorCount++;
+            if (sseErrorCount >= 3) {
+                try { sseSource.close(); } catch (e) {}
                 sseSource = null;
-                startLiveUpdates(); // existing 30s poll
+                startLiveUpdates(); // existing 30s poll fallback
             }
         };
         return true;
