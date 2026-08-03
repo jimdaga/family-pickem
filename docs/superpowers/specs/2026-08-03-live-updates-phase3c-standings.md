@@ -64,6 +64,22 @@ player's **points in place** by `data-user-id` (add `data-user-id` +
 NOT reorder rows or change rank numbers (those update on reload). Expose the pool
 slug + week to JS via data attributes.
 
+### F. Complete the live game state on /scores/ (clock/quarter + per-quarter)
+3b made team **totals** and coarse **status** (notstarted→inprogress→final) live,
+but not the ticking clock/quarter (`statusTitle`) or the per-quarter line scores —
+those only refresh on a status transition or reload. Close that gap:
+- **Payload:** `score_event_payload` already includes `status_title`; add the
+  period arrays (`homeTeamPeriod1..4/OT`, `awayTeamPeriod1..4/OT`). Add the period
+  fields (and `statusTitle`, already present) to the change-detection trigger so a
+  clock/quarter change publishes even without a total-score change.
+- **Client:** in `applyScoreEvent`, on every (non-transition) event also patch the
+  card's status/clock text (add `data-status-title` to the `{{ game.statusTitle }}`
+  header span) and the per-quarter `.quarter-score` cells (add `data-period`
+  markers, e.g. `data-home-period="1"`). So the game clock and quarter scores tick
+  live, not just the totals.
+- This is the scores surface (`scores.html` / `live_events.py` / `update_games`),
+  bundled into 3c's shipment.
+
 ### E. Fold in deferred 3b minors
 While in these files: (1) guard `filterGames` so it doesn't start the 30s poll
 while an SSE stream is healthy; (2) add the missing unit test for the SSE
