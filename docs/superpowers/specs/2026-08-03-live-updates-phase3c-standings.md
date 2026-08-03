@@ -58,7 +58,7 @@ by the endpoint. It:
 
 ### D. Client
 On the lobby (`family_pool_home.html`) and the standings page, add an
-`EventSource('/events/standings/?pool=<slug>&week=<n>')` that patches each
+`EventSource('/events/standings/?family=<fslug>&pool=<pslug>')` that patches each
 player's **points in place** by `data-user-id` (add `data-user-id` +
 `data-user-week-points` on the week-points-summary rows, and
 `data-user-total-points` on the standings-page rows). Reuse the 3b client pattern
