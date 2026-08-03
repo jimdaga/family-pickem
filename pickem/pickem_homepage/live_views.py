@@ -6,12 +6,15 @@ Auth is enforced by RequireLoginForInternalPagesMiddleware (the path is not in
 its public allowlist). Uses only async-safe I/O — no sync ORM in this view.
 """
 import asyncio
+import logging
 import os
 
 from asgiref.sync import sync_to_async
 from django.http import HttpResponseBadRequest, StreamingHttpResponse
 
 from pickem_api.live_events import scores_channel
+
+logger = logging.getLogger(__name__)
 
 KEEPALIVE_SECONDS = 20
 
@@ -60,6 +63,11 @@ async def _event_stream(channel):
                 if isinstance(data, bytes):
                     data = data.decode("utf-8")
                 yield f"data: {data}\n\n"
+    except Exception:
+        # Redis unreachable / dropped: end the stream gracefully so the client
+        # falls back to polling, without Django logging an unhandled app error.
+        logger.warning("SSE score stream ended on error", exc_info=True)
+        return
     finally:
         # Best-effort cleanup; never raise from finally even if subscribe failed.
         if pubsub is not None:
