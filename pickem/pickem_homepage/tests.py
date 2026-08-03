@@ -9290,3 +9290,57 @@ class HealthzTests(TestCase):
             response = self.client.get("/healthz/")
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["status"], "error")
+
+
+class SseScoresAuthTests(TestCase):
+    def test_requires_login(self):
+        # RequireLoginForInternalPagesMiddleware should block anonymous access.
+        resp = self.client.get("/events/scores/?week=3")
+        self.assertIn(resp.status_code, (302, 401))
+
+    def test_url_reverses(self):
+        self.assertEqual(reverse("live_scores_events"), "/events/scores/")
+
+
+class SseStreamShapeTests(TestCase):
+    async def test_stream_emits_published_event(self):
+        # Drive the async generator directly with a fake pubsub so no real
+        # Redis is needed: first a message, then stop.
+        from unittest import mock
+        import asyncio as _asyncio
+
+        from pickem_homepage import live_views
+
+        class FakePubSub:
+            def __init__(self):
+                self._msgs = [{"type": "message", "data": b'{"game_id": 1}'}]
+
+            async def subscribe(self, ch):
+                return None
+
+            async def get_message(self, ignore_subscribe_messages=True, timeout=0.0):
+                if self._msgs:
+                    return self._msgs.pop(0)
+                raise _asyncio.CancelledError()
+
+            async def unsubscribe(self, ch):
+                return None
+
+            async def aclose(self):
+                return None
+
+        class FakeClient:
+            def pubsub(self):
+                return FakePubSub()
+
+            async def aclose(self):
+                return None
+
+        with mock.patch.dict("os.environ", {"REDIS_URL": "redis://x:6379/1"}), \
+                mock.patch("redis.asyncio.from_url", return_value=FakeClient()):
+            gen = live_views._event_stream("scores:2627:3")
+            first = await gen.__anext__()
+            self.assertIn("connected", first)
+            second = await gen.__anext__()
+            self.assertIn('data: {"game_id": 1}', second)
+            await gen.aclose()
