@@ -1615,11 +1615,21 @@
         try { d = JSON.parse(ev.data); } catch (e) { return; }
         const card = document.querySelector(`.game-score-card[data-game-id="${d.game_id}"]`);
         if (!card) return;
+        const statusChanged = card.getAttribute('data-game-status') !== d.status;
+        if (statusChanged) {
+            // A status transition (e.g. notstarted -> inprogress) can change
+            // which score-dependent markup the card has at all — a
+            // notstarted card has no [data-home-score]/[data-away-score]
+            // elements, so a score-only patch would silently do nothing and
+            // leave the card stale. Do a full refresh instead of patching.
+            card.setAttribute('data-game-status', d.status);
+            if (typeof updateLiveScores === 'function') updateLiveScores();
+            return;
+        }
         const home = card.querySelector('[data-home-score]');
         const away = card.querySelector('[data-away-score]');
         if (home) home.textContent = d.home_score;
         if (away) away.textContent = d.away_score;
-        card.setAttribute('data-game-status', d.status);
         // reuse existing update animation + completion handling
         card.style.animation = 'none'; card.offsetHeight; card.style.animation = 'fadeIn 0.5s ease-in';
         if (window.scoresLivePulse) window.scoresLivePulse();

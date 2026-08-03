@@ -181,6 +181,17 @@ def run_job_once(job_id, run=None):
     return job_run
 
 
+def _update_games_running():
+    """True if an update_games run marker is currently live (within the stale
+    window). Best-effort guard: the pipeline tick (60s) and the live-scores
+    tick (12s) both invoke update_games, and max_instances=1 is scoped per
+    APScheduler job, so it doesn't stop the two ticks from overlapping each
+    other. A tiny TOCTOU window remains between this check and
+    mark_job_started(), but update_games upserts are idempotent, so a rare
+    double-run is harmless."""
+    return any(m.job_id == "update_games" for m in current_running_jobs())
+
+
 def run_pipeline_tick():
     """The single orchestrator job (every minute). Runs each enabled, due job in
     dependency order — sequentially, so steps never overlap or run out of order.
@@ -194,6 +205,11 @@ def run_pipeline_tick():
     for job_id, _label, _mins, run in orchestrated_jobs():
         cfg = configs.get(job_id)
         if cfg is None or not cfg.enabled or not cfg.is_due(now):
+            continue
+        if job_id == "update_games" and _update_games_running():
+            # Live-scores tick already has update_games in flight; skip this
+            # step for now and let the rest of the pipeline run — the next
+            # tick will pick update_games back up once it's due again.
             continue
         run_job_once(job_id, run)
 
@@ -214,6 +230,8 @@ def run_live_scores_tick():
     Off-window this is a single cheap EXISTS query and returns. On-window it
     runs update_games (which publishes changed games to Redis)."""
     if not live_window_active():
+        return
+    if _update_games_running():
         return
     run_job_once("update_games")
 

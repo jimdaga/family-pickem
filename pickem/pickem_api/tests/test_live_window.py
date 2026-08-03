@@ -32,3 +32,14 @@ class LiveWindowTests(TestCase):
                 mock.patch.object(scheduler, "run_job_once") as run:
             scheduler.run_live_scores_tick()
             run.assert_called_once_with("update_games")
+
+    def test_tick_skips_update_games_when_already_running(self):
+        # Even during a live window, the live-scores tick must not kick off a
+        # second update_games run if the pipeline tick (or a prior live tick)
+        # already has one in flight — guards against overlapping runs since
+        # max_instances=1 is only scoped per-APScheduler-job.
+        with mock.patch.object(scheduler, "live_window_active", return_value=True), \
+                mock.patch.object(scheduler, "_update_games_running", return_value=True), \
+                mock.patch.object(scheduler, "run_job_once") as run:
+            scheduler.run_live_scores_tick()
+            run.assert_not_called()
