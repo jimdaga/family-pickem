@@ -40,13 +40,15 @@ points.) Reuse `live_events.py` — add `standings_channel(pool, season)` +
 a `publish_event(channel, payload)` used by both scores and standings.
 
 ### C. SSE endpoint — pool-scoped auth (the key new piece)
-Scores are public; standings are not. Add `GET /events/standings/?pool=<slug>&week=<n>`
-(async, uvicorn). It:
-- Resolves the current season and the pool from `<slug>`, and **verifies the
-  requesting user is a member of that pool** via `FamilyMembership` (user → family
-  → pool) — all through `sync_to_async` (no sync ORM in the async path, per the
-  3a lesson). Non-members get 403; anonymous is already blocked by
-  `RequireLoginForInternalPagesMiddleware`.
+Scores are public; standings are not. Add `GET /events/standings/?family=<fslug>&pool=<pslug>`
+(async, uvicorn). `family` is required (a pool slug is only unique within a
+family, so `family` disambiguates it); `week` is accepted but currently unused
+by the endpoint. It:
+- Resolves the current season and the pool from `<fslug>`/`<pslug>`, and
+  **verifies the requesting user is a member of that pool** via
+  `FamilyMembership` (user → family → pool) — all through `sync_to_async` (no
+  sync ORM in the async path, per the 3a lesson). Non-members get 403;
+  anonymous is already blocked by `RequireLoginForInternalPagesMiddleware`.
 - Subscribes to `standings:{pool}:{season}` and streams like 3b (reuse the
   generalized `_event_stream(channel)` — keepalive, graceful Redis-error end,
   guarded cleanup).

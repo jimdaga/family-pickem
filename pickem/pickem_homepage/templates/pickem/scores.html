@@ -1652,7 +1652,7 @@
         const statusTitleEl = card.querySelector('[data-status-title]');
         if (statusTitleEl && d.status_title) statusTitleEl.textContent = d.status_title;
 
-        const periodLabels = ['1', '2', '3', '4', 'OT'];
+        const periodLabels = ['1', '2', '3', '4'];
         if (Array.isArray(d.home_periods)) {
             d.home_periods.forEach(function (val, idx) {
                 const el = card.querySelector('[data-home-period="' + periodLabels[idx] + '"]');

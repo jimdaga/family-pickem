@@ -47,15 +47,23 @@ logger = logging.getLogger(__name__)
 WEEKS = range(1, 19)
 
 
-def maybe_publish_standings_change(old_total, row, week, season):
-    """Publish a live standings event if ``total_points`` changed (or new row).
+def maybe_publish_standings_change(old_total, old_week_points, row, week, season):
+    """Publish a live standings event if points changed (or new row).
 
     ``old_total`` is ``row.total_points`` captured before the recompute, or
-    ``None`` if the row was just created. Best-effort via ``publish_event``
-    (which never raises) — a publish failure must never break the recompute.
+    ``None`` if the row was just created. ``old_week_points`` is the
+    pre-recompute ``week_{week}_points`` (or ``None`` if unknown/new row).
+    The lobby displays the current week's points, so a cross-week scoring
+    correction that changes ``week_{week}_points`` without moving
+    ``total_points`` still needs to publish. Best-effort via
+    ``publish_event`` (which never raises) — a publish failure must never
+    break the recompute.
     """
-    if old_total is not None and old_total == row.total_points:
-        return
+    if old_total is not None:
+        total_unchanged = old_total == row.total_points
+        week_unchanged = old_week_points == getattr(row, f"week_{week}_points", None)
+        if total_unchanged and week_unchanged:
+            return
     publish_event(
         standings_channel(row.pool_id, season), standings_event_payload(row, week)
     )
@@ -158,6 +166,11 @@ class Command(BaseCommand):
                 },
             )
             old_total = None if created else row.total_points
+            old_week_points = (
+                None
+                if created or current_week is None
+                else getattr(row, f"week_{current_week}_points", None)
+            )
 
             correct_by_week = Counter()
             tied_by_week = Counter()
@@ -184,7 +197,9 @@ class Command(BaseCommand):
 
             row.total_points = total
             row.save()
-            maybe_publish_standings_change(old_total, row, current_week, season)
+            maybe_publish_standings_change(
+                old_total, old_week_points, row, current_week, season
+            )
             updated += 1
             self.stdout.write(f" - pool {pool_id} user {user_id}: {total} points")
 
