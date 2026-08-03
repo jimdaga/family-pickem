@@ -346,21 +346,16 @@ class Command(BaseCommand):
             row["id"]: row
             for row in GamesAndScores.objects.filter(
                 id__in=[game_id for game_id, _ in parsed]
-            ).values("id", "gameScored", "gameWinner")
+            ).values("id", "gameScored", *LIVE_SCORE_FIELDS)
         }
         count = 0
         for game_id, defaults in parsed:
             previous = previous_by_id.get(game_id)
-            existing = (
-                GamesAndScores.objects.filter(id=game_id)
-                .values(*LIVE_SCORE_FIELDS)
-                .first()
-            )
             game, _created = GamesAndScores.objects.update_or_create(
                 id=game_id, defaults=defaults
             )
             # Best-effort live push (scores-only SSE); never blocks the upsert.
-            maybe_publish_game_change(None if _created else existing, game)
+            maybe_publish_game_change(None if _created else previous, game)
             # ESPN occasionally reverses an already-scored result (forfeit,
             # replay correction). update_picks only re-visits gameScored=False
             # games, so without this the old winner's pickers stay wrongly
