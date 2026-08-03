@@ -187,6 +187,7 @@ urlpatterns = [
     path('invites/<str:invite_code>/', views.accept_invite_link, name='accept_invite_link'),
     path('scores/', views.scores, name='scores'),
     path('events/scores/', live_views.live_scores_events, name='live_scores_events'),
+    path('events/standings/', live_views.live_standings_events, name='live_standings_events'),
     path('standings/', views.standings, name='standings'),
     path('rules/', views.rules, name='rules'),
     path('accounts/signup/', views.account_signup_google_only, name='account_signup'),

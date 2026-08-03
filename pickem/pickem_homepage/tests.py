@@ -9344,3 +9344,148 @@ class SseStreamShapeTests(TestCase):
             second = await gen.__anext__()
             self.assertIn('data: {"game_id": 1}', second)
             await gen.aclose()
+
+
+class SseStandingsAuthTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.client = Client()
+        self.family = Family.objects.create(name="Smith Family", slug="smith-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="main",
+            season=2526,
+            competition="nfl",
+            is_default=True,
+        )
+        self.member = User.objects.create_user(
+            "standings-member", email="standings-member@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "standings-outsider", email="standings-outsider@example.com", password="pass"
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.member,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def test_url_reverses(self):
+        self.assertEqual(reverse("live_standings_events"), "/events/standings/")
+
+    def test_requires_login(self):
+        # RequireLoginForInternalPagesMiddleware should block anonymous access.
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": self.pool.slug},
+        )
+        self.assertIn(resp.status_code, (302, 401))
+
+    def test_missing_params_returns_400(self):
+        self.client.force_login(self.member)
+
+        resp = self.client.get("/events/standings/")
+
+        self.assertEqual(resp.status_code, 400)
+
+    def test_missing_pool_param_returns_400(self):
+        self.client.force_login(self.member)
+
+        resp = self.client.get(
+            "/events/standings/", {"family": self.family.slug}
+        )
+
+        self.assertEqual(resp.status_code, 400)
+
+    def test_non_member_gets_403(self):
+        self.client.force_login(self.outsider)
+
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": self.pool.slug},
+        )
+
+        self.assertEqual(resp.status_code, 403)
+
+    def test_unknown_pool_gets_403(self):
+        self.client.force_login(self.member)
+
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": "does-not-exist"},
+        )
+
+        self.assertEqual(resp.status_code, 403)
+
+    def test_member_gets_stream(self):
+        # No REDIS_URL in test env: _event_stream ends immediately, so the
+        # response is a valid (empty) SSE stream rather than a 403/400.
+        self.client.force_login(self.member)
+
+        resp = self.client.get(
+            "/events/standings/",
+            {"family": self.family.slug, "pool": self.pool.slug},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "text/event-stream")
+        self.assertEqual(resp["Cache-Control"], "no-cache")
+        self.assertEqual(resp["X-Accel-Buffering"], "no")
+
+
+class ResolvePoolForMemberTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+
+    def setUp(self):
+        self.family = Family.objects.create(name="Jones Family", slug="jones-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="main",
+            season=2526,
+            competition="nfl",
+            is_default=True,
+        )
+        self.member = User.objects.create_user(
+            "resolve-member", email="resolve-member@example.com", password="pass"
+        )
+        self.outsider = User.objects.create_user(
+            "resolve-outsider", email="resolve-outsider@example.com", password="pass"
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.member,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def test_member_resolves_pool_id_and_season(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        result = _resolve_pool_for_member(self.member, self.family.slug, self.pool.slug)
+
+        self.assertEqual(result, (self.pool.id, self.pool.season))
+
+    def test_non_member_returns_none(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        result = _resolve_pool_for_member(self.outsider, self.family.slug, self.pool.slug)
+
+        self.assertIsNone(result)
+
+    def test_unknown_family_or_pool_returns_none(self):
+        from pickem_homepage.live_views import _resolve_pool_for_member
+
+        result = _resolve_pool_for_member(self.member, "no-such-family", self.pool.slug)
+
+        self.assertIsNone(result)

@@ -10,9 +10,13 @@ import logging
 import os
 
 from asgiref.sync import sync_to_async
-from django.http import HttpResponseBadRequest, StreamingHttpResponse
+from django.http import (
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+    StreamingHttpResponse,
+)
 
-from pickem_api.live_events import scores_channel
+from pickem_api.live_events import scores_channel, standings_channel
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +100,53 @@ async def live_scores_events(request):
 
     resp = StreamingHttpResponse(
         _event_stream(channel), content_type="text/event-stream"
+    )
+    resp["Cache-Control"] = "no-cache"
+    resp["X-Accel-Buffering"] = "no"  # defeat proxy/Cloudflare buffering
+    return resp
+
+
+def _resolve_pool_for_member(user, family_slug, pool_slug):
+    """(pool_id, season) if `user` is a member of the pool, else None. Sync — call
+    via sync_to_async from the async view."""
+    from pickem_api.models import FamilyMembership, Pool
+
+    pool = (
+        Pool.objects.filter(family__slug=family_slug, slug=pool_slug)
+        .values("id", "season", "family_id")
+        .first()
+    )
+    if not pool:
+        return None
+    if not FamilyMembership.objects.filter(
+        user=user, family_id=pool["family_id"]
+    ).exists():
+        return None
+    return pool["id"], pool["season"]
+
+
+async def live_standings_events(request):
+    """SSE stream of live standings changes for ?family=<slug>&pool=<slug>.
+
+    Membership is verified per-request via _resolve_pool_for_member (run off
+    the event loop through sync_to_async) — no sync ORM access in this view
+    body itself.
+    """
+    family_slug = request.GET.get("family", "").strip()
+    pool_slug = request.GET.get("pool", "").strip()
+    if not family_slug or not pool_slug:
+        return HttpResponseBadRequest("family and pool required")
+
+    resolved = await sync_to_async(_resolve_pool_for_member)(
+        request.user, family_slug, pool_slug
+    )
+    if resolved is None:
+        return HttpResponseForbidden("not a member of this pool")
+    pool_id, season = resolved
+
+    resp = StreamingHttpResponse(
+        _event_stream(standings_channel(pool_id, season)),
+        content_type="text/event-stream",
     )
     resp["Cache-Control"] = "no-cache"
     resp["X-Accel-Buffering"] = "no"  # defeat proxy/Cloudflare buffering
