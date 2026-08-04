@@ -794,6 +794,12 @@
         if (label) { label.textContent = 'Page ' + (page + 1) + ' of ' + pageCount; }
         if (prevBtn) { prevBtn.disabled = (page === 0); }
         if (nextBtn) { nextBtn.disabled = (page >= pageCount - 1); }
+        // Toggling row display:none changes document height, shifting every
+        // section below Week Points. The GSAP reveal ScrollTriggers cache their
+        // positions and don't re-evaluate on a display change (no scroll/resize
+        // fires), so a section still below the fold (e.g. "Upcoming" games) would
+        // stay stuck at autoAlpha:0. Recompute positions so it reveals in place.
+        window.ScrollTrigger && window.ScrollTrigger.refresh();
     }
 
     function refresh() {

@@ -607,6 +607,37 @@ class TenantDashboardIsolationTests(TestCase):
         )
         self.assertContains(standings, "data-user-total-points")
 
+    def test_week_points_pagination_refreshes_scroll_reveal(self):
+        """Paginating Week Points toggles row display, which shifts every
+        section below it. The GSAP reveal caches trigger positions at load, so
+        without a ScrollTrigger.refresh() after a page change the "Upcoming"
+        games section — held at autoAlpha:0 while below the fold — never fires
+        and stays hidden. Lock the guarded refresh into the pager's render()
+        (bug: games tiles fail to render on Week Points pages past page 1)."""
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, family)
+        # Seed more than one page (page size is 12) so the pager is actually
+        # active — the bug only manifests when a page change toggles rows.
+        season = get_season()
+        for i in range(13):
+            userSeasonPoints.objects.create(
+                pool=pool, userEmail=f"wp{i}@example.com", userID=str(1000 + i),
+                gameseason=season, gameyear=str(2000 + season // 100),
+                week_1_points=i, total_points=i,
+            )
+        self.client.force_login(self.member)
+
+        html = self.client.get(self._tenant_url(family, pool)).content.decode()
+        # Every seeded member renders a row (data-week-points-value="…" appears
+        # only on rows; the JS references the attr with single quotes), so 13
+        # rows means the client-side pager spans more than one page.
+        self.assertEqual(html.count('data-week-points-value="'), 13)
+        # The refresh must live *inside* the pager's render(), after it toggles
+        # row visibility — not merely somewhere on the page — and be guarded for
+        # reduced-motion / no-GSAP.
+        render_body = html.split("function render()", 1)[1].split("function refresh()", 1)[0]
+        self.assertRegex(render_body, r"window\.ScrollTrigger\s*&&\s*window\.ScrollTrigger\.refresh\(\)")
+
     def test_pool_home_is_branded_as_lobby_with_gsap_polish(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         smith_pool.season = 2627
