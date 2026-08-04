@@ -83,6 +83,15 @@ A small helper, reused by scores + lobby + standings clients:
 
 ### 2. Scores — kickoff / finish swap
 
+> **Implementation note (found during planning):** this is **already
+> implemented and working**. `statusType` is in `SCORE_TRIGGER_FIELDS`
+> (`live_events.py`), so a kickoff/finish publishes an SSE event; `applyScoreEvent`
+> (`scores.html` ~L1618) already detects the status change, forces `hasLiveGames()`
+> true, and calls `updateLiveScores()` for a full card refetch. The 0.0.199/0.0.202
+> demo "didn't swap" only because the DB was edited directly, bypassing
+> `update_games`/publish. **No change needed here** beyond the §4 fallback.
+
+
 In `applyScoreEvent`: when the event's `status` ≠ the card's current
 `data-game-status`, call `scheduleStructuralRefetch('scores')` (in addition to
 flipping `data-game-status` so `hasLiveGames()` stays correct for the interval
