@@ -680,7 +680,12 @@
     // needs fresh server-rendered rows. Coalesces a burst of events into one
     // fetch; the value patch below still gives instant feedback in the meantime.
     var refetchTimer = null;
+    var refetchGeneration = 0;
     function scheduleLeaderboardRefetch() {
+        // Bump a generation token each schedule; an in-flight fetch that resolves
+        // out of order (a slower older request finishing after a newer one) is
+        // discarded so it can't overwrite fresher rows with stale HTML.
+        var generation = ++refetchGeneration;
         if (refetchTimer) { clearTimeout(refetchTimer); }
         refetchTimer = setTimeout(function () {
             refetchTimer = null;
@@ -689,7 +694,7 @@
                 cache: 'no-store', credentials: 'same-origin'
             }).then(function (r) { return r.ok ? r.text() : null; })
               .then(function (html) {
-                  if (!html) { return; }
+                  if (!html || generation !== refetchGeneration) { return; }
                   var doc = new DOMParser().parseFromString(html, 'text/html');
                   var fresh = doc.querySelector('[data-week-points-grid]');
                   var current = document.querySelector('[data-week-points-grid]');

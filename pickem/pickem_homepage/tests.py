@@ -586,7 +586,12 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertEqual(lobby.status_code, 200)
         self.assertContains(lobby, "data-week-points-grid")
         self.assertContains(lobby, 'data-week-points-page-size="12"')
-        self.assertContains(lobby, 'data-week-points-value="3"')
+        # The row-identity hook (data-user-id) must sit on the same row as the
+        # reorder value attr — the SSE client finds the row by data-user-id.
+        self.assertRegex(
+            lobby.content.decode(),
+            rf'data-user-id="{self.member.id}"\s+data-week-points-value="3"',
+        )
         self.assertContains(lobby, "__weekPointsPaginate")
 
         # Standings leaderboard: container hook + per-row reorder value attr.
@@ -596,7 +601,10 @@ class TenantDashboardIsolationTests(TestCase):
         ))
         self.assertEqual(standings.status_code, 200)
         self.assertContains(standings, "data-standings-list")
-        self.assertContains(standings, 'data-total-points="3"')
+        self.assertRegex(
+            standings.content.decode(),
+            rf'data-user-id="{self.member.id}"\s+data-total-points="3"',
+        )
         self.assertContains(standings, "data-user-total-points")
 
     def test_pool_home_is_branded_as_lobby_with_gsap_polish(self):
