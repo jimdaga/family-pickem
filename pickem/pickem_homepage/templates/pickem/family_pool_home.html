@@ -195,11 +195,14 @@
             </a>
         </div>
         {% if week_points_summary %}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" data-week-points-grid data-week-points-page-size="10">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" data-week-points-grid data-week-points-page-size="12">
             {% for row in week_points_summary %}
-            <div class="flex items-center justify-between gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3" data-user-id="{{ row.points.userID }}" data-week-points-row>
+            <div class="flex items-center justify-between gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3" data-user-id="{{ row.points.userID }}" data-week-points-value="{{ row.week_points }}" data-week-points-row>
                 <div class="flex items-center gap-3 min-w-0">
-                    <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-black text-primary">#{{ row.rank }}</span>
+                    <span class="w-6 flex-shrink-0 text-center text-sm font-black {% if row.rank %}text-primary{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">{% if row.rank %}{{ row.rank }}{% else %}<span title="Ranking begins after the first completed game">&ndash;</span>{% endif %}</span>
+                    {% with row.points.userID|lookupavatar as avatar %}
+                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}" alt="" class="h-8 w-8 flex-shrink-0 rounded-full border border-border-light dark:border-border-subtle object-cover" onerror="this.src='https://www.gravatar.com/avatar/?d=identicon&s=64'">
+                    {% endwith %}
                     <span class="truncate text-sm font-bold text-text-dark dark:text-white">
                         {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors">{{ row.user|display_name }}</a>{% else %}Player {{ row.points.userID }}{% endif %}
                     </span>
@@ -393,41 +396,6 @@
         </div>
     </div>
 
-    <!-- ═════════════════════════════ AROUND THE NFL (ESPN) ═════════════════════════════ -->
-    {% if espn_news %}
-    <div class="lobby-section section-container mb-6" data-testid="espn-news">
-        <div class="flex items-center gap-3 mb-4">
-            <i class="fas fa-newspaper text-xl text-primary"></i>
-            <h2 class="text-lg font-bold text-text-dark dark:text-white">Around the NFL</h2>
-            <span class="text-xs text-text-secondary-light dark:text-text-secondary">via ESPN</span>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {% for article in espn_news %}
-            <a href="{{ article.url }}" target="_blank" rel="noopener noreferrer"
-               class="group flex flex-col overflow-hidden rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface hover:border-primary/50 hover:shadow-card-hover transition-all">
-                {% if article.image %}
-                <div class="aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-bg-dark/40">
-                    <img src="{{ article.image }}" alt="" loading="lazy"
-                         class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                         onerror="this.closest('a').querySelector('.espn-fallback')?.classList.remove('hidden'); this.remove()">
-                </div>
-                {% endif %}
-                <div class="espn-fallback {% if article.image %}hidden{% endif %} flex aspect-[16/9] items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
-                    <i class="fas fa-football-ball text-3xl text-primary/40"></i>
-                </div>
-                <div class="p-3 flex-1 flex flex-col">
-                    <p class="text-sm font-bold text-text-dark dark:text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors">{{ article.headline }}</p>
-                    {% if article.description %}
-                    <p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary line-clamp-2">{{ article.description }}</p>
-                    {% endif %}
-                    <span class="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">Read on ESPN <i class="fas fa-arrow-up-right-from-square text-[9px]"></i></span>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
     <!-- ═════════════════════════════ MESSAGE BOARD ACTIVITY ════════════════════════════ -->
     <div class="lobby-section section-container mb-6" data-testid="lobby-message-board">
         <div class="flex items-center justify-between gap-3 mb-4">
@@ -473,6 +441,41 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- ═════════════════════════════ AROUND THE NFL (ESPN) ═════════════════════════════ -->
+    {% if espn_news %}
+    <div class="lobby-section section-container mb-6" data-testid="espn-news">
+        <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-newspaper text-xl text-primary"></i>
+            <h2 class="text-lg font-bold text-text-dark dark:text-white">Around the NFL</h2>
+            <span class="text-xs text-text-secondary-light dark:text-text-secondary">via ESPN</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for article in espn_news %}
+            <a href="{{ article.url }}" target="_blank" rel="noopener noreferrer"
+               class="group flex flex-col overflow-hidden rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface hover:border-primary/50 hover:shadow-card-hover transition-all">
+                {% if article.image %}
+                <div class="aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-bg-dark/40">
+                    <img src="{{ article.image }}" alt="" loading="lazy"
+                         class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                         onerror="this.closest('a').querySelector('.espn-fallback')?.classList.remove('hidden'); this.remove()">
+                </div>
+                {% endif %}
+                <div class="espn-fallback {% if article.image %}hidden{% endif %} flex aspect-[16/9] items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+                    <i class="fas fa-football-ball text-3xl text-primary/40"></i>
+                </div>
+                <div class="p-3 flex-1 flex flex-col">
+                    <p class="text-sm font-bold text-text-dark dark:text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors">{{ article.headline }}</p>
+                    {% if article.description %}
+                    <p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary line-clamp-2">{{ article.description }}</p>
+                    {% endif %}
+                    <span class="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">Read on ESPN <i class="fas fa-arrow-up-right-from-square text-[9px]"></i></span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- ══════════════════════════════════ OWNER ACTIONS ═════════════════════════════════ -->
     <div class="lobby-section flex flex-wrap gap-3 mb-8">
@@ -672,24 +675,71 @@
         return;
     }
 
+    // Debounced full re-render of the Week Points grid from the server. SSE can
+    // only patch existing text; a reorder or a member who joined after page load
+    // needs fresh server-rendered rows. Coalesces a burst of events into one
+    // fetch; the value patch below still gives instant feedback in the meantime.
+    var refetchTimer = null;
+    var refetchGeneration = 0;
+    function scheduleLeaderboardRefetch() {
+        // Bump a generation token each schedule; an in-flight fetch that resolves
+        // out of order (a slower older request finishing after a newer one) is
+        // discarded so it can't overwrite fresher rows with stale HTML.
+        var generation = ++refetchGeneration;
+        if (refetchTimer) { clearTimeout(refetchTimer); }
+        refetchTimer = setTimeout(function () {
+            refetchTimer = null;
+            fetch(window.location.href, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-store' },
+                cache: 'no-store', credentials: 'same-origin'
+            }).then(function (r) { return r.ok ? r.text() : null; })
+              .then(function (html) {
+                  if (!html || generation !== refetchGeneration) { return; }
+                  var doc = new DOMParser().parseFromString(html, 'text/html');
+                  var fresh = doc.querySelector('[data-week-points-grid]');
+                  var current = document.querySelector('[data-week-points-grid]');
+                  if (fresh && current) {
+                      current.innerHTML = fresh.innerHTML;
+                      if (typeof window.__weekPointsPaginate === 'function') {
+                          window.__weekPointsPaginate();
+                      }
+                  }
+              }).catch(function () {});
+        }, 1500);
+    }
+
     function applyStandingsEvent(ev) {
         var d;
         try { d = JSON.parse(ev.data); } catch (e) { return; }
         if (d.user_id === undefined || d.user_id === null) {
             return;
         }
-        var row = document.querySelector('[data-user-id="' + d.user_id + '"]');
-        if (!row) {
-            return;
-        }
         // week_points is only meaningful for the week this page is showing;
         // an event for a different week (e.g. a late-scoring prior week)
         // must not clobber this podium.
-        if (week && String(d.week) === String(week) && d.week_points !== null && d.week_points !== undefined) {
+        if (!week || String(d.week) !== String(week) ||
+            d.week_points === null || d.week_points === undefined) {
+            return;
+        }
+        // Scope to the Week Points podium rows (the lobby also has standings-
+        // preview rows carrying data-user-id).
+        var row = document.querySelector(
+            '[data-week-points-row][data-user-id="' + d.user_id + '"]');
+        if (!row) {
+            // Member not on the podium yet (joined after load) -> structural.
+            scheduleLeaderboardRefetch();
+            return;
+        }
+        var prev = parseInt(row.getAttribute('data-week-points-value'), 10);
+        if (isNaN(prev) || prev !== d.week_points) {
+            // Patch the value in place for instant feedback...
             var weekPointsEl = row.querySelector('[data-user-week-points]');
             if (weekPointsEl) {
                 weekPointsEl.textContent = d.week_points + ' pts';
             }
+            row.setAttribute('data-week-points-value', d.week_points);
+            // ...then settle row order (and pull in any new rows) via refetch.
+            scheduleLeaderboardRefetch();
         }
     }
 
@@ -724,17 +774,15 @@
      this just shows one page at a time. Hidden past page 1 until navigated. -->
 <script>
 (function () {
-    var grid = document.querySelector('[data-week-points-grid]');
-    if (!grid) { return; }
-    var rows = Array.prototype.slice.call(grid.querySelectorAll('[data-week-points-row]'));
-    var pageSize = parseInt(grid.getAttribute('data-week-points-page-size'), 10) || 10;
     var pager = document.querySelector('[data-week-points-pager]');
-    if (rows.length <= pageSize || !pager) { return; }  // one page: nothing to do
-
-    var prevBtn = pager.querySelector('[data-week-points-prev]');
-    var nextBtn = pager.querySelector('[data-week-points-next]');
-    var label = pager.querySelector('[data-week-points-page-label]');
-    var pageCount = Math.ceil(rows.length / pageSize);
+    var prevBtn = pager ? pager.querySelector('[data-week-points-prev]') : null;
+    var nextBtn = pager ? pager.querySelector('[data-week-points-next]') : null;
+    var label = pager ? pager.querySelector('[data-week-points-page-label]') : null;
+    // Closure state, re-read from the DOM on every refresh() so a live refetch
+    // that swaps the grid's rows re-paginates correctly.
+    var rows = [];
+    var pageSize = 12;
+    var pageCount = 1;
     var page = 0;
 
     function render() {
@@ -748,11 +796,29 @@
         if (nextBtn) { nextBtn.disabled = (page >= pageCount - 1); }
     }
 
+    function refresh() {
+        var grid = document.querySelector('[data-week-points-grid]');
+        if (!grid) { return; }
+        rows = Array.prototype.slice.call(grid.querySelectorAll('[data-week-points-row]'));
+        pageSize = parseInt(grid.getAttribute('data-week-points-page-size'), 10) || 12;
+        pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+        if (page >= pageCount) { page = pageCount - 1; }
+        if (!pager || rows.length <= pageSize) {  // one page: show all, hide pager
+            rows.forEach(function (row) { row.classList.remove('hidden'); });
+            if (pager) { pager.classList.add('hidden'); }
+            return;
+        }
+        pager.classList.remove('hidden');
+        render();
+    }
+
+    // Buttons live outside the grid, so their listeners survive a grid innerHTML
+    // swap — bind them once here; render() reads the refreshed closure state.
     if (prevBtn) { prevBtn.addEventListener('click', function () { if (page > 0) { page--; render(); } }); }
     if (nextBtn) { nextBtn.addEventListener('click', function () { if (page < pageCount - 1) { page++; render(); } }); }
 
-    pager.classList.remove('hidden');
-    render();
+    window.__weekPointsPaginate = refresh;  // re-init hook for the live refetch
+    refresh();
 })();
 </script>
 {% endblock %}
