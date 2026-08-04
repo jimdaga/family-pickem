@@ -60,5 +60,13 @@ fi
 # only see the pod-spec env. That asymmetry is what stops a rogue second
 # scheduler from starting when someone execs into the scheduler pod (which
 # does set RUN_SCHEDULER at the container level).
+#
+# --lifespan off: Django's ASGIHandler does not implement the ASGI lifespan
+# protocol and raises ValueError on a lifespan scope. Under uvicorn's default
+# (--lifespan auto) that ValueError is caught by uvicorn for graceful
+# fallback, but Sentry's ASGI instrumentation still reports it as an unhandled
+# error on every startup (PYTHON-DJANGO-B). We have no ASGI startup/shutdown
+# hooks (the scheduler starts from apps.ready()), so disabling lifespan is
+# correct and silences the noise.
 export RUN_WEB_SERVER=true
-exec uvicorn pickem.asgi:application --host 0.0.0.0 --port 8000 --workers "${UVICORN_WORKERS:-1}"
+exec uvicorn pickem.asgi:application --host 0.0.0.0 --port 8000 --workers "${UVICORN_WORKERS:-1}" --lifespan off
