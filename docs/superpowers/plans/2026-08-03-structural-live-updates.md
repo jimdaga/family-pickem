@@ -203,7 +203,15 @@ function scheduleLeaderboardRefetch() {
 
 ---
 
-### Task 5: Scores pre-kickoff heartbeat fallback (§4)
+### Task 5: Scores pre-kickoff heartbeat fallback (§4) — DEFERRED to #160
+
+**Deferred during implementation.** §2 was found already working end-to-end via
+SSE (`statusType` is a publish trigger), so this only guards the rare "SSE fully
+down at the exact kickoff second" edge. There is no clean per-card kickoff-time
+attribute to drive it, and a coarse always-poll heartbeat is wasteful. Not worth
+the fragility now; revisit under #160 if the edge ever bites.
+
+_Original design (for reference):_
 
 **Files:**
 - Modify: `pickem/pickem_homepage/templates/pickem/scores.html` — near the SSE
