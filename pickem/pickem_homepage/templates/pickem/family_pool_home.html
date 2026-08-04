@@ -195,9 +195,9 @@
             </a>
         </div>
         {% if week_points_summary %}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" data-week-points-grid data-week-points-page-size="10">
             {% for row in week_points_summary %}
-            <div class="flex items-center justify-between gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3" data-user-id="{{ row.points.userID }}">
+            <div class="flex items-center justify-between gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3" data-user-id="{{ row.points.userID }}" data-week-points-row>
                 <div class="flex items-center gap-3 min-w-0">
                     <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-black text-primary">#{{ row.rank }}</span>
                     <span class="truncate text-sm font-bold text-text-dark dark:text-white">
@@ -208,8 +208,20 @@
             </div>
             {% endfor %}
         </div>
+        {# Pager: shown only when there are more members than one page (JS-driven). #}
+        <div class="mt-4 flex items-center justify-center gap-4 hidden" data-week-points-pager>
+            <button type="button" data-week-points-prev
+                    class="px-3 py-1.5 rounded-lg border border-border-light dark:border-border-subtle text-xs font-semibold text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                <i class="fas fa-arrow-left mr-1 text-[10px]"></i> Prev
+            </button>
+            <span class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary" data-week-points-page-label></span>
+            <button type="button" data-week-points-next
+                    class="px-3 py-1.5 rounded-lg border border-border-light dark:border-border-subtle text-xs font-semibold text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                Next <i class="fas fa-arrow-right ml-1 text-[10px]"></i>
+            </button>
+        </div>
         {% else %}
-        <p class="text-sm text-text-secondary-light dark:text-text-secondary py-4 text-center">No points yet this week.</p>
+        <p class="text-sm text-text-secondary-light dark:text-text-secondary py-4 text-center">No members in this pool yet.</p>
         {% endif %}
     </div>
 
@@ -704,6 +716,43 @@
             sseSource = null;
         }
     };
+})();
+</script>
+
+<!-- Client-side pagination for the Week Points list. All member rows are
+     rendered (so the live SSE update can patch any member, even off-page);
+     this just shows one page at a time. Hidden past page 1 until navigated. -->
+<script>
+(function () {
+    var grid = document.querySelector('[data-week-points-grid]');
+    if (!grid) { return; }
+    var rows = Array.prototype.slice.call(grid.querySelectorAll('[data-week-points-row]'));
+    var pageSize = parseInt(grid.getAttribute('data-week-points-page-size'), 10) || 10;
+    var pager = document.querySelector('[data-week-points-pager]');
+    if (rows.length <= pageSize || !pager) { return; }  // one page: nothing to do
+
+    var prevBtn = pager.querySelector('[data-week-points-prev]');
+    var nextBtn = pager.querySelector('[data-week-points-next]');
+    var label = pager.querySelector('[data-week-points-page-label]');
+    var pageCount = Math.ceil(rows.length / pageSize);
+    var page = 0;
+
+    function render() {
+        var start = page * pageSize;
+        var end = start + pageSize;
+        rows.forEach(function (row, i) {
+            row.classList.toggle('hidden', i < start || i >= end);
+        });
+        if (label) { label.textContent = 'Page ' + (page + 1) + ' of ' + pageCount; }
+        if (prevBtn) { prevBtn.disabled = (page === 0); }
+        if (nextBtn) { nextBtn.disabled = (page >= pageCount - 1); }
+    }
+
+    if (prevBtn) { prevBtn.addEventListener('click', function () { if (page > 0) { page--; render(); } }); }
+    if (nextBtn) { nextBtn.addEventListener('click', function () { if (page < pageCount - 1) { page++; render(); } }); }
+
+    pager.classList.remove('hidden');
+    render();
 })();
 </script>
 {% endblock %}

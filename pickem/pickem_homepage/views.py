@@ -460,6 +460,44 @@ def get_current_week_context(gameseason):
         return '1', 'nfl'
 
 
+def build_week_points_summary(pool, gameseason, current_week):
+    """Ordered week-points rows for every member of ``pool`` this season.
+
+    Week points default to 0 (a null ``week_N_points`` is coalesced to 0), so an
+    unscored week shows all members at 0 rather than an empty list — mirroring
+    the scores page, which lists ``notstarted`` games at 0-0. Rendering every
+    member also keeps their ``data-user-id`` rows on the lobby so the live SSE
+    update (Phase 3c) can patch points in place from kickoff; the template
+    paginates the list client-side. Ordered by week points desc, then userID.
+    Returns ``[]`` when ``current_week`` is not a valid week number (1-18).
+    """
+    from django.db.models import IntegerField, Value
+    from django.db.models.functions import Coalesce
+    if not (str(current_week).isdigit() and 1 <= int(current_week) <= 18):
+        return []
+    week_points_field = f"week_{current_week}_points"
+    week_points_rows = list(
+        userSeasonPoints.objects.filter(pool=pool, gameseason=gameseason)
+        .annotate(_wp=Coalesce(week_points_field, Value(0), output_field=IntegerField()))
+        .order_by("-_wp", "userID")
+    )
+    week_points_user_ids = [
+        int(points.userID)
+        for points in week_points_rows
+        if str(points.userID).isdigit()
+    ]
+    week_points_users = User.objects.in_bulk(week_points_user_ids)
+    return [
+        {
+            'rank': rank,
+            'points': points,
+            'week_points': getattr(points, week_points_field) or 0,
+            'user': week_points_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
+        }
+        for rank, points in enumerate(week_points_rows, 1)
+    ]
+
+
 def redirect_to_default_pool_route(request, route_name, **route_kwargs):
     family_choices = get_family_pool_choices(request.user)
     if not family_choices:
@@ -1097,37 +1135,9 @@ def family_pool_home(request, family_slug, pool_slug):
         for rank, points in enumerate(top_standings, 1)
     ]
 
-    # Skip the week-points podium until something has actually been scored
-    # this week; ranking a field of zeros just crowns whoever sorts first.
-    week_has_scored_games = GamesAndScores.objects.filter(
-        gameseason=gameseason,
-        gameWeek=current_week,
-        competition=current_competition,
-        gameScored=True,
-    ).exists()
-    week_points_summary = []
-    if week_has_scored_games and str(current_week).isdigit() and 1 <= int(current_week) <= 18:
-        week_points_field = f"week_{current_week}_points"
-        week_points_rows = list(
-            userSeasonPoints.objects.filter(pool=pool, gameseason=gameseason)
-            .exclude(**{week_points_field: None})
-            .order_by(f"-{week_points_field}", "userID")[:3]
-        )
-        week_points_user_ids = [
-            int(points.userID)
-            for points in week_points_rows
-            if str(points.userID).isdigit()
-        ]
-        week_points_users = User.objects.in_bulk(week_points_user_ids)
-        week_points_summary = [
-            {
-                'rank': rank,
-                'points': points,
-                'week_points': getattr(points, week_points_field) or 0,
-                'user': week_points_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
-            }
-            for rank, points in enumerate(week_points_rows, 1)
-        ]
+    # Every pool member's week points — 0 to start, all members shown; the
+    # template paginates client-side. See build_week_points_summary().
+    week_points_summary = build_week_points_summary(pool, gameseason, current_week)
 
     recent_winners = []
     for week_num in range(1, 19):
