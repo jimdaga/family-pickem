@@ -607,6 +607,26 @@ class TenantDashboardIsolationTests(TestCase):
         )
         self.assertContains(standings, "data-user-total-points")
 
+    def test_week_points_pagination_refreshes_scroll_reveal(self):
+        """Paginating Week Points toggles row display, which shifts every
+        section below it. The GSAP reveal caches trigger positions at load, so
+        without a ScrollTrigger.refresh() after a page change the "Upcoming"
+        games section — held at autoAlpha:0 while below the fold — never fires
+        and stays hidden. Lock the guarded refresh into the pager (bug: games
+        tiles fail to render on Week Points pages past page 1)."""
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, family)
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=self.member.email, userID=str(self.member.id),
+            gameseason=2526, gameyear="2025", week_1_points=3, total_points=3,
+        )
+        self.client.force_login(self.member)
+
+        lobby = self.client.get(self._tenant_url(family, pool)).content.decode()
+        # The pager's render() must recompute stale ScrollTrigger positions
+        # after it changes row visibility, guarded for reduced-motion / no-GSAP.
+        self.assertRegex(lobby, r"window\.ScrollTrigger\s*&&\s*window\.ScrollTrigger\.refresh\(\)")
+
     def test_pool_home_is_branded_as_lobby_with_gsap_polish(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         smith_pool.season = 2627
