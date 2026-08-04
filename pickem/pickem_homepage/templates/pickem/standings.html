@@ -133,12 +133,13 @@
         </div>
 
         <!-- Leaderboard -->
-        <div class="space-y-1.5 p-3">
+        <div class="space-y-1.5 p-3" data-standings-list>
             {% for player in player_points %}
             <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}"
                class="standings-row block bg-white/60 dark:bg-bg-dark/30 rounded-lg px-3 py-2 border border-border-light dark:border-border-subtle hover:border-primary/50 dark:hover:border-primary/50 hover:shadow-card-hover transition-all duration-200"
                style="animation-delay: {{ forloop.counter0|add:1|floatformat:2 }}s"
-               data-user-id="{{ player.userID }}">
+               data-user-id="{{ player.userID }}"
+               data-total-points="{{ player.total_points|default:0 }}">
                 {% with usernames|lookup:player.userID as username %}
                 {% with avatars|lookup:player.userID as avatar %}
 
@@ -367,22 +368,57 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
+    // Debounced full re-render of the leaderboard from the server. SSE can only
+    // patch existing text; a reorder (or a member who joined after page load)
+    // needs fresh server-ordered rows. Coalesces a burst into one fetch; the
+    // in-place patch below still gives instant feedback in the meantime.
+    var refetchTimer = null;
+    function scheduleLeaderboardRefetch() {
+        if (refetchTimer) { clearTimeout(refetchTimer); }
+        refetchTimer = setTimeout(function () {
+            refetchTimer = null;
+            fetch(window.location.href, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-store' },
+                cache: 'no-store', credentials: 'same-origin'
+            }).then(function (r) { return r.ok ? r.text() : null; })
+              .then(function (html) {
+                  if (!html) { return; }
+                  var doc = new DOMParser().parseFromString(html, 'text/html');
+                  var fresh = doc.querySelector('[data-standings-list]');
+                  var current = document.querySelector('[data-standings-list]');
+                  if (fresh && current) {
+                      current.innerHTML = fresh.innerHTML;
+                  }
+              }).catch(function () {});
+        }, 1500);
+    }
+
     function applyStandingsEvent(ev) {
         var d;
         try { d = JSON.parse(ev.data); } catch (e) { return; }
         if (d.user_id === undefined || d.user_id === null) {
             return;
         }
-        var row = document.querySelector('[data-user-id="' + d.user_id + '"]');
-        if (!row) {
-            return;
-        }
         if (d.total_points === null || d.total_points === undefined) {
             return;
         }
-        var totalPointsEl = row.querySelector('[data-user-total-points]');
-        if (totalPointsEl) {
-            totalPointsEl.textContent = d.total_points;
+        var row = document.querySelector(
+            '.standings-row[data-user-id="' + d.user_id + '"]');
+        if (!row) {
+            // Member not on the leaderboard yet (joined after load) -> structural.
+            scheduleLeaderboardRefetch();
+            return;
+        }
+        var prev = parseInt(row.getAttribute('data-total-points'), 10);
+        if (isNaN(prev) || prev !== d.total_points) {
+            // Patch the value in place for instant feedback...
+            var totalPointsEl = row.querySelector('[data-user-total-points]');
+            if (totalPointsEl) {
+                totalPointsEl.textContent = d.total_points;
+            }
+            row.setAttribute('data-total-points', d.total_points);
+            // ...then settle row order (and pull in any new rows) via refetch.
+            scheduleLeaderboardRefetch();
         }
     }
 
