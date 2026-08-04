@@ -471,16 +471,25 @@ def build_week_points_summary(pool, gameseason, current_week):
     paginates the list client-side. Ordered by week points desc, then userID.
     Returns ``[]`` when ``current_week`` is not a valid week number (1-18).
     """
-    from django.db.models import IntegerField, Value
-    from django.db.models.functions import Coalesce
     if not (str(current_week).isdigit() and 1 <= int(current_week) <= 18):
         return []
     week_points_field = f"week_{current_week}_points"
     week_points_rows = list(
         userSeasonPoints.objects.filter(pool=pool, gameseason=gameseason)
-        .annotate(_wp=Coalesce(week_points_field, Value(0), output_field=IntegerField()))
-        .order_by("-_wp", "userID")
     )
+
+    def _sort_key(row):
+        # Week points desc (null == 0), then userID ascending. userID is stored
+        # as str(user.id), so tie-break numerically ("2" before "10") rather than
+        # lexically; non-numeric ids sort after numeric ones. The two id groups
+        # never compare tuple elements of mixed type (the 0/1 tag separates them).
+        week_points = getattr(row, week_points_field) or 0
+        uid = str(row.userID)
+        if uid.isdigit():
+            return (-week_points, 0, int(uid))
+        return (-week_points, 1, uid)
+
+    week_points_rows.sort(key=_sort_key)
     week_points_user_ids = [
         int(points.userID)
         for points in week_points_rows
