@@ -568,6 +568,37 @@ class TenantDashboardIsolationTests(TestCase):
         games_heading = response.context["games_section_heading"]
         self.assertLess(content.index("Week Points"), content.index(games_heading))
 
+    def test_live_update_dom_contract_present_on_lobby_and_standings(self):
+        """Lock the data-* hooks the SSE clients depend on so a template change
+        can't silently break structural live updates (#159)."""
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, family)
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=self.member.email, userID=str(self.member.id),
+            gameseason=2526, gameyear="2025", week_1_points=3, total_points=3,
+        )
+        self.client.force_login(self.member)
+
+        # Lobby Week Points block: grid hook, page size 12, per-row value attr
+        # (asserted with its value so it matches a rendered row, not the JS
+        # literal), and the pagination re-init hook the refetch calls.
+        lobby = self.client.get(self._tenant_url(family, pool))
+        self.assertEqual(lobby.status_code, 200)
+        self.assertContains(lobby, "data-week-points-grid")
+        self.assertContains(lobby, 'data-week-points-page-size="12"')
+        self.assertContains(lobby, 'data-week-points-value="3"')
+        self.assertContains(lobby, "__weekPointsPaginate")
+
+        # Standings leaderboard: container hook + per-row reorder value attr.
+        standings = self.client.get(reverse(
+            "family_pool_standings",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+        self.assertEqual(standings.status_code, 200)
+        self.assertContains(standings, "data-standings-list")
+        self.assertContains(standings, 'data-total-points="3"')
+        self.assertContains(standings, "data-user-total-points")
+
     def test_pool_home_is_branded_as_lobby_with_gsap_polish(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
         smith_pool.season = 2627
