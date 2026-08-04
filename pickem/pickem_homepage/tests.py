@@ -9593,3 +9593,67 @@ class ResolvePoolForMemberTests(TestCase):
         result = _resolve_pool_for_member(self.member, self.family.slug, self.pool.slug)
 
         self.assertIsNone(result)
+
+
+class BuildWeekPointsSummaryTests(TestCase):
+    """The lobby Week Points list shows every pool member, 0 to start (#158)."""
+
+    def setUp(self):
+        from pickem_api.models import Family, Pool
+        self.family = Family.objects.create(name="WP Fam", slug="wp-fam")
+        self.pool = Pool.objects.create(
+            family=self.family, name="WP Pool", slug="wp-pool",
+            season=2526, competition="nfl",
+        )
+        self.season = 2526
+
+    def _member(self, username, week_1_points):
+        user = User.objects.create(username=username)
+        userSeasonPoints.objects.create(
+            pool=self.pool, userEmail=f"{username}@ex.com", userID=str(user.id),
+            gameseason=self.season, gameyear="2025", week_1_points=week_1_points,
+        )
+        return user
+
+    def test_includes_all_members_at_zero_before_any_scoring(self):
+        from pickem_homepage.views import build_week_points_summary
+        # Two members whose week points are still null (nothing scored yet).
+        u1 = self._member("alice", None)
+        u2 = self._member("bob", None)
+        summary = build_week_points_summary(self.pool, self.season, "1")
+        self.assertEqual(len(summary), 2)  # all members shown, not an empty podium
+        self.assertEqual({row['week_points'] for row in summary}, {0})  # null -> 0
+        self.assertEqual([row['rank'] for row in summary], [1, 2])
+        self.assertEqual({row['user'].id for row in summary}, {u1.id, u2.id})
+
+    def test_orders_by_week_points_desc_treating_null_as_zero(self):
+        from pickem_homepage.views import build_week_points_summary
+        leader = self._member("leader", 7)
+        self._member("null_member", None)   # must sort as 0, not nulls-first
+        self._member("zero_member", 0)
+        summary = build_week_points_summary(self.pool, self.season, "1")
+        self.assertEqual(summary[0]['user'].id, leader.id)   # 7 pts ranks first
+        self.assertEqual(summary[0]['rank'], 1)
+        self.assertEqual([row['week_points'] for row in summary], [7, 0, 0])
+
+    def test_out_of_range_week_returns_empty(self):
+        from pickem_homepage.views import build_week_points_summary
+        self._member("alice", 3)
+        self.assertEqual(build_week_points_summary(self.pool, self.season, "0"), [])
+        self.assertEqual(build_week_points_summary(self.pool, self.season, "19"), [])
+        self.assertEqual(build_week_points_summary(self.pool, self.season, "x"), [])
+
+    def test_tied_scores_break_by_numeric_user_id(self):
+        # userID is stored as str(user.id); tied week scores must order 2 before
+        # 10 (numeric), not "10" before "2" (lexicographic).
+        from pickem_homepage.views import build_week_points_summary
+        # Force specific ids that would sort wrong lexically when tied at 0.
+        for uid in (2, 10):
+            user = User.objects.create(id=uid, username=f"u{uid}")
+            userSeasonPoints.objects.create(
+                pool=self.pool, userEmail=f"u{uid}@ex.com", userID=str(user.id),
+                gameseason=self.season, gameyear="2025", week_1_points=0,
+            )
+        summary = build_week_points_summary(self.pool, self.season, "1")
+        ordered_ids = [row['points'].userID for row in summary]
+        self.assertEqual(ordered_ids, ["2", "10"])  # numeric, not lexicographic
