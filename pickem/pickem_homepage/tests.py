@@ -9615,23 +9615,37 @@ class BuildWeekPointsSummaryTests(TestCase):
         )
         return user
 
-    def test_includes_all_members_at_zero_before_any_scoring(self):
+    def test_includes_all_members_but_unranked_before_any_completed_game(self):
         from pickem_homepage.views import build_week_points_summary
         # Two members whose week points are still null (nothing scored yet).
         u1 = self._member("alice", None)
         u2 = self._member("bob", None)
-        summary = build_week_points_summary(self.pool, self.season, "1")
+        # No game completed yet -> everyone equal -> no rank (shown as "-").
+        summary = build_week_points_summary(
+            self.pool, self.season, "1", week_has_completed_game=False
+        )
         self.assertEqual(len(summary), 2)  # all members shown, not an empty podium
         self.assertEqual({row['week_points'] for row in summary}, {0})  # null -> 0
-        self.assertEqual([row['rank'] for row in summary], [1, 2])
+        self.assertEqual([row['rank'] for row in summary], [None, None])
         self.assertEqual({row['user'].id for row in summary}, {u1.id, u2.id})
+
+    def test_rank_is_numeric_once_a_game_has_completed(self):
+        from pickem_homepage.views import build_week_points_summary
+        self._member("alice", None)
+        self._member("bob", None)
+        summary = build_week_points_summary(
+            self.pool, self.season, "1", week_has_completed_game=True
+        )
+        self.assertEqual([row['rank'] for row in summary], [1, 2])
 
     def test_orders_by_week_points_desc_treating_null_as_zero(self):
         from pickem_homepage.views import build_week_points_summary
         leader = self._member("leader", 7)
         self._member("null_member", None)   # must sort as 0, not nulls-first
         self._member("zero_member", 0)
-        summary = build_week_points_summary(self.pool, self.season, "1")
+        summary = build_week_points_summary(
+            self.pool, self.season, "1", week_has_completed_game=True
+        )
         self.assertEqual(summary[0]['user'].id, leader.id)   # 7 pts ranks first
         self.assertEqual(summary[0]['rank'], 1)
         self.assertEqual([row['week_points'] for row in summary], [7, 0, 0])
@@ -9639,9 +9653,12 @@ class BuildWeekPointsSummaryTests(TestCase):
     def test_out_of_range_week_returns_empty(self):
         from pickem_homepage.views import build_week_points_summary
         self._member("alice", 3)
-        self.assertEqual(build_week_points_summary(self.pool, self.season, "0"), [])
-        self.assertEqual(build_week_points_summary(self.pool, self.season, "19"), [])
-        self.assertEqual(build_week_points_summary(self.pool, self.season, "x"), [])
+        self.assertEqual(
+            build_week_points_summary(self.pool, self.season, "0", week_has_completed_game=True), [])
+        self.assertEqual(
+            build_week_points_summary(self.pool, self.season, "19", week_has_completed_game=True), [])
+        self.assertEqual(
+            build_week_points_summary(self.pool, self.season, "x", week_has_completed_game=True), [])
 
     def test_tied_scores_break_by_numeric_user_id(self):
         # userID is stored as str(user.id); tied week scores must order 2 before
@@ -9654,6 +9671,8 @@ class BuildWeekPointsSummaryTests(TestCase):
                 pool=self.pool, userEmail=f"u{uid}@ex.com", userID=str(user.id),
                 gameseason=self.season, gameyear="2025", week_1_points=0,
             )
-        summary = build_week_points_summary(self.pool, self.season, "1")
+        summary = build_week_points_summary(
+            self.pool, self.season, "1", week_has_completed_game=True
+        )
         ordered_ids = [row['points'].userID for row in summary]
         self.assertEqual(ordered_ids, ["2", "10"])  # numeric, not lexicographic

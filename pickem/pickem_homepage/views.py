@@ -460,7 +460,7 @@ def get_current_week_context(gameseason):
         return '1', 'nfl'
 
 
-def build_week_points_summary(pool, gameseason, current_week):
+def build_week_points_summary(pool, gameseason, current_week, week_has_completed_game):
     """Ordered week-points rows for every member of ``pool`` this season.
 
     Week points default to 0 (a null ``week_N_points`` is coalesced to 0), so an
@@ -469,6 +469,10 @@ def build_week_points_summary(pool, gameseason, current_week):
     member also keeps their ``data-user-id`` rows on the lobby so the live SSE
     update (Phase 3c) can patch points in place from kickoff; the template
     paginates the list client-side. Ordered by week points desc, then userID.
+
+    ``rank`` is a number (1..N) only when ``week_has_completed_game`` is True;
+    before the week's first game completes everyone is equal, so ``rank`` is
+    ``None`` and the template shows a dash instead of a position.
     Returns ``[]`` when ``current_week`` is not a valid week number (1-18).
     """
     if not (str(current_week).isdigit() and 1 <= int(current_week) <= 18):
@@ -498,7 +502,7 @@ def build_week_points_summary(pool, gameseason, current_week):
     week_points_users = User.objects.in_bulk(week_points_user_ids)
     return [
         {
-            'rank': rank,
+            'rank': (rank if week_has_completed_game else None),
             'points': points,
             'week_points': getattr(points, week_points_field) or 0,
             'user': week_points_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
@@ -1145,8 +1149,18 @@ def family_pool_home(request, family_slug, pool_slug):
     ]
 
     # Every pool member's week points — 0 to start, all members shown; the
-    # template paginates client-side. See build_week_points_summary().
-    week_points_summary = build_week_points_summary(pool, gameseason, current_week)
+    # template paginates client-side. See build_week_points_summary(). Ranks are
+    # hidden until this week has a scored game (before that everyone is at 0 and
+    # equal), mirroring the season-wide season_has_started treatment above.
+    week_has_completed_game = GamesAndScores.objects.filter(
+        gameseason=gameseason,
+        competition=current_competition,
+        gameWeek=current_week,
+        gameScored=True,
+    ).exists()
+    week_points_summary = build_week_points_summary(
+        pool, gameseason, current_week, week_has_completed_game
+    )
 
     recent_winners = []
     for week_num in range(1, 19):
