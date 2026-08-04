@@ -118,7 +118,35 @@ kickoff time is at/past `now`, run a low-frequency (~60s)
 `scheduleStructuralRefetch('scores')` until they flip. Cheap, self-limiting, and
 the debounce ensures heartbeat + SSE never double-fetch.
 
-### 5. Testing
+### 5. Week Points block polish (lobby — final step)
+
+Bundled cosmetic/rank improvements to the lobby Week Points block
+(`family_pool_home.html`, the podium grid from 0.0.202). These share the block
+and the "has a completed game" condition, so they land as the last step:
+
+- **Rank only after a completed game.** `build_week_points_summary` currently
+  assigns `rank = 1..N` unconditionally. Change it to assign a numeric rank
+  **only when the current week has ≥1 completed game**; otherwise `rank = None`.
+  The template renders `#N` when `row.rank` is set and `–` (em/en-dash, matching
+  the existing standings-preview treatment at ~L348) when it is `None`. Before
+  any game completes, everyone is equal, so every row shows `–`.
+  - Detection: a boolean `week_has_completed_game` (any `GamesAndScores` row for
+    the season+week with `statusType='finished'`), computed in the view and
+    passed into the helper so the helper stays pure and unit-testable.
+- **User avatars (like the scores page).** Each Week Points row renders the
+  member's avatar via `{% with row.points.userID|lookupavatar as avatar %}` →
+  `<img class="w-8 h-8 rounded-full border …" src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}">`,
+  matching the scores-page styling. The numeric rank (`#N`, when present) shows as
+  a small label beside the avatar; when unranked, the `–` shows in its place.
+  `lookupavatar` is already loaded (`pickem_homepage_extras`) in the template.
+- **Paginate at 12, not 10.** The grid is 3 columns × 4 rows, so
+  `data-week-points-page-size="10"` → `"12"` fills a clean page.
+
+Interaction with §3: pre-completion all rows are equal and unranked, so no
+reorder occurs; post-completion ranks are numeric and the §3 reorder-refetch
+applies normally.
+
+### 6. Testing
 
 The behavior is client-side JS, which Django can't unit-test directly. Scope:
 
@@ -127,7 +155,10 @@ The behavior is client-side JS, which Django can't unit-test directly. Scope:
   `data-game-id` on cards, `data-user-id` (+ the value attributes used for
   reorder detection) on leaderboard rows, and the region container ids — so a
   template change can't silently break the client contract.
-- **No server behavior changes**, so the existing suite covers regressions.
+- **Server-side rank rule (§5):** extend the existing
+  `BuildWeekPointsSummaryTests` — assert every row has `rank is None` when the
+  week has no completed game, and `rank = 1..N` once a completed game exists.
+- **No other server behavior changes**, so the existing suite covers regressions.
 - **Behavioral verification:** scripted live demo on dev (as done for 0.0.199 /
   0.0.202): drive a `notstarted → inprogress → finished` transition and a
   point change that reorders rows, confirm swaps with no reload, then restore.
