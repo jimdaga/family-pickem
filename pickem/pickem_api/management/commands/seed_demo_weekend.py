@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
+from pickem.utils import get_season
 from pickem_api.demo_weekend import (
     DEMO_POOL_SLUG, DEMO_SEASON, DEMO_SLUG, DEMO_WEEK, GAMES, PICKS,
     PLAYERS, TEAMS,
@@ -39,8 +40,9 @@ class Command(BaseCommand):
             raise CommandError("seed_demo_weekend is a dev tool; DEBUG must be on.")
 
         if options["print_current_season"]:
-            row = currentSeason.objects.first()
-            self.stdout.write(str(row.season if row else ""))
+            # get_season() has its own no-row fallback (int), so this always
+            # prints a bare integer for the orchestrator to parse/restore.
+            self.stdout.write(str(get_season()))
             return
         if options["make_current"]:
             row = currentSeason.objects.first()
@@ -138,13 +140,13 @@ class Command(BaseCommand):
         defensive so a schema drift can't break seeding."""
         try:
             from pickem_api.models import UserProfile
+            UserProfile.objects.get_or_create(
+                user=user, defaults={
+                    "tagline": "Demo player",
+                    "favorite_team": favorite_team_slug,
+                })
         except Exception:
             return
-        UserProfile.objects.get_or_create(
-            user=user, defaults={
-                "tagline": "Demo player",
-                "favorite_team": favorite_team_slug,
-            })
 
     def _wipe(self):
         family = Family.objects.filter(slug=DEMO_SLUG).first()

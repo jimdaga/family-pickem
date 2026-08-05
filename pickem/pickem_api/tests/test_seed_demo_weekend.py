@@ -44,6 +44,15 @@ class SeedDemoWeekendTests(TestCase):
         call_command("seed_demo_weekend", "--print-current-season", stdout=out)
         self.assertEqual(out.getvalue().strip(), str(dw.DEMO_SEASON))
 
+    def test_print_current_season_with_no_row_prints_bare_int(self):
+        # No currentSeason row exists at all — get_season()'s own fallback
+        # must still produce a bare integer for the orchestrator to parse.
+        self.assertFalse(currentSeason.objects.exists())
+        out = StringIO()
+        call_command("seed_demo_weekend", "--print-current-season", stdout=out)
+        printed = out.getvalue().strip()
+        self.assertTrue(printed.isdigit(), f"expected a bare int, got {printed!r}")
+
     def test_refuses_without_debug(self):
         with override_settings(DEBUG=False):
             with self.assertRaises(CommandError):
