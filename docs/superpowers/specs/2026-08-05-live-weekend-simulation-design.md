@@ -208,12 +208,26 @@ browser receives is produced by the real, shipped code.
   isolated synthetic league).
 - No production/deployed use — dev-only by construction.
 
+## `statusType` vocabulary (resolved)
+
+`statusType` is a closed set, populated only by `update_games` via `STATUS_MAP`:
+
+- `notstarted` — pre-kickoff (ESPN `STATUS_SCHEDULED`)
+- `inprogress` — live (ESPN `STATUS_IN_PROGRESS` / `STATUS_END_PERIOD` /
+  `STATUS_HALFTIME`)
+- `finished` — final, incl. overtime (ESPN `STATUS_FINAL` / `STATUS_FINAL_OVERTIME`)
+
+`statusTitle` is the freeform display label ("Final", "Q3 5:22"). The simulator
+scripts each game `notstarted → inprogress → finished`, matching `seed_demo_week`.
+
+> **Follow-up (out of scope here):** `statusType` is a freeform `CharField` even
+> though its value space is closed. Converting it to `models.TextChoices` would
+> give admin/superadmin dropdowns + validation. Because existing values already
+> conform, no data migration is needed (only a no-op `choices` migration). Worth
+> doing as its own small change; deliberately **not** bundled into this harness.
+
 ## Open Questions (resolve during planning)
 
-- Exact `statusType` string vocabulary the pipeline + templates expect for
-  pre-kickoff vs live vs final (`notstarted` / `scheduled` / `inprogress` /
-  `finished` / `final`?) — confirm against `update_games.py` and `scores.html`
-  rendering before scripting states.
 - Whether `update_weekly_winners` / `update_rankings` need to run every tick or
   only once at week-final; default to once-at-final to keep ticks cheap, run
   `update_standings` every finalize for the live reorder.
