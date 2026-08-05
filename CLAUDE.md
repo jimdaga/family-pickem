@@ -237,6 +237,16 @@ python manage.py update_picks
 python manage.py update_standings
 ```
 
+### Live Weekend Simulation (dev-only)
+
+`scripts/live-sim.sh <your-username> [duration]` stands up throwaway Redis +
+uvicorn, points `currentSeason` at the isolated demo season (9999), seeds a
+~13-game weekend, and replays it live over ~5 min so the SSE-driven surfaces
+(`/scores`, lobby Week Points, `/standings`) can be watched updating. It tears
+everything down (restoring your real season) on exit. Requires Docker + DEBUG.
+Building blocks (all DEBUG-only, season-9999-only):
+`seed_demo_weekend`, `simulate_weekend` (see `pickem_api/demo_weekend.py`).
+
 ## Important Notes from claude_instructions.md
 
 When applying changes:
