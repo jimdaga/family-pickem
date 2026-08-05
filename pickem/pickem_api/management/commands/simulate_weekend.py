@@ -7,6 +7,7 @@ Finalized games are scored through the real pipeline (see _finalize)."""
 import time
 
 from django.conf import settings as django_settings
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
 from pickem_api.demo_weekend import DEMO_SEASON, DEMO_WEEK, GAMES, game_state_at
@@ -64,12 +65,23 @@ class Command(BaseCommand):
                     f"{state['homeTeamScore']}-{state['awayTeamScore']}")
 
             if frac >= 1.0 and len(finalized) >= len(GAMES):
+                self._complete_week()
                 break
             time.sleep(tick)
 
         self.stdout.write(self.style.SUCCESS("Weekend simulation complete."))
 
     def _finalize(self, row):
-        """Hook: run the scoring pipeline when a game goes final. Filled in
-        Task 4; a no-op here keeps Task 3 independently testable."""
-        return
+        """Score a just-finalized game through the real pipeline so the
+        standings SSE fires. update_picks grades the game's picks;
+        update_standings republishes the pool's live standings."""
+        call_command("update_picks", season=DEMO_SEASON, verbosity=0)
+        call_command("update_standings", season=DEMO_SEASON, verbosity=0)
+
+    def _complete_week(self):
+        """Once every game is final, award the weekly winner + ranks (bonus
+        can flip the leaderboard) and republish standings a final time."""
+        call_command("update_weekly_winners", season=DEMO_SEASON,
+                     week=int(DEMO_WEEK), verbosity=0)
+        call_command("update_rankings", season=DEMO_SEASON, verbosity=0)
+        call_command("update_standings", season=DEMO_SEASON, verbosity=0)
