@@ -59,7 +59,7 @@ class Command(BaseCommand):
                 maybe_publish_game_change(before, row)
                 if state["statusType"] == "finished" and row.id not in finalized:
                     finalized.add(row.id)
-                    self._finalize(row)  # Task 4 fills this in.
+                    self._finalize(row)
                 self.stdout.write(
                     f"[frac={frac:.2f}] {row.slug}: {state['statusTitle']} "
                     f"{state['homeTeamScore']}-{state['awayTeamScore']}")

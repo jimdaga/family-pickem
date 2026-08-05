@@ -82,7 +82,7 @@ GAMES = [
     # Sunday night
     _game(9998012, "demo-frost", "demo-flames", [3, 7, 3, 7], [0, 0, 7, 3], 0.65, 0.85),
     # Monday night — the tiebreaker. Close final (final total = 44) so the
-    # tiebreaker guesses decide it. sharks win 24-20.
+    # tiebreaker guesses decide it. comet win 24-20.
     _game(9998013, "demo-comet", "demo-vipers", [7, 3, 7, 7], [0, 7, 3, 10], 0.82, 1.0,
           tiebreaker=True),
 ]
