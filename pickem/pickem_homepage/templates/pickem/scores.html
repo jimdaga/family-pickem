@@ -1464,11 +1464,9 @@
                         currentGame.classList.toggle('scores-live-game', newStatus === 'inprogress');
                         
                         
-                        // Add update animation
-                        currentGame.style.animation = 'none';
-                        currentGame.offsetHeight; // Trigger reflow
-                        currentGame.style.animation = 'fadeIn 0.5s ease-in';
-                        
+                        // Content was swapped in above; no per-update card fade
+                        // (it flashed the whole card). Status transitions are
+                        // infrequent, so the instant swap reads cleanly.
                         gamesUpdated++;
                         
                         // Check if game just completed
@@ -1495,7 +1493,6 @@
             const newStats = newDoc.querySelector('.weekly-performance-stats');
             if (currentStats && newStats && currentStats.innerHTML !== newStats.innerHTML) {
                 currentStats.innerHTML = newStats.innerHTML;
-                currentStats.style.animation = 'fadeIn 0.5s ease-in';
             }
             
             // Update week points leaderboard
@@ -1503,8 +1500,7 @@
             const newLeaderboard = newDoc.getElementById('week-points-leaderboard');
             if (currentLeaderboard && newLeaderboard && currentLeaderboard.innerHTML !== newLeaderboard.innerHTML) {
                 currentLeaderboard.innerHTML = newLeaderboard.innerHTML;
-                currentLeaderboard.style.animation = 'fadeIn 0.5s ease-in';
-                
+
                 // Refresh the Week Points layout after updating leaderboard content
                 if (typeof window.weekPointsLayoutManager !== 'undefined') {
                     setTimeout(() => {
@@ -1666,8 +1662,9 @@
             });
         }
 
-        // reuse existing update animation + completion handling
-        card.style.animation = 'none'; card.offsetHeight; card.style.animation = 'fadeIn 0.5s ease-in';
+        // The score/period text was patched in place above; do NOT fade the
+        // whole card on every tick — that flashed the entire card on every
+        // score change. The continuous "live" glow (scoresLivePulse) is kept.
         if (window.scoresLivePulse) window.scoresLivePulse();
     }
 

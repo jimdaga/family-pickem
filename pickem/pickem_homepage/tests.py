@@ -3370,6 +3370,22 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertContains(response, "updateInterval = null;")
         self.assertContains(response, "document.removeEventListener('visibilitychange', window.visibilityHandler);")
 
+    def test_scores_live_update_patches_in_place_without_card_fade(self):
+        """Live score ticks patch score/period text in place; they must NOT
+        fade the whole card on every update. The old code ran
+        `card.style.animation = 'fadeIn 0.5s ease-in'` on every SSE tick, which
+        flashed the entire card during scoring (user-reported). Lock that the
+        SSE handler no longer fades the card while still patching in place and
+        keeping the continuous 'live' glow."""
+        self.client.force_login(self.smith_member)
+        html = self.client.get(self._tenant_url("family_pool_scores")).content.decode()
+        # Isolate the SSE apply handler; it must patch in place, not fade.
+        sse_body = html.split("function applyScoreEvent(", 1)[1].split(
+            "function startSse(", 1)[0]
+        self.assertNotIn("fadeIn", sse_body)
+        self.assertIn("data-home-score", sse_body)   # still patches scores in place
+        self.assertIn("scoresLivePulse", sse_body)   # keeps the live glow
+
     def test_tenant_create_post_assigns_current_family_server_side(self):
         self.client.force_login(self.smith_member)
 
