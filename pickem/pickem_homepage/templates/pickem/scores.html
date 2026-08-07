@@ -1422,7 +1422,33 @@
             
             let gamesUpdated = 0;
             let completedGames = 0;
-            
+
+            // <script> tags inserted via innerHTML never execute, so the
+            // per-card inline setup scripts (pick placeholders, missing-picks
+            // reveal) would not run after a live card swap — leaving a game
+            // that just transitioned (e.g. scheduled -> in progress) with
+            // un-initialized/hidden markup until a full page reload. Re-run the
+            // swapped-in scripts so a live transition "unlocks" the card
+            // exactly like a fresh load.
+            //
+            // NOTE for card-partial authors: keep per-card inline scripts wrapped
+            // in an IIFE ((function(){ ... })()). This helper re-runs them on every
+            // live swap, so a top-level `let`/`const` would throw a redeclaration
+            // SyntaxError on the second swap — and because that surfaces via the
+            // global error handler (not this call's try/catch), it would fail
+            // silently with no user-facing "update failed" signal. IIFEs re-run
+            // safely (the two current card scripts already are).
+            function runInlineScripts(container) {
+                container.querySelectorAll('script').forEach(function (old) {
+                    const s = document.createElement('script');
+                    for (const attr of old.attributes) {
+                        s.setAttribute(attr.name, attr.value);
+                    }
+                    s.textContent = old.textContent;
+                    old.parentNode.replaceChild(s, old);
+                });
+            }
+
             currentGames.forEach((currentGame, index) => {
                 if (newGames[index]) {
                     const currentStatus = currentGame.getAttribute('data-game-status');
@@ -1462,13 +1488,13 @@
                         currentGame.innerHTML = newGames[index].innerHTML;
                         currentGame.setAttribute('data-game-status', newStatus);
                         currentGame.classList.toggle('scores-live-game', newStatus === 'inprogress');
-                        
-                        
-                        // Add update animation
-                        currentGame.style.animation = 'none';
-                        currentGame.offsetHeight; // Trigger reflow
-                        currentGame.style.animation = 'fadeIn 0.5s ease-in';
-                        
+                        // Re-run the swapped-in inline scripts (see above) so the
+                        // now-in-progress card initializes without a manual reload.
+                        runInlineScripts(currentGame);
+
+                        // Content was swapped in above; no per-update card fade
+                        // (it flashed the whole card). Status transitions are
+                        // infrequent, so the instant swap reads cleanly.
                         gamesUpdated++;
                         
                         // Check if game just completed
@@ -1495,7 +1521,6 @@
             const newStats = newDoc.querySelector('.weekly-performance-stats');
             if (currentStats && newStats && currentStats.innerHTML !== newStats.innerHTML) {
                 currentStats.innerHTML = newStats.innerHTML;
-                currentStats.style.animation = 'fadeIn 0.5s ease-in';
             }
             
             // Update week points leaderboard
@@ -1503,8 +1528,7 @@
             const newLeaderboard = newDoc.getElementById('week-points-leaderboard');
             if (currentLeaderboard && newLeaderboard && currentLeaderboard.innerHTML !== newLeaderboard.innerHTML) {
                 currentLeaderboard.innerHTML = newLeaderboard.innerHTML;
-                currentLeaderboard.style.animation = 'fadeIn 0.5s ease-in';
-                
+
                 // Refresh the Week Points layout after updating leaderboard content
                 if (typeof window.weekPointsLayoutManager !== 'undefined') {
                     setTimeout(() => {
@@ -1666,8 +1690,9 @@
             });
         }
 
-        // reuse existing update animation + completion handling
-        card.style.animation = 'none'; card.offsetHeight; card.style.animation = 'fadeIn 0.5s ease-in';
+        // The score/period text was patched in place above; do NOT fade the
+        // whole card on every tick — that flashed the entire card on every
+        // score change. The continuous "live" glow (scoresLivePulse) is kept.
         if (window.scoresLivePulse) window.scoresLivePulse();
     }
 

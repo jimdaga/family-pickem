@@ -613,7 +613,12 @@ class TenantDashboardIsolationTests(TestCase):
         without a ScrollTrigger.refresh() after a page change the "Upcoming"
         games section — held at autoAlpha:0 while below the fold — never fires
         and stays hidden. Lock the guarded refresh into the pager's render()
-        (bug: games tiles fail to render on Week Points pages past page 1)."""
+        (bug: games tiles fail to render on Week Points pages past page 1).
+
+        The refresh is now gated behind a skipScrollRefresh flag so the live
+        update path can suppress it (see the no-flash test below); manual page
+        navigation still refreshes. This test asserts the refresh is present and
+        inside render(); the gating is asserted separately."""
         family, pool = self._family_with_pool("Smith Family", "smith-family")
         self._active_membership(self.member, family)
         # Seed more than one page (page size is 12) so the pager is actually
@@ -635,8 +640,35 @@ class TenantDashboardIsolationTests(TestCase):
         # The refresh must live *inside* the pager's render(), after it toggles
         # row visibility — not merely somewhere on the page — and be guarded for
         # reduced-motion / no-GSAP.
-        render_body = html.split("function render()", 1)[1].split("function refresh()", 1)[0]
+        render_body = html.split("function render(", 1)[1].split("function refresh(", 1)[0]
         self.assertRegex(render_body, r"window\.ScrollTrigger\s*&&\s*window\.ScrollTrigger\.refresh\(\)")
+
+    def test_live_week_points_update_patches_in_place_without_full_flash(self):
+        """A live standings update must NOT rebuild the whole Week Points grid.
+
+        The old handler did `current.innerHTML = fresh.innerHTML`, tearing down
+        and repainting every tile on every event (a constant full-panel flash
+        during scoring) and calling ScrollTrigger.refresh() — which re-fired the
+        GSAP reveal on other lobby sections. The fix reconciles tiles in place
+        (reusing nodes) and only refreshes ScrollTriggers on a structural change.
+        Lock that so the flash can't regress."""
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, family)
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=self.member.email, userID=str(self.member.id),
+            gameseason=get_season(), gameyear="2025", week_1_points=3, total_points=3,
+        )
+        self.client.force_login(self.member)
+        html = self.client.get(self._tenant_url(family, pool)).content.decode()
+
+        # The in-place reconcile exists and is what the refetch calls.
+        self.assertIn("function reconcileWeekPoints(", html)
+        self.assertIn("reconcileWeekPoints(current, fresh)", html)
+        # The wholesale grid innerHTML swap must be gone (it was the flash).
+        self.assertNotIn("current.innerHTML = fresh.innerHTML", html)
+        # The live refetch re-paginates with the ScrollTrigger refresh suppressed
+        # unless the member set changed, so other sections don't re-animate.
+        self.assertIn("__weekPointsPaginate(!structural)", html)
 
     def test_pool_home_is_branded_as_lobby_with_gsap_polish(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
@@ -850,6 +882,49 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, "In Progress")
         self.assertNotContains(response, "Jones family secret")
         self.assertNotContains(response, "2 of 1")
+
+    def test_lobby_game_tiles_carry_live_score_hooks_and_subscribe(self):
+        """The lobby "This Week's Games" tiles must live-update via the scores
+        SSE (previously only the /scores page did). Lock the per-tile hooks the
+        client patches (data-game-id/status, data-home-score/away-score,
+        data-status-title) and the /events/scores/ subscription + in-place
+        apply handler, so the games tiles can't silently regress to static."""
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        GamesAndScores.objects.create(
+            id=1050, slug="buf-nyj-2025-week-1", competition="nfl",
+            gameWeek="1", gameyear="2025", gameseason=2526,
+            startTimestamp=timezone.now() - timedelta(hours=1),
+            statusType="inprogress", statusTitle="Q3 5:22",
+            homeTeamId=3, homeTeamSlug="nyj", homeTeamName="New York Jets",
+            homeTeamScore=14, awayTeamId=4, awayTeamSlug="buf",
+            awayTeamName="Buffalo Bills", awayTeamScore=17,
+        )
+        self.client.force_login(self.member)
+        html = self.client.get(self._tenant_url(smith_family, smith_pool)).content.decode()
+
+        # Scope the per-tile hooks to the games grid (not merely "somewhere on
+        # the page") so unrelated markup can't satisfy them. The card's identity
+        # + status attrs must sit together on the card element the client finds.
+        self.assertIn("data-lobby-games-grid", html)
+        # Bound the slice to the card markup (stop at the first <script>) so the
+        # SSE script's selector literals ([data-home-score] etc.) further down
+        # the page cannot satisfy these assertions — otherwise the test would
+        # pass even if the tiles lost the attributes it claims to lock.
+        grid = html.split("data-lobby-games-grid", 1)[1].split("<script", 1)[0]
+        self.assertRegex(
+            grid,
+            r'data-lobby-game-card data-game-id="1050" data-game-status="inprogress"',
+        )
+        self.assertIn("data-home-score", grid)
+        self.assertIn("data-away-score", grid)
+        self.assertIn("data-status-title", grid)
+        # data-live-week must render a real week number — the scores SSE URL is
+        # built from it, so an empty value would silently disable live updates.
+        self.assertRegex(html, r'data-live-week="\d+"')
+        # Subscribes to the scores SSE and patches in place (no full-grid swap).
+        self.assertIn("/events/scores/?week=", html)
+        self.assertIn("function applyScoreEvent(", html)
 
     def test_dashboard_snapshot_weekday_selection_rules(self):
         from pickem_homepage.views import select_dashboard_snapshot_games
@@ -3337,6 +3412,36 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertContains(response, "if (updateInterval)")
         self.assertContains(response, "updateInterval = null;")
         self.assertContains(response, "document.removeEventListener('visibilitychange', window.visibilityHandler);")
+
+    def test_scores_live_update_patches_in_place_without_card_fade(self):
+        """Live score ticks patch score/period text in place; they must NOT
+        fade the whole card on every update. The old code ran
+        `card.style.animation = 'fadeIn 0.5s ease-in'` on every SSE tick, which
+        flashed the entire card during scoring (user-reported). Lock that the
+        SSE handler no longer fades the card while still patching in place and
+        keeping the continuous 'live' glow."""
+        self.client.force_login(self.smith_member)
+        html = self.client.get(self._tenant_url("family_pool_scores")).content.decode()
+        # Isolate the SSE apply handler; it must patch in place, not fade.
+        sse_body = html.split("function applyScoreEvent(", 1)[1].split(
+            "function startSse(", 1)[0]
+        self.assertNotIn("fadeIn", sse_body)
+        self.assertIn("data-home-score", sse_body)   # still patches scores in place
+        self.assertIn("scoresLivePulse", sse_body)   # keeps the live glow
+
+    def test_scores_live_card_swap_reexecutes_inline_scripts(self):
+        """A live card swap replaces card innerHTML; <script> tags inserted via
+        innerHTML never execute, so the per-card inline setup scripts (pick
+        placeholders, missing-picks reveal) would not run — leaving a game that
+        just transitioned scheduled->in-progress with un-initialized/hidden
+        markup until a full page reload (user-reported "had to refresh to
+        unlock"). Lock that the swap re-runs the inline scripts."""
+        self.client.force_login(self.smith_member)
+        html = self.client.get(self._tenant_url("family_pool_scores")).content.decode()
+        # The re-execution helper exists and is invoked right after the swap.
+        self.assertIn("function runInlineScripts(", html)
+        self.assertIn("currentGame.innerHTML = newGames[index].innerHTML;", html)
+        self.assertIn("runInlineScripts(currentGame);", html)
 
     def test_tenant_create_post_assigns_current_family_server_side(self):
         self.client.force_login(self.smith_member)
