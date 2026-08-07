@@ -90,7 +90,7 @@ class Command(BaseCommand):
         season = options["season"] or get_season()
         pool_id_filter = options.get("pool")
         self.stdout.write(f"Recomputing standings for season {season}")
-        current_week = self._current_week()
+        current_week = self._current_week(season)
 
         pick_filter = {"gameseason": season}
         if pool_id_filter:
@@ -208,16 +208,25 @@ class Command(BaseCommand):
         )
 
     @staticmethod
-    def _current_week():
-        """Best-effort current week number for today, or None.
+    def _current_week(season):
+        """Best-effort current week number for ``season`` today, or None.
 
         Only used to enrich the live-standings publish payload, so any
         lookup failure (e.g. no GameWeeks row for today) simply falls back
         to ``None`` rather than raising — the payload handles week=None.
+
+        Scoped to ``season`` so a same-date GameWeeks row from another season
+        can't leak the wrong week into this season's payload — notably the
+        dev-only demo season 9999 seeded by ``seed_demo_weekend``, which shares
+        today's date. Falls back to a season-less legacy row (some historical
+        GameWeeks rows predate the season column and have season=NULL).
         """
         try:
             today = timezone.localdate()
-            row = GameWeeks.objects.filter(date=today).first()
+            row = (
+                GameWeeks.objects.filter(date=today, season=season).first()
+                or GameWeeks.objects.filter(date=today, season__isnull=True).first()
+            )
             return row.weekNumber if row else None
         except Exception:
             logger.warning("current week lookup failed", exc_info=True)
