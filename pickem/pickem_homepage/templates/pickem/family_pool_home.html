@@ -681,6 +681,90 @@
     // fetch; the value patch below still gives instant feedback in the meantime.
     var refetchTimer = null;
     var refetchGeneration = 0;
+
+    // Reconcile the Week Points tiles in place against freshly server-rendered
+    // rows, reusing existing tile nodes keyed by data-user-id. The old code
+    // replaced the whole grid's innerHTML on every event, which tore down and
+    // repainted EVERY tile (even unchanged ones) — a constant full-panel flash
+    // during scoring. Here, unchanged tiles are never touched; only changed
+    // tiles patch, and rank changes relocate a tile with a subtle FLIP slide.
+    // Returns true if the member set changed (rows added/removed) — a structural
+    // change the pager must fully re-evaluate (it can shift page height).
+    function reconcileWeekPoints(current, fresh) {
+        var reduce = window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var freshRows = Array.prototype.slice.call(
+            fresh.querySelectorAll('[data-week-points-row]'));
+        var currentRows = Array.prototype.slice.call(
+            current.querySelectorAll('[data-week-points-row]'));
+        var byId = {};
+        currentRows.forEach(function (r) {
+            byId[r.getAttribute('data-user-id')] = r;
+        });
+
+        // FLIP step 1: record current positions before any DOM move.
+        var firstRects = {};
+        if (!reduce) {
+            currentRows.forEach(function (r) {
+                firstRects[r.getAttribute('data-user-id')] =
+                    r.getBoundingClientRect();
+            });
+        }
+
+        var structural = false;
+        var seen = {};
+        // Walk fresh order; append each matching node (existing or new) so the
+        // grid ends in server order without recreating unchanged nodes.
+        freshRows.forEach(function (freshRow) {
+            var id = freshRow.getAttribute('data-user-id');
+            seen[id] = true;
+            var node = byId[id];
+            if (node) {
+                if (node.innerHTML !== freshRow.innerHTML) {
+                    node.innerHTML = freshRow.innerHTML;  // only changed tiles
+                }
+                node.setAttribute('data-week-points-value',
+                    freshRow.getAttribute('data-week-points-value'));
+            } else {
+                node = document.importNode(freshRow, true);  // new member
+                structural = true;
+            }
+            current.appendChild(node);  // moving an existing node keeps it alive
+        });
+        // Remove members no longer present.
+        currentRows.forEach(function (r) {
+            if (!seen[r.getAttribute('data-user-id')]) {
+                r.parentNode && r.parentNode.removeChild(r);
+                structural = true;
+            }
+        });
+
+        // FLIP step 2: slide any tile that moved from its old position. Skip
+        // hidden (paginated-away) rows, which measure as zero-size.
+        if (!reduce) {
+            currentRows.forEach(function (node) {
+                var first = firstRects[node.getAttribute('data-user-id')];
+                if (!first || !first.width || !node.parentNode) { return; }
+                var last = node.getBoundingClientRect();
+                if (!last.width) { return; }
+                var dx = first.left - last.left;
+                var dy = first.top - last.top;
+                if (dx === 0 && dy === 0) { return; }
+                node.style.transition = 'none';
+                node.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+                requestAnimationFrame(function () {
+                    node.style.transition = 'transform 220ms ease';
+                    node.style.transform = '';
+                });
+                window.setTimeout(function () {
+                    node.style.transition = '';
+                    node.style.transform = '';
+                }, 260);
+            });
+        }
+        return structural;
+    }
+
     function scheduleLeaderboardRefetch() {
         // Bump a generation token each schedule; an in-flight fetch that resolves
         // out of order (a slower older request finishing after a newer one) is
@@ -699,9 +783,12 @@
                   var fresh = doc.querySelector('[data-week-points-grid]');
                   var current = document.querySelector('[data-week-points-grid]');
                   if (fresh && current) {
-                      current.innerHTML = fresh.innerHTML;
+                      var structural = reconcileWeekPoints(current, fresh);
                       if (typeof window.__weekPointsPaginate === 'function') {
-                          window.__weekPointsPaginate();
+                          // Re-paginate; only let it refresh ScrollTriggers (which
+                          // would re-animate other sections) when the member set
+                          // actually changed — a pure reorder leaves height alone.
+                          window.__weekPointsPaginate(!structural);
                       }
                   }
               }).catch(function () {});
@@ -785,7 +872,7 @@
     var pageCount = 1;
     var page = 0;
 
-    function render() {
+    function render(skipScrollRefresh) {
         var start = page * pageSize;
         var end = start + pageSize;
         rows.forEach(function (row, i) {
@@ -799,10 +886,16 @@
         // positions and don't re-evaluate on a display change (no scroll/resize
         // fires), so a section still below the fold (e.g. "Upcoming" games) would
         // stay stuck at autoAlpha:0. Recompute positions so it reveals in place.
-        window.ScrollTrigger && window.ScrollTrigger.refresh();
+        // BUT refreshing also re-fires those from() reveals on already-visible
+        // sections (a jarring flash). A live reorder doesn't change height, so
+        // the live-update path passes skipScrollRefresh=true to leave other
+        // sections untouched; manual page-nav (height changes) still refreshes.
+        if (!skipScrollRefresh) {
+            window.ScrollTrigger && window.ScrollTrigger.refresh();
+        }
     }
 
-    function refresh() {
+    function refresh(skipScrollRefresh) {
         var grid = document.querySelector('[data-week-points-grid]');
         if (!grid) { return; }
         rows = Array.prototype.slice.call(grid.querySelectorAll('[data-week-points-row]'));
@@ -815,7 +908,7 @@
             return;
         }
         pager.classList.remove('hidden');
-        render();
+        render(skipScrollRefresh);
     }
 
     // Buttons live outside the grid, so their listeners survive a grid innerHTML

@@ -613,7 +613,12 @@ class TenantDashboardIsolationTests(TestCase):
         without a ScrollTrigger.refresh() after a page change the "Upcoming"
         games section — held at autoAlpha:0 while below the fold — never fires
         and stays hidden. Lock the guarded refresh into the pager's render()
-        (bug: games tiles fail to render on Week Points pages past page 1)."""
+        (bug: games tiles fail to render on Week Points pages past page 1).
+
+        The refresh is now gated behind a skipScrollRefresh flag so the live
+        update path can suppress it (see the no-flash test below); manual page
+        navigation still refreshes. This test asserts the refresh is present and
+        inside render(); the gating is asserted separately."""
         family, pool = self._family_with_pool("Smith Family", "smith-family")
         self._active_membership(self.member, family)
         # Seed more than one page (page size is 12) so the pager is actually
@@ -635,8 +640,35 @@ class TenantDashboardIsolationTests(TestCase):
         # The refresh must live *inside* the pager's render(), after it toggles
         # row visibility — not merely somewhere on the page — and be guarded for
         # reduced-motion / no-GSAP.
-        render_body = html.split("function render()", 1)[1].split("function refresh()", 1)[0]
+        render_body = html.split("function render(", 1)[1].split("function refresh(", 1)[0]
         self.assertRegex(render_body, r"window\.ScrollTrigger\s*&&\s*window\.ScrollTrigger\.refresh\(\)")
+
+    def test_live_week_points_update_patches_in_place_without_full_flash(self):
+        """A live standings update must NOT rebuild the whole Week Points grid.
+
+        The old handler did `current.innerHTML = fresh.innerHTML`, tearing down
+        and repainting every tile on every event (a constant full-panel flash
+        during scoring) and calling ScrollTrigger.refresh() — which re-fired the
+        GSAP reveal on other lobby sections. The fix reconciles tiles in place
+        (reusing nodes) and only refreshes ScrollTriggers on a structural change.
+        Lock that so the flash can't regress."""
+        family, pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, family)
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=self.member.email, userID=str(self.member.id),
+            gameseason=get_season(), gameyear="2025", week_1_points=3, total_points=3,
+        )
+        self.client.force_login(self.member)
+        html = self.client.get(self._tenant_url(family, pool)).content.decode()
+
+        # The in-place reconcile exists and is what the refetch calls.
+        self.assertIn("function reconcileWeekPoints(", html)
+        self.assertIn("reconcileWeekPoints(current, fresh)", html)
+        # The wholesale grid innerHTML swap must be gone (it was the flash).
+        self.assertNotIn("current.innerHTML = fresh.innerHTML", html)
+        # The live refetch re-paginates with the ScrollTrigger refresh suppressed
+        # unless the member set changed, so other sections don't re-animate.
+        self.assertIn("__weekPointsPaginate(!structural)", html)
 
     def test_pool_home_is_branded_as_lobby_with_gsap_polish(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
