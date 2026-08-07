@@ -3,9 +3,11 @@ from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 from io import StringIO
 
+from django.utils import timezone
+
 from pickem_api import demo_weekend as dw
 from pickem_api.models import (
-    Family, GamePicks, GamesAndScores, Pool, currentSeason,
+    Family, GamePicks, GamesAndScores, GameWeeks, Pool, currentSeason,
 )
 
 
@@ -29,12 +31,38 @@ class SeedDemoWeekendTests(TestCase):
             GamePicks.objects.filter(gameseason=dw.DEMO_SEASON).count(),
             expected_picks)
 
+    def test_seeds_gameweek_for_today_so_live_week_resolves(self):
+        # update_standings._current_week() looks up GameWeeks by today's date;
+        # without a row it publishes week=null and the lobby drops the event.
+        # The seeder adds a demo row for today so the live path works.
+        call_command("seed_demo_weekend", stdout=StringIO())
+        row = GameWeeks.objects.filter(
+            date=timezone.localdate(), season=dw.DEMO_SEASON).first()
+        self.assertIsNotNone(row)
+        self.assertEqual(row.weekNumber, int(dw.DEMO_WEEK))
+
+    def test_seeds_gameweek_only_when_today_has_no_real_row(self):
+        # Never shadow a real-season week row for today.
+        GameWeeks.objects.create(
+            date=timezone.localdate(), competition="nfl", season=2627,
+            weekNumber=5)
+        call_command("seed_demo_weekend", stdout=StringIO())
+        self.assertFalse(
+            GameWeeks.objects.filter(
+                date=timezone.localdate(), season=dw.DEMO_SEASON).exists())
+        # The real row is untouched.
+        self.assertEqual(
+            GameWeeks.objects.get(
+                date=timezone.localdate(), season=2627).weekNumber, 5)
+
     def test_wipe_removes_everything(self):
         call_command("seed_demo_weekend", stdout=StringIO())
         call_command("seed_demo_weekend", "--wipe", stdout=StringIO())
         self.assertFalse(Family.objects.filter(slug=dw.DEMO_SLUG).exists())
         self.assertEqual(
             GamesAndScores.objects.filter(gameseason=dw.DEMO_SEASON).count(), 0)
+        self.assertEqual(
+            GameWeeks.objects.filter(season=dw.DEMO_SEASON).count(), 0)
 
     def test_make_current_and_print(self):
         currentSeason.objects.create(season=2627)

@@ -18,8 +18,8 @@ from pickem_api.demo_weekend import (
 )
 from pickem_api.models import (
     Family, FamilyAuditLog, FamilyMembership, GamePicks, GamesAndScores,
-    Pool, PoolSettings, Teams, currentSeason, userPoints, userSeasonPoints,
-    userStats,
+    GameWeeks, Pool, PoolSettings, Teams, currentSeason, userPoints,
+    userSeasonPoints, userStats,
 )
 
 
@@ -96,6 +96,18 @@ class Command(BaseCommand):
                 teamLogo="/static/images/nfl.svg", teamWins=0, teamLosses=0,
                 teamTies=0, color=color, alternateColor="334155"))
 
+        # A GameWeeks row for today makes update_standings._current_week()
+        # resolve to the demo week, so the live-standings SSE payload carries a
+        # real week (not null) and the lobby Week Points panel updates live
+        # during the sim. Only add one if today has no real (non-demo)
+        # GameWeeks row — never shadow real-season data. Removed on --wipe.
+        today = timezone.localdate()
+        if not GameWeeks.objects.filter(date=today).exclude(
+                season=DEMO_SEASON).exists():
+            GameWeeks.objects.update_or_create(
+                date=today, competition="nfl", season=DEMO_SEASON,
+                defaults={"weekNumber": int(DEMO_WEEK)})
+
         base = timezone.now()
         for g in GAMES:
             # Kickoff timestamps spread so the scores page ordering looks real.
@@ -153,6 +165,7 @@ class Command(BaseCommand):
         GamePicks.objects.filter(gameseason=DEMO_SEASON).delete()
         userSeasonPoints.objects.filter(gameseason=DEMO_SEASON).delete()
         GamesAndScores.objects.filter(gameseason=DEMO_SEASON).delete()
+        GameWeeks.objects.filter(season=DEMO_SEASON).delete()
         Teams.objects.filter(gameseason=DEMO_SEASON).delete()
         if family:
             FamilyAuditLog.objects.filter(family=family).delete()
