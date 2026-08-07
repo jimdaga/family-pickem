@@ -246,16 +246,16 @@
             </a>
         </div>
         {% if current_week_games %}
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" data-lobby-games-grid>
             {% for game in current_week_games %}
-            <div class="lobby-live-card rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-4">
+            <div class="lobby-live-card rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-4" data-lobby-game-card data-game-id="{{ game.id }}" data-game-status="{{ game.statusType|lower }}">
                 <div class="flex items-center justify-between gap-3 mb-3">
                     <span class="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-bold
                         {% if game.statusType == 'inprogress' %}bg-green-500/15 text-green-700 dark:text-green-300
                         {% elif game.statusType == 'finished' %}bg-slate-500/15 text-slate-700 dark:text-slate-300
                         {% else %}bg-blue-500/15 text-blue-700 dark:text-blue-300{% endif %}">
                         {% if game.statusType == 'inprogress' %}<span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>{% endif %}
-                        {{ game.statusTitle }}
+                        <span data-status-title>{{ game.statusTitle }}</span>
                     </span>
                     <span class="text-right text-xs font-semibold text-text-secondary-light dark:text-text-secondary">
                         {{ game.startTimestamp|date:"D, M j" }}{% with game|game_start_label as start_label %}{% if start_label %}<span class="mx-1 opacity-50">&middot;</span>{{ start_label }}{% endif %}{% endwith %}
@@ -271,7 +271,7 @@
                         </span>
                         <span class="flex items-center gap-1.5 font-black text-text-dark dark:text-white">
                             {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}<i class="fas fa-trophy text-xs text-yellow-500" title="{{ game.awayTeamName }} won" aria-label="Winner"></i>{% endif %}
-                            {{ game.awayTeamScore|default:"-" }}
+                            <span data-away-score>{{ game.awayTeamScore|default:"-" }}</span>
                         </span>
                     </div>
                     <div class="flex items-center justify-between gap-3{% if game.statusType == 'finished' and game.gameWinner and game.gameWinner != game.homeTeamSlug %} opacity-60{% endif %}">
@@ -283,7 +283,7 @@
                         </span>
                         <span class="flex items-center gap-1.5 font-black text-text-dark dark:text-white">
                             {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}<i class="fas fa-trophy text-xs text-yellow-500" title="{{ game.homeTeamName }} won" aria-label="Winner"></i>{% endif %}
-                            {{ game.homeTeamScore|default:"-" }}
+                            <span data-home-score>{{ game.homeTeamScore|default:"-" }}</span>
                         </span>
                     </div>
                 </div>
@@ -847,6 +847,100 @@
         // repeated failures with no data. There's no 30s poll fallback on
         // this page, so give-up just means the podium stops live-updating
         // until the next full page load.
+        sseErrorCount++;
+        if (sseErrorCount >= 3) {
+            try { sseSource.close(); } catch (e) {}
+            sseSource = null;
+        }
+    };
+})();
+</script>
+
+<!-- Live game scores for the "This Week's Games" tiles via the same scores SSE
+     the /scores page uses. Score/status text is patched in place (no flash);
+     a status transition (which adds winner trophies, dims the loser, and
+     reveals pick groups) triggers a debounced refetch that swaps only the
+     cards whose markup actually changed — unchanged cards are never touched. -->
+<script>
+(function () {
+    if (!window.EventSource) { return; }
+    var page = document.querySelector('[data-lobby-page]');
+    var week = page && page.dataset ? page.dataset.liveWeek : '';
+    var grid = document.querySelector('[data-lobby-games-grid]');
+    if (!week || !grid) { return; }
+
+    // Debounced refetch of the lobby page; swap only game cards whose innerHTML
+    // changed (status transition), leaving unchanged cards — and the rest of the
+    // page — untouched. No fade: a status flip is infrequent and reads cleanly.
+    var refetchTimer = null;
+    var refetchGeneration = 0;
+    function scheduleGamesRefetch() {
+        var generation = ++refetchGeneration;
+        if (refetchTimer) { clearTimeout(refetchTimer); }
+        refetchTimer = setTimeout(function () {
+            refetchTimer = null;
+            fetch(window.location.href, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-store' },
+                cache: 'no-store', credentials: 'same-origin'
+            }).then(function (r) { return r.ok ? r.text() : null; })
+              .then(function (html) {
+                  if (!html || generation !== refetchGeneration) { return; }
+                  var doc = new DOMParser().parseFromString(html, 'text/html');
+                  var freshCards = {};
+                  doc.querySelectorAll('[data-lobby-game-card]').forEach(function (c) {
+                      freshCards[c.getAttribute('data-game-id')] = c;
+                  });
+                  grid.querySelectorAll('[data-lobby-game-card]').forEach(function (cur) {
+                      var fresh = freshCards[cur.getAttribute('data-game-id')];
+                      if (!fresh) { return; }
+                      if (cur.innerHTML !== fresh.innerHTML) {
+                          cur.innerHTML = fresh.innerHTML;
+                          // Keep the status attr in sync so later score-only
+                          // patches compare against the current status.
+                          cur.setAttribute('data-game-status',
+                              fresh.getAttribute('data-game-status'));
+                      }
+                  });
+              }).catch(function () {});
+        }, 1200);
+    }
+
+    function applyScoreEvent(ev) {
+        var d;
+        try { d = JSON.parse(ev.data); } catch (e) { return; }
+        var card = grid.querySelector(
+            '[data-lobby-game-card][data-game-id="' + d.game_id + '"]');
+        if (!card) { return; }
+        if (card.getAttribute('data-game-status') !== d.status) {
+            // Status transition changes card structure (trophies, dimming, pick
+            // groups) — mark the new status and refetch to swap the card.
+            card.setAttribute('data-game-status', d.status);
+            scheduleGamesRefetch();
+            return;
+        }
+        // Same status: patch score + clock text in place, no repaint.
+        var home = card.querySelector('[data-home-score]');
+        var away = card.querySelector('[data-away-score]');
+        if (home && d.home_score !== null && d.home_score !== undefined) {
+            home.textContent = d.home_score;
+        }
+        if (away && d.away_score !== null && d.away_score !== undefined) {
+            away.textContent = d.away_score;
+        }
+        var title = card.querySelector('[data-status-title]');
+        if (title && d.status_title) { title.textContent = d.status_title; }
+    }
+
+    var sseSource = null;
+    var sseErrorCount = 0;
+    try {
+        sseSource = new EventSource(
+            '/events/scores/?week=' + encodeURIComponent(week));
+    } catch (e) { return; }
+    sseSource.onmessage = function (ev) { sseErrorCount = 0; applyScoreEvent(ev); };
+    sseSource.onerror = function () {
+        // Same give-up-after-repeated-failures policy as the standings stream;
+        // no poll fallback, so the tiles just stop updating until a page load.
         sseErrorCount++;
         if (sseErrorCount >= 3) {
             try { sseSource.close(); } catch (e) {}

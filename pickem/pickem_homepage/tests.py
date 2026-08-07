@@ -883,6 +883,37 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertNotContains(response, "Jones family secret")
         self.assertNotContains(response, "2 of 1")
 
+    def test_lobby_game_tiles_carry_live_score_hooks_and_subscribe(self):
+        """The lobby "This Week's Games" tiles must live-update via the scores
+        SSE (previously only the /scores page did). Lock the per-tile hooks the
+        client patches (data-game-id/status, data-home-score/away-score,
+        data-status-title) and the /events/scores/ subscription + in-place
+        apply handler, so the games tiles can't silently regress to static."""
+        smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
+        self._active_membership(self.member, smith_family)
+        GamesAndScores.objects.create(
+            id=1050, slug="buf-nyj-2025-week-1", competition="nfl",
+            gameWeek="1", gameyear="2025", gameseason=2526,
+            startTimestamp=timezone.now() - timedelta(hours=1),
+            statusType="inprogress", statusTitle="Q3 5:22",
+            homeTeamId=3, homeTeamSlug="nyj", homeTeamName="New York Jets",
+            homeTeamScore=14, awayTeamId=4, awayTeamSlug="buf",
+            awayTeamName="Buffalo Bills", awayTeamScore=17,
+        )
+        self.client.force_login(self.member)
+        html = self.client.get(self._tenant_url(smith_family, smith_pool)).content.decode()
+
+        # Per-tile hooks the client finds/patches, all on the same card (id 1050).
+        self.assertRegex(html, r'data-lobby-game-card data-game-id="1050"')
+        self.assertIn("data-game-status=", html)
+        self.assertIn("data-home-score", html)
+        self.assertIn("data-away-score", html)
+        self.assertIn("data-status-title", html)
+        self.assertIn("data-lobby-games-grid", html)
+        # Subscribes to the scores SSE and patches in place (no full-grid swap).
+        self.assertIn("/events/scores/?week=", html)
+        self.assertIn("function applyScoreEvent(", html)
+
     def test_dashboard_snapshot_weekday_selection_rules(self):
         from pickem_homepage.views import select_dashboard_snapshot_games
 
