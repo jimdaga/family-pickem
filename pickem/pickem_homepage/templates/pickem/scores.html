@@ -1422,7 +1422,25 @@
             
             let gamesUpdated = 0;
             let completedGames = 0;
-            
+
+            // <script> tags inserted via innerHTML never execute, so the
+            // per-card inline setup scripts (pick placeholders, missing-picks
+            // reveal) would not run after a live card swap — leaving a game
+            // that just transitioned (e.g. scheduled -> in progress) with
+            // un-initialized/hidden markup until a full page reload. Re-run the
+            // swapped-in scripts so a live transition "unlocks" the card
+            // exactly like a fresh load.
+            function runInlineScripts(container) {
+                container.querySelectorAll('script').forEach(function (old) {
+                    const s = document.createElement('script');
+                    for (const attr of old.attributes) {
+                        s.setAttribute(attr.name, attr.value);
+                    }
+                    s.textContent = old.textContent;
+                    old.parentNode.replaceChild(s, old);
+                });
+            }
+
             currentGames.forEach((currentGame, index) => {
                 if (newGames[index]) {
                     const currentStatus = currentGame.getAttribute('data-game-status');
@@ -1462,8 +1480,10 @@
                         currentGame.innerHTML = newGames[index].innerHTML;
                         currentGame.setAttribute('data-game-status', newStatus);
                         currentGame.classList.toggle('scores-live-game', newStatus === 'inprogress');
-                        
-                        
+                        // Re-run the swapped-in inline scripts (see above) so the
+                        // now-in-progress card initializes without a manual reload.
+                        runInlineScripts(currentGame);
+
                         // Content was swapped in above; no per-update card fade
                         // (it flashed the whole card). Status transitions are
                         // infrequent, so the instant swap reads cleanly.

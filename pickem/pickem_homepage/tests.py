@@ -3386,6 +3386,20 @@ class TenantProfilesPlayersMessageBoardIsolationTests(TestCase):
         self.assertIn("data-home-score", sse_body)   # still patches scores in place
         self.assertIn("scoresLivePulse", sse_body)   # keeps the live glow
 
+    def test_scores_live_card_swap_reexecutes_inline_scripts(self):
+        """A live card swap replaces card innerHTML; <script> tags inserted via
+        innerHTML never execute, so the per-card inline setup scripts (pick
+        placeholders, missing-picks reveal) would not run — leaving a game that
+        just transitioned scheduled->in-progress with un-initialized/hidden
+        markup until a full page reload (user-reported "had to refresh to
+        unlock"). Lock that the swap re-runs the inline scripts."""
+        self.client.force_login(self.smith_member)
+        html = self.client.get(self._tenant_url("family_pool_scores")).content.decode()
+        # The re-execution helper exists and is invoked right after the swap.
+        self.assertIn("function runInlineScripts(", html)
+        self.assertIn("currentGame.innerHTML = newGames[index].innerHTML;", html)
+        self.assertIn("runInlineScripts(currentGame);", html)
+
     def test_tenant_create_post_assigns_current_family_server_side(self):
         self.client.force_login(self.smith_member)
 
