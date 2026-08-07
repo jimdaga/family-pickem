@@ -907,7 +907,11 @@ class TenantDashboardIsolationTests(TestCase):
         # the page") so unrelated markup can't satisfy them. The card's identity
         # + status attrs must sit together on the card element the client finds.
         self.assertIn("data-lobby-games-grid", html)
-        grid = html.split("data-lobby-games-grid", 1)[1]
+        # Bound the slice to the card markup (stop at the first <script>) so the
+        # SSE script's selector literals ([data-home-score] etc.) further down
+        # the page cannot satisfy these assertions — otherwise the test would
+        # pass even if the tiles lost the attributes it claims to lock.
+        grid = html.split("data-lobby-games-grid", 1)[1].split("<script", 1)[0]
         self.assertRegex(
             grid,
             r'data-lobby-game-card data-game-id="1050" data-game-status="inprogress"',
