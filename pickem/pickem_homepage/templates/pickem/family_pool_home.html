@@ -791,7 +791,13 @@
                           window.__weekPointsPaginate(!structural);
                       }
                   }
-              }).catch(function () {});
+              }).catch(function (err) {
+                  // Best-effort: a dropped fetch just stops live reordering
+                  // until reload. Log so a genuine bug in reconcileWeekPoints
+                  // (the ~70 lines of DOM surgery above) is distinguishable
+                  // from a routine network blip rather than silently vanishing.
+                  if (window.console) { console.error('week points live refetch/reconcile failed', err); }
+              });
         }, 1500);
     }
 
@@ -901,7 +907,12 @@
                               fresh.getAttribute('data-game-status'));
                       }
                   });
-              }).catch(function () {});
+              }).catch(function (err) {
+                  // Best-effort (see the standings refetch above): log so a real
+                  // bug in this refetch/reconcile is distinguishable from a
+                  // routine network blip rather than silently disappearing.
+                  if (window.console) { console.error('lobby games live refetch failed', err); }
+              });
         }, 1200);
     }
 

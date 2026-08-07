@@ -903,13 +903,21 @@ class TenantDashboardIsolationTests(TestCase):
         self.client.force_login(self.member)
         html = self.client.get(self._tenant_url(smith_family, smith_pool)).content.decode()
 
-        # Per-tile hooks the client finds/patches, all on the same card (id 1050).
-        self.assertRegex(html, r'data-lobby-game-card data-game-id="1050"')
-        self.assertIn("data-game-status=", html)
-        self.assertIn("data-home-score", html)
-        self.assertIn("data-away-score", html)
-        self.assertIn("data-status-title", html)
+        # Scope the per-tile hooks to the games grid (not merely "somewhere on
+        # the page") so unrelated markup can't satisfy them. The card's identity
+        # + status attrs must sit together on the card element the client finds.
         self.assertIn("data-lobby-games-grid", html)
+        grid = html.split("data-lobby-games-grid", 1)[1]
+        self.assertRegex(
+            grid,
+            r'data-lobby-game-card data-game-id="1050" data-game-status="inprogress"',
+        )
+        self.assertIn("data-home-score", grid)
+        self.assertIn("data-away-score", grid)
+        self.assertIn("data-status-title", grid)
+        # data-live-week must render a real week number — the scores SSE URL is
+        # built from it, so an empty value would silently disable live updates.
+        self.assertRegex(html, r'data-live-week="\d+"')
         # Subscribes to the scores SSE and patches in place (no full-grid swap).
         self.assertIn("/events/scores/?week=", html)
         self.assertIn("function applyScoreEvent(", html)

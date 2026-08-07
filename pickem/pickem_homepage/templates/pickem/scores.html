@@ -1430,6 +1430,14 @@
             // un-initialized/hidden markup until a full page reload. Re-run the
             // swapped-in scripts so a live transition "unlocks" the card
             // exactly like a fresh load.
+            //
+            // NOTE for card-partial authors: keep per-card inline scripts wrapped
+            // in an IIFE ((function(){ ... })()). This helper re-runs them on every
+            // live swap, so a top-level `let`/`const` would throw a redeclaration
+            // SyntaxError on the second swap — and because that surfaces via the
+            // global error handler (not this call's try/catch), it would fail
+            // silently with no user-facing "update failed" signal. IIFEs re-run
+            // safely (the two current card scripts already are).
             function runInlineScripts(container) {
                 container.querySelectorAll('script').forEach(function (old) {
                     const s = document.createElement('script');
