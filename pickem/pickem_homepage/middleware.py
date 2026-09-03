@@ -50,6 +50,9 @@ class RequireLoginForInternalPagesMiddleware:
         "/robots.txt",
         "/healthz/",
         "/livez/",
+        # Logo asset embedded in transactional emails: the recipient's mail
+        # client fetches it unauthenticated, so it must not redirect to login.
+        "/email/pickem-logo.png",
     }
 
     def __init__(self, get_response):

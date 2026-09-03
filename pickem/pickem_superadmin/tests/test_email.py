@@ -937,3 +937,134 @@ class EmailEnvironmentFallbackTests(TestCase):
         settings_obj.save()
 
         self.assertFalse(resend_invite_email_is_configured())
+
+
+class EmailLogoAssetTests(TestCase):
+    """The wordmark that transactional emails embed is served by the app, not
+    ``{% static %}`` — S3 signed static URLs 403 by the time the mail is opened.
+    """
+
+    def test_email_logo_route_is_a_stable_public_png(self):
+        response = self.client.get(reverse('email_logo'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'image/png')
+        # Never expires: no version query string, changes only on deploy.
+        self.assertIn('immutable', response['Cache-Control'])
+        self.assertIn('max-age=31536000', response['Cache-Control'])
+        body = b''.join(response.streaming_content)
+        self.assertTrue(body.startswith(b'\x89PNG'))
+
+    def test_email_logo_route_does_not_require_login(self):
+        # A recipient's mail client fetches the image unauthenticated.
+        response = self.client.get(reverse('email_logo'))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_email_logo_path_is_stable(self):
+        self.assertEqual(reverse('email_logo'), '/email/pickem-logo.png')
+
+
+@override_settings(
+    SITE_BASE_URL='https://family-pickem.com',
+    EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY=True,
+    EMAIL_NOTIFICATION_SAFE_ALLOWLIST=['jdagostino2@gmail.com'],
+    WEEKLY_PICKS_EMAIL_LOGO_URL='',
+    INVITE_EMAIL_LOGO_URL='',
+)
+class TransactionalEmailLinkAndLogoTests(TestCase):
+    """With no logo override configured, every transactional email points at the
+    production site and the app-hosted logo endpoint.
+    """
+
+    def setUp(self):
+        settings_obj = EmailProviderSettings.load()
+        settings_obj.invites_enabled = True
+        settings_obj.from_email = "Family Pick'em <invite@family-pickem.com>"
+        settings_obj.set_api_key('re_configured_secret')
+        settings_obj.save()
+
+    def _sent_params(self, resend_mock):
+        resend_mock.Emails.send.assert_called_once()
+        return resend_mock.Emails.send.call_args.args[0]
+
+    def test_invite_email_links_to_hosted_logo(self):
+        owner = User.objects.create_user('owner', email='owner@example.com', password='pw')
+        family = Family.objects.create(name='Dagostino', slug='dagostino')
+        pool = Pool.objects.create(
+            family=family, name='Pickem Pool', slug='pickem-pool', season=2627,
+        )
+        FamilyMembership.objects.create(
+            family=family, user=owner, role=FamilyMembership.Role.OWNER,
+        )
+        invitation = FamilyInvitation.objects.create(
+            family=family, pool=pool, code_hash=hash_invite_code('abc123'),
+            recipient_email='target@example.com',
+            role=FamilyMembership.Role.MEMBER, created_by=owner,
+        )
+
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'email_1'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            send_family_invitation_email(
+                invitation=invitation,
+                invite_link='https://family-pickem.com/invites/abc123/',
+                invite_code='abc123',
+            )
+
+        html = self._sent_params(resend_mock)['html']
+        self.assertIn(
+            'src="https://family-pickem.com/email/pickem-logo.png"', html,
+        )
+        self.assertNotIn('src=""', html)
+
+    def test_weekly_picks_email_links_to_prod_site_and_hosted_logo(self):
+        campaign = EmailNotificationCampaign.load_weekly_picks()
+        campaign.enabled = True
+        campaign.weekday = 2
+        campaign.hour = 9
+        campaign.minute = 0
+        campaign.timezone_name = 'America/New_York'
+        campaign.rollout_mode = EmailNotificationCampaign.RolloutMode.ALL_ENABLED_USERS
+        campaign.save()
+
+        family = Family.objects.create(name='Dagostino', slug='dagostino')
+        Pool.objects.create(
+            family=family, name='Main Pool', slug='main-pool', season=2627, is_default=True,
+        )
+        user = User.objects.create_user('jdag', email='jdagostino2@gmail.com', password='pw')
+        UserProfile.objects.create(user=user, email_notifications=True)
+        FamilyMembership.objects.create(
+            family=family, user=user, role=FamilyMembership.Role.MEMBER,
+        )
+        for team_id, slug, name in ((1, 'packers', 'Green Bay Packers'), (2, 'bears', 'Chicago Bears')):
+            Teams.objects.create(
+                id=team_id, gameseason=2627, teamNameSlug=slug, teamNameName=name,
+                teamLogo=f'https://cdn.example.test/{slug}.png',
+                color='0B162A', alternateColor='C83803',
+            )
+        GameWeeks.objects.create(
+            weekNumber=1, competition='nfl', date=datetime(2026, 9, 10).date(), season=2627,
+        )
+        GamesAndScores.objects.create(
+            id=1, slug='bears-packers', competition='nfl', gameWeek='1', gameyear='2026',
+            gameseason=2627,
+            startTimestamp=timezone.make_aware(datetime(2026, 9, 10, 20, 20)),
+            statusType='STATUS_SCHEDULED', statusTitle='Scheduled',
+            homeTeamId=1, homeTeamSlug='packers', homeTeamName='Green Bay Packers',
+            awayTeamId=2, awayTeamSlug='bears', awayTeamName='Chicago Bears',
+        )
+
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'weekly_1'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            send_due_email_campaigns(now=timezone.make_aware(datetime(2026, 9, 9, 13, 5)))
+
+        html = self._sent_params(resend_mock)['html']
+        self.assertIn(
+            'src="https://family-pickem.com/email/pickem-logo.png"', html,
+        )
+        self.assertIn(
+            'https://family-pickem.com/families/dagostino/pools/main-pool/picks/', html,
+        )
+        self.assertNotIn('localhost', html)

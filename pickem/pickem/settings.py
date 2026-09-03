@@ -271,7 +271,14 @@ LOGOUT_REDIRECT_URL = '/'
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip()
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', '').strip()
 RESEND_INVITE_REPLY_TO = os.environ.get('RESEND_INVITE_REPLY_TO', '').strip()
-SITE_BASE_URL = os.environ.get('SITE_BASE_URL', 'http://localhost:8000').strip().rstrip('/')
+# Absolute origin used to build links in transactional emails. Email campaigns
+# run in the scheduler with no HTTP request, so there is no request.get_host()
+# to fall back on — an unset value in production silently ships localhost links
+# in delivered mail. Default to the real site whenever DEBUG is off.
+SITE_BASE_URL = os.environ.get(
+    'SITE_BASE_URL',
+    'http://localhost:8000' if DEBUG else 'https://family-pickem.com',
+).strip().rstrip('/')
 EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY = (
     os.getenv('EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY', 'True').lower() == 'true'
 )
@@ -283,11 +290,12 @@ EMAIL_NOTIFICATION_SAFE_ALLOWLIST = [
     ).split(',')
     if email.strip()
 ]
-# Absolute, publicly-reachable URL to the logo shown in invite emails. Left blank
-# by default because production static is served from S3 (URLs can be signed and
-# expire, which would break the image in delivered mail); the invite template
-# falls back to a styled text wordmark when this is empty. Point it at a stable
-# public logo URL to show the image.
+# Optional override for the logo shown in transactional emails. Left blank by
+# default: emailing.py serves a committed copy of the wordmark from the app
+# itself (see the `email_logo` view / `/email/pickem-logo.png`), which never
+# expires — unlike a `{% static %}` URL, which in production is an S3 signed URL
+# that 403s once its short TTL passes. Only set this to point delivered mail at
+# some other stable public URL.
 INVITE_EMAIL_LOGO_URL = os.environ.get('INVITE_EMAIL_LOGO_URL', '').strip()
 WEEKLY_PICKS_EMAIL_LOGO_URL = os.environ.get(
     'WEEKLY_PICKS_EMAIL_LOGO_URL',

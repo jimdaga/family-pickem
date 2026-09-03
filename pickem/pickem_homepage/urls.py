@@ -2,12 +2,14 @@ from django.urls import path, re_path, include
 from django.contrib.auth.views import LogoutView
 from . import views
 from . import live_views
+from . import email_assets
 
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('email/pickem-logo.png', email_assets.email_logo, name='email_logo'),
     path('public/', views.public_home, name='public_home'),
     path('about/', views.public_info, {'page': 'about'}, name='public_about'),
     path('contact/', views.public_info, {'page': 'contact'}, name='public_contact'),

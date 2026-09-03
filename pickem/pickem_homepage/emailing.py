@@ -89,8 +89,24 @@ def _absolute_static_url(path):
     return _absolute_url(path)
 
 
+def _hosted_email_logo_url():
+    """Absolute URL of the wordmark the app serves for transactional emails.
+
+    Served straight from the app (see ``email_assets.email_logo``) so it never
+    expires — a ``{% static %}`` URL is an S3 signed URL in production and 403s
+    by the time the mail is opened.
+    """
+    return _absolute_url(reverse('email_logo'))
+
+
 def _weekly_picks_email_logo_url():
-    return (getattr(settings, 'WEEKLY_PICKS_EMAIL_LOGO_URL', '') or '').strip()
+    override = (getattr(settings, 'WEEKLY_PICKS_EMAIL_LOGO_URL', '') or '').strip()
+    return override or _hosted_email_logo_url()
+
+
+def _invite_email_logo_url():
+    override = (getattr(settings, 'INVITE_EMAIL_LOGO_URL', '') or '').strip()
+    return override or _hosted_email_logo_url()
 
 
 def _team_logo_map(slugs):
@@ -720,7 +736,7 @@ def send_family_invitation_email(*, invitation, invite_link, invite_code):
         'family_name': invitation.family.name,
         'pool_name': pool_name,
         'invite_link': invite_link,
-        'logo_url': getattr(settings, 'INVITE_EMAIL_LOGO_URL', ''),
+        'logo_url': _invite_email_logo_url(),
     }
     params = {
         'from': config['from_email'],
