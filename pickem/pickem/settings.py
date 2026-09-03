@@ -273,12 +273,22 @@ RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', '').strip()
 RESEND_INVITE_REPLY_TO = os.environ.get('RESEND_INVITE_REPLY_TO', '').strip()
 # Absolute origin used to build links in transactional emails. Email campaigns
 # run in the scheduler with no HTTP request, so there is no request.get_host()
-# to fall back on — an unset value in production silently ships localhost links
-# in delivered mail. Default to the real site whenever DEBUG is off.
-SITE_BASE_URL = os.environ.get(
-    'SITE_BASE_URL',
-    'http://localhost:8000' if DEBUG else 'https://family-pickem.com',
-).strip().rstrip('/')
+# to fall back on — an unset value would silently ship localhost links in
+# delivered mail. When it isn't set explicitly, derive it from the first real
+# public host in DJANGO_ALLOWED_HOSTS so each deployed environment points at
+# itself (prd -> family-pickem.com, dev -> dev.family-pickem.com) rather than a
+# hardcoded prod domain. Setting SITE_BASE_URL in the env still wins.
+def _default_site_base_url():
+    if DEBUG:
+        return 'http://localhost:8000'
+    for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(','):
+        host = host.strip().lstrip('.')
+        if host and '*' not in host and host not in ('localhost', '127.0.0.1'):
+            return f'https://{host}'
+    return 'https://family-pickem.com'
+
+
+SITE_BASE_URL = os.environ.get('SITE_BASE_URL', _default_site_base_url()).strip().rstrip('/')
 EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY = (
     os.getenv('EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY', 'True').lower() == 'true'
 )
@@ -291,11 +301,12 @@ EMAIL_NOTIFICATION_SAFE_ALLOWLIST = [
     if email.strip()
 ]
 # Optional override for the logo shown in transactional emails. Left blank by
-# default: emailing.py serves a committed copy of the wordmark from the app
-# itself (see the `email_logo` view / `/email/pickem-logo.png`), which never
-# expires — unlike a `{% static %}` URL, which in production is an S3 signed URL
-# that 403s once its short TTL passes. Only set this to point delivered mail at
-# some other stable public URL.
+# default: the app serves a committed copy of the logo from
+# `pickem_homepage/email_assets.py` (route `/email/pickem-logo.png`), whose
+# long-lived `Cache-Control` outlasts any mail sitting in an inbox — unlike a
+# `{% static %}` URL, which in production is an S3 signed URL that 403s once its
+# ~1h TTL passes. Only set this to point delivered mail at some other stable
+# public URL.
 INVITE_EMAIL_LOGO_URL = os.environ.get('INVITE_EMAIL_LOGO_URL', '').strip()
 WEEKLY_PICKS_EMAIL_LOGO_URL = os.environ.get(
     'WEEKLY_PICKS_EMAIL_LOGO_URL',

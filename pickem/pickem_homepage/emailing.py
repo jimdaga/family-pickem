@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.template.loader import render_to_string
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
 from pickem.utils import get_season, is_pick_locked_for_pool
@@ -85,18 +85,20 @@ def _absolute_url(path):
     return f'{base}{path}'
 
 
-def _absolute_static_url(path):
-    return _absolute_url(path)
-
-
 def _hosted_email_logo_url():
-    """Absolute URL of the wordmark the app serves for transactional emails.
+    """Absolute URL of the logo the app serves for transactional emails.
 
-    Served straight from the app (see ``email_assets.email_logo``) so it never
-    expires — a ``{% static %}`` URL is an S3 signed URL in production and 403s
-    by the time the mail is opened.
+    Served straight from the app (see ``email_assets.email_logo``) with a
+    long-lived cache header — a ``{% static %}`` URL is an S3 signed URL in
+    production and 403s by the time the mail is opened. Returns ``''`` if the
+    route can't be resolved so a send degrades to a text fallback rather than
+    raising.
     """
-    return _absolute_url(reverse('email_logo'))
+    try:
+        return _absolute_url(reverse('email_logo'))
+    except NoReverseMatch:
+        logger.error("email_logo route is not registered; emails will use the text fallback.")
+        return ''
 
 
 def _weekly_picks_email_logo_url():

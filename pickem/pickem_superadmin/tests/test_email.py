@@ -1,10 +1,13 @@
 from datetime import datetime, timedelta
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+
+from pickem.settings import _default_site_base_url
 
 from pickem_api.models import (
     Family, FamilyInvitation, FamilyMembership, GamePicks, GameWeeks, GamesAndScores, Pool,
@@ -777,6 +780,28 @@ class MissedPicksReminderTests(TestCase):
         self.assertIn('Side Pool', params['html'])
         self.assertIn('Chicago Bears', params['html'])
 
+    @override_settings(
+        SITE_BASE_URL='https://family-pickem.com', WEEKLY_PICKS_EMAIL_LOGO_URL='',
+    )
+    def test_missed_picks_reminder_links_to_prod_site_and_hosted_logo(self):
+        from pickem_homepage.emailing import _send_missed_picks_reminder, _user_pools_with_missing_picks
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_logo'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            _send_missed_picks_reminder(
+                user=self.user, recipient_email=self.user.email, bundle=bundle,
+            )
+
+        html = resend_mock.Emails.send.call_args.args[0]['html']
+        self.assertIn('src="https://family-pickem.com/email/pickem-logo.png"', html)
+        self.assertIn(
+            'https://family-pickem.com/families/dagostino/pools/main-pool/picks/', html,
+        )
+        self.assertNotIn('localhost', html)
+        self.assertNotIn('src=""', html)
+
     def test_send_missed_picks_preview_email_uses_sample_user(self):
         from pickem_homepage.emailing import send_missed_picks_preview_email
 
@@ -940,29 +965,72 @@ class EmailEnvironmentFallbackTests(TestCase):
 
 
 class EmailLogoAssetTests(TestCase):
-    """The wordmark that transactional emails embed is served by the app, not
+    """The logo that transactional emails embed is served by the app, not
     ``{% static %}`` — S3 signed static URLs 403 by the time the mail is opened.
     """
 
-    def test_email_logo_route_is_a_stable_public_png(self):
+    def test_email_logo_route_is_a_cacheable_public_png(self):
         response = self.client.get(reverse('email_logo'))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'image/png')
-        # Never expires: no version query string, changes only on deploy.
-        self.assertIn('immutable', response['Cache-Control'])
-        self.assertIn('max-age=31536000', response['Cache-Control'])
+        self.assertIn('public', response['Cache-Control'])
+        # Long enough that the fetch is rare, short enough that a replaced logo
+        # isn't pinned in inbox/proxy caches long after a deploy.
+        self.assertIn('max-age=604800', response['Cache-Control'])
         body = b''.join(response.streaming_content)
         self.assertTrue(body.startswith(b'\x89PNG'))
 
+    def test_email_logo_route_answers_head(self):
+        # Link-preview crawlers and image proxies HEAD an asset before GET.
+        response = self.client.head(reverse('email_logo'))
+
+        self.assertEqual(response.status_code, 200)
+
     def test_email_logo_route_does_not_require_login(self):
-        # A recipient's mail client fetches the image unauthenticated.
+        # A recipient's mail client fetches the image unauthenticated; a 302
+        # here would mean the middleware exemption regressed.
         response = self.client.get(reverse('email_logo'))
 
         self.assertEqual(response.status_code, 200)
 
     def test_email_logo_path_is_stable(self):
+        # Pins the hardcoded copy in RequireLoginForInternalPagesMiddleware.
         self.assertEqual(reverse('email_logo'), '/email/pickem-logo.png')
+
+    def test_missing_logo_asset_raises_loudly(self):
+        from pickem_homepage import email_assets
+
+        with patch.object(email_assets, '_EMAIL_LOGO_PATH', Path('/nonexistent/email-logo.png')):
+            with self.assertRaises(OSError):
+                email_assets.email_logo(RequestFactory().get('/email/pickem-logo.png'))
+
+    def test_system_check_flags_a_missing_logo_asset(self):
+        from pickem_homepage import email_assets
+
+        self.assertEqual(email_assets._email_logo_asset_check(None), [])
+        with patch.object(email_assets, '_EMAIL_LOGO_PATH', Path('/nonexistent/email-logo.png')):
+            errors = email_assets._email_logo_asset_check(None)
+        self.assertEqual([e.id for e in errors], ['pickem_homepage.E001'])
+
+
+class DefaultSiteBaseUrlTests(SimpleTestCase):
+    """`SITE_BASE_URL` falls back to the running environment's own host so a
+    deployed non-prod box never emits links into production."""
+
+    def test_debug_uses_localhost(self):
+        with patch('pickem.settings.DEBUG', True):
+            self.assertEqual(_default_site_base_url(), 'http://localhost:8000')
+
+    def test_non_debug_derives_from_allowed_hosts(self):
+        with patch('pickem.settings.DEBUG', False), \
+             patch.dict('os.environ', {'DJANGO_ALLOWED_HOSTS': 'localhost,dev.family-pickem.com'}, clear=False):
+            self.assertEqual(_default_site_base_url(), 'https://dev.family-pickem.com')
+
+    def test_non_debug_without_allowed_hosts_falls_back_to_prod(self):
+        with patch('pickem.settings.DEBUG', False), \
+             patch.dict('os.environ', {'DJANGO_ALLOWED_HOSTS': ''}, clear=False):
+            self.assertEqual(_default_site_base_url(), 'https://family-pickem.com')
 
 
 @override_settings(
@@ -1068,3 +1136,33 @@ class TransactionalEmailLinkAndLogoTests(TestCase):
             'https://family-pickem.com/families/dagostino/pools/main-pool/picks/', html,
         )
         self.assertNotIn('localhost', html)
+        self.assertNotIn('src=""', html)
+
+    @override_settings(INVITE_EMAIL_LOGO_URL='https://cdn.example.test/invite-logo.png')
+    def test_invite_email_honours_logo_override(self):
+        owner = User.objects.create_user('owner', email='owner@example.com', password='pw')
+        family = Family.objects.create(name='Dagostino', slug='dagostino')
+        pool = Pool.objects.create(
+            family=family, name='Pickem Pool', slug='pickem-pool', season=2627,
+        )
+        FamilyMembership.objects.create(
+            family=family, user=owner, role=FamilyMembership.Role.OWNER,
+        )
+        invitation = FamilyInvitation.objects.create(
+            family=family, pool=pool, code_hash=hash_invite_code('abc123'),
+            recipient_email='target@example.com',
+            role=FamilyMembership.Role.MEMBER, created_by=owner,
+        )
+
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'email_2'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            send_family_invitation_email(
+                invitation=invitation,
+                invite_link='https://family-pickem.com/invites/abc123/',
+                invite_code='abc123',
+            )
+
+        html = self._sent_params(resend_mock)['html']
+        self.assertIn('src="https://cdn.example.test/invite-logo.png"', html)
+        self.assertNotIn('/email/pickem-logo.png', html)
