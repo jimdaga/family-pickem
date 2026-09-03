@@ -3,7 +3,7 @@
 <body style="margin:0; padding:0; background:#f3f6fb; font-family:'Segoe UI',Helvetica,Arial,sans-serif; color:#111827;">
   <div style="max-width:700px; margin:0 auto; padding:24px 16px;">
     <div style="background:linear-gradient(135deg,#0b3d91,#1d4ed8); border-radius:20px 20px 0 0; padding:28px 28px 20px; color:#ffffff;">
-      <img src="{{ logo_url }}" alt="Family Pick'em" style="height:48px; width:auto; display:block; margin:0 0 16px;">
+      {% if logo_url %}<span style="display:inline-block; background:#ffffff; border-radius:14px; padding:8px; margin:0 0 16px;"><img src="{{ logo_url }}" alt="Family Pick'em" style="height:40px; width:auto; max-width:200px; display:block;"></span>{% else %}<div style="font-size:22px; font-weight:800; color:#ffffff; margin:0 0 16px;">🏈 Family Pick&rsquo;em</div>{% endif %}
       <div style="font-size:13px; letter-spacing:0.08em; text-transform:uppercase; opacity:0.8;">Family Pick'em</div>
       <h1 style="margin:8px 0 10px; font-size:30px; line-height:1.15;">Picks for Week {{ week }} are available</h1>
       <p style="margin:0; font-size:16px; line-height:1.6; color:rgba(255,255,255,0.88);">
