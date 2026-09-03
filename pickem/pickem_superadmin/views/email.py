@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.shortcuts import redirect, render
+from django.template.defaultfilters import pluralize
 from django.views.decorators.http import require_http_methods
 
 from pickem_homepage.emailing import (
@@ -211,7 +212,7 @@ def email_settings(request):
                 )
                 messages.success(
                     request,
-                    f"Weekly picks campaign ran for week {row['week']} and sent {row['sent_count']} email(s).",
+                    f"Weekly picks campaign ran for week {row['week']} and sent {row['sent_count']} email{pluralize(row['sent_count'])}.",
                 )
                 return redirect('superadmin:email_settings')
             messages.error(
@@ -240,7 +241,7 @@ def email_settings(request):
                 )
                 messages.success(
                     request,
-                    f"Missed picks reminder ran for week {row['week']} and sent {row['sent_count']} email(s).",
+                    f"Missed picks reminder ran for week {row['week']} and sent {row['sent_count']} email{pluralize(row['sent_count'])}.",
                 )
                 return redirect('superadmin:email_settings')
             messages.error(

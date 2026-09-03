@@ -288,6 +288,25 @@ class EmailSettingsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'not in an active NFL week window')
 
+    def test_run_now_flash_pluralizes_the_email_count(self):
+        for sent_count, expected in ((1, 'sent 1 email.'), (3, 'sent 3 emails.')):
+            with self.subTest(sent_count=sent_count):
+                fake = {'campaigns': [{
+                    'campaign_key': EmailNotificationCampaign.CampaignKey.MISSED_PICKS_REMINDER,
+                    'season': 2627, 'week': 4, 'sent_count': sent_count,
+                }]}
+                with patch(
+                    'pickem_superadmin.views.email.send_due_email_campaigns',
+                    return_value=fake,
+                ):
+                    response = self.client.post(
+                        reverse('superadmin:email_settings'),
+                        {'action': 'send_missed_picks_now'},
+                        follow=True,
+                    )
+                self.assertContains(response, expected)
+                self.assertNotContains(response, 'email(s)')
+
 
 class InviteEmailSendingTests(TestCase):
     def setUp(self):
@@ -779,6 +798,27 @@ class MissedPicksReminderTests(TestCase):
         self.assertIn('Main Pool', params['html'])
         self.assertIn('Side Pool', params['html'])
         self.assertIn('Chicago Bears', params['html'])
+        # 2 pools x 1 open game each -> plural.
+        self.assertEqual(params['subject'], 'You have 2 picks left before kickoff')
+        # A charset declaration and no raw astral/dash glyphs — the two most
+        # common reasons a client renders the body blank.
+        self.assertIn('<meta charset="utf-8">', params['html'])
+        self.assertNotIn('—', params['html'])
+        self.assertNotIn('\U0001F3C8', params['html'])
+
+    def test_missed_picks_subject_is_singular_for_one_game(self):
+        from pickem_homepage.emailing import _send_missed_picks_reminder, _user_pools_with_missing_picks
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_singular'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            _send_missed_picks_reminder(
+                user=self.user, recipient_email=self.user.email, bundle=bundle,
+            )
+
+        subject = resend_mock.Emails.send.call_args.args[0]['subject']
+        self.assertEqual(subject, 'You have 1 pick left before kickoff')
 
     @override_settings(
         SITE_BASE_URL='https://family-pickem.com', WEEKLY_PICKS_EMAIL_LOGO_URL='',
@@ -801,6 +841,7 @@ class MissedPicksReminderTests(TestCase):
         )
         self.assertNotIn('localhost', html)
         self.assertNotIn('src=""', html)
+        self.assertIn('<meta charset="utf-8">', html)
 
     def test_send_missed_picks_preview_email_uses_sample_user(self):
         from pickem_homepage.emailing import send_missed_picks_preview_email
@@ -980,6 +1021,10 @@ class EmailLogoAssetTests(TestCase):
         self.assertIn('max-age=604800', response['Cache-Control'])
         body = b''.join(response.streaming_content)
         self.assertTrue(body.startswith(b'\x89PNG'))
+        # IHDR colour-type byte (offset 25) must be 6 (RGBA) — the logo is a
+        # white knockout that only reads on the coloured headers if it's
+        # transparent; a re-export to an opaque tile would regress silently.
+        self.assertEqual(body[25], 6)
 
     def test_email_logo_route_answers_head(self):
         # Link-preview crawlers and image proxies HEAD an asset before GET.
@@ -1137,6 +1182,7 @@ class TransactionalEmailLinkAndLogoTests(TestCase):
         )
         self.assertNotIn('localhost', html)
         self.assertNotIn('src=""', html)
+        self.assertIn('<meta charset="utf-8">', html)
 
     @override_settings(INVITE_EMAIL_LOGO_URL='https://cdn.example.test/invite-logo.png')
     def test_invite_email_honours_logo_override(self):

@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.template.defaultfilters import pluralize
 from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
@@ -525,12 +526,13 @@ def _send_missed_picks_reminder(*, user, recipient_email, bundle, preview=False)
         return {'status': 'skipped', 'reason': 'not_configured'}
 
     context = _missed_picks_context(user=user, bundle=bundle, preview=preview)
+    # Both callers skip users with an empty bundle, so total_games is always >= 1.
     total_games = sum(len(entry['missing_games']) for entry in bundle)
     params = {
         'api_key': config['api_key'],
         'from': config['from_email'],
         'to': [recipient_email],
-        'subject': f"You have {total_games} pick(s) left before kickoff",
+        'subject': f"You have {total_games} pick{pluralize(total_games)} left before kickoff",
         'html': render_to_string('emails/missed_picks_reminder.html', context),
         'text': render_to_string('emails/missed_picks_reminder.txt', context),
     }
