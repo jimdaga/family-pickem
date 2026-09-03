@@ -526,6 +526,7 @@ def _send_missed_picks_reminder(*, user, recipient_email, bundle, preview=False)
         return {'status': 'skipped', 'reason': 'not_configured'}
 
     context = _missed_picks_context(user=user, bundle=bundle, preview=preview)
+    # Both callers skip users with an empty bundle, so total_games is always >= 1.
     total_games = sum(len(entry['missing_games']) for entry in bundle)
     params = {
         'api_key': config['api_key'],
