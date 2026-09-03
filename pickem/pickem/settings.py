@@ -288,7 +288,10 @@ def _default_site_base_url():
     return 'https://family-pickem.com'
 
 
-SITE_BASE_URL = os.environ.get('SITE_BASE_URL', _default_site_base_url()).strip().rstrip('/')
+SITE_BASE_URL = (
+    os.environ.get('SITE_BASE_URL', '').strip().rstrip('/')
+    or _default_site_base_url()
+)
 EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY = (
     os.getenv('EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY', 'True').lower() == 'true'
 )
