@@ -779,6 +779,22 @@ class MissedPicksReminderTests(TestCase):
         self.assertIn('Main Pool', params['html'])
         self.assertIn('Side Pool', params['html'])
         self.assertIn('Chicago Bears', params['html'])
+        # 2 pools x 1 open game each -> plural.
+        self.assertEqual(params['subject'], 'You have 2 picks left before kickoff')
+
+    def test_missed_picks_subject_is_singular_for_one_game(self):
+        from pickem_homepage.emailing import _send_missed_picks_reminder, _user_pools_with_missing_picks
+
+        bundle = _user_pools_with_missing_picks(self.user, target=self.target)
+        resend_mock = Mock()
+        resend_mock.Emails.send.return_value = {'id': 'missed_picks_singular'}
+        with patch('pickem_homepage.emailing.resend', new=resend_mock):
+            _send_missed_picks_reminder(
+                user=self.user, recipient_email=self.user.email, bundle=bundle,
+            )
+
+        subject = resend_mock.Emails.send.call_args.args[0]['subject']
+        self.assertEqual(subject, 'You have 1 pick left before kickoff')
 
     @override_settings(
         SITE_BASE_URL='https://family-pickem.com', WEEKLY_PICKS_EMAIL_LOGO_URL='',

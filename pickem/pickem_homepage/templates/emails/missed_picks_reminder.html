@@ -1,9 +1,13 @@
 <!doctype html>
 <html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
 <body style="margin:0; padding:0; background:#f3f6fb; font-family:'Segoe UI',Helvetica,Arial,sans-serif; color:#111827;">
   <div style="max-width:700px; margin:0 auto; padding:24px 16px;">
     <div style="background:linear-gradient(135deg,#92400e,#c2410c); border-radius:20px 20px 0 0; padding:28px 28px 20px; color:#ffffff;">
-      {% if logo_url %}<span style="display:inline-block; background:#ffffff; border-radius:14px; padding:8px; margin:0 0 16px;"><img src="{{ logo_url }}" alt="Family Pick'em" style="height:40px; width:auto; max-width:200px; display:block;"></span>{% else %}<div style="font-size:22px; font-weight:800; color:#ffffff; margin:0 0 16px;">🏈 Family Pick&rsquo;em</div>{% endif %}
+      {% if logo_url %}<img src="{{ logo_url }}" alt="Family Pick'em" width="46" style="height:46px; width:auto; max-width:220px; display:block; margin:0 0 14px;">{% else %}<div style="font-size:22px; font-weight:800; color:#ffffff; margin:0 0 14px;">Family Pick&rsquo;em</div>{% endif %}
       <div style="font-size:13px; letter-spacing:0.08em; text-transform:uppercase; opacity:0.8;">Family Pick'em</div>
       <h1 style="margin:8px 0 10px; font-size:30px; line-height:1.15;">You still have picks to make</h1>
       <p style="margin:0; font-size:16px; line-height:1.6; color:rgba(255,255,255,0.88);">
@@ -18,7 +22,7 @@
           {{ entry.family.name }} &middot; {{ entry.pool.name }}
         </div>
         <div style="font-size:15px; color:#334155; line-height:1.6; margin-bottom:14px;">
-          {{ entry.missing_games|length }} game{{ entry.missing_games|length|pluralize }} still open — pick before kickoff:
+          {{ entry.missing_games|length }} game{{ entry.missing_games|length|pluralize }} still open &mdash; pick before kickoff:
         </div>
         <ul style="margin:0 0 14px; padding-left:18px; font-size:14px; color:#475569; line-height:1.8;">
           {% for game in entry.missing_games %}
