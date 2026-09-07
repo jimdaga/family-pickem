@@ -21,6 +21,7 @@ from django.utils import timezone
 QUEUEABLE_COMMANDS = (
     'update_all',
     'update_games',
+    'update_tiebreakers',
     'update_picks',
     'update_standings',
     'update_stats',

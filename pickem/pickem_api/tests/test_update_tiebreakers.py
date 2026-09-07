@@ -179,3 +179,23 @@ class CommandTests(TestCase):
         last.refresh_from_db()
         self.assertFalse(last.tieBreakerGame)
         self.assertIn("would flag", out.getvalue().lower())
+
+
+class PipelineWiringTests(TestCase):
+    def test_runs_after_update_games_and_before_missed_picks(self):
+        from pickem_api.management.commands.update_all import PIPELINE
+
+        self.assertIn("update_tiebreakers", PIPELINE)
+        self.assertEqual(
+            PIPELINE.index("update_tiebreakers"),
+            PIPELINE.index("update_games") + 1,
+        )
+        self.assertLess(
+            PIPELINE.index("update_tiebreakers"),
+            PIPELINE.index("update_missed_picks"),
+        )
+
+    def test_is_queueable_from_superadmin(self):
+        from pickem_superadmin.jobs import QUEUEABLE_COMMANDS
+
+        self.assertIn("update_tiebreakers", QUEUEABLE_COMMANDS)
