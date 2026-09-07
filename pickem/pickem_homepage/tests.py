@@ -9960,3 +9960,38 @@ class CommissionerSetupCardTests(TestCase):
         self.client.force_login(self.owner)
 
         self.assertTrue(self._lobby().context["show_commissioner_setup"])
+
+    def test_card_renders_for_owner_with_all_three_links(self):
+        self._game(9001, timezone.now() + timedelta(days=3))
+        self.client.force_login(self.owner)
+
+        page = self._lobby()
+
+        self.assertContains(page, 'data-testid="commissioner-setup"')
+        for route in (
+            "family_pool_admin_invites",
+            "family_pool_admin_settings",
+            "family_pool_admin_publications",
+        ):
+            self.assertContains(
+                page,
+                reverse(
+                    route,
+                    kwargs={
+                        "family_slug": self.family.slug,
+                        "pool_slug": self.pool.slug,
+                    },
+                ),
+            )
+
+    def test_card_absent_for_member(self):
+        self._game(9001, timezone.now() + timedelta(days=3))
+        self.client.force_login(self.member)
+
+        self.assertNotContains(self._lobby(), 'data-testid="commissioner-setup"')
+
+    def test_card_absent_after_kickoff(self):
+        self._game(9001, timezone.now() - timedelta(hours=1))
+        self.client.force_login(self.owner)
+
+        self.assertNotContains(self._lobby(), 'data-testid="commissioner-setup"')
