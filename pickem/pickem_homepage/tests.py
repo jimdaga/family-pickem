@@ -9851,3 +9851,112 @@ class BuildWeekPointsSummaryTests(TestCase):
         )
         ordered_ids = [row['points'].userID for row in summary]
         self.assertEqual(ordered_ids, ["2", "10"])  # numeric, not lexicographic
+
+
+class CommissionerSetupCardTests(TestCase):
+    """The pre-season commissioner getting-started card on the lobby."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.get_or_create(
+            season=2526, defaults={"display_name": "2025-2026"}
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user(
+            "setup-owner", email="setup-owner@example.com", password="pass"
+        )
+        self.member = User.objects.create_user(
+            "setup-member", email="setup-member@example.com", password="pass"
+        )
+        self.family = Family.objects.create(name="Setup Family", slug="setup-family")
+        self.pool = Pool.objects.create(
+            family=self.family,
+            name="Main Pickem",
+            slug="setup-main",
+            season=2526,
+            competition="nfl",
+            status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        PoolSettings.objects.create(pool=self.pool)
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.owner,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.member,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+
+    def _lobby(self):
+        return self.client.get(
+            reverse(
+                "family_pool_home",
+                kwargs={
+                    "family_slug": self.family.slug,
+                    "pool_slug": self.pool.slug,
+                },
+            )
+        )
+
+    def _game(self, game_id, kickoff, week="1"):
+        return GamesAndScores.objects.create(
+            id=game_id,
+            slug=f"setup-game-{game_id}",
+            competition="nfl",
+            gameWeek=week,
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=kickoff,
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=1,
+            homeTeamSlug="atl",
+            homeTeamName="Atlanta Falcons",
+            awayTeamId=2,
+            awayTeamSlug="ari",
+            awayTeamName="Arizona Cardinals",
+        )
+
+    def test_owner_sees_flag_before_first_kickoff(self):
+        self._game(9001, timezone.now() + timedelta(days=3))
+        self.client.force_login(self.owner)
+
+        self.assertTrue(self._lobby().context["show_commissioner_setup"])
+
+    def test_member_never_sees_flag(self):
+        self._game(9001, timezone.now() + timedelta(days=3))
+        self.client.force_login(self.member)
+
+        self.assertFalse(self._lobby().context["show_commissioner_setup"])
+
+    def test_owner_loses_flag_once_first_game_has_kicked_off(self):
+        # Week 1 already started; a later week is still in the future. The
+        # earliest kickoff of the SEASON is what counts, not this week's.
+        self._game(9001, timezone.now() - timedelta(hours=1))
+        self._game(9002, timezone.now() + timedelta(days=6), week="2")
+        self.client.force_login(self.owner)
+
+        self.assertFalse(self._lobby().context["show_commissioner_setup"])
+
+    def test_owner_sees_flag_when_season_has_no_games_yet(self):
+        self.client.force_login(self.owner)
+
+        self.assertTrue(self._lobby().context["show_commissioner_setup"])
+
+    def test_other_competition_kickoff_does_not_close_the_window(self):
+        past = self._game(9003, timezone.now() - timedelta(hours=1))
+        GamesAndScores.objects.filter(id=past.id).update(competition="ncaa")
+        self._game(9001, timezone.now() + timedelta(days=3))
+        self.client.force_login(self.owner)
+
+        self.assertTrue(self._lobby().context["show_commissioner_setup"])

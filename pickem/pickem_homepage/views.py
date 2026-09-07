@@ -1259,10 +1259,35 @@ def family_pool_home(request, family_slug, pool_slug):
             teamNameSlug=viewer_profile.favorite_team
         ).first()
 
+    # Commissioner getting-started card: pool setup links that only matter
+    # before anyone has played a game. Keyed on the season's first KICKOFF, not
+    # the `season_has_started` local above -- that one means "a game has been
+    # scored", which flips hours later. No games loaded yet is the deep
+    # pre-season, so the card shows then too.
+    season_kickoff = (
+        GamesAndScores.objects.filter(
+            gameseason=gameseason,
+            competition=current_competition,
+        )
+        .order_by('startTimestamp')
+        .values_list('startTimestamp', flat=True)
+        .first()
+    )
+    viewer_membership = tenant_context.membership
+    show_commissioner_setup = bool(
+        viewer_membership
+        and viewer_membership.role in (
+            FamilyMembership.Role.OWNER,
+            FamilyMembership.Role.ADMIN,
+        )
+        and (season_kickoff is None or timezone.now() < season_kickoff)
+    )
+
     context = {
         'family': family,
         'pool': pool,
         'membership': tenant_context.membership,
+        'show_commissioner_setup': show_commissioner_setup,
         'gameseason': gameseason,
         'current_week': current_week,
         'current_competition': current_competition,
