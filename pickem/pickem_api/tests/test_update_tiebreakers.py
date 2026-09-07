@@ -1,9 +1,13 @@
 from datetime import timedelta
+from io import StringIO
+from unittest import mock
 
+from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
 from grading_tests.factories import create_game
+from pickem_api.management.commands import update_tiebreakers as ut
 from pickem_api.management.commands.update_tiebreakers import set_week_tiebreaker
 from pickem_api.models import GamesAndScores
 
@@ -97,3 +101,81 @@ class SetWeekTiebreakerTests(TestCase):
         self.assertEqual(set_week_tiebreaker(SEASON, 5, "nfl"), nfl_late.id)
         self.assertEqual(set_week_tiebreaker(SEASON, 5, "ncaa"), other_late.id)
         self.assertEqual(self._flagged_ids(5), {nfl_late.id, other_late.id})
+
+
+class WeeksForSeasonTests(TestCase):
+    def setUp(self):
+        self.base = timezone.now() - timedelta(days=30)
+
+    def test_orders_weeks_numerically_not_lexically(self):
+        for week in (2, 10, 1):
+            create_game(week, season=SEASON, kickoff=self.base, tiebreaker_game=False)
+
+        self.assertEqual(ut.weeks_for_season(SEASON), ["1", "2", "10"])
+
+    def test_other_seasons_are_excluded(self):
+        create_game(1, season=SEASON, kickoff=self.base, tiebreaker_game=False)
+        create_game(7, season=2526, kickoff=self.base, tiebreaker_game=False)
+
+        self.assertEqual(ut.weeks_for_season(SEASON), ["1"])
+
+
+class CommandTests(TestCase):
+    def setUp(self):
+        self.base = timezone.now() - timedelta(days=30)
+
+    def _week(self, week, hours):
+        return [
+            create_game(
+                week,
+                season=SEASON,
+                kickoff=self.base + timedelta(hours=h),
+                tiebreaker_game=False,
+            )
+            for h in hours
+        ]
+
+    def test_defaults_to_current_week(self):
+        last = self._week(6, [0, 1, 30])[-1]
+
+        with mock.patch.object(ut, "current_week_for_today", return_value="6"):
+            call_command("update_tiebreakers", season=SEASON, stdout=StringIO())
+
+        last.refresh_from_db()
+        self.assertTrue(last.tieBreakerGame)
+
+    def test_explicit_week_only_touches_that_week(self):
+        week6_last = self._week(6, [0, 30])[-1]
+        week7_last = self._week(7, [0, 30])[-1]
+
+        call_command("update_tiebreakers", season=SEASON, week="7", stdout=StringIO())
+
+        week6_last.refresh_from_db()
+        week7_last.refresh_from_db()
+        self.assertFalse(week6_last.tieBreakerGame)
+        self.assertTrue(week7_last.tieBreakerGame)
+
+    def test_all_weeks_covers_every_week(self):
+        week6_last = self._week(6, [0, 30])[-1]
+        week7_last = self._week(7, [0, 30])[-1]
+
+        call_command(
+            "update_tiebreakers", season=SEASON, all_weeks=True, stdout=StringIO()
+        )
+
+        week6_last.refresh_from_db()
+        week7_last.refresh_from_db()
+        self.assertTrue(week6_last.tieBreakerGame)
+        self.assertTrue(week7_last.tieBreakerGame)
+
+    def test_dry_run_writes_nothing(self):
+        last = self._week(8, [0, 30])[-1]
+        out = StringIO()
+
+        call_command(
+            "update_tiebreakers", season=SEASON, week="8", dry_run=True, stdout=out
+        )
+
+        last.refresh_from_db()
+        self.assertFalse(last.tieBreakerGame)
+        self.assertIn("would flag", out.getvalue().lower())

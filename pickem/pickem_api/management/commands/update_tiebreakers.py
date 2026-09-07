@@ -83,3 +83,105 @@ def set_week_tiebreaker(season, week, competition):
     if not target["tieBreakerGame"]:
         GamesAndScores.objects.filter(id=target["id"]).update(tieBreakerGame=True)
     return target["id"]
+
+
+def preview_week_tiebreaker(season, week, competition):
+    """The id the tiebreaker would be set to, writing nothing. None if skipped."""
+    games = _week_games(season, week, competition)
+    target = _last_game(games, season, week, competition)
+    return target["id"] if target else None
+
+
+def weeks_for_season(season):
+    """Distinct gameWeek values for a season, ordered numerically.
+
+    gameWeek is a CharField, so a database sort would put "10" before "2".
+    Non-numeric weeks sort last rather than raising -- a junk row must not take
+    down a pipeline step.
+    """
+    weeks = set(
+        GamesAndScores.objects.filter(gameseason=int(season))
+        .values_list("gameWeek", flat=True)
+    )
+    return sorted(
+        weeks,
+        key=lambda w: (
+            not str(w).isdigit(),
+            int(w) if str(w).isdigit() else 0,
+            str(w),
+        ),
+    )
+
+
+def competitions_for_week(season, week):
+    """Distinct competitions present in one (season, week)."""
+    return sorted(
+        set(
+            GamesAndScores.objects.filter(
+                gameseason=int(season), gameWeek=str(week)
+            ).values_list("competition", flat=True)
+        )
+    )
+
+
+class Command(BaseCommand):
+    help = "Flag the last game of each week as that week's tiebreaker game."
+
+    def add_arguments(self, parser):
+        parser.add_argument("--season", type=int, default=None)
+        parser.add_argument(
+            "--week", default=None, help="Week number (defaults to today's week)."
+        )
+        parser.add_argument(
+            "--all-weeks",
+            action="store_true",
+            help="Process every week present for the season (use for backfills).",
+        )
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Report what would change without writing anything.",
+        )
+
+    def handle(self, *args, **options):
+        season = options["season"] or get_season()
+        dry_run = options["dry_run"]
+
+        if options["all_weeks"]:
+            weeks = weeks_for_season(season)
+        else:
+            weeks = [str(options["week"] or current_week_for_today(season))]
+
+        self.stdout.write(
+            f"Setting tiebreaker games for season {season} "
+            f"week(s) {', '.join(weeks) or '(none)'}"
+        )
+
+        flagged = 0
+        for week in weeks:
+            for competition in competitions_for_week(season, week):
+                if dry_run:
+                    game_id = preview_week_tiebreaker(season, week, competition)
+                else:
+                    game_id = set_week_tiebreaker(season, week, competition)
+
+                if game_id is None:
+                    self.stdout.write(
+                        f" - week {week} ({competition}): skipped, no single last game"
+                    )
+                    continue
+
+                flagged += 1
+                verb = "would flag" if dry_run else "tiebreaker ="
+                self.stdout.write(
+                    f" - week {week} ({competition}): {verb} game {game_id}"
+                )
+
+        if dry_run:
+            self.stdout.write(self.style.WARNING("Dry run -- nothing written."))
+        else:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Set tiebreaker for {flagged} week/competition group(s)."
+                )
+            )
