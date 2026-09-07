@@ -58,6 +58,7 @@ from pickem_api.authz import (
     get_real_user_family_memberships,
     get_user_family_memberships,
     require_tenant_context,
+    role_allows,
 )
 from pickem_api.models import Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, Pool, PoolSettings
 from pickem_api.logo_processing import LogoValidationError, process_family_logo
@@ -1259,29 +1260,35 @@ def family_pool_home(request, family_slug, pool_slug):
             teamNameSlug=viewer_profile.favorite_team
         ).first()
 
-    # Commissioner getting-started card: pool setup links that only matter
-    # before anyone has played a game. Keyed on the season's first KICKOFF, not
-    # the `season_has_started` local above -- that one means "a game has been
-    # scored", which flips hours later. No games loaded yet is the deep
-    # pre-season, so the card shows then too.
-    season_kickoff = (
-        GamesAndScores.objects.filter(
-            gameseason=gameseason,
-            competition=current_competition,
-        )
-        .order_by('startTimestamp')
-        .values_list('startTimestamp', flat=True)
-        .first()
+    # Commissioner getting-started card: setup links worth surfacing
+    # prominently only before this pool's season is under way. Gated on the
+    # family OWNER/ADMIN role — deliberately not UserProfile.is_commissioner,
+    # which is a separate site-wide flag.
+    #
+    # The window closes at the first KICKOFF of this pool's season and
+    # competition, not at `season_has_started` above — that one means "a game
+    # has been scored", which flips several hours later. The competition scope
+    # is load-bearing (see test_other_competition_kickoff_does_not_close_the_window):
+    # no game row for this season+competition means nothing is scheduled yet,
+    # so the card stays up.
+    #
+    # The role test runs first so a plain member never pays for the query.
+    show_commissioner_setup = role_allows(
+        tenant_context.membership.role, FamilyMembership.Role.ADMIN
     )
-    viewer_membership = tenant_context.membership
-    show_commissioner_setup = bool(
-        viewer_membership
-        and viewer_membership.role in (
-            FamilyMembership.Role.OWNER,
-            FamilyMembership.Role.ADMIN,
+    if show_commissioner_setup:
+        season_kickoff = (
+            GamesAndScores.objects.filter(
+                gameseason=gameseason,
+                competition=current_competition,
+            )
+            .order_by('startTimestamp')
+            .values_list('startTimestamp', flat=True)
+            .first()
         )
-        and (season_kickoff is None or timezone.now() < season_kickoff)
-    )
+        show_commissioner_setup = (
+            season_kickoff is None or timezone.now() < season_kickoff
+        )
 
     context = {
         'family': family,

@@ -162,10 +162,10 @@
                 </span>
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <h3 class="text-lg font-bold text-text-dark dark:text-white">Get your pool ready</h3>
+                        <h2 class="text-lg font-bold text-text-dark dark:text-white">Get your pool ready</h2>
                         <span class="commissioner-message-badge">Getting started</span>
                     </div>
-                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Only you can see this. It disappears once the season kicks off.</p>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Only pool admins can see this. It disappears once the season kicks off.</p>
                 </div>
             </div>
 
@@ -180,7 +180,7 @@
                 </a>
                 <a href="{% url 'family_pool_admin_settings' family.slug pool.slug %}"
                    class="group flex items-start gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3 hover:border-primary dark:hover:border-primary transition-colors">
-                    <i class="fas fa-sliders mt-0.5 text-primary" aria-hidden="true"></i>
+                    <i class="fas fa-sliders-h mt-0.5 text-primary" aria-hidden="true"></i>
                     <span>
                         <span class="block text-sm font-bold text-text-dark dark:text-white">Pool settings</span>
                         <span class="block text-xs text-text-secondary-light dark:text-text-secondary">Scoring, pick locking, missed picks</span>
@@ -199,6 +199,7 @@
     </div>
     {% endif %}
 
+    <!-- ═══════════════════════ COMMISSIONER NOTES + AI RECAPS ════════════════════ -->
     {% if publications %}
         {% for publication in publications %}
             <article class="{% if publication.source == 'ai_weekly_summary' %}ai-recap-card lobby-section mb-6{% else %}commissioner-message-card lobby-section mb-6{% endif %}" {% if publication.source == 'ai_weekly_summary' %}data-testid="ai-weekly-recap"{% else %}data-testid="commissioner-message"{% endif %}>

@@ -9870,6 +9870,9 @@ class CommissionerSetupCardTests(TestCase):
         self.owner = User.objects.create_user(
             "setup-owner", email="setup-owner@example.com", password="pass"
         )
+        self.admin_user = User.objects.create_user(
+            "setup-admin", email="setup-admin@example.com", password="pass"
+        )
         self.member = User.objects.create_user(
             "setup-member", email="setup-member@example.com", password="pass"
         )
@@ -9888,6 +9891,12 @@ class CommissionerSetupCardTests(TestCase):
             family=self.family,
             user=self.owner,
             role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        FamilyMembership.objects.create(
+            family=self.family,
+            user=self.admin_user,
+            role=FamilyMembership.Role.ADMIN,
             status=FamilyMembership.Status.ACTIVE,
         )
         FamilyMembership.objects.create(
@@ -9933,6 +9942,29 @@ class CommissionerSetupCardTests(TestCase):
 
         self.assertTrue(self._lobby().context["show_commissioner_setup"])
 
+    def test_admin_sees_flag_before_first_kickoff(self):
+        # The gate admits ADMIN as well as OWNER, and all three cards link to
+        # pages gated at minimum_role=ADMIN. Without this, narrowing the gate
+        # to owners would hide the card from every admin with a green suite.
+        self._game(9001, timezone.now() + timedelta(days=3))
+        self.client.force_login(self.admin_user)
+
+        self.assertTrue(self._lobby().context["show_commissioner_setup"])
+
+    def test_superuser_without_membership_sees_flag(self):
+        # God mode hands superusers a synthetic OWNER membership for any
+        # family (pickem_api/authz.py), so the card follows. Pinned as
+        # intentional rather than accidental cross-tenant visibility.
+        superuser = User.objects.create_user(
+            "setup-sre", email="setup-sre@example.com", password="pass",
+            is_superuser=True,
+        )
+        self._game(9001, timezone.now() + timedelta(days=3))
+        self.client.force_login(superuser)
+
+        self.assertTrue(self._lobby().context["show_commissioner_setup"])
+        self.assertFalse(FamilyMembership.objects.filter(user=superuser).exists())
+
     def test_member_never_sees_flag(self):
         self._game(9001, timezone.now() + timedelta(days=3))
         self.client.force_login(self.member)
@@ -9968,13 +10000,20 @@ class CommissionerSetupCardTests(TestCase):
         page = self._lobby()
 
         self.assertContains(page, 'data-testid="commissioner-setup"')
+        # Scope the link assertions to the card itself. The invites URL also
+        # renders in the OWNER ACTIONS strip lower down the lobby, so a
+        # page-wide assertContains would still pass with the card's own invite
+        # link deleted.
+        html = page.content.decode()
+        card = html.split('data-testid="commissioner-setup"', 1)[1].split(
+            "COMMISSIONER NOTES + AI RECAPS", 1
+        )[0]
         for route in (
             "family_pool_admin_invites",
             "family_pool_admin_settings",
             "family_pool_admin_publications",
         ):
-            self.assertContains(
-                page,
+            self.assertIn(
                 reverse(
                     route,
                     kwargs={
@@ -9982,6 +10021,7 @@ class CommissionerSetupCardTests(TestCase):
                         "pool_slug": self.pool.slug,
                     },
                 ),
+                card,
             )
 
     def test_card_absent_for_member(self):
