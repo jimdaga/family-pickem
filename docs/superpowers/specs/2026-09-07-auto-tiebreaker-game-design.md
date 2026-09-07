@@ -21,18 +21,20 @@ times are published.
 For each `(gameseason, gameWeek, competition)` group:
 
 1. Order the group's games by `startTimestamp` descending.
-2. **If two or more games tie for the latest kickoff, skip the group entirely**
+2. **If every game in the group shares one kickoff, skip the group entirely**
    and log why. Existing flags are left as they are — a week we cannot reason
    about is a week we do not touch.
-3. Otherwise the single latest game is the tiebreaker: `tieBreakerGame=True` on
-   it, `False` on every other game in the group.
+3. Otherwise the latest kickoff is the tiebreaker slot: `tieBreakerGame=True` on
+   that game, `False` on every other game in the group. If a doubleheader puts
+   two games in that slot, the **lower game id** wins, so the choice is stable
+   across runs.
 
-### Why the tie rule instead of a week-18 special case
+### Why "all games tied" instead of a week-18 special case
 
 Until the week-18 schedule firms up, ESPN returns every week-18 game at one
 shared placeholder kickoff. Verified against the live scoreboard for the 2026
 season: all 16 week-18 games return `2027-01-10T05:00Z`. There is therefore no
-identifiable last game, and the tie test detects that state directly.
+identifiable last game, and the all-tied test detects that state directly.
 
 Two consequences of expressing it this way:
 
@@ -42,6 +44,20 @@ Two consequences of expressing it this way:
 
 A rule keyed on "kickoff is at midnight" would be wrong: the placeholder is
 midnight *Eastern* (`05:00Z`), not midnight UTC.
+
+### Why the skip is "all tied" and not "any tie"
+
+A tie for the latest kickoff means one of two different things, and the size of
+the tie separates them. The unpublished-schedule placeholder ties *every* game
+in the week (16 of 16). A Monday-night doubleheader ties only the last two —
+the week does have a real last slot, it just holds two games, and skipping it
+would leave that week with no tiebreaker at all.
+
+Measured against the three seasons in the local production snapshot: of 53
+weeks, 52 have a unique last game and one (2023 week 14, Giants@Packers and
+Dolphins@Titans both at 8:15pm ET) is a doubleheader. Under "all tied + lowest
+id", the rule reproduces all 53 hand-set flags exactly, the doubleheader
+included.
 
 ## Authority
 
@@ -98,8 +114,10 @@ Added to `pickem_superadmin/jobs.QUEUEABLE_COMMANDS` so it can be queued from
 
 - Last game of a normal week is flagged.
 - A pre-existing flag on the wrong game is cleared.
-- A group whose games all share the latest kickoff is left completely untouched,
+- A group whose games *all* share one kickoff is left completely untouched,
   including any flag already present.
+- A doubleheader in the last slot takes the lower game id, and clears a flag
+  sitting on the other tied game.
 - A single-game group flags that game.
 - A second run over correct data performs no writes.
 - Two competitions in the same week each get their own tiebreaker.

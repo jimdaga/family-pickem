@@ -52,20 +52,45 @@ class SetWeekTiebreakerTests(TestCase):
         self.assertFalse(stale.tieBreakerGame)
         self.assertTrue(mnf.tieBreakerGame)
 
-    def test_tied_latest_kickoff_leaves_week_untouched(self):
+    def test_whole_week_tied_leaves_week_untouched(self):
         # ESPN's unpublished-schedule state: every game shares one placeholder
         # kickoff, so there is no identifiable last game.
         a = self._game(18, 5)
         b = self._game(18, 5, flagged=True)
+        c = self._game(18, 5)
 
         self.assertIsNone(set_week_tiebreaker(SEASON, 18, "nfl"))
 
-        a.refresh_from_db()
-        b.refresh_from_db()
+        for game in (a, b, c):
+            game.refresh_from_db()
         self.assertFalse(a.tieBreakerGame)
+        self.assertFalse(c.tieBreakerGame)
         # The pre-existing flag survives: a week we cannot reason about is a
         # week we do not touch.
         self.assertTrue(b.tieBreakerGame)
+
+    def test_doubleheader_takes_lowest_game_id(self):
+        # Two games genuinely share the last slot (a Monday-night doubleheader).
+        # The week has a real last kickoff, so it must still get a tiebreaker.
+        self._game(14, 0)
+        first = self._game(14, 30)
+        second = self._game(14, 30)
+        lower, higher = sorted([first, second], key=lambda g: g.id)
+
+        self.assertEqual(set_week_tiebreaker(SEASON, 14, "nfl"), lower.id)
+        self.assertEqual(self._flagged_ids(14), {lower.id})
+        higher.refresh_from_db()
+        self.assertFalse(higher.tieBreakerGame)
+
+    def test_doubleheader_clears_flag_from_the_other_tied_game(self):
+        self._game(15, 0)
+        first = self._game(15, 30)
+        second = self._game(15, 30)
+        lower, higher = sorted([first, second], key=lambda g: g.id)
+        GamesAndScores.objects.filter(id=higher.id).update(tieBreakerGame=True)
+
+        self.assertEqual(set_week_tiebreaker(SEASON, 15, "nfl"), lower.id)
+        self.assertEqual(self._flagged_ids(15), {lower.id})
 
     def test_single_game_week_is_flagged(self):
         only = self._game(3, 0)

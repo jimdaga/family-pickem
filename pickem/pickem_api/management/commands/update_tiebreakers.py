@@ -6,12 +6,14 @@ It used to be set by hand every week and was easy to forget, leaving a week with
 no tiebreaker inputs at all.
 
 The rule: within a ``(gameseason, gameWeek, competition)`` group, the game with
-the strictly latest kickoff is the tiebreaker -- normally Monday night.
+the latest kickoff is the tiebreaker -- normally Monday night. When a
+doubleheader puts two games in that last slot, the lower game id wins, so the
+choice is stable across runs.
 
-If two or more games tie for the latest kickoff, the group is skipped entirely
+If *every* game in the group shares one kickoff, the group is skipped entirely
 and left exactly as it was. That is the week-18 guard: until the schedule firms
 up, ESPN returns every week-18 game at one shared placeholder kickoff, so there
-is no identifiable last game. Expressing it as a tie test rather than a week-18
+is no identifiable last game. Expressing it that way rather than as a week-18
 special case means it also covers any other unfinalized week, and it releases
 itself the moment real kickoff times land. A kickoff-hour check would be wrong
 here -- the placeholder is midnight *Eastern*, not midnight UTC.
@@ -51,19 +53,37 @@ def _week_games(season, week, competition):
 
 
 def _last_game(games, season, week, competition):
-    """The single latest-kickoff game, or None when there is no unique one."""
+    """The week's last game, or None when the schedule isn't published yet.
+
+    A tie for the latest kickoff means one of two very different things, and
+    the size of the tie tells them apart:
+
+    * *Every* game shares one kickoff -- the unpublished-schedule placeholder.
+      There is no last game to find, so the week is skipped.
+    * *Some* games share the latest kickoff -- a Monday-night doubleheader.
+      There genuinely is a last slot, it just holds two games; the lower game
+      id wins so the choice is stable across runs. (Verified against three
+      seasons of real data: this reproduces every hand-picked flag, including
+      2023 week 14's Giants@Packers / Dolphins@Titans doubleheader.)
+    """
     if not games:
         return None
     latest = games[0]["startTimestamp"]
-    tied = sum(1 for game in games if game["startTimestamp"] == latest)
-    if tied > 1:
+    tied = [game for game in games if game["startTimestamp"] == latest]
+    if len(tied) == len(games) > 1:
         logger.info(
-            "Skipping tiebreaker for season %s week %s (%s): %d games tie for "
-            "the latest kickoff %s -- schedule not published yet",
-            season, week, competition, tied, latest,
+            "Skipping tiebreaker for season %s week %s (%s): all %d games share "
+            "kickoff %s -- schedule not published yet",
+            season, week, competition, len(games), latest,
         )
         return None
-    return games[0]
+    if len(tied) > 1:
+        logger.info(
+            "Season %s week %s (%s): %d games tie for the last kickoff %s "
+            "(doubleheader); taking the lowest game id",
+            season, week, competition, len(tied), latest,
+        )
+    return min(tied, key=lambda game: game["id"])
 
 
 def set_week_tiebreaker(season, week, competition):
@@ -77,7 +97,11 @@ def set_week_tiebreaker(season, week, competition):
     if target is None:
         return None
 
-    stale_ids = [game["id"] for game in games[1:] if game["tieBreakerGame"]]
+    stale_ids = [
+        game["id"]
+        for game in games
+        if game["tieBreakerGame"] and game["id"] != target["id"]
+    ]
     if stale_ids:
         GamesAndScores.objects.filter(id__in=stale_ids).update(tieBreakerGame=False)
     if not target["tieBreakerGame"]:
