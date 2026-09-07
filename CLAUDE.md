@@ -113,14 +113,17 @@ Data updates run as ORM-direct Django management commands (`pickem/pickem_api/ma
 
 1. `update_records` - team win/loss records (independent)
 2. `update_games` - fetch scores + winners from ESPN
-3. `update_missed_picks` - apply missed-pick policies before grading
-4. `update_picks` - score picks against game winners
-5. `update_standings` - recompute per-pool weekly/total points
-6. `update_weekly_winners` - award winner bonuses once the week completes
-7. `update_rankings` - rank pool members by total points (incl. bonus)
-8. `update_season_winners` - flag the season champion once the season ends
-9. `generate_weekly_summaries` - AI recap drafts
-10. `update_stats` - recompute per-user `userStats`
+3. `update_tiebreakers` - flag each week's last game as the tiebreaker (skips a
+   week whose games all share one placeholder kickoff, e.g. week 18 before the
+   schedule is published)
+4. `update_missed_picks` - apply missed-pick policies before grading
+5. `update_picks` - score picks against game winners
+6. `update_standings` - recompute per-pool weekly/total points
+7. `update_weekly_winners` - award winner bonuses once the week completes
+8. `update_rankings` - rank pool members by total points (incl. bonus)
+9. `update_season_winners` - flag the season champion once the season ends
+10. `generate_weekly_summaries` - AI recap drafts
+11. `update_stats` - recompute per-user `userStats`
 
 In production this pipeline runs on a tick via the in-process APScheduler
 (`pickem_api/scheduler.py`, enabled by `RUN_SCHEDULER=true` on a single web
