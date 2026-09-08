@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -21,6 +22,7 @@ from pickem_homepage.emailing import (
     send_test_email,
 )
 from pickem_homepage.views import hash_invite_code
+from pickem_superadmin.forms import EmailNotificationCampaignForm
 from pickem_superadmin.models import (
     EmailNotificationCampaign, EmailProviderSettings, SuperAdminAuditLog,
 )
@@ -277,6 +279,113 @@ class EmailSettingsViewTests(TestCase):
             target_id=str(campaign.pk),
         )
         self.assertEqual(audit.summary, 'Updated missed picks reminder email campaign')
+
+    def _form_posting(self, html, action_value):
+        """The single <form> element that posts ``action_value``.
+
+        Scoping matters: this page has four forms carrying missed_campaign
+        widgets. A page-wide search would pass with the field rendered inside
+        the preview form, where the save POST would still never send it.
+        """
+        for fragment in html.split('<form')[1:]:
+            body = fragment.split('</form>')[0]
+            if f'value="{action_value}"' in body:
+                return body
+        self.fail(f'no <form> on the page posts action={action_value}')
+
+    def test_campaign_forms_render_every_field_they_require(self):
+        """A required field the save form does not render is unsubmittable.
+
+        The POST then fails validation, the view falls through without saving,
+        and a silent revert is indistinguishable from a save that did not
+        stick. Assert render/require parity inside each save form.
+        """
+        html = self.client.get(reverse('superadmin:email_settings')).content.decode()
+
+        for prefix, action in (
+            ('campaign', 'save_weekly_campaign'),
+            ('missed_campaign', 'save_missed_picks_campaign'),
+        ):
+            form_html = self._form_posting(html, action)
+            form = EmailNotificationCampaignForm(prefix=prefix)
+            for name, field in form.fields.items():
+                if not field.required:
+                    continue
+                with self.subTest(prefix=prefix, field=name):
+                    marker = f'name="{prefix}-{name}"'
+                    self.assertIn(
+                        marker,
+                        form_html,
+                        f'{prefix}.{name} is required but the {action} form does '
+                        'not render it, so the browser cannot submit it and '
+                        'every save silently fails',
+                    )
+                    # Rendered but disabled is the same failure: the browser
+                    # omits a disabled control from the POST.
+                    tag = form_html.split(marker, 1)[1].split('>', 1)[0]
+                    self.assertNotIn('disabled', tag, f'{prefix}.{name} is disabled')
+
+    def test_enabling_missed_picks_persists_with_the_payload_the_page_sends(self):
+        """Regression: build the payload from the RENDERED page, not by hand.
+
+        The pre-existing save test hand-wrote a family_link_strategy value the
+        template did not render, so it passed while the real page could not
+        save at all -- the POST omitted a required field, validation failed,
+        and the view fell through silently. Deriving the payload from the
+        rendered form means a field that stops being rendered breaks this test
+        instead of only breaking production.
+        """
+        campaign = EmailNotificationCampaign.load_missed_picks_reminder()
+        self.assertFalse(campaign.enabled)
+
+        html = self.client.get(reverse('superadmin:email_settings')).content.decode()
+        form_html = self._form_posting(html, 'save_missed_picks_campaign')
+        rendered = set(re.findall(r'name="(missed_campaign-[\w]+)"', form_html))
+        self.assertIn('missed_campaign-enabled', rendered)
+
+        form = EmailNotificationCampaignForm(instance=campaign, prefix='missed_campaign')
+        payload = {'action': 'save_missed_picks_campaign'}
+        for name in rendered:
+            field = name.split('missed_campaign-', 1)[1]
+            value = form.initial.get(field, '')
+            payload[name] = '' if value is None else str(value)
+        # The two values the operator is actually changing.
+        payload['missed_campaign-enabled'] = 'on'
+        payload['missed_campaign-weekday'] = '6'
+
+        response = self.client.post(
+            reverse('superadmin:email_settings'), payload, follow=True
+        )
+
+        self.assertEqual(response.status_code, 200)
+        campaign.refresh_from_db()
+        self.assertTrue(campaign.enabled)
+        self.assertEqual(campaign.weekday, 6)
+
+    def test_a_rejected_campaign_save_tells_the_user_why(self):
+        """Even once the fields line up, a failed save must not be silent."""
+        response = self.client.post(
+            reverse('superadmin:email_settings'),
+            {
+                'action': 'save_missed_picks_campaign',
+                'missed_campaign-enabled': 'on',
+                'missed_campaign-weekday': '6',
+                'missed_campaign-hour': '99',  # out of range: 0-23
+                'missed_campaign-minute': '0',
+                'missed_campaign-timezone_name': 'America/New_York',
+                'missed_campaign-rollout_mode': EmailNotificationCampaign.RolloutMode.ALLOWLIST,
+                'missed_campaign-allowlist_emails': 'jdagostino2@gmail.com',
+                # Present, so the out-of-range hour is the ONLY thing wrong.
+                'missed_campaign-family_link_strategy':
+                    EmailNotificationCampaign.FamilyLinkStrategy.EARLIEST_MEMBERSHIP,
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(EmailNotificationCampaign.load_missed_picks_reminder().enabled)
+        self.assertContains(response, 'data-testid="missed-campaign-errors"')
+        self.assertContains(response, 'hour')
 
     def test_running_missed_picks_campaign_now_outside_active_week_errors(self):
         response = self.client.post(
