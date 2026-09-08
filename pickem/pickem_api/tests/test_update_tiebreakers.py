@@ -344,6 +344,32 @@ class CommandTests(TestCase):
         # The blank week is rendered visibly, not silently collapsed to "(none)".
         self.assertNotIn("week(s) (none)", out.getvalue())
 
+    def test_each_week_and_competition_is_processed_exactly_once(self):
+        """Meta.ordering leaking into .distinct() made every group repeat.
+
+        GamesAndScores orders by startTimestamp, which Django appends to a
+        DISTINCT SELECT -- so the enumeration returned one row per game rather
+        than one per competition, and the command re-processed each group once
+        per kickoff. The writes are idempotent so the data stayed correct, but
+        the operator output was wrong and the work was quadratic.
+        """
+        self._week(9, [0, 1, 2, 30])
+        out = StringIO()
+
+        call_command("update_tiebreakers", season=SEASON, week="9", stdout=out)
+
+        lines = [ln for ln in out.getvalue().splitlines() if ln.startswith(" - ")]
+        self.assertEqual(len(lines), 1, f"expected one line per group, got: {lines}")
+        self.assertIn("group(s)", out.getvalue())
+        self.assertIn("for 1 week", out.getvalue())
+
+    def test_enumeration_helpers_deduplicate(self):
+        self._week(10, [0, 1, 2, 30])
+        self._week(11, [0, 5])
+
+        self.assertEqual(ut.competitions_for_week(SEASON, 10), ["nfl"])
+        self.assertEqual(ut.weeks_for_season(SEASON), ["10", "11"])
+
 
 class PipelineWiringTests(TestCase):
     def test_runs_after_update_games_and_before_missed_picks(self):
