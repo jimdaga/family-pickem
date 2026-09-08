@@ -195,7 +195,9 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        season = options["season"] or get_season()
+        # `is None`, not `or`: --season 0 is falsy and would silently fall
+        # through to the current season instead of being used as given.
+        season = options["season"] if options["season"] is not None else get_season()
         dry_run = options["dry_run"]
 
         if options["all_weeks"] and options["week"] is not None:

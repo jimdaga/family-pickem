@@ -113,9 +113,10 @@ Data updates run as ORM-direct Django management commands (`pickem/pickem_api/ma
 
 1. `update_records` - team win/loss records (independent)
 2. `update_games` - fetch scores + winners from ESPN
-3. `update_tiebreakers` - flag each week's last game as the tiebreaker (skips a
-   week whose games all share one placeholder kickoff, e.g. week 18 before the
-   schedule is published)
+3. `update_tiebreakers` - flag the last game in each
+   `(season, week, competition)` group as that group's tiebreaker (skips a
+   group whose games all share one placeholder kickoff, e.g. week 18 before
+   the schedule is published)
 4. `update_missed_picks` - apply missed-pick policies before grading
 5. `update_picks` - score picks against game winners
 6. `update_standings` - recompute per-pool weekly/total points

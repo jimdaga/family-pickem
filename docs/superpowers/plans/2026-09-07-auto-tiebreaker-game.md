@@ -757,3 +757,32 @@ Or queue `update_tiebreakers` from `/superadmin/jobs/` once deployed (that path
 covers the current week only). Any week whose games all share a placeholder
 kickoff reports "skipped, no single last game" and is picked up automatically on
 a later run once ESPN publishes its times.
+
+---
+
+## Amendments made during review
+
+This plan is the pre-implementation record. Several steps were superseded before
+merge; the shipped code differs as follows.
+
+- **A tie for the latest kickoff no longer skips the group unconditionally.**
+  The plan's `_last_game` skips whenever two or more games share the latest
+  kickoff. Backtesting against three seasons of production data showed that
+  misfires on Monday-night doubleheaders (season 2324 week 14), leaving a real
+  week with no tiebreaker at all. The shipped rule skips only when *every* game
+  in the group shares one kickoff -- the ESPN unpublished-schedule placeholder
+  -- and resolves a partial tie by taking the lower ESPN game id. A lone game
+  in a group is flagged, not skipped.
+- **`set_week_tiebreaker` returns the flagged game's id**, not a
+  `GamesAndScores` instance.
+- **The clear and the set run inside `transaction.atomic()`.** As planned they
+  were two autocommit writes with the clear first, so a pick submitted in the
+  gap would have skipped the "tiebreaker required" guard and stored NULL
+  score/yards.
+- **`--week` and `--all-weeks` are mutually exclusive**; the plan silently let
+  `--all-weeks` win on the destructive backfill path.
+- **Coverage added** beyond the plan's list: the doubleheader branches, the
+  per-competition loop, the dry-run skip and doubleheader branches,
+  `--all-weeks --dry-run`, a non-numeric week, and an atomicity test. The
+  command also runs in the grading harness pipeline in its production position.
+
