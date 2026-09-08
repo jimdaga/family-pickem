@@ -54,6 +54,13 @@
       <form method="post" class="space-y-4">
         {% csrf_token %}
         <input type="hidden" name="action" value="save_weekly_campaign">
+        {% if campaign_form.errors %}
+        <div data-testid="weekly-campaign-errors" class="mt-1 text-[12px] text-red-700">
+          {% for field, errors in campaign_form.errors.items %}
+            {% for error in errors %}<div>{{ field }}: {{ error }}</div>{% endfor %}
+          {% endfor %}
+        </div>
+        {% endif %}
         <div class="flex items-center gap-2">
           {{ campaign_form.enabled }}
           <label for="{{ campaign_form.enabled.id_for_label }}" class="text-[13px] font-medium text-[#1b212b]">Enable weekly picks email</label>
@@ -140,6 +147,13 @@
       <form method="post" class="space-y-4">
         {% csrf_token %}
         <input type="hidden" name="action" value="save_missed_picks_campaign">
+        {% if missed_campaign_form.errors %}
+        <div data-testid="missed-campaign-errors" class="mt-1 text-[12px] text-red-700">
+          {% for field, errors in missed_campaign_form.errors.items %}
+            {% for error in errors %}<div>{{ field }}: {{ error }}</div>{% endfor %}
+          {% endfor %}
+        </div>
+        {% endif %}
         <div class="flex items-center gap-2">
           {{ missed_campaign_form.enabled }}
           <label for="{{ missed_campaign_form.enabled.id_for_label }}" class="text-[13px] font-medium text-[#1b212b]">Enable missed picks email</label>
@@ -175,6 +189,10 @@
           <div class="mt-1 text-[12px] text-[#667085]">
             Comma-separated recipients for safe testing. Production safety guard still limits sends to the global allowlist.
           </div>
+        </div>
+        <div>
+          <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Family link strategy</label>
+          {{ missed_campaign_form.family_link_strategy }}
         </div>
         <button type="submit" class="sa-btn sa-btn-primary">Save missed picks campaign</button>
       </form>
