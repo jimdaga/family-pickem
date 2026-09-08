@@ -42,7 +42,7 @@ PIPELINE = [
 
 
 class Command(BaseCommand):
-    help = "Run the full update pipeline (records, games, picks, standings, rankings)."
+    help = "Run the full update pipeline; see the module docstring for the order."
 
     def add_arguments(self, parser):
         parser.add_argument(

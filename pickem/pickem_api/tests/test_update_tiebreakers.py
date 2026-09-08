@@ -3,6 +3,7 @@ from io import StringIO
 from unittest import mock
 
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase
 from django.utils import timezone
 
@@ -59,7 +60,11 @@ class SetWeekTiebreakerTests(TestCase):
         b = self._game(18, 5, flagged=True)
         c = self._game(18, 5)
 
-        self.assertIsNone(set_week_tiebreaker(SEASON, 18, "nfl"))
+        # One SELECT and no writes. The flag assertions below cannot fail on
+        # their own -- a and c were created False -- so the query count is what
+        # actually pins "left exactly as it was".
+        with self.assertNumQueries(1):
+            self.assertIsNone(set_week_tiebreaker(SEASON, 18, "nfl"))
 
         for game in (a, b, c):
             game.refresh_from_db()
@@ -68,6 +73,48 @@ class SetWeekTiebreakerTests(TestCase):
         # The pre-existing flag survives: a week we cannot reason about is a
         # week we do not touch.
         self.assertTrue(b.tieBreakerGame)
+
+    def test_two_game_week_all_tied_is_skipped(self):
+        # The other side of the `> 1` boundary from the single-game case: two
+        # games, both at the same kickoff, is a fully-tied slate -> skip.
+        a = self._game(16, 5)
+        b = self._game(16, 5)
+
+        self.assertIsNone(set_week_tiebreaker(SEASON, 16, "nfl"))
+
+        for game in (a, b):
+            game.refresh_from_db()
+            self.assertFalse(game.tieBreakerGame)
+
+    def test_atomic_write_leaves_no_flagless_window(self):
+        # The clear and the set must land in one transaction: a reader in
+        # between would see no flagged game and pickem_homepage would store
+        # NULL tiebreaker values. Simulate a crash on the second write and
+        # assert the first was rolled back rather than committed alone.
+        stale = self._game(19, 0, flagged=True)
+        target = self._game(19, 30)
+
+        real_filter = GamesAndScores.objects.filter
+        calls = {"n": 0}
+
+        def exploding_filter(*args, **kwargs):
+            qs = real_filter(*args, **kwargs)
+            if kwargs.get("id") == target.id:
+                raise RuntimeError("boom on the set")
+            calls["n"] += 1
+            return qs
+
+        with mock.patch.object(
+            GamesAndScores.objects, "filter", side_effect=exploding_filter
+        ):
+            with self.assertRaises(RuntimeError):
+                set_week_tiebreaker(SEASON, 19, "nfl")
+
+        stale.refresh_from_db()
+        target.refresh_from_db()
+        # The clear must NOT have survived on its own.
+        self.assertTrue(stale.tieBreakerGame)
+        self.assertFalse(target.tieBreakerGame)
 
     def test_doubleheader_takes_lowest_game_id(self):
         # Two games genuinely share the last slot (a Monday-night doubleheader).
@@ -204,6 +251,98 @@ class CommandTests(TestCase):
         last.refresh_from_db()
         self.assertFalse(last.tieBreakerGame)
         self.assertIn("would flag", out.getvalue().lower())
+
+    def test_command_flags_every_competition_in_the_week(self):
+        # The per-competition loop in handle() was never exercised: every
+        # command test used nfl only, so a competitions_for_week regression
+        # that returned just the first competition would drop the tiebreaker
+        # for every non-NFL pool with a green suite.
+        nfl_last = self._week(11, [0, 30])[-1]
+        ncaa = self._week(11, [0, 29])
+        GamesAndScores.objects.filter(id__in=[g.id for g in ncaa]).update(
+            competition="ncaa"
+        )
+        out = StringIO()
+
+        call_command("update_tiebreakers", season=SEASON, week="11", stdout=out)
+
+        self.assertEqual(
+            set(
+                GamesAndScores.objects.filter(
+                    gameseason=SEASON, gameWeek="11", tieBreakerGame=True
+                ).values_list("id", flat=True)
+            ),
+            {nfl_last.id, ncaa[-1].id},
+        )
+        self.assertIn("nfl", out.getvalue())
+        self.assertIn("ncaa", out.getvalue())
+
+    def test_dry_run_reports_a_skipped_week_without_writing(self):
+        a = self._week(12, [5])[0]
+        b = self._week(12, [5])[0]
+        out = StringIO()
+
+        call_command(
+            "update_tiebreakers", season=SEASON, week="12", dry_run=True, stdout=out
+        )
+
+        self.assertIn("skipped, no single last game", out.getvalue())
+        for game in (a, b):
+            game.refresh_from_db()
+            self.assertFalse(game.tieBreakerGame)
+
+    def test_dry_run_names_the_doubleheader_winner_it_would_pick(self):
+        # A dry run that lied about the doubleheader choice would defeat the
+        # point of running it before a backfill.
+        self._week(13, [0])
+        pair = self._week(13, [30, 30])
+        lower = min(pair, key=lambda g: g.id)
+        out = StringIO()
+
+        call_command(
+            "update_tiebreakers", season=SEASON, week="13", dry_run=True, stdout=out
+        )
+
+        self.assertIn(f"would flag game {lower.id}", out.getvalue())
+        lower.refresh_from_db()
+        self.assertFalse(lower.tieBreakerGame)
+
+    def test_dry_run_with_all_weeks_still_writes_nothing(self):
+        last_6 = self._week(6, [0, 30])[-1]
+        last_7 = self._week(7, [0, 30])[-1]
+
+        call_command(
+            "update_tiebreakers", season=SEASON, all_weeks=True, dry_run=True,
+            stdout=StringIO(),
+        )
+
+        for game in (last_6, last_7):
+            game.refresh_from_db()
+            self.assertFalse(game.tieBreakerGame)
+
+    def test_week_and_all_weeks_together_are_rejected(self):
+        with self.assertRaises(CommandError):
+            call_command(
+                "update_tiebreakers", season=SEASON, week="6", all_weeks=True,
+                stdout=StringIO(),
+            )
+
+    def test_non_numeric_week_does_not_crash_the_step(self):
+        # weeks_for_season promises a junk row cannot take down a pipeline
+        # step. update_all swallows per-step exceptions, so a raise here would
+        # silently leave every week unflagged -- the exact failure this
+        # feature exists to remove.
+        last = self._week(14, [0, 30])[-1]
+        junk = self._week(14, [1])[0]
+        GamesAndScores.objects.filter(id=junk.id).update(gameWeek="")
+        out = StringIO()
+
+        call_command("update_tiebreakers", season=SEASON, all_weeks=True, stdout=out)
+
+        last.refresh_from_db()
+        self.assertTrue(last.tieBreakerGame)
+        # The blank week is rendered visibly, not silently collapsed to "(none)".
+        self.assertNotIn("week(s) (none)", out.getvalue())
 
 
 class PipelineWiringTests(TestCase):

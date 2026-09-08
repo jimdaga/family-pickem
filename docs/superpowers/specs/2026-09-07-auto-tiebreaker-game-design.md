@@ -21,8 +21,10 @@ times are published.
 For each `(gameseason, gameWeek, competition)` group:
 
 1. Order the group's games by `startTimestamp` descending.
-2. **If every game in the group shares one kickoff, skip the group entirely**
-   and log why. Existing flags are left as they are — a week we cannot reason
+2. **If the group holds two or more games and every one of them shares a
+   single kickoff, skip the group entirely** and log why. A lone game is
+   trivially "all tied" but is unambiguously that week's last game, so it is
+   flagged rather than skipped. Existing flags are left as they are — a week we cannot reason
    about is a week we do not touch.
 3. Otherwise the latest kickoff is the tiebreaker slot: `tieBreakerGame=True` on
    that game, `False` on every other game in the group. If a doubleheader puts
@@ -33,7 +35,9 @@ For each `(gameseason, gameWeek, competition)` group:
 
 Until the week-18 schedule firms up, ESPN returns every week-18 game at one
 shared placeholder kickoff. Verified against the live scoreboard for the 2026
-season: all 16 week-18 games return `2027-01-10T05:00Z`. There is therefore no
+season: all 16 week-18 games return `2027-01-10T05:00Z` (midnight ET in
+January, i.e. EST; an unfinalized week in EDT would read `04:00Z`, which is
+why the rule tests for a shared timestamp rather than a specific hour). There is therefore no
 identifiable last game, and the all-tied test detects that state directly.
 
 Two consequences of expressing it this way:
@@ -54,8 +58,8 @@ the week does have a real last slot, it just holds two games, and skipping it
 would leave that week with no tiebreaker at all.
 
 Measured against the three seasons in the local production snapshot: of 53
-weeks, 52 have a unique last game and one (2023 week 14, Giants@Packers and
-Dolphins@Titans both at 8:15pm ET) is a doubleheader. Under "all tied + lowest
+weeks, 52 have a unique last game and one (season 2324, week 14 — Packers at
+Giants and Titans at Dolphins, both at 8:15pm ET) is a doubleheader. Under "all tied + lowest
 id", the rule reproduces all 53 hand-set flags exactly, the doubleheader
 included.
 
@@ -81,10 +85,11 @@ to `missing_tiebreaker_actual`, resolving via the pool's secondary tiebreaker
 Core function, importable so tests do not go through `call_command`:
 
 ```python
-def set_week_tiebreaker(season, week, competition) -> GamesAndScores | None
+def set_week_tiebreaker(season, week, competition) -> int | None
 ```
 
-Returns the flagged game, or `None` when the group was skipped or empty.
+Returns the flagged game's **id**, or `None` when the group was skipped or
+empty.
 
 - Idempotent: a group already in the correct state performs zero writes.
 - Writes use queryset `.update()`, so a no-op run does not churn `gameUpdated`.

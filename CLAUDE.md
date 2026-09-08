@@ -233,6 +233,10 @@ python manage.py update_games
 # Update a specific week
 python manage.py update_games --week 5
 
+# Backfill every week's tiebreaker game for a season (dry run first)
+python manage.py update_tiebreakers --season 2627 --all-weeks --dry-run
+python manage.py update_tiebreakers --season 2627 --all-weeks
+
 # Update user picks
 python manage.py update_picks
 
