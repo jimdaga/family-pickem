@@ -58,6 +58,7 @@ from pickem_api.authz import (
     get_real_user_family_memberships,
     get_user_family_memberships,
     require_tenant_context,
+    role_allows,
 )
 from pickem_api.models import Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, Pool, PoolSettings
 from pickem_api.logo_processing import LogoValidationError, process_family_logo
@@ -1259,10 +1260,48 @@ def family_pool_home(request, family_slug, pool_slug):
             teamNameSlug=viewer_profile.favorite_team
         ).first()
 
+    # Commissioner getting-started card: setup links worth surfacing
+    # prominently only before this pool's season is under way. Gated on the
+    # family OWNER/ADMIN role — deliberately not UserProfile.is_commissioner,
+    # which is a separate site-wide flag.
+    #
+    # The window closes at the first KICKOFF of this pool's season and
+    # competition, not at `season_has_started` above — that one means "a game
+    # has been scored", which flips several hours later.
+    #
+    # Scope is `pool.competition`, deliberately NOT the `current_competition`
+    # resolved above: that one comes from today's GameWeeks row (falling back
+    # to 'nfl'), so it describes the site's current slate rather than this
+    # pool's. Where the two disagree, an unrelated kickoff could hide the card
+    # or the pool's own kickoff could leave it up. See
+    # test_pool_competition_drives_the_window_not_the_current_slate.
+    #
+    # No game row for this season+competition means nothing is scheduled yet,
+    # so the card stays up.
+    #
+    # The role test runs first so a plain member never pays for the query.
+    show_commissioner_setup = role_allows(
+        tenant_context.membership.role, FamilyMembership.Role.ADMIN
+    )
+    if show_commissioner_setup:
+        season_kickoff = (
+            GamesAndScores.objects.filter(
+                gameseason=gameseason,
+                competition=pool.competition,
+            )
+            .order_by('startTimestamp')
+            .values_list('startTimestamp', flat=True)
+            .first()
+        )
+        show_commissioner_setup = (
+            season_kickoff is None or timezone.now() < season_kickoff
+        )
+
     context = {
         'family': family,
         'pool': pool,
         'membership': tenant_context.membership,
+        'show_commissioner_setup': show_commissioner_setup,
         'gameseason': gameseason,
         'current_week': current_week,
         'current_competition': current_competition,
