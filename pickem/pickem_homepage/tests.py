@@ -9993,6 +9993,20 @@ class CommissionerSetupCardTests(TestCase):
 
         self.assertTrue(self._lobby().context["show_commissioner_setup"])
 
+    def test_pool_competition_drives_the_window_not_the_current_slate(self):
+        # The kickoff query must scope to pool.competition, not the
+        # current_competition resolved from today's GameWeeks row (which falls
+        # back to 'nfl'). This pool runs 'ncaa' and its season already kicked
+        # off, so the card must be gone -- under 'nfl' scoping the query would
+        # find no rows, read as "nothing scheduled yet", and wrongly show it.
+        self.pool.competition = "ncaa"
+        self.pool.save(update_fields=["competition"])
+        kicked_off = self._game(9004, timezone.now() - timedelta(hours=1))
+        GamesAndScores.objects.filter(id=kicked_off.id).update(competition="ncaa")
+        self.client.force_login(self.owner)
+
+        self.assertFalse(self._lobby().context["show_commissioner_setup"])
+
     def test_card_renders_for_owner_with_all_three_links(self):
         self._game(9001, timezone.now() + timedelta(days=3))
         self.client.force_login(self.owner)

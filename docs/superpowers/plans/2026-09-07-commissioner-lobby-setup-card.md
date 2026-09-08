@@ -18,7 +18,7 @@
 - Commissioner test is `membership.role in ('owner', 'admin')` — the same expression the existing OWNER ACTIONS block uses. Do not introduce a new permission helper.
 - Run tests with: `uv run python manage.py test <label> --settings=pickem.test_settings`
 - Every commit message ends with:
-  ```
+  ```text
   Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
   Claude-Session: https://claude.ai/code/session_01EKQvoUBZ6qDWj5YsRS8nY7
   ```
@@ -472,3 +472,33 @@ and the branch is ready.
 - The card duplicates the existing "Manage Invites" button in the OWNER ACTIONS
   row at the bottom of the lobby. That button is left alone: it stays useful
   after kickoff, when this card is gone.
+
+---
+
+## Amendments made during review
+
+The plan above is the pre-implementation record. Three of its steps were
+superseded by review findings before merge; the shipped code differs as follows.
+
+- **The role test now runs before the kickoff query** (Task 1, Step 3). As
+  planned, `season_kickoff` was computed unconditionally, so every plain member
+  paid for a query whose result was discarded. The final code resolves the role
+  first and queries only for an owner or admin.
+- **The gate uses `role_allows(..., FamilyMembership.Role.ADMIN)`**, not the
+  hand-written `role in ('owner', 'admin')` tuple the constraints section
+  specified. That keeps it in lockstep with the `ROLE_ORDER` hierarchy the three
+  linked admin pages already enforce.
+- **The kickoff query scopes to `pool.competition`**, not the
+  `current_competition` the plan used. `current_competition` comes from today's
+  `GameWeeks` row (falling back to `'nfl'`), so it describes the site's current
+  slate rather than this pool's; where the two disagree the card would show or
+  hide on the wrong signal.
+- **Coverage added** for the `ADMIN` role, the superuser god-mode path, and the
+  `pool.competition` scoping. The link assertions are scoped to the card element
+  because the invites URL also renders in the OWNER ACTIONS strip lower down the
+  lobby, where a page-wide assertion would pass with the card's own link deleted.
+- **Manual verification** (Task 3, Step 2) used an authenticated Django test
+  client against the real local database rather than the bare
+  `curl http://localhost:8000/` the plan suggested, which sends no session
+  cookie and requests the site root — it could not have verified a
+  commissioner-only card.

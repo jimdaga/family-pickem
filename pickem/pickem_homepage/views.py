@@ -1267,9 +1267,16 @@ def family_pool_home(request, family_slug, pool_slug):
     #
     # The window closes at the first KICKOFF of this pool's season and
     # competition, not at `season_has_started` above — that one means "a game
-    # has been scored", which flips several hours later. The competition scope
-    # is load-bearing (see test_other_competition_kickoff_does_not_close_the_window):
-    # no game row for this season+competition means nothing is scheduled yet,
+    # has been scored", which flips several hours later.
+    #
+    # Scope is `pool.competition`, deliberately NOT the `current_competition`
+    # resolved above: that one comes from today's GameWeeks row (falling back
+    # to 'nfl'), so it describes the site's current slate rather than this
+    # pool's. Where the two disagree, an unrelated kickoff could hide the card
+    # or the pool's own kickoff could leave it up. See
+    # test_pool_competition_drives_the_window_not_the_current_slate.
+    #
+    # No game row for this season+competition means nothing is scheduled yet,
     # so the card stays up.
     #
     # The role test runs first so a plain member never pays for the query.
@@ -1280,7 +1287,7 @@ def family_pool_home(request, family_slug, pool_slug):
         season_kickoff = (
             GamesAndScores.objects.filter(
                 gameseason=gameseason,
-                competition=current_competition,
+                competition=pool.competition,
             )
             .order_by('startTimestamp')
             .values_list('startTimestamp', flat=True)
