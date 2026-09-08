@@ -151,8 +151,13 @@ def weeks_for_season(season):
     Non-numeric weeks sort last rather than raising -- a junk row must not take
     down a pipeline step.
     """
+    # .order_by() clears GamesAndScores.Meta.ordering before .distinct().
+    # Without it Django adds the ordering column (startTimestamp) to the
+    # SELECT, so DISTINCT applies to (gameWeek, startTimestamp) pairs and
+    # every week comes back once per kickoff.
     weeks = set(
         GamesAndScores.objects.filter(gameseason=int(season))
+        .order_by()
         .values_list("gameWeek", flat=True)
         .distinct()
     )
@@ -168,8 +173,12 @@ def weeks_for_season(season):
 
 def competitions_for_week(season, week):
     """Distinct competitions present in one (season, week)."""
+    # .order_by() for the same reason as weeks_for_season: without it
+    # Meta.ordering leaks startTimestamp into the DISTINCT and this returns one
+    # row per game rather than one per competition.
     return sorted(
         GamesAndScores.objects.filter(gameseason=int(season), gameWeek=str(week))
+        .order_by()
         .values_list("competition", flat=True)
         .distinct()
     )
