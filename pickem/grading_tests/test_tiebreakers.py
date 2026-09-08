@@ -21,7 +21,10 @@ class TiebreakerChainTest(GradingTestCase):
         self.league = create_league("alice", "bob")
         self.pool = self.league.pool
         self.opener = create_game(1)
-        self.mnf = create_game(1, mnf=True)
+        # tiebreaker_game=False on purpose: mnf=True only places the later
+        # kickoff. The flag itself must come from update_tiebreakers running in
+        # the pipeline, so these scenarios exercise the real producer.
+        self.mnf = create_game(1, mnf=True, tiebreaker_game=False)
 
     def _run_week(self, *, alice, bob, yards=None):
         """Both users pick both winners; tiebreaker predictions differ."""
@@ -117,3 +120,71 @@ class TiebreakerChainTest(GradingTestCase):
         self.run_pipeline(yards=700)
         self.assertWeek(self.pool, self.league["alice"], 1, bonus=2, winner=True)
         self.assertWeek(self.pool, self.league["bob"], 1, winner=False)
+
+
+class FlagMovedAfterPicksTest(GradingTestCase):
+    """Characterization: what happens when the tiebreaker game moves after
+    predictions are already in.
+
+    There is deliberately NO kickoff freeze -- update_tiebreakers re-asserts
+    the last game of the week on every tick, so a late ESPN schedule change can
+    move the flag after picks lock. This test does not argue for or against
+    that; it pins the consequence so a future change cannot alter it silently.
+    """
+
+    def setUp(self):
+        self.league = create_league("alice", "bob")
+        self.pool = self.league.pool
+        self.opener = create_game(1)
+        self.original_mnf = create_game(1, mnf=True, tiebreaker_game=False)
+
+    def test_predictions_stay_on_the_old_game_and_stop_counting(self):
+        from datetime import timedelta
+
+        from pickem_api.models import GamePicks, GamesAndScores
+        from pickem_api.management.commands.update_tiebreakers import (
+            set_week_tiebreaker,
+        )
+        from .factories import SEASON
+
+        # Week as originally scheduled: original_mnf is last, so it is flagged
+        # and it is where both users enter their tiebreaker predictions.
+        self.assertEqual(
+            set_week_tiebreaker(SEASON, 1, "nfl"), self.original_mnf.id
+        )
+        for user, score in ((self.league["alice"], 44), (self.league["bob"], 48)):
+            make_pick(self.pool, user, self.opener, "home")
+            make_pick(
+                self.pool, user, self.original_mnf, "home", score=score, yards=700
+            )
+
+        # A later game is flexed in after the fact.
+        flexed = create_game(
+            1,
+            kickoff=self.original_mnf.startTimestamp + timedelta(hours=3),
+            tiebreaker_game=False,
+        )
+        make_pick(self.pool, self.league["alice"], flexed, "home")
+        make_pick(self.pool, self.league["bob"], flexed, "home")
+
+        self.assertEqual(set_week_tiebreaker(SEASON, 1, "nfl"), flexed.id)
+
+        # The flag moved. The predictions did not.
+        self.assertFalse(
+            GamesAndScores.objects.get(id=self.original_mnf.id).tieBreakerGame
+        )
+        self.assertTrue(GamesAndScores.objects.get(id=flexed.id).tieBreakerGame)
+
+        kept = GamePicks.objects.filter(
+            pool=self.pool, pick_game_id=self.original_mnf.id
+        ).values_list("tieBreakerScore", flat=True)
+        self.assertEqual(sorted(kept), [44, 48])
+
+        # ...but they now sit on a game nobody grades against: every
+        # prediction for the newly flagged game is NULL, so the primary
+        # tiebreaker has nothing to compare and the week falls through to the
+        # pool's secondary. This is the accepted cost of having no freeze.
+        on_flagged = GamePicks.objects.filter(
+            pool=self.pool, pick_game_id=flexed.id
+        ).values_list("tieBreakerScore", flat=True)
+        self.assertEqual(list(on_flagged), [None, None])

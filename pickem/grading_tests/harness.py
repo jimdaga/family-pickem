@@ -20,7 +20,19 @@ from .factories import SEASON
 #: fetch steps (update_records, update_games) are replaced by synthetic data;
 #: update_season_winners/update_stats are downstream of standings and out of
 #: scope for this suite.
+#:
+#: update_tiebreakers is NOT an ESPN step -- it is pure ORM over the rows the
+#: factories create -- so it runs here in its production position, and the
+#: scenarios below let it produce the flag instead of planting one.
+#:
+#: What that does and does not buy: a command that flags the WRONG game breaks
+#: these scenarios, because WeekContext prefers a flagged game over its
+#: fallback. A command that flags NOTHING does not, because the fallback then
+#: picks the week's last game anyway -- which is the same game. Grading is
+#: therefore only half a check on this command; the flag is load-bearing for
+#: pick COLLECTION (pickem_homepage/views.py), not for grading.
 PIPELINE = [
+    "update_tiebreakers",
     "update_missed_picks",
     "update_picks",
     "update_standings",

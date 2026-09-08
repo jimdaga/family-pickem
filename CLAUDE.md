@@ -113,14 +113,18 @@ Data updates run as ORM-direct Django management commands (`pickem/pickem_api/ma
 
 1. `update_records` - team win/loss records (independent)
 2. `update_games` - fetch scores + winners from ESPN
-3. `update_missed_picks` - apply missed-pick policies before grading
-4. `update_picks` - score picks against game winners
-5. `update_standings` - recompute per-pool weekly/total points
-6. `update_weekly_winners` - award winner bonuses once the week completes
-7. `update_rankings` - rank pool members by total points (incl. bonus)
-8. `update_season_winners` - flag the season champion once the season ends
-9. `generate_weekly_summaries` - AI recap drafts
-10. `update_stats` - recompute per-user `userStats`
+3. `update_tiebreakers` - flag the last game in each
+   `(season, week, competition)` group as that group's tiebreaker (skips a
+   group whose games all share one placeholder kickoff, e.g. week 18 before
+   the schedule is published)
+4. `update_missed_picks` - apply missed-pick policies before grading
+5. `update_picks` - score picks against game winners
+6. `update_standings` - recompute per-pool weekly/total points
+7. `update_weekly_winners` - award winner bonuses once the week completes
+8. `update_rankings` - rank pool members by total points (incl. bonus)
+9. `update_season_winners` - flag the season champion once the season ends
+10. `generate_weekly_summaries` - AI recap drafts
+11. `update_stats` - recompute per-user `userStats`
 
 In production this pipeline runs on a tick via the in-process APScheduler
 (`pickem_api/scheduler.py`, enabled by `RUN_SCHEDULER=true` on a single web
@@ -230,12 +234,43 @@ python manage.py update_games
 # Update a specific week
 python manage.py update_games --week 5
 
+# Backfill every week's tiebreaker game for a season (dry run first)
+python manage.py update_tiebreakers --season 2627 --all-weeks --dry-run
+python manage.py update_tiebreakers --season 2627 --all-weeks
+
 # Update user picks
 python manage.py update_picks
 
 # Update standings
 python manage.py update_standings
 ```
+
+
+### Once-per-season schedule backfill
+
+`update_games` fetches **only the current week** (`current_week_for_today`), so
+a new season starts with week 1 alone and fills in one week at a time as the
+season reaches it. Once the NFL publishes the full schedule, populate every
+week in one pass — this is a deliberate annual manual step, not automated:
+
+```bash
+python manage.py shell -c "
+from django.core.management import call_command
+from pickem.utils import get_season
+season = get_season()
+for wk in range(1, 19):
+    call_command('update_games', season=season, week=str(wk))
+"
+```
+
+Expect ~272 games across 18 weeks (13–16 per week; the spread is bye weeks).
+Then run the `update_tiebreakers --all-weeks` backfill above so every week gets
+its tiebreaker game.
+
+Week 18 is the known exception: ESPN returns all 16 of its games at one
+placeholder kickoff (midnight ET) until the schedule firms up late in the
+season, so `update_tiebreakers` deliberately skips it and picks it up on a
+later run once real times land.
 
 ### Live Weekend Simulation (dev-only)
 
