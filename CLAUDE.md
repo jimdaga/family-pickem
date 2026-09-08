@@ -244,6 +244,33 @@ python manage.py update_picks
 python manage.py update_standings
 ```
 
+
+### Once-per-season schedule backfill
+
+`update_games` fetches **only the current week** (`current_week_for_today`), so
+a new season starts with week 1 alone and fills in one week at a time as the
+season reaches it. Once the NFL publishes the full schedule, populate every
+week in one pass — this is a deliberate annual manual step, not automated:
+
+```bash
+python manage.py shell -c "
+from django.core.management import call_command
+from pickem.utils import get_season
+season = get_season()
+for wk in range(1, 19):
+    call_command('update_games', season=season, week=str(wk))
+"
+```
+
+Expect ~272 games across 18 weeks (13–16 per week; the spread is bye weeks).
+Then run the `update_tiebreakers --all-weeks` backfill above so every week gets
+its tiebreaker game.
+
+Week 18 is the known exception: ESPN returns all 16 of its games at one
+placeholder kickoff (midnight ET) until the schedule firms up late in the
+season, so `update_tiebreakers` deliberately skips it and picks it up on a
+later run once real times land.
+
 ### Live Weekend Simulation (dev-only)
 
 `scripts/live-sim.sh <your-username> [duration]` stands up throwaway Redis +
