@@ -280,29 +280,50 @@ class EmailSettingsViewTests(TestCase):
         )
         self.assertEqual(audit.summary, 'Updated missed picks reminder email campaign')
 
+    def _form_posting(self, html, action_value):
+        """The single <form> element that posts ``action_value``.
+
+        Scoping matters: this page has four forms carrying missed_campaign
+        widgets. A page-wide search would pass with the field rendered inside
+        the preview form, where the save POST would still never send it.
+        """
+        for fragment in html.split('<form')[1:]:
+            body = fragment.split('</form>')[0]
+            if f'value="{action_value}"' in body:
+                return body
+        self.fail(f'no <form> on the page posts action={action_value}')
+
     def test_campaign_forms_render_every_field_they_require(self):
-        """A required field the template never renders is unsubmittable.
+        """A required field the save form does not render is unsubmittable.
 
         The POST then fails validation, the view falls through without saving,
-        and the campaign cards render no errors -- so the setting silently
-        reverts with no feedback at all. Assert render/require parity for both
-        campaigns rather than trusting a hand-written payload.
+        and a silent revert is indistinguishable from a save that did not
+        stick. Assert render/require parity inside each save form.
         """
-        page = self.client.get(reverse('superadmin:email_settings'))
-        html = page.content.decode()
+        html = self.client.get(reverse('superadmin:email_settings')).content.decode()
 
-        for prefix in ('campaign', 'missed_campaign'):
+        for prefix, action in (
+            ('campaign', 'save_weekly_campaign'),
+            ('missed_campaign', 'save_missed_picks_campaign'),
+        ):
+            form_html = self._form_posting(html, action)
             form = EmailNotificationCampaignForm(prefix=prefix)
             for name, field in form.fields.items():
                 if not field.required:
                     continue
                 with self.subTest(prefix=prefix, field=name):
+                    marker = f'name="{prefix}-{name}"'
                     self.assertIn(
-                        f'name="{prefix}-{name}"',
-                        html,
-                        f'{prefix}.{name} is required but is not rendered, so the '
-                        'browser cannot submit it and every save silently fails',
+                        marker,
+                        form_html,
+                        f'{prefix}.{name} is required but the {action} form does '
+                        'not render it, so the browser cannot submit it and '
+                        'every save silently fails',
                     )
+                    # Rendered but disabled is the same failure: the browser
+                    # omits a disabled control from the POST.
+                    tag = form_html.split(marker, 1)[1].split('>', 1)[0]
+                    self.assertNotIn('disabled', tag, f'{prefix}.{name} is disabled')
 
     def test_enabling_missed_picks_persists_with_the_payload_the_page_sends(self):
         """Regression: build the payload from the RENDERED page, not by hand.
@@ -318,7 +339,8 @@ class EmailSettingsViewTests(TestCase):
         self.assertFalse(campaign.enabled)
 
         html = self.client.get(reverse('superadmin:email_settings')).content.decode()
-        rendered = set(re.findall(r'name="(missed_campaign-[\w]+)"', html))
+        form_html = self._form_posting(html, 'save_missed_picks_campaign')
+        rendered = set(re.findall(r'name="(missed_campaign-[\w]+)"', form_html))
         self.assertIn('missed_campaign-enabled', rendered)
 
         form = EmailNotificationCampaignForm(instance=campaign, prefix='missed_campaign')
@@ -353,6 +375,9 @@ class EmailSettingsViewTests(TestCase):
                 'missed_campaign-timezone_name': 'America/New_York',
                 'missed_campaign-rollout_mode': EmailNotificationCampaign.RolloutMode.ALLOWLIST,
                 'missed_campaign-allowlist_emails': 'jdagostino2@gmail.com',
+                # Present, so the out-of-range hour is the ONLY thing wrong.
+                'missed_campaign-family_link_strategy':
+                    EmailNotificationCampaign.FamilyLinkStrategy.EARLIEST_MEMBERSHIP,
             },
             follow=True,
         )
@@ -360,6 +385,7 @@ class EmailSettingsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(EmailNotificationCampaign.load_missed_picks_reminder().enabled)
         self.assertContains(response, 'data-testid="missed-campaign-errors"')
+        self.assertContains(response, 'hour')
 
     def test_running_missed_picks_campaign_now_outside_active_week_errors(self):
         response = self.client.post(
