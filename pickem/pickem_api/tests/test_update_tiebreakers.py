@@ -385,6 +385,37 @@ class PipelineWiringTests(TestCase):
             PIPELINE.index("update_missed_picks"),
         )
 
+    def test_scheduler_pipeline_matches_the_command_pipeline(self):
+        """The two pipeline lists must not drift.
+
+        Production does NOT run `update_all` on the tick -- the scheduler has
+        its own PIPELINE in pickem_api/scheduler.py and runs each step
+        individually. update_tiebreakers was added to update_all only, so it
+        never ran in production despite a green suite: this test asserted the
+        wrong list. Pin both, in the same order.
+        """
+        from pickem_api.management.commands.update_all import PIPELINE as COMMAND
+        from pickem_api.scheduler import PIPELINE as SCHEDULED
+
+        scheduled_ids = [job_id for (job_id, _label, _minutes) in SCHEDULED]
+        self.assertEqual(
+            scheduled_ids,
+            COMMAND,
+            "the scheduler pipeline and update_all pipeline have drifted; a step "
+            "missing from the scheduler list never runs in production",
+        )
+
+    def test_tiebreakers_is_an_orchestrated_job(self):
+        """It must also be reachable through the orchestrator's job registry,
+        which is what seeds its ScheduledJobConfig row (enabled by default)."""
+        from pickem_api.scheduler import JOB_DEFAULT_MINUTES, JOB_ORDER
+
+        self.assertIn("update_tiebreakers", JOB_DEFAULT_MINUTES)
+        self.assertEqual(
+            JOB_ORDER.index("update_tiebreakers"),
+            JOB_ORDER.index("update_games") + 1,
+        )
+
     def test_is_queueable_from_superadmin(self):
         from pickem_superadmin.jobs import QUEUEABLE_COMMANDS
 
