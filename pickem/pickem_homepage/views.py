@@ -425,7 +425,7 @@ def build_family_admin_sections(family, pool, user=None):
         {
             'label': 'Payments',
             'description': 'Track who has paid this pool\'s entry fee.',
-            'icon': 'fas fa-hand-holding-dollar',
+            'icon': 'fas fa-dollar-sign',
             'url': reverse('family_pool_admin_payments', kwargs=route_kwargs),
             'status': 'Manage payments',
             'requires_payment_tracking': True,
@@ -1300,10 +1300,9 @@ def family_pool_home(request, family_slug, pool_slug):
     # so the card stays up.
     #
     # The role test runs first so a plain member never pays for the query.
-    show_commissioner_setup = role_allows(
-        tenant_context.membership.role, FamilyMembership.Role.ADMIN
-    )
-    if show_commissioner_setup:
+    # One phase string rather than two booleans, so exactly one card can render.
+    commissioner_card = ''
+    if role_allows(tenant_context.membership.role, FamilyMembership.Role.ADMIN):
         season_kickoff = (
             GamesAndScores.objects.filter(
                 gameseason=gameseason,
@@ -1313,15 +1312,37 @@ def family_pool_home(request, family_slug, pool_slug):
             .values_list('startTimestamp', flat=True)
             .first()
         )
-        show_commissioner_setup = (
-            season_kickoff is None or timezone.now() < season_kickoff
+        commissioner_card = (
+            'preseason'
+            if season_kickoff is None or timezone.now() < season_kickoff
+            else 'inseason'
         )
+
+    # Quiet nudge for an unpaid member, and only where the pool opted in.
+    # Absence of a paid row means unpaid, so this is an existence check rather
+    # than a join -- and it is scoped to this pool AND season, so paying in one
+    # pool never silences another.
+    pool_settings_row = PoolSettings.objects.filter(pool=pool).first()
+    show_unpaid_notice = bool(
+        pool_settings_row
+        and pool_settings_row.payment_tracking_enabled
+        and not PoolMemberPayment.objects.filter(
+            pool=pool, user=request.user, gameseason=gameseason, paid=True
+        ).exists()
+    )
+    unpaid_amount = (
+        pool_settings_row.entry_fee_amount
+        if pool_settings_row and pool_settings_row.entry_fee_amount
+        else 0
+    )
 
     context = {
         'family': family,
         'pool': pool,
         'membership': tenant_context.membership,
-        'show_commissioner_setup': show_commissioner_setup,
+        'commissioner_card': commissioner_card,
+        'show_unpaid_notice': show_unpaid_notice,
+        'unpaid_amount': unpaid_amount,
         'gameseason': gameseason,
         'current_week': current_week,
         'current_competition': current_competition,

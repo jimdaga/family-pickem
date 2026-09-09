@@ -152,8 +152,19 @@
         </a>
     </div>
 
+    <!-- ══════════════════════════ UNPAID ENTRY FEE NOTICE ════════════════════════ -->
+    {% if show_unpaid_notice %}
+    <div class="lobby-section mb-4 flex items-start gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3" data-testid="unpaid-notice">
+        <i class="fas fa-info-circle mt-0.5 text-primary" aria-hidden="true"></i>
+        <p class="text-sm text-text-dark dark:text-white">
+            Entry fee outstanding{% if unpaid_amount %} (${{ unpaid_amount }}){% endif %} &mdash; see your commissioner.
+            <span class="block text-xs text-text-secondary-light dark:text-text-secondary">Already paid? They just need to check you off.</span>
+        </p>
+    </div>
+    {% endif %}
+
     <!-- ═══════════════════════ COMMISSIONER GETTING STARTED ══════════════════════ -->
-    {% if show_commissioner_setup %}
+    {% if commissioner_card == 'preseason' %}
     <div class="commissioner-message-card lobby-section mb-6" data-testid="commissioner-setup">
         <div class="commissioner-message-card__inner">
             <div class="flex items-center gap-2">
@@ -192,6 +203,50 @@
                     <span>
                         <span class="block text-sm font-bold text-text-dark dark:text-white">Post a lobby note</span>
                         <span class="block text-xs text-text-secondary-light dark:text-text-secondary">Welcome everyone to the season</span>
+                    </span>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% elif commissioner_card == 'inseason' %}
+    <div class="commissioner-message-card lobby-section mb-6" data-testid="commissioner-inseason">
+        <div class="commissioner-message-card__inner">
+            <div class="flex items-center gap-2">
+                <span class="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-primary" aria-hidden="true">
+                    <i class="fas fa-clipboard-list text-xs"></i>
+                </span>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h2 class="text-lg font-bold text-text-dark dark:text-white">Running your pool</h2>
+                        <span class="commissioner-message-badge">Commissioner</span>
+                    </div>
+                    <p class="text-xs text-text-secondary-light dark:text-text-secondary">Only pool admins can see this.</p>
+                </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <a href="{% url 'family_pool_admin_publications' family.slug pool.slug %}"
+                   class="group flex items-start gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3 hover:border-primary dark:hover:border-primary transition-colors">
+                    <i class="fas fa-bullhorn mt-0.5 text-primary" aria-hidden="true"></i>
+                    <span>
+                        <span class="block text-sm font-bold text-text-dark dark:text-white">Post a lobby note</span>
+                        <span class="block text-xs text-text-secondary-light dark:text-text-secondary">Reminders, results, trash talk</span>
+                    </span>
+                </a>
+                <a href="{% url 'family_pool_admin_settings' family.slug pool.slug %}"
+                   class="group flex items-start gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3 hover:border-primary dark:hover:border-primary transition-colors">
+                    <i class="fas fa-sliders-h mt-0.5 text-primary" aria-hidden="true"></i>
+                    <span>
+                        <span class="block text-sm font-bold text-text-dark dark:text-white">Pool settings</span>
+                        <span class="block text-xs text-text-secondary-light dark:text-text-secondary">Scoring, locking, payments</span>
+                    </span>
+                </a>
+                <a href="{% url 'family_pool_admin_members' family.slug pool.slug %}"
+                   class="group flex items-start gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3 hover:border-primary dark:hover:border-primary transition-colors">
+                    <i class="fas fa-user-shield mt-0.5 text-primary" aria-hidden="true"></i>
+                    <span>
+                        <span class="block text-sm font-bold text-text-dark dark:text-white">Members</span>
+                        <span class="block text-xs text-text-secondary-light dark:text-text-secondary">Roles and active status</span>
                     </span>
                 </a>
             </div>

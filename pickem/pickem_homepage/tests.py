@@ -9941,7 +9941,7 @@ class CommissionerSetupCardTests(TestCase):
         self._game(9001, timezone.now() + timedelta(days=3))
         self.client.force_login(self.owner)
 
-        self.assertTrue(self._lobby().context["show_commissioner_setup"])
+        self.assertEqual(self._lobby().context["commissioner_card"], "preseason")
 
     def test_admin_sees_flag_before_first_kickoff(self):
         # The gate admits ADMIN as well as OWNER, and all three cards link to
@@ -9950,7 +9950,7 @@ class CommissionerSetupCardTests(TestCase):
         self._game(9001, timezone.now() + timedelta(days=3))
         self.client.force_login(self.admin_user)
 
-        self.assertTrue(self._lobby().context["show_commissioner_setup"])
+        self.assertEqual(self._lobby().context["commissioner_card"], "preseason")
 
     def test_superuser_without_membership_sees_flag(self):
         # God mode hands superusers a synthetic OWNER membership for any
@@ -9963,28 +9963,28 @@ class CommissionerSetupCardTests(TestCase):
         self._game(9001, timezone.now() + timedelta(days=3))
         self.client.force_login(superuser)
 
-        self.assertTrue(self._lobby().context["show_commissioner_setup"])
+        self.assertEqual(self._lobby().context["commissioner_card"], "preseason")
         self.assertFalse(FamilyMembership.objects.filter(user=superuser).exists())
 
     def test_member_never_sees_flag(self):
         self._game(9001, timezone.now() + timedelta(days=3))
         self.client.force_login(self.member)
 
-        self.assertFalse(self._lobby().context["show_commissioner_setup"])
+        self.assertEqual(self._lobby().context["commissioner_card"], "")
 
-    def test_owner_loses_flag_once_first_game_has_kicked_off(self):
+    def test_owner_switches_to_the_inseason_card_after_first_kickoff(self):
         # Week 1 already started; a later week is still in the future. The
         # earliest kickoff of the SEASON is what counts, not this week's.
         self._game(9001, timezone.now() - timedelta(hours=1))
         self._game(9002, timezone.now() + timedelta(days=6), week="2")
         self.client.force_login(self.owner)
 
-        self.assertFalse(self._lobby().context["show_commissioner_setup"])
+        self.assertEqual(self._lobby().context["commissioner_card"], "inseason")
 
     def test_owner_sees_flag_when_season_has_no_games_yet(self):
         self.client.force_login(self.owner)
 
-        self.assertTrue(self._lobby().context["show_commissioner_setup"])
+        self.assertEqual(self._lobby().context["commissioner_card"], "preseason")
 
     def test_other_competition_kickoff_does_not_close_the_window(self):
         past = self._game(9003, timezone.now() - timedelta(hours=1))
@@ -9992,7 +9992,7 @@ class CommissionerSetupCardTests(TestCase):
         self._game(9001, timezone.now() + timedelta(days=3))
         self.client.force_login(self.owner)
 
-        self.assertTrue(self._lobby().context["show_commissioner_setup"])
+        self.assertEqual(self._lobby().context["commissioner_card"], "preseason")
 
     def test_pool_competition_drives_the_window_not_the_current_slate(self):
         # The kickoff query must scope to pool.competition, not the
@@ -10006,7 +10006,48 @@ class CommissionerSetupCardTests(TestCase):
         GamesAndScores.objects.filter(id=kicked_off.id).update(competition="ncaa")
         self.client.force_login(self.owner)
 
-        self.assertFalse(self._lobby().context["show_commissioner_setup"])
+        self.assertEqual(self._lobby().context["commissioner_card"], "inseason")
+
+    def test_inseason_card_renders_its_three_links_and_no_invite(self):
+        # After kickoff the invite link is deliberately gone: the in-season
+        # card is about running the pool, not filling it.
+        self._game(9001, timezone.now() - timedelta(hours=1))
+        self.client.force_login(self.owner)
+
+        page = self._lobby()
+        self.assertContains(page, 'data-testid="commissioner-inseason"')
+        self.assertNotContains(page, 'data-testid="commissioner-setup"')
+
+        card = page.content.decode().split('data-testid="commissioner-inseason"', 1)[1].split(
+            "COMMISSIONER NOTES + AI RECAPS", 1
+        )[0]
+        for route in (
+            "family_pool_admin_publications",
+            "family_pool_admin_settings",
+            "family_pool_admin_members",
+        ):
+            self.assertIn(
+                reverse(route, kwargs={
+                    "family_slug": self.family.slug, "pool_slug": self.pool.slug,
+                }),
+                card,
+            )
+        self.assertNotIn(
+            reverse("family_pool_admin_invites", kwargs={
+                "family_slug": self.family.slug, "pool_slug": self.pool.slug,
+            }),
+            card,
+        )
+
+    def test_member_sees_neither_card_after_kickoff(self):
+        self._game(9001, timezone.now() - timedelta(hours=1))
+        self.client.force_login(self.member)
+
+        page = self._lobby()
+        self.assertEqual(page.context["commissioner_card"], "")
+        self.assertNotContains(page, 'data-testid="commissioner-inseason"')
+        self.assertNotContains(page, 'data-testid="commissioner-setup"')
+
 
     def test_card_renders_for_owner_with_all_three_links(self):
         self._game(9001, timezone.now() + timedelta(days=3))
@@ -10195,4 +10236,74 @@ class PaymentTrackerTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertFalse(PoolMemberPayment.objects.filter(user=outsider).exists())
+
+    # --- lobby notice -------------------------------------------------------
+
+    def _lobby(self):
+        return self.client.get(reverse("family_pool_home", kwargs={
+            "family_slug": self.family.slug, "pool_slug": self.pool.slug,
+        }))
+
+    def _mark_paid(self, user, *, pool=None, gameseason=2526):
+        return PoolMemberPayment.objects.create(
+            pool=pool or self.pool, user=user, gameseason=gameseason, paid=True,
+        )
+
+    def test_no_lobby_notice_while_tracking_is_off(self):
+        self.client.force_login(self.member)
+
+        page = self._lobby()
+        self.assertFalse(page.context["show_unpaid_notice"])
+        self.assertNotContains(page, 'data-testid="unpaid-notice"')
+
+    def test_unpaid_member_sees_the_notice_once_enabled(self):
+        self._enable()
+        self.client.force_login(self.member)
+
+        page = self._lobby()
+        self.assertTrue(page.context["show_unpaid_notice"])
+        self.assertContains(page, 'data-testid="unpaid-notice"')
+        self.assertContains(page, "Entry fee outstanding")
+        self.assertContains(page, "$25")
+
+    def test_notice_disappears_once_marked_paid(self):
+        self._enable()
+        self._mark_paid(self.member)
+        self.client.force_login(self.member)
+
+        self.assertNotContains(self._lobby(), 'data-testid="unpaid-notice"')
+
+    def test_a_row_marked_unpaid_still_shows_the_notice(self):
+        self._enable()
+        PoolMemberPayment.objects.create(
+            pool=self.pool, user=self.member, gameseason=2526, paid=False,
+        )
+        self.client.force_login(self.member)
+
+        self.assertContains(self._lobby(), 'data-testid="unpaid-notice"')
+
+    def test_paying_another_season_does_not_silence_this_one(self):
+        self._enable()
+        self._mark_paid(self.member, gameseason=2425)
+        self.client.force_login(self.member)
+
+        self.assertContains(self._lobby(), 'data-testid="unpaid-notice"')
+
+    def test_paying_another_pool_does_not_silence_this_one(self):
+        self._enable()
+        other_pool = Pool.objects.create(
+            family=self.family, name="Second", slug="pay-second", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE,
+        )
+        PoolSettings.objects.create(pool=other_pool)
+        self._mark_paid(self.member, pool=other_pool)
+        self.client.force_login(self.member)
+
+        self.assertContains(self._lobby(), 'data-testid="unpaid-notice"')
+
+    def test_an_unpaid_commissioner_sees_the_notice_too(self):
+        self._enable()
+        self.client.force_login(self.owner)
+
+        self.assertContains(self._lobby(), 'data-testid="unpaid-notice"')
 
