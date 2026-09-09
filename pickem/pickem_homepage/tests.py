@@ -40,6 +40,7 @@ from pickem_api.models import (
     GamesAndScores,
     GameWeeks,
     Pool,
+    PoolMemberPayment,
     PoolSettings,
     Teams,
     userSeasonPoints,
@@ -10049,3 +10050,149 @@ class CommissionerSetupCardTests(TestCase):
         self.client.force_login(self.owner)
 
         self.assertNotContains(self._lobby(), 'data-testid="commissioner-setup"')
+
+
+class PaymentTrackerTests(TestCase):
+    """Opt-in entry-fee tracking: admin page, audit, and the lobby notice."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.get_or_create(
+            season=2526, defaults={"display_name": "2025-2026"}
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user("pay-owner", email="po@example.com", password="pass")
+        self.admin_user = User.objects.create_user("pay-admin", email="pa@example.com", password="pass")
+        self.member = User.objects.create_user("pay-member", email="pm@example.com", password="pass")
+        self.family = Family.objects.create(name="Pay Family", slug="pay-family")
+        self.pool = Pool.objects.create(
+            family=self.family, name="Main", slug="pay-main", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        self.settings = PoolSettings.objects.create(
+            pool=self.pool, entry_fee_enabled=True, entry_fee_amount=25,
+        )
+        for user, role in (
+            (self.owner, FamilyMembership.Role.OWNER),
+            (self.admin_user, FamilyMembership.Role.ADMIN),
+            (self.member, FamilyMembership.Role.MEMBER),
+        ):
+            FamilyMembership.objects.create(
+                family=self.family, user=user, role=role,
+                status=FamilyMembership.Status.ACTIVE,
+            )
+
+    def _url(self, name):
+        return reverse(name, kwargs={
+            "family_slug": self.family.slug, "pool_slug": self.pool.slug,
+        })
+
+    def _enable(self):
+        self.settings.payment_tracking_enabled = True
+        self.settings.save(update_fields=["payment_tracking_enabled"])
+
+    # --- the toggle ---------------------------------------------------------
+
+    def test_tracking_is_off_by_default(self):
+        self.assertFalse(PoolSettings.objects.get(pool=self.pool).payment_tracking_enabled)
+
+    def test_page_shows_an_off_state_instead_of_404_when_disabled(self):
+        self.client.force_login(self.owner)
+        page = self.client.get(self._url("family_pool_admin_payments"))
+
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'data-testid="payments-disabled"')
+        self.assertNotContains(page, 'data-testid="payment-row"')
+
+    def test_disabled_pool_rejects_a_stale_post(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(self._url("family_pool_admin_payments"), {
+            "user_id": str(self.member.id), "paid": "on",
+        })
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(PoolMemberPayment.objects.exists())
+
+    def test_hub_card_appears_only_once_enabled(self):
+        self.client.force_login(self.owner)
+        hub = self._url("family_pool_admin")
+        self.assertNotContains(self.client.get(hub), "Manage payments")
+
+        self._enable()
+        self.assertContains(self.client.get(hub), "Manage payments")
+
+    # --- the gate -----------------------------------------------------------
+
+    def test_plain_member_cannot_reach_the_page(self):
+        self._enable()
+        self.client.force_login(self.member)
+
+        self.assertNotEqual(
+            self.client.get(self._url("family_pool_admin_payments")).status_code, 200
+        )
+
+    def test_admin_and_owner_can_reach_the_page(self):
+        self._enable()
+        for user in (self.admin_user, self.owner):
+            with self.subTest(user=user.username):
+                self.client.force_login(user)
+                page = self.client.get(self._url("family_pool_admin_payments"))
+                self.assertEqual(page.status_code, 200)
+                self.assertContains(page, 'data-testid="payments-summary"')
+
+    # --- marking ------------------------------------------------------------
+
+    def test_marking_paid_records_who_and_when_and_audits(self):
+        self._enable()
+        self.client.force_login(self.admin_user)
+
+        self.client.post(self._url("family_pool_admin_payments"), {
+            "user_id": str(self.member.id), "paid": "on", "note": "venmo",
+        })
+
+        payment = PoolMemberPayment.objects.get(
+            pool=self.pool, user=self.member, gameseason=2526
+        )
+        self.assertTrue(payment.paid)
+        self.assertEqual(payment.note, "venmo")
+        self.assertEqual(payment.marked_by, self.admin_user)
+        self.assertIsNotNone(payment.marked_at)
+        audit = FamilyAuditLog.objects.get(
+            action=FamilyAuditLog.Action.PAYMENT_UPDATED
+        )
+        self.assertEqual(audit.actor, self.admin_user)
+        self.assertEqual(audit.metadata["target_user_id"], self.member.id)
+
+    def test_unmarking_clears_paid_without_deleting_history(self):
+        self._enable()
+        self.client.force_login(self.owner)
+        url = self._url("family_pool_admin_payments")
+        self.client.post(url, {"user_id": str(self.member.id), "paid": "on"})
+        self.client.post(url, {"user_id": str(self.member.id)})  # checkbox absent
+
+        payment = PoolMemberPayment.objects.get(pool=self.pool, user=self.member)
+        self.assertFalse(payment.paid)
+        self.assertEqual(
+            FamilyAuditLog.objects.filter(
+                action=FamilyAuditLog.Action.PAYMENT_UPDATED
+            ).count(),
+            2,
+        )
+
+    def test_cannot_mark_someone_outside_the_family(self):
+        self._enable()
+        outsider = User.objects.create_user("pay-outsider", email="x@example.com", password="pass")
+        self.client.force_login(self.owner)
+
+        response = self.client.post(self._url("family_pool_admin_payments"), {
+            "user_id": str(outsider.id), "paid": "on",
+        })
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(PoolMemberPayment.objects.filter(user=outsider).exists())
+

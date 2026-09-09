@@ -452,6 +452,7 @@ class FamilyAuditLog(models.Model):
                     'manual_pick_updated',
                     'week_winner_updated',
                     'family_status_updated',
+                    'payment_updated',
                 ]),
                 name='family_audit_log_action_valid',
             ),
