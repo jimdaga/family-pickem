@@ -185,6 +185,18 @@ class PoolRulesForm(forms.Form):
             'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
         }),
     )
+    payment_tracking_enabled = forms.BooleanField(
+        label="Track entry fee payments",
+        required=False,
+        help_text=(
+            "Opt-in. While off there is no payments page and members see no "
+            "notice. Turning it on shows every member as unpaid until you "
+            "mark them."
+        ),
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20',
+        }),
+    )
     entry_fee_amount = forms.IntegerField(
         label="Entry fee (whole dollars)",
         min_value=0,

@@ -1382,6 +1382,7 @@ ADMIN_POOL_SETTINGS_FIELDS = [
     'perfect_week_bonus_amount',
     'entry_fee_enabled',
     'entry_fee_amount',
+    'payment_tracking_enabled',
     'pick_type',
     'missed_pick_policy',
     'include_playoffs',
