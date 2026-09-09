@@ -107,6 +107,7 @@ def _run_email_campaigns():
 PIPELINE = [
     ('update_records', 'Team records', RECORDS_INTERVAL_MINUTES),
     ('update_games', 'Game scores', UPDATE_INTERVAL_MINUTES),
+    ('update_tiebreakers', 'Tiebreaker games', UPDATE_INTERVAL_MINUTES),
     ('update_missed_picks', 'Missed picks', UPDATE_INTERVAL_MINUTES),
     ('update_picks', 'Score picks', UPDATE_INTERVAL_MINUTES),
     ('update_standings', 'Standings', UPDATE_INTERVAL_MINUTES),
