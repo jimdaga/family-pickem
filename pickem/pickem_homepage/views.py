@@ -3457,23 +3457,30 @@ def global_leaderboard(request):
         accuracy = round((correct / total) * 100) if total else None
         entries.append({
             'userID': uid,
-            'points': row.get('points') or 0,
+            # No 'points': cross-pool totals are not comparable when pools use
+            # different scoring, and exposing them invites reading the table as
+            # a points ranking, which is exactly the confusion this removes.
             'leagues': row.get('leagues') or 0,
             'weeks_won': s.get('weeks_won') or 0,
             'correct': correct,
             'accuracy': accuracy,
         })
 
-    # Rank by blended points, then accuracy, then correct picks as tiebreakers.
-    # userID only stabilizes the display order — it is NOT a ranking signal, so
-    # players tied on (points, accuracy, correct) share a rank (standard
-    # competition ranking: 1,2,2,4). At season start everyone is 0/0/0 → all #1.
+    # Rank on CORRECT PICKS, not points. Points are summed across pools whose
+    # scoring schemes differ -- a pool paying 10 per win buried everyone else --
+    # and they double-count a player in two pools who picked one game right.
+    # correctPickTotalSeason is already de-duplicated by distinct game for the
+    # pool-null row (see update_stats), so it is comparable across every pool.
+    # Accuracy then weeks won break ties; userID only stabilizes display order
+    # and is NOT a ranking signal, so genuinely tied players share a rank.
     entries.sort(
-        key=lambda e: (-e['points'], -(e['accuracy'] or 0), -e['correct'], e['userID'])
+        key=lambda e: (
+            -e['correct'], -(e['accuracy'] or 0), -e['weeks_won'], e['userID']
+        )
     )
 
     def rank_key(e):
-        return (e['points'], e['accuracy'] or 0, e['correct'])
+        return (e['correct'], e['accuracy'] or 0, e['weeks_won'])
 
     previous_key = None
     for i, e in enumerate(entries, 1):
@@ -3487,7 +3494,7 @@ def global_leaderboard(request):
 
     # Before any games are scored every player is tied at 0 — a gold/silver/
     # bronze podium would be meaningless, so only show it once real results exist.
-    has_scores = any(e['points'] or e['correct'] for e in entries)
+    has_scores = any(e['correct'] for e in entries)
 
     context = {
         'gameseason': season,

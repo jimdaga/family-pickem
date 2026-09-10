@@ -97,7 +97,7 @@ page → lobby.
 
 ---
 
-## [ ] 5. Global leaderboard ranks on cross-pool points
+## [x] 5. Global leaderboard ranks on cross-pool points
 
 **Reported:** a pool awarding 10 points per win dominates; multi-pool users
 appear inflated.
@@ -120,6 +120,6 @@ column is gone from the page.
 
 ## Finish
 
-- [ ] Full suite + `makemigrations --check`
-- [ ] `npm run build:prod`; commit `tailwind.css` only if genuinely changed
+- [x] Full suite + `makemigrations --check`
+- [x] `npm run build:prod`; commit `tailwind.css` only if genuinely changed
 - [ ] ship-it: review → PR → CodeRabbit → merge → release → prd verify

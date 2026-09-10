@@ -8537,24 +8537,70 @@ class GlobalLeaderboardTests(TestCase):
             gameseason=self.season, gameyear="2025", total_points=total,
         )
 
-    def test_leaderboard_is_public_and_blends_points_across_pools(self):
-        # Alice plays in BOTH pools; her site-wide total is the sum.
+    def _stats(self, user, *, correct, total=None, weeks_won=0):
+        """The cross-pool (pool-null) stats row the leaderboard ranks on.
+
+        update_stats writes this row counting DISTINCT games, so a player in two
+        pools who picked one game right appears once.
+        """
+        return userStats.objects.create(
+            pool=None, userID=str(user.id),
+            correctPickTotalSeason=correct,
+            totalPicksSeason=total if total is not None else correct,
+            weeksWonSeason=weeks_won,
+        )
+
+    def test_leaderboard_is_public_and_ranks_on_correct_picks(self):
+        # Bob's pool pays far more per win, so on points he would dominate --
+        # that is the bug. Ranking is on correct picks, where Alice leads.
         self._points(self.smith_pool, self.alice, 10)
         self._points(self.jones_pool, self.alice, 7)
-        # Bob only plays one pool.
-        self._points(self.smith_pool, self.bob, 12)
+        self._points(self.smith_pool, self.bob, 120)
+        self._stats(self.alice, correct=9, total=10)
+        self._stats(self.bob, correct=4, total=10)
 
         response = self.client.get(reverse("global_leaderboard"))  # no login
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pickem/global_leaderboard.html")
 
         entries = {e["userID"]: e for e in response.context["entries"]}
-        self.assertEqual(entries[str(self.alice.id)]["points"], 17)  # 10 + 7 blended
+        self.assertEqual(entries[str(self.alice.id)]["correct"], 9)
         self.assertEqual(entries[str(self.alice.id)]["leagues"], 2)
-        self.assertEqual(entries[str(self.bob.id)]["points"], 12)
-        # Alice (17) outranks Bob (12) even though Bob's single-pool score is higher.
+        self.assertEqual(entries[str(self.bob.id)]["correct"], 4)
         self.assertEqual(entries[str(self.alice.id)]["rank"], 1)
         self.assertEqual(entries[str(self.bob.id)]["rank"], 2)
+        # Points are gone from the payload and the page entirely.
+        self.assertNotIn("points", entries[str(self.alice.id)])
+        self.assertNotContains(response, ">Points<")
+
+    def test_a_high_scoring_pool_no_longer_buys_a_higher_rank(self):
+        """The reported bug: one pool paid 10 per win and swamped the board."""
+        self._points(self.smith_pool, self.bob, 500)
+        self._stats(self.bob, correct=2, total=10)
+        self._points(self.smith_pool, self.alice, 3)
+        self._stats(self.alice, correct=8, total=10)
+
+        response = self.client.get(reverse("global_leaderboard"))
+
+        ranks = {e["userID"]: e["rank"] for e in response.context["entries"]}
+        self.assertEqual(ranks[str(self.alice.id)], 1)
+        self.assertEqual(ranks[str(self.bob.id)], 2)
+
+    def test_a_game_picked_in_two_pools_counts_once(self):
+        """Multi-pool players were inflated; the pool-null row de-duplicates."""
+        self._points(self.smith_pool, self.alice, 1)
+        self._points(self.jones_pool, self.alice, 1)
+        self._stats(self.alice, correct=1, total=1)
+        self._stats(self.bob, correct=1, total=1)
+
+        response = self.client.get(reverse("global_leaderboard"))
+
+        entries = {e["userID"]: e for e in response.context["entries"]}
+        self.assertEqual(entries[str(self.alice.id)]["correct"], 1)
+        self.assertEqual(entries[str(self.alice.id)]["leagues"], 2)
+        # Same single correct pick, so they tie despite Alice's two pools.
+        self.assertEqual(entries[str(self.alice.id)]["rank"], 1)
+        self.assertEqual(entries[str(self.bob.id)]["rank"], 1)
 
     def test_leaderboard_excludes_superusers_and_blends_accuracy(self):
         self._points(self.smith_pool, self.alice, 10)
@@ -8605,7 +8651,7 @@ class GlobalLeaderboardTests(TestCase):
 
         entries = {e["userID"]: e for e in response.context["entries"]}
         self.assertIn(str(self.bob.id), entries)
-        self.assertEqual(entries[str(self.bob.id)]["points"], 0)
+        self.assertEqual(entries[str(self.bob.id)]["correct"], 0)
         self.assertEqual(entries[str(self.bob.id)]["leagues"], 0)
 
     def test_players_tied_at_zero_share_rank_one_and_podium_is_hidden(self):
@@ -8624,8 +8670,8 @@ class GlobalLeaderboardTests(TestCase):
 
     def test_competition_ranking_skips_after_a_tie(self):
         # Two tied leaders, then a third player: ranks are 1, 1, 3.
-        self._points(self.smith_pool, self.alice, 10)
-        self._points(self.smith_pool, self.bob, 10)
+        self._stats(self.alice, correct=10, total=10)
+        self._stats(self.bob, correct=10, total=10)
         carol = User.objects.create_user("carol-gl", email="carol-gl@example.com", password="x")
         self._link_google(carol, given_name="Carol")
         FamilyMembership.objects.create(
@@ -8634,7 +8680,7 @@ class GlobalLeaderboardTests(TestCase):
             role=FamilyMembership.Role.MEMBER,
             status=FamilyMembership.Status.ACTIVE,
         )
-        self._points(self.smith_pool, carol, 5)
+        self._stats(carol, correct=5, total=10)
 
         response = self.client.get(reverse("global_leaderboard"))
 
