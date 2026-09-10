@@ -1,9 +1,13 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from pickem_api.models import Family, GamesAndScores, Pool, PoolSettings, currentSeason
+from pickem_api.models import (
+    Family, GamePicks, GamesAndScores, GameWeeks, Pool, PoolSettings, currentSeason,
+)
 from pickem_homepage.models import SiteBanner
 from pickem_superadmin.models import SuperAdminAuditLog
 
@@ -276,4 +280,128 @@ class OverviewTests(TestCase):
         self.assertLess(jobs_idx, logs_idx, 'jobs should appear before logs')
         self.assertLess(logs_idx, audit_idx, 'logs should appear before audit')
 
+
+class PoolHealthTests(TestCase):
+    """Abandoned / went-quiet / new-pool metrics on the overview."""
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            'ph-admin', email='ph@example.com', password='x', is_superuser=True, is_staff=True,
+        )
+        self.client.force_login(self.admin)
+        currentSeason.objects.get_or_create(season=2627, defaults={'display_name': '2026-2027'})
+
+    def _pool(self, slug, *, age_days=0, season=2627):
+        family = Family.objects.create(name=slug, slug=slug)
+        pool = Pool.objects.create(
+            family=family, name='Main', slug=f'{slug}-pool', season=season,
+            competition='nfl', status=Pool.Status.ACTIVE, is_default=True,
+        )
+        if age_days:
+            created = timezone.now() - timedelta(days=age_days)
+            Pool.objects.filter(pk=pool.pk).update(created_at=created)
+            pool.refresh_from_db()
+        return pool
+
+    def _game(self, gid, week, kickoff):
+        return GamesAndScores.objects.create(
+            id=gid, slug=f'ph-{gid}', competition='nfl', gameWeek=str(week),
+            gameyear='2026', gameseason=2627, startTimestamp=kickoff,
+            statusType='notstarted', statusTitle='x',
+            homeTeamId=1, homeTeamSlug='atl', homeTeamName='Atlanta',
+            awayTeamId=2, awayTeamSlug='ari', awayTeamName='Arizona',
+        )
+
+    def _pick(self, pool, game, uid='1'):
+        return GamePicks.objects.create(
+            id=f'ph-{pool.id}-{game.id}-{uid}', pool=pool, userID=uid, uid=int(uid),
+            gameseason=2627, gameWeek=game.gameWeek, competition='nfl',
+            pick_game_id=game.id, pick='atl',
+        )
+
+    def _health(self):
+        return self.client.get(reverse('superadmin:overview')).context['pool_health']
+
+    def test_old_pool_with_no_picks_is_abandoned(self):
+        dead = self._pool('dead', age_days=30)
+
+        slugs = [r['pool'].slug for r in self._health()['abandoned']]
+
+        self.assertIn(dead.slug, slugs)
+
+    def test_new_pool_with_no_picks_is_not_abandoned(self):
+        """Three of the live pools are days old -- new, not dead."""
+        fresh = self._pool('fresh', age_days=2)
+
+        slugs = [r['pool'].slug for r in self._health()['abandoned']]
+
+        self.assertNotIn(fresh.slug, slugs)
+
+    def test_old_pool_with_picks_is_not_abandoned(self):
+        active = self._pool('activepool', age_days=30)
+        self._pick(active, self._game(6001, 1, timezone.now() - timedelta(days=1)))
+
+        slugs = [r['pool'].slug for r in self._health()['abandoned']]
+
+        self.assertNotIn(active.slug, slugs)
+
+    def test_a_pool_that_pre_picked_is_not_called_quiet(self):
+        """The false positive that ruled out a simple recency threshold.
+
+        Live pools submitted a whole week days in advance and then went
+        legitimately silent; "no picks in N days" would flag them.
+        """
+        pool = self._pool('prepicker', age_days=30)
+        game = self._game(6002, 1, timezone.now() - timedelta(hours=2))
+        pick = self._pick(pool, game)
+        # Submitted well before kickoff, then silence.
+        GamePicks.objects.filter(pk=pick.pk).update(
+            pickAdded=timezone.now() - timedelta(days=20)
+        )
+
+        quiet = [r['pool'].slug for r in self._health()['quiet']]
+
+        self.assertNotIn(pool.slug, quiet)
+
+    def test_a_pool_with_history_but_nothing_this_week_is_quiet(self):
+        pool = self._pool('stopped', age_days=30)
+        self._pick(pool, self._game(6003, 1, timezone.now() - timedelta(days=8)))
+        # Week 2 has kicked off and this pool has not picked for it.
+        self._game(6004, 2, timezone.now() - timedelta(hours=2))
+        GameWeeks.objects.create(
+            date=timezone.localdate(), weekNumber=2, competition='nfl', season=2627,
+        )
+
+        quiet = [r['pool'].slug for r in self._health()['quiet']]
+
+        self.assertIn(pool.slug, quiet)
+
+    def test_nothing_is_quiet_before_the_week_kicks_off(self):
+        pool = self._pool('early', age_days=30)
+        self._pick(pool, self._game(6005, 1, timezone.now() - timedelta(days=8)))
+        self._game(6006, 2, timezone.now() + timedelta(days=3))   # not started
+        GameWeeks.objects.create(
+            date=timezone.localdate(), weekNumber=2, competition='nfl', season=2627,
+        )
+
+        self.assertEqual(self._health()['quiet'], [])
+
+    def test_new_pools_lists_recent_signups_with_activity(self):
+        recent = self._pool('recent', age_days=3)
+        self._pick(recent, self._game(6007, 1, timezone.now() - timedelta(days=1)))
+        old = self._pool('ancient', age_days=90)
+
+        rows = {r['pool'].slug: r for r in self._health()['new_pools']}
+
+        self.assertIn(recent.slug, rows)
+        self.assertNotIn(old.slug, rows)
+        self.assertEqual(rows[recent.slug]['picks'], 1)
+        self.assertEqual(rows[recent.slug]['members'], 0)
+
+    def test_cards_render_on_the_page(self):
+        page = self.client.get(reverse('superadmin:overview'))
+
+        for testid in ('abandoned-pools', 'quiet-pools', 'new-pools'):
+            with self.subTest(card=testid):
+                self.assertContains(page, f'data-testid="{testid}"')
 

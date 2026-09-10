@@ -28,7 +28,7 @@ No grandfathering needed.
 
 ---
 
-## [ ] 2. Overview: abandoned + went-quiet pools
+## [x] 2. Overview: abandoned + went-quiet pools
 
 **Decision: two tiers** (Jim's choice).
 
@@ -45,7 +45,7 @@ recency threshold would flag them; the current-week rule does not.
 
 ---
 
-## [ ] 3. Overview: newly created pools
+## [x] 3. Overview: newly created pools
 
 Pools created in the last 30 days with family, creation date, member count and
 picks so far, so a dead new signup is visible without cross-referencing.
@@ -54,6 +54,6 @@ picks so far, so a dead new signup is visible without cross-referencing.
 
 ## Finish
 
-- [ ] Full suite + `makemigrations --check`
-- [ ] `npm run build:prod`; commit `tailwind.css` only if genuinely changed
+- [x] Full suite + `makemigrations --check`
+- [x] `npm run build:prod`; commit `tailwind.css` only if genuinely changed
 - [ ] ship-it: review → PR → CodeRabbit → merge → release → prd verify

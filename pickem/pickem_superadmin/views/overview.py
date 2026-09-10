@@ -6,8 +6,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from datetime import timedelta
+
 from pickem_api.models import (
-    Family, GamePicks, GamesAndScores, Pool, currentSeason,
+    Family, FamilyMembership, GamePicks, GamesAndScores, GameWeeks, Pool,
+    currentSeason,
 )
 from pickem_homepage.forms import BANNER_ICON_CHOICES
 from pickem_homepage.models import SiteBanner
@@ -61,6 +64,100 @@ def _anomalies(season):
     }
 
 
+#: A pool younger than this has simply not started yet, not been abandoned.
+#: Grounded in live data: at 14 days this flags the three genuinely dead pools
+#: and none of the several created within the last week.
+ABANDONED_AFTER_DAYS = 14
+
+#: Window for the "new pools" feed.
+NEW_POOL_WINDOW_DAYS = 30
+
+
+def _pool_health(season):
+    """Abandoned pools, pools that went quiet, and recent signups.
+
+    Two tiers rather than one, because a single recency threshold cannot tell
+    them apart. Players PRE-PICK: pools have submitted a whole week days in
+    advance and then legitimately gone silent, so "no picks in N days" flags
+    healthy pools. Instead:
+
+    * abandoned - never received a single pick, and old enough that this is not
+      just a pool that has yet to get going;
+    * went quiet - has picks in its history, but nothing for the CURRENT week
+      once that week has actually kicked off.
+    """
+    now = timezone.now()
+    cutoff = now - timedelta(days=ABANDONED_AFTER_DAYS)
+
+    pools = (
+        Pool.objects.filter(status=Pool.Status.ACTIVE)
+        .select_related('family')
+        .annotate(pick_count=Count('game_picks', distinct=True))
+    )
+
+    abandoned = [
+        {
+            'pool': pool,
+            'age_days': (now - pool.created_at).days,
+            'members': FamilyMembership.objects.filter(
+                family=pool.family, status=FamilyMembership.Status.ACTIVE
+            ).count(),
+        }
+        for pool in pools
+        if pool.pick_count == 0 and pool.created_at <= cutoff
+    ]
+    abandoned.sort(key=lambda row: row['age_days'], reverse=True)
+
+    # "Went quiet" needs a week that has actually started; before kickoff a
+    # pool with no picks for it is early, not quiet.
+    quiet = []
+    current_week = None
+    if season:
+        today = timezone.localdate()
+        week_row = (
+            GameWeeks.objects.filter(season=season, date__lte=today)
+            .order_by('-date').first()
+        )
+        current_week = str(week_row.weekNumber) if week_row else None
+    if current_week:
+        week_started = GamesAndScores.objects.filter(
+            gameseason=season,
+            gameWeek=current_week,
+            startTimestamp__lte=now,
+        ).exists()
+        if week_started:
+            for pool in pools.filter(season=season):
+                if not pool.pick_count:
+                    continue  # already counted as abandoned, or simply new
+                has_current = GamePicks.objects.filter(
+                    pool=pool, gameseason=season, gameWeek=current_week
+                ).exists()
+                if not has_current:
+                    quiet.append({'pool': pool, 'picks': pool.pick_count})
+
+    new_cutoff = now - timedelta(days=NEW_POOL_WINDOW_DAYS)
+    new_pools = [
+        {
+            'pool': pool,
+            'age_days': (now - pool.created_at).days,
+            'members': FamilyMembership.objects.filter(
+                family=pool.family, status=FamilyMembership.Status.ACTIVE
+            ).count(),
+            'picks': pool.pick_count,
+        }
+        for pool in pools.filter(created_at__gte=new_cutoff).order_by('-created_at')
+    ]
+
+    return {
+        'abandoned': abandoned,
+        'quiet': quiet,
+        'new_pools': new_pools,
+        'abandoned_after_days': ABANDONED_AFTER_DAYS,
+        'new_window_days': NEW_POOL_WINDOW_DAYS,
+        'current_week': current_week,
+    }
+
+
 @superadmin_required
 def overview(request):
     current = currentSeason.objects.first()
@@ -81,6 +178,7 @@ def overview(request):
         'counts': counts,
         'health': jobs.scheduler_health(),
         'anomalies': _anomalies(season),
+        'pool_health': _pool_health(season),
         'current_season': current,
         'site_banners': SiteBanner.objects.filter(family__isnull=True, is_active=True),
         'banner_icon_choices': BANNER_ICON_CHOICES,
