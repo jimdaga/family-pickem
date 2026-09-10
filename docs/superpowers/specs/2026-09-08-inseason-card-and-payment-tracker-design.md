@@ -107,7 +107,8 @@ feature is opt-in per pool.
 
 - `payment_tracking_enabled` defaults to False; lobby notice and page content
   are absent while off.
-- Payments page gate: member 404s, admin and owner reach it.
+- Payments page gate: a plain member gets 403 on both GET and POST; admin
+  and owner reach it.
 - Marking paid writes the row, sets `marked_by`/`marked_at`, and writes a
   `FamilyAuditLog` row; unmarking clears `paid`.
 - Lobby notice shows for an unpaid member only when the toggle is on, and
@@ -122,5 +123,11 @@ feature is opt-in per pool.
 
 ## Migrations
 
-One migration: the new model, the `PoolSettings` field, and the
-`FamilyAuditLog.Action` choice addition.
+Two migrations:
+
+- `0098` — the new `PoolMemberPayment` model, the `PoolSettings` field, and the
+  `FamilyAuditLog.Action` choice addition.
+- `0099` — replaces the `family_audit_log_action_valid` CHECK constraint. The
+  allowed-action list is hardcoded in the model `Meta`, so the enum choice alone
+  does not reach the database; without this every payment write fails with
+  `CHECK constraint failed`.

@@ -85,7 +85,8 @@
                             <td class="px-4 py-3 font-semibold text-text-dark dark:text-white">{{ row.user.username }}</td>
                             <td class="px-4 py-3">
                                 <label class="inline-flex items-center gap-2">
-                                    <input type="checkbox" form="pay-{{ row.user.id }}" name="paid" {% if row.paid %}checked{% endif %}
+                                    <input type="checkbox" form="pay-{{ row.user.id }}" name="paid"
+                                           aria-label="Paid status for {{ row.user.username }}" {% if row.paid %}checked{% endif %}
                                            class="h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20">
                                     <span class="{% if row.paid %}text-green-600 dark:text-green-400{% else %}text-text-secondary-light dark:text-text-secondary{% endif %} font-semibold" data-testid="payment-status">
                                         {% if row.paid %}Paid{% else %}Unpaid{% endif %}
@@ -94,6 +95,7 @@
                             </td>
                             <td class="px-4 py-3">
                                 <input type="text" form="pay-{{ row.user.id }}" name="note" value="{{ row.payment.note|default:'' }}" maxlength="200"
+                                       aria-label="Payment note for {{ row.user.username }}"
                                        placeholder="Venmo, cash, ..."
                                        class="w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-1.5 text-sm text-text-dark dark:text-white">
                             </td>
@@ -106,7 +108,7 @@
                                 {% endif %}
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <button type="submit" form="pay-{{ row.user.id }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+                                <button type="submit" form="pay-{{ row.user.id }}" aria-label="Save payment for {{ row.user.username }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
                                     Save
                                 </button>
                             </td>

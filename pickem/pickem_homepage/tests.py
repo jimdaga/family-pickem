@@ -10536,3 +10536,19 @@ class PaymentTrackerTests(TestCase):
             self._url("family_pool_admin_payments"),
         )
 
+    def test_each_payment_control_names_its_member(self):
+        """Controls repeat per row, so each needs a member-specific
+        accessible name or a screen-reader user cannot tell rows apart."""
+        self._enable()
+        self.client.force_login(self.owner)
+
+        html = self.client.get(self._url("family_pool_admin_payments")).content.decode()
+
+        for label in (
+            f"Paid status for {self.member.username}",
+            f"Payment note for {self.member.username}",
+            f"Save payment for {self.member.username}",
+        ):
+            with self.subTest(label=label):
+                self.assertIn(f'aria-label="{label}"', html)
+
