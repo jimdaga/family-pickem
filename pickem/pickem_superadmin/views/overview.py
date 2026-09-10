@@ -76,25 +76,37 @@ NEW_POOL_WINDOW_DAYS = 30
 POOL_HEALTH_LIMIT = 20
 
 
-def _current_week_for_health(season):
-    """(week, competition) for today, or (None, None) if it cannot be resolved.
+def _current_weeks_by_competition(season):
+    """{competition: week} for today, resolved per competition.
 
-    Mirrors current_week_for_today() in update_games: today's row, else the most
-    recent row that has already started. The season__isnull=True arm matters --
-    historical GameWeeks rows predate the season column, and update_standings
-    carries the same fallback. Returning None (rather than guessing) lets the
-    caller say "not checked" instead of showing a false all-clear.
+    Per competition because Pool.competition varies: one competition having
+    kicked off says nothing about another, and a single shared (week, started)
+    pair would list pools of a not-yet-started competition as "quiet".
+
+    Season-scoped rows win outright; seasonless rows are only a fallback.
+    Historical GameWeeks rows predate the season column (update_standings
+    carries the same fallback), but a NULL-season row must never outrank a real
+    one -- GameWeeks has no default ordering, so an unqualified .first() would
+    let a lower primary key decide.
     """
     if not season:
-        return None, None
+        return {}
     today = timezone.localdate()
-    weeks = GameWeeks.objects.filter(Q(season=season) | Q(season__isnull=True))
-    row = weeks.filter(date=today).first() or (
-        weeks.filter(date__lte=today).order_by('-date').first()
+    rows = list(
+        GameWeeks.objects.filter(
+            Q(season=season) | Q(season__isnull=True), date__lte=today
+        ).order_by('date')
     )
-    if row is None:
-        return None, None
-    return str(row.weekNumber), row.competition
+    weeks = {}
+    for seasoned in (True, False):
+        for row in rows:
+            if (row.season == season) is not seasoned:
+                continue
+            # rows are date-ascending, so the last write per competition is the
+            # most recent week that has already begun.
+            if seasoned or row.competition not in weeks:
+                weeks[row.competition] = str(row.weekNumber)
+    return weeks
 
 
 def _pool_health(season):
@@ -110,17 +122,15 @@ def _pool_health(season):
       deliberately: an all-time count would permanently exempt a pool that
       played once and died, and would accumulate every historical never-used
       pool forever.
-    * went quiet - has picks this season, but nothing for the current week once
-      that week has actually kicked off.
+    * went quiet - has picks this season, but nothing for its own competition's
+      current week once that week has actually kicked off.
 
-    Constant query count regardless of pool count: this card sits on the
-    landing page, which holds itself to cheap checks only.
+    Constant query count regardless of pool or competition count: this card
+    sits on the landing page, which holds itself to cheap checks only.
     """
     now = timezone.now()
     cutoff = now - timedelta(days=ABANDONED_AFTER_DAYS)
-    current_week, week_competition = _current_week_for_health(season)
 
-    # 1: pools, with both a season-scoped and an all-time pick count.
     pools = list(
         Pool.objects.filter(status=Pool.Status.ACTIVE)
         .select_related('family')
@@ -132,29 +142,41 @@ def _pool_health(season):
         )
     )
 
-    # 2: one grouped count instead of a query per pool.
     member_counts = dict(
         FamilyMembership.objects.filter(
             status=FamilyMembership.Status.ACTIVE
         ).values_list('family').annotate(n=Count('id'))
     )
 
-    # 3: one set instead of an exists() per pool.
-    picked_this_week = set()
-    week_started = False
-    if season and current_week:
-        week_games = GamesAndScores.objects.filter(
-            gameseason=season, gameWeek=current_week
+    # Only competitions some pool actually plays. Production carries 155
+    # seasonless GameWeeks rows including an 'nfl-preseason' competition no
+    # pool uses; resolving weeks for it would widen the queries and let a
+    # competition nobody plays decide whether anything was "checked".
+    in_use = {pool.competition for pool in pools if pool.season == season}
+    weeks_by_competition = {
+        competition: week
+        for competition, week in _current_weeks_by_competition(season).items()
+        if competition in in_use
+    }
+
+    # Which (competition, week) pairs have actually kicked off, and who has
+    # picked in them -- two queries covering every competition at once.
+    started_pairs = set()
+    picked_pairs = set()
+    if weeks_by_competition:
+        pair_q = Q()
+        for competition, week in weeks_by_competition.items():
+            pair_q |= Q(competition=competition, gameWeek=week)
+        started_pairs = set(
+            GamesAndScores.objects.filter(
+                pair_q, gameseason=season, startTimestamp__lte=now
+            ).values_list('competition', 'gameWeek').distinct()
         )
-        if week_competition:
-            week_games = week_games.filter(competition=week_competition)
-        week_started = week_games.filter(startTimestamp__lte=now).exists()
-        if week_started:
-            picked_this_week = set(
-                GamePicks.objects.filter(
-                    gameseason=season, gameWeek=current_week
-                ).values_list('pool_id', flat=True)
-            )
+        picked_pairs = set(
+            GamePicks.objects.filter(pair_q, gameseason=season)
+            .values_list('pool_id', 'competition', 'gameWeek')
+            .distinct()
+        )
 
     def _row(pool, **extra):
         return {
@@ -177,14 +199,15 @@ def _pool_health(season):
     )[:POOL_HEALTH_LIMIT]
 
     quiet = []
-    if week_started:
-        quiet = [
-            _row(pool, picks=pool.season_picks)
-            for pool in pools
-            if pool.season == season
-            and pool.season_picks
-            and pool.id not in picked_this_week
-        ][:POOL_HEALTH_LIMIT]
+    for pool in pools:
+        if pool.season != season or not pool.season_picks:
+            continue
+        week = weeks_by_competition.get(pool.competition)
+        if not week or (pool.competition, week) not in started_pairs:
+            continue  # that competition has not kicked off; nothing to judge
+        if (pool.id, pool.competition, week) not in picked_pairs:
+            quiet.append(_row(pool, picks=pool.season_picks, week=week))
+    quiet = quiet[:POOL_HEALTH_LIMIT]
 
     new_cutoff = now - timedelta(days=NEW_POOL_WINDOW_DAYS)
     new_pools = sorted(
@@ -203,8 +226,8 @@ def _pool_health(season):
         'new_pools': new_pools,
         'abandoned_after_days': ABANDONED_AFTER_DAYS,
         'new_window_days': NEW_POOL_WINDOW_DAYS,
-        'current_week': current_week,
-        'week_checked': week_started,
+        'current_week': ', '.join(sorted(set(weeks_by_competition.values()))) or None,
+        'week_checked': bool(started_pairs),
     }
 
 

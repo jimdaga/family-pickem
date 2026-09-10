@@ -448,17 +448,81 @@ class PoolHealthTests(TestCase):
         self.assertContains(page, 'Not checked')
         self.assertNotContains(page, 'Every active pool has picked this week.')
 
-    def test_pool_health_query_count_does_not_grow_with_pools(self):
-        """This card sits on the landing page, which allows only cheap checks."""
-        for i in range(3):
-            self._pool(f'q{i}', age_days=30)
-        with self.assertNumQueries(4):
-            from pickem_superadmin.views.overview import _pool_health
+    def _count_health_queries(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from pickem_superadmin.views.overview import _pool_health
+
+        with CaptureQueriesContext(connection) as ctx:
             _pool_health(2627)
+        return len(ctx)
+
+    def test_pool_health_query_count_does_not_grow_with_pools(self):
+        """This card sits on the landing page, which allows only cheap checks.
+
+        Asserts constancy rather than a magic number: the number itself shifts
+        with which branches are live, but it must not scale with pool count.
+        Before this was collapsed it was 21 queries for 15 pools.
+        """
+        GameWeeks.objects.create(
+            date=timezone.localdate(), weekNumber=1, competition='nfl', season=2627,
+        )
+        self._game(6200, 1, timezone.now() - timedelta(hours=2))
+        for i in range(3):
+            pool = self._pool(f'q{i}', age_days=30)
+            self._pick(pool, GamesAndScores.objects.get(id=6200), uid=str(i + 1))
+
+        with_three = self._count_health_queries()
 
         for i in range(3, 12):
-            self._pool(f'q{i}', age_days=30)
-        with self.assertNumQueries(4):
-            from pickem_superadmin.views.overview import _pool_health
-            _pool_health(2627)
+            pool = self._pool(f'q{i}', age_days=30)
+            self._pick(pool, GamesAndScores.objects.get(id=6200), uid=str(i + 1))
+
+        self.assertEqual(self._count_health_queries(), with_three)
+
+    def test_a_competition_that_has_not_kicked_off_is_not_called_quiet(self):
+        """One competition starting says nothing about another."""
+        nfl_pool = self._pool('nflpool', age_days=30)
+        GameWeeks.objects.create(
+            date=timezone.localdate(), weekNumber=1, competition='nfl', season=2627,
+        )
+        self._pick(nfl_pool, self._game(6300, 1, timezone.now() - timedelta(hours=2)))
+
+        cfb_pool = self._pool('cfbpool', age_days=30)
+        Pool.objects.filter(pk=cfb_pool.pk).update(competition='cfb')
+        cfb_pool.refresh_from_db()
+        GameWeeks.objects.create(
+            date=timezone.localdate(), weekNumber=1, competition='cfb', season=2627,
+        )
+        cfb_game = GamesAndScores.objects.create(
+            id=6301, slug='ph-cfb', competition='cfb', gameWeek='1', gameyear='2026',
+            gameseason=2627, startTimestamp=timezone.now() + timedelta(days=2),
+            statusType='notstarted', statusTitle='x',
+            homeTeamId=1, homeTeamSlug='atl', homeTeamName='Atlanta',
+            awayTeamId=2, awayTeamSlug='ari', awayTeamName='Arizona',
+        )
+        GamePicks.objects.create(
+            id='ph-cfb-pick', pool=cfb_pool, userID='9', uid=9, gameseason=2627,
+            gameWeek='1', competition='cfb', pick_game_id=cfb_game.id, pick='atl',
+        )
+
+        quiet = [r['pool'].slug for r in self._health()['quiet']]
+
+        # nfl kicked off and that pool picked; cfb has not kicked off at all.
+        self.assertNotIn(cfb_pool.slug, quiet)
+        self.assertNotIn(nfl_pool.slug, quiet)
+
+    def test_a_seasonless_week_row_never_outranks_a_current_season_one(self):
+        """GameWeeks has no default ordering, so a lower pk must not win."""
+        from pickem_superadmin.views.overview import _current_weeks_by_competition
+
+        GameWeeks.objects.create(
+            date=timezone.localdate() - timedelta(days=1), weekNumber=99,
+            competition='nfl', season=None,
+        )
+        GameWeeks.objects.create(
+            date=timezone.localdate(), weekNumber=1, competition='nfl', season=2627,
+        )
+
+        self.assertEqual(_current_weeks_by_competition(2627), {'nfl': '1'})
 
