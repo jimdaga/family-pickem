@@ -208,11 +208,25 @@ def build_user_display_maps(user_ids):
     return usernames, avatars
 
 def select_dashboard_snapshot_games(games, *, today=None):
+    """The games the lobby should show. See select_dashboard_snapshot_day() for
+    which day (if any) was selected -- callers that label the section need it,
+    because Friday deliberately shows Thursday night's slate."""
+    return select_dashboard_snapshot_day(games, today=today)[0]
+
+
+def select_dashboard_snapshot_day(games, *, today=None):
+    """Return ``(games, narrowed_to_date)``.
+
+    ``narrowed_to_date`` is None when the whole week is shown, otherwise the
+    date the snapshot narrowed to. It is NOT always today: on Friday the lobby
+    shows Thursday night's game, so a heading built from this must name that
+    day rather than claiming "today".
+    """
     today = today or timezone.localdate()
     weekday = today.weekday()
 
     if weekday in (1, 2):
-        return games
+        return games, None
 
     if weekday == 4:
         target_date = today - timedelta(days=1)
@@ -221,8 +235,8 @@ def select_dashboard_snapshot_games(games, *, today=None):
 
     day_games = games.filter(startTimestamp__date=target_date)
     if day_games.exists():
-        return day_games
-    return games
+        return day_games, target_date
+    return games, None
 
 def attach_dashboard_pick_groups(games, *, pool, family):
     game_ids = [game.id for game in games]
@@ -567,12 +581,24 @@ def season_rank_map(rows):
     pool never shows blanks where the hero shows a number.
     """
     rows = list(rows)
-    if rows and all(getattr(row, 'current_rank', None) for row in rows):
-        return {str(row.userID): row.current_rank for row in rows}
-    return {
+    computed = {
         str(row.userID): rank
         for rank, row in competition_ranks(rows, lambda r: r.total_points or 0)
     }
+    # Prefer the stored rank ONLY when it agrees with the ordering we are about
+    # to render. update_rankings is the only writer, and the superadmin repair
+    # services recompute standings without it, so a stale current_rank can
+    # disagree with current totals -- rendering a column that reads 3, 1, 2.
+    # Agreement means the hero badge matches; disagreement means the pipeline
+    # is behind and the list must still be internally consistent.
+    stored = {
+        str(row.userID): row.current_rank
+        for row in rows
+        if getattr(row, 'current_rank', None)
+    }
+    if stored == computed:
+        return stored
+    return computed
 
 
 def redirect_to_default_pool_route(request, route_name, **route_kwargs):
@@ -1260,17 +1286,25 @@ def family_pool_home(request, family_slug, pool_slug):
     # Status-aware heading for the games section: "Live This Week" only makes
     # sense when something is actually live (or recently played).
     week_statuses = set(current_week_games.values_list('statusType', flat=True))
-    dashboard_snapshot_games = list(
-        select_dashboard_snapshot_games(current_week_games).order_by('startTimestamp', 'id')
-    )
+    snapshot_qs, snapshot_day = select_dashboard_snapshot_day(current_week_games)
+    dashboard_snapshot_games = list(snapshot_qs.order_by('startTimestamp', 'id'))
     # The snapshot narrows to a single day on most weekdays, so a week-level
-    # heading would claim to list games it is not showing.
-    showing_day_subset = len(dashboard_snapshot_games) < current_week_games.count()
+    # heading would claim to list games it is not showing. current_games is the
+    # week count computed just above -- don't COUNT the same rows twice.
+    showing_day_subset = (
+        snapshot_day is not None and len(dashboard_snapshot_games) < current_games
+    )
 
     first_kickoff = None
     games_section_subheading = ''
     if showing_day_subset:
-        games_section_heading = "Today's Games"
+        # Friday shows Thursday night's game: name the day rather than lying
+        # about "today".
+        games_section_heading = (
+            "Today's Games"
+            if snapshot_day == timezone.localdate()
+            else f"{snapshot_day.strftime('%A')}'s Games"
+        )
         games_section_subheading = f'Week {current_week}'
     elif 'inprogress' in week_statuses:
         games_section_heading = 'Live This Week'
@@ -3394,7 +3428,12 @@ def public_info(request, page):
 
 
 def global_leaderboard(request):
-    """Public site-wide leaderboard blending every pool for the current season.
+    """Public site-wide leaderboard across every pool for the current season.
+
+    Ranked on correct picks, NOT points: pools use different scoring, so summed
+    points are not comparable between them, and a player in two pools would
+    have one game counted twice. correctPickTotalSeason on the pool-null
+    userStats row counts distinct games, so it is comparable everywhere.
 
     Ranks players across the whole site: a player's points are summed across
     all pools they play in, so this answers "who's the best picker anywhere",
@@ -3427,7 +3466,6 @@ def global_leaderboard(request):
             userSeasonPoints.objects.filter(gameseason=season)
             .values('userID')
             .annotate(
-                points=Coalesce(Sum('total_points'), 0),
                 leagues=Count('pool', distinct=True),
             )
         )

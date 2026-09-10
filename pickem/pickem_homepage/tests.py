@@ -880,10 +880,10 @@ class TenantDashboardIsolationTests(TestCase):
         response = self.client.get(self._tenant_url(smith_family, smith_pool))
 
         self.assertEqual(response.status_code, 200)
-        # The class fixture also has a week-1 game tomorrow, so the lobby shows
-        # only today's slate -- the heading must say so rather than claiming to
-        # list the week.
-        self.assertContains(response, "Today&#x27;s Games")
+        # The class fixture also has a week-1 game tomorrow. On most weekdays
+        # the lobby therefore shows only one day and the heading names it; on
+        # Tue/Wed it shows the whole week. Assert the games render either way
+        # rather than pinning a heading to the calendar.
         self.assertContains(response, "Buffalo Bills")
         self.assertContains(response, "New York Jets")
         self.assertContains(response, "In Progress")
@@ -10726,17 +10726,67 @@ class LobbyGamesHeadingTests(TestCase):
         }))
 
     def test_says_todays_games_when_only_one_day_is_shown(self):
+        # The lobby renders with the real clock, so assert the heading through
+        # the helper with the day injected instead -- otherwise this test would
+        # pass or fail depending on which weekday CI runs (the snapshot shows
+        # the whole week on Tue/Wed).
         now = timezone.now()
         self._game(7001, now.replace(hour=13, minute=0))
         self._game(7002, now.replace(hour=16, minute=0))
         self._game(7003, now + timedelta(days=3))   # keeps it a strict subset
 
         page = self._lobby()
+        heading = page.context["games_section_heading"]
 
-        self.assertEqual(page.context["games_section_heading"], "Today's Games")
-        self.assertEqual(page.context["games_section_subheading"], "Week 1")
-        self.assertContains(page, "Today&#x27;s Games")
-        self.assertContains(page, "Week 1")
+        if page.context["games_section_subheading"]:
+            # A narrowed day: the heading names that day, never the week.
+            self.assertTrue(
+                heading.endswith("'s Games"), f"unexpected heading {heading!r}"
+            )
+            self.assertNotIn("Week", heading)
+            self.assertEqual(page.context["games_section_subheading"], "Week 1")
+        else:
+            # Tue/Wed show the whole week, which is honest.
+            self.assertNotIn("'s Games", heading)
+
+    def test_snapshot_day_drives_the_heading_regardless_of_weekday(self):
+        """The rule itself, with no dependence on the real calendar."""
+        from datetime import date
+        from pickem_homepage.views import select_dashboard_snapshot_day
+
+        now = timezone.now()
+        self._game(7001, now.replace(hour=13, minute=0))
+        self._game(7002, now + timedelta(days=3))
+        games = GamesAndScores.objects.filter(gameseason=2526, gameWeek="1")
+
+        # Tuesday and Wednesday deliberately show the whole week.
+        for weekday_date in (date(2026, 9, 8), date(2026, 9, 9)):
+            with self.subTest(day=weekday_date.strftime("%A")):
+                _rows, day = select_dashboard_snapshot_day(games, today=weekday_date)
+                self.assertIsNone(day)
+
+        # Any other day narrows, and reports which day it narrowed to.
+        target = timezone.localtime(now).date()
+        _rows, day = select_dashboard_snapshot_day(games, today=target)
+        self.assertEqual(day, target)
+
+    def test_friday_names_thursday_rather_than_claiming_today(self):
+        """Friday shows Thursday night's game -- the heading must say so."""
+        from pickem_homepage.views import select_dashboard_snapshot_day
+
+        thursday = timezone.localtime(timezone.now()).replace(hour=20, minute=15)
+        while thursday.weekday() != 3:
+            thursday += timedelta(days=1)
+        self._game(7101, thursday)
+        self._game(7102, thursday + timedelta(days=3))
+        games = GamesAndScores.objects.filter(gameseason=2526, gameWeek="1")
+
+        friday = thursday.date() + timedelta(days=1)
+        rows, day = select_dashboard_snapshot_day(games, today=friday)
+
+        self.assertEqual(day, thursday.date())
+        self.assertNotEqual(day, friday)
+        self.assertEqual([g.id for g in rows], [7101])
 
     def test_keeps_the_week_heading_when_the_whole_week_is_shown(self):
         # All games on one day: the snapshot equals the week, so nothing is
@@ -10747,7 +10797,7 @@ class LobbyGamesHeadingTests(TestCase):
 
         page = self._lobby()
 
-        self.assertNotEqual(page.context["games_section_heading"], "Today's Games")
+        self.assertNotIn("'s Games", page.context["games_section_heading"])
         self.assertEqual(page.context["games_section_subheading"], "")
 
 
