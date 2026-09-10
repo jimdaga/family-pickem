@@ -147,12 +147,12 @@
                     <!-- Rank Badge -->
                     <div class="flex-shrink-0 w-9 h-9 rounded-full
                                 {% if not season_has_started %}bg-surface-hover
-                                {% elif forloop.counter == 1 %}bg-yellow-500
-                                {% elif forloop.counter == 2 %}bg-gray-400
-                                {% elif forloop.counter == 3 %}bg-amber-700
+                                {% elif player.display_rank == 1 %}bg-yellow-500
+                                {% elif player.display_rank == 2 %}bg-gray-400
+                                {% elif player.display_rank == 3 %}bg-amber-700
                                 {% else %}bg-surface-hover{% endif %}
                                 flex items-center justify-center font-black text-white text-sm shadow-md">
-                        {% if season_has_started %}{{ forloop.counter }}{% else %}<span title="Standings begin after the first game">&ndash;</span>{% endif %}
+                        {% if season_has_started %}{{ player.display_rank|default:forloop.counter }}{% else %}<span title="Standings begin after the first game">&ndash;</span>{% endif %}
                     </div>
 
                     <!-- Player Avatar & Info -->

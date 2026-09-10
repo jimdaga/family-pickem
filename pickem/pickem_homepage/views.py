@@ -208,11 +208,25 @@ def build_user_display_maps(user_ids):
     return usernames, avatars
 
 def select_dashboard_snapshot_games(games, *, today=None):
+    """The games the lobby should show. See select_dashboard_snapshot_day() for
+    which day (if any) was selected -- callers that label the section need it,
+    because Friday deliberately shows Thursday night's slate."""
+    return select_dashboard_snapshot_day(games, today=today)[0]
+
+
+def select_dashboard_snapshot_day(games, *, today=None):
+    """Return ``(games, narrowed_to_date)``.
+
+    ``narrowed_to_date`` is None when the whole week is shown, otherwise the
+    date the snapshot narrowed to. It is NOT always today: on Friday the lobby
+    shows Thursday night's game, so a heading built from this must name that
+    day rather than claiming "today".
+    """
     today = today or timezone.localdate()
     weekday = today.weekday()
 
     if weekday in (1, 2):
-        return games
+        return games, None
 
     if weekday == 4:
         target_date = today - timedelta(days=1)
@@ -221,8 +235,8 @@ def select_dashboard_snapshot_games(games, *, today=None):
 
     day_games = games.filter(startTimestamp__date=target_date)
     if day_games.exists():
-        return day_games
-    return games
+        return day_games, target_date
+    return games, None
 
 def attach_dashboard_pick_groups(games, *, pool, family):
     game_ids = [game.id for game in games]
@@ -530,8 +544,61 @@ def build_week_points_summary(pool, gameseason, current_week, week_has_completed
             'week_points': getattr(points, week_points_field) or 0,
             'user': week_points_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
         }
-        for rank, points in enumerate(week_points_rows, 1)
+        for rank, points in competition_ranks(
+            week_points_rows, lambda row: getattr(row, week_points_field) or 0
+        )
     ]
+
+
+def competition_ranks(rows, score):
+    """Standard competition ranking (1, 1, 3, ...) over rows already ordered by
+    ``score`` descending. Yields ``(rank, row)``.
+
+    Positional numbering with ``enumerate()`` cannot express a tie: eight
+    players on the same total would read 1..8 instead of eight firsts followed
+    by a ninth. Every rank a page displays goes through here or through the
+    stored ``current_rank``, so the lobby, standings page and hero badge cannot
+    disagree.
+    """
+    rank = 0
+    seen = 0
+    previous = None
+    for row in rows:
+        value = score(row)
+        seen += 1
+        if previous is None or value != previous:
+            rank = seen
+            previous = value
+        yield rank, row
+
+
+def season_rank_map(rows):
+    """userID -> season rank for ``userSeasonPoints`` rows ordered by points.
+
+    Prefers the rank ``update_rankings`` stored, which is what the hero badge
+    reads (``pickem/context_processors.py``); falls back to computing the same
+    competition ranking when the pipeline has not populated it yet, so a fresh
+    pool never shows blanks where the hero shows a number.
+    """
+    rows = list(rows)
+    computed = {
+        str(row.userID): rank
+        for rank, row in competition_ranks(rows, lambda r: r.total_points or 0)
+    }
+    # Prefer the stored rank ONLY when it agrees with the ordering we are about
+    # to render. update_rankings is the only writer, and the superadmin repair
+    # services recompute standings without it, so a stale current_rank can
+    # disagree with current totals -- rendering a column that reads 3, 1, 2.
+    # Agreement means the hero badge matches; disagreement means the pipeline
+    # is behind and the list must still be internally consistent.
+    stored = {
+        str(row.userID): row.current_rank
+        for row in rows
+        if getattr(row, 'current_rank', None)
+    }
+    if stored == computed:
+        return stored
+    return computed
 
 
 def redirect_to_default_pool_route(request, route_name, **route_kwargs):
@@ -1162,13 +1229,14 @@ def family_pool_home(request, family_slug, pool_slug):
         competition=current_competition,
         gameScored=True,
     ).exists()
+    lobby_ranks = season_rank_map(top_standings)
     standings = [
         {
-            'rank': rank if season_has_started else None,
+            'rank': lobby_ranks.get(str(points.userID)) if season_has_started else None,
             'points': points,
             'user': standing_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
         }
-        for rank, points in enumerate(top_standings, 1)
+        for points in top_standings
     ]
 
     # Every pool member's week points — 0 to start, all members shown; the
@@ -1218,8 +1286,27 @@ def family_pool_home(request, family_slug, pool_slug):
     # Status-aware heading for the games section: "Live This Week" only makes
     # sense when something is actually live (or recently played).
     week_statuses = set(current_week_games.values_list('statusType', flat=True))
+    snapshot_qs, snapshot_day = select_dashboard_snapshot_day(current_week_games)
+    dashboard_snapshot_games = list(snapshot_qs.order_by('startTimestamp', 'id'))
+    # The snapshot narrows to a single day on most weekdays, so a week-level
+    # heading would claim to list games it is not showing. current_games is the
+    # week count computed just above -- don't COUNT the same rows twice.
+    showing_day_subset = (
+        snapshot_day is not None and len(dashboard_snapshot_games) < current_games
+    )
+
     first_kickoff = None
-    if 'inprogress' in week_statuses:
+    games_section_subheading = ''
+    if showing_day_subset:
+        # Friday shows Thursday night's game: name the day rather than lying
+        # about "today".
+        games_section_heading = (
+            "Today's Games"
+            if snapshot_day == timezone.localdate()
+            else f"{snapshot_day.strftime('%A')}'s Games"
+        )
+        games_section_subheading = f'Week {current_week}'
+    elif 'inprogress' in week_statuses:
         games_section_heading = 'Live This Week'
     elif week_statuses and week_statuses == {'notstarted'}:
         games_section_heading = f'Upcoming: Week {current_week}'
@@ -1229,9 +1316,6 @@ def family_pool_home(request, family_slug, pool_slug):
         games_section_heading = f'Week {current_week} Games'
     else:
         games_section_heading = 'Upcoming Games'
-    dashboard_snapshot_games = list(
-        select_dashboard_snapshot_games(current_week_games).order_by('startTimestamp', 'id')
-    )
     attach_dashboard_pick_groups(
         dashboard_snapshot_games,
         pool=pool,
@@ -1359,6 +1443,7 @@ def family_pool_home(request, family_slug, pool_slug):
         'current_week_games': dashboard_snapshot_games,
         'current_games': current_games,
         'games_section_heading': games_section_heading,
+        'games_section_subheading': games_section_subheading,
         'first_kickoff': first_kickoff,
         'user_picks_count': user_picks_count,
         'user_pick_status': user_pick_status,
@@ -3343,7 +3428,12 @@ def public_info(request, page):
 
 
 def global_leaderboard(request):
-    """Public site-wide leaderboard blending every pool for the current season.
+    """Public site-wide leaderboard across every pool for the current season.
+
+    Ranked on correct picks, NOT points: pools use different scoring, so summed
+    points are not comparable between them, and a player in two pools would
+    have one game counted twice. correctPickTotalSeason on the pool-null
+    userStats row counts distinct games, so it is comparable everywhere.
 
     Ranks players across the whole site: a player's points are summed across
     all pools they play in, so this answers "who's the best picker anywhere",
@@ -3376,7 +3466,6 @@ def global_leaderboard(request):
             userSeasonPoints.objects.filter(gameseason=season)
             .values('userID')
             .annotate(
-                points=Coalesce(Sum('total_points'), 0),
                 leagues=Count('pool', distinct=True),
             )
         )
@@ -3406,23 +3495,30 @@ def global_leaderboard(request):
         accuracy = round((correct / total) * 100) if total else None
         entries.append({
             'userID': uid,
-            'points': row.get('points') or 0,
+            # No 'points': cross-pool totals are not comparable when pools use
+            # different scoring, and exposing them invites reading the table as
+            # a points ranking, which is exactly the confusion this removes.
             'leagues': row.get('leagues') or 0,
             'weeks_won': s.get('weeks_won') or 0,
             'correct': correct,
             'accuracy': accuracy,
         })
 
-    # Rank by blended points, then accuracy, then correct picks as tiebreakers.
-    # userID only stabilizes the display order — it is NOT a ranking signal, so
-    # players tied on (points, accuracy, correct) share a rank (standard
-    # competition ranking: 1,2,2,4). At season start everyone is 0/0/0 → all #1.
+    # Rank on CORRECT PICKS, not points. Points are summed across pools whose
+    # scoring schemes differ -- a pool paying 10 per win buried everyone else --
+    # and they double-count a player in two pools who picked one game right.
+    # correctPickTotalSeason is already de-duplicated by distinct game for the
+    # pool-null row (see update_stats), so it is comparable across every pool.
+    # Accuracy then weeks won break ties; userID only stabilizes display order
+    # and is NOT a ranking signal, so genuinely tied players share a rank.
     entries.sort(
-        key=lambda e: (-e['points'], -(e['accuracy'] or 0), -e['correct'], e['userID'])
+        key=lambda e: (
+            -e['correct'], -(e['accuracy'] or 0), -e['weeks_won'], e['userID']
+        )
     )
 
     def rank_key(e):
-        return (e['points'], e['accuracy'] or 0, e['correct'])
+        return (e['correct'], e['accuracy'] or 0, e['weeks_won'])
 
     previous_key = None
     for i, e in enumerate(entries, 1):
@@ -3436,7 +3532,7 @@ def global_leaderboard(request):
 
     # Before any games are scored every player is tied at 0 — a gold/silver/
     # bronze podium would be meaningless, so only show it once real results exist.
-    has_scores = any(e['points'] or e['correct'] for e in entries)
+    has_scores = any(e['correct'] for e in entries)
 
     context = {
         'gameseason': season,
@@ -3572,6 +3668,15 @@ def render_standings_page(request, *, tenant_context=None):
 
     # One batched lookup for every name/avatar the template needs, instead of
     # the per-row safe_username/lookupavatar filter queries.
+    # Ranks come from the view, not forloop.counter: positional numbering
+    # cannot express a tie (eight players on the same total must all read #1),
+    # and the hero badge already reads the stored rank -- computing a second,
+    # different number here is what made the pages disagree.
+    player_points = list(player_points)
+    _ranks = season_rank_map(player_points)
+    for entry in player_points:
+        entry.display_rank = _ranks.get(str(entry.userID))
+
     display_ids = [entry.userID for entry in player_points]
     for winners in weekly_winners.values():
         display_ids.extend(winner.userID for winner in winners)

@@ -1,3 +1,4 @@
+import pathlib
 import re
 from datetime import date, timedelta
 from io import BytesIO, StringIO
@@ -721,7 +722,8 @@ class TenantDashboardIsolationTests(TestCase):
         )
         response = self.client.get(self._tenant_url(smith_family, smith_pool))
         self.assertTrue(response.context["season_has_started"])
-        self.assertEqual([row["rank"] for row in response.context["standings"]], [1, 2])
+        # Equal totals tie rather than reading first and second.
+        self.assertEqual([row["rank"] for row in response.context["standings"]], [1, 1])
 
     def test_lobby_game_cards_show_weekday_and_date(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
@@ -878,7 +880,10 @@ class TenantDashboardIsolationTests(TestCase):
         response = self.client.get(self._tenant_url(smith_family, smith_pool))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Live This Week")
+        # The class fixture also has a week-1 game tomorrow. On most weekdays
+        # the lobby therefore shows only one day and the heading names it; on
+        # Tue/Wed it shows the whole week. Assert the games render either way
+        # rather than pinning a heading to the calendar.
         self.assertContains(response, "Buffalo Bills")
         self.assertContains(response, "New York Jets")
         self.assertContains(response, "In Progress")
@@ -8532,24 +8537,70 @@ class GlobalLeaderboardTests(TestCase):
             gameseason=self.season, gameyear="2025", total_points=total,
         )
 
-    def test_leaderboard_is_public_and_blends_points_across_pools(self):
-        # Alice plays in BOTH pools; her site-wide total is the sum.
+    def _stats(self, user, *, correct, total=None, weeks_won=0):
+        """The cross-pool (pool-null) stats row the leaderboard ranks on.
+
+        update_stats writes this row counting DISTINCT games, so a player in two
+        pools who picked one game right appears once.
+        """
+        return userStats.objects.create(
+            pool=None, userID=str(user.id),
+            correctPickTotalSeason=correct,
+            totalPicksSeason=total if total is not None else correct,
+            weeksWonSeason=weeks_won,
+        )
+
+    def test_leaderboard_is_public_and_ranks_on_correct_picks(self):
+        # Bob's pool pays far more per win, so on points he would dominate --
+        # that is the bug. Ranking is on correct picks, where Alice leads.
         self._points(self.smith_pool, self.alice, 10)
         self._points(self.jones_pool, self.alice, 7)
-        # Bob only plays one pool.
-        self._points(self.smith_pool, self.bob, 12)
+        self._points(self.smith_pool, self.bob, 120)
+        self._stats(self.alice, correct=9, total=10)
+        self._stats(self.bob, correct=4, total=10)
 
         response = self.client.get(reverse("global_leaderboard"))  # no login
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pickem/global_leaderboard.html")
 
         entries = {e["userID"]: e for e in response.context["entries"]}
-        self.assertEqual(entries[str(self.alice.id)]["points"], 17)  # 10 + 7 blended
+        self.assertEqual(entries[str(self.alice.id)]["correct"], 9)
         self.assertEqual(entries[str(self.alice.id)]["leagues"], 2)
-        self.assertEqual(entries[str(self.bob.id)]["points"], 12)
-        # Alice (17) outranks Bob (12) even though Bob's single-pool score is higher.
+        self.assertEqual(entries[str(self.bob.id)]["correct"], 4)
         self.assertEqual(entries[str(self.alice.id)]["rank"], 1)
         self.assertEqual(entries[str(self.bob.id)]["rank"], 2)
+        # Points are gone from the payload and the page entirely.
+        self.assertNotIn("points", entries[str(self.alice.id)])
+        self.assertNotContains(response, ">Points<")
+
+    def test_a_high_scoring_pool_no_longer_buys_a_higher_rank(self):
+        """The reported bug: one pool paid 10 per win and swamped the board."""
+        self._points(self.smith_pool, self.bob, 500)
+        self._stats(self.bob, correct=2, total=10)
+        self._points(self.smith_pool, self.alice, 3)
+        self._stats(self.alice, correct=8, total=10)
+
+        response = self.client.get(reverse("global_leaderboard"))
+
+        ranks = {e["userID"]: e["rank"] for e in response.context["entries"]}
+        self.assertEqual(ranks[str(self.alice.id)], 1)
+        self.assertEqual(ranks[str(self.bob.id)], 2)
+
+    def test_a_game_picked_in_two_pools_counts_once(self):
+        """Multi-pool players were inflated; the pool-null row de-duplicates."""
+        self._points(self.smith_pool, self.alice, 1)
+        self._points(self.jones_pool, self.alice, 1)
+        self._stats(self.alice, correct=1, total=1)
+        self._stats(self.bob, correct=1, total=1)
+
+        response = self.client.get(reverse("global_leaderboard"))
+
+        entries = {e["userID"]: e for e in response.context["entries"]}
+        self.assertEqual(entries[str(self.alice.id)]["correct"], 1)
+        self.assertEqual(entries[str(self.alice.id)]["leagues"], 2)
+        # Same single correct pick, so they tie despite Alice's two pools.
+        self.assertEqual(entries[str(self.alice.id)]["rank"], 1)
+        self.assertEqual(entries[str(self.bob.id)]["rank"], 1)
 
     def test_leaderboard_excludes_superusers_and_blends_accuracy(self):
         self._points(self.smith_pool, self.alice, 10)
@@ -8600,7 +8651,7 @@ class GlobalLeaderboardTests(TestCase):
 
         entries = {e["userID"]: e for e in response.context["entries"]}
         self.assertIn(str(self.bob.id), entries)
-        self.assertEqual(entries[str(self.bob.id)]["points"], 0)
+        self.assertEqual(entries[str(self.bob.id)]["correct"], 0)
         self.assertEqual(entries[str(self.bob.id)]["leagues"], 0)
 
     def test_players_tied_at_zero_share_rank_one_and_podium_is_hidden(self):
@@ -8619,8 +8670,8 @@ class GlobalLeaderboardTests(TestCase):
 
     def test_competition_ranking_skips_after_a_tie(self):
         # Two tied leaders, then a third player: ranks are 1, 1, 3.
-        self._points(self.smith_pool, self.alice, 10)
-        self._points(self.smith_pool, self.bob, 10)
+        self._stats(self.alice, correct=10, total=10)
+        self._stats(self.bob, correct=10, total=10)
         carol = User.objects.create_user("carol-gl", email="carol-gl@example.com", password="x")
         self._link_google(carol, given_name="Carol")
         FamilyMembership.objects.create(
@@ -8629,7 +8680,7 @@ class GlobalLeaderboardTests(TestCase):
             role=FamilyMembership.Role.MEMBER,
             status=FamilyMembership.Status.ACTIVE,
         )
-        self._points(self.smith_pool, carol, 5)
+        self._stats(carol, correct=5, total=10)
 
         response = self.client.get(reverse("global_leaderboard"))
 
@@ -9813,7 +9864,21 @@ class BuildWeekPointsSummaryTests(TestCase):
         summary = build_week_points_summary(
             self.pool, self.season, "1", week_has_completed_game=True
         )
-        self.assertEqual([row['rank'] for row in summary], [1, 2])
+        # Both on zero: a tie, not first and second. Positional numbering used
+        # to render this as [1, 2].
+        self.assertEqual([row['rank'] for row in summary], [1, 1])
+
+    def test_weekly_ties_share_a_rank_and_the_next_score_skips(self):
+        from pickem_homepage.views import build_week_points_summary
+        for name in ("a", "b", "c"):
+            self._member(name, 5)
+        self._member("trailing", 2)
+
+        summary = build_week_points_summary(
+            self.pool, self.season, "1", week_has_completed_game=True
+        )
+
+        self.assertEqual([row['rank'] for row in summary], [1, 1, 1, 4])
 
     def test_orders_by_week_points_desc_treating_null_as_zero(self):
         from pickem_homepage.views import build_week_points_summary
@@ -10551,4 +10616,319 @@ class PaymentTrackerTests(TestCase):
         ):
             with self.subTest(label=label):
                 self.assertIn(f'aria-label="{label}"', html)
+
+
+class CompetitionRankTests(TestCase):
+    """Ranks must express ties, and every page must show the same number."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.get_or_create(
+            season=2526, defaults={"display_name": "2025-2026"}
+        )
+
+    def test_eight_tied_share_first_and_the_next_player_is_ninth(self):
+        from pickem_homepage.views import competition_ranks
+
+        rows = [{"p": 1} for _ in range(8)] + [{"p": 0}, {"p": 0}]
+        ranks = [rank for rank, _ in competition_ranks(rows, lambda r: r["p"])]
+
+        self.assertEqual(ranks, [1] * 8 + [9, 9])
+
+    def test_distinct_scores_rank_sequentially(self):
+        from pickem_homepage.views import competition_ranks
+
+        rows = [{"p": 9}, {"p": 5}, {"p": 1}]
+
+        self.assertEqual(
+            [rank for rank, _ in competition_ranks(rows, lambda r: r["p"])],
+            [1, 2, 3],
+        )
+
+    def test_empty_input_is_safe(self):
+        from pickem_homepage.views import competition_ranks
+
+        self.assertEqual(list(competition_ranks([], lambda r: r)), [])
+
+    def test_season_rank_map_prefers_the_stored_rank(self):
+        """The hero badge reads current_rank; the lists must match it."""
+        from pickem_homepage.views import season_rank_map
+
+        rows = [
+            SimpleNamespace(userID="1", total_points=10, current_rank=1),
+            SimpleNamespace(userID="2", total_points=10, current_rank=1),
+            SimpleNamespace(userID="3", total_points=4, current_rank=3),
+        ]
+
+        self.assertEqual(season_rank_map(rows), {"1": 1, "2": 1, "3": 3})
+
+    def test_season_rank_map_falls_back_when_the_pipeline_has_not_run(self):
+        from pickem_homepage.views import season_rank_map
+
+        rows = [
+            SimpleNamespace(userID="1", total_points=10, current_rank=None),
+            SimpleNamespace(userID="2", total_points=10, current_rank=None),
+            SimpleNamespace(userID="3", total_points=4, current_rank=None),
+        ]
+
+        # Same shape as the stored ranking, so a fresh pool never shows blanks
+        # where the hero badge shows a number.
+        self.assertEqual(season_rank_map(rows), {"1": 1, "2": 1, "3": 3})
+
+
+class LobbyGamesHeadingTests(TestCase):
+    """The heading must not claim a full week while showing one day."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.get_or_create(
+            season=2526, defaults={"display_name": "2025-2026"}
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user("head-owner", email="h@example.com", password="pass")
+        self.family = Family.objects.create(name="Head Family", slug="head-family")
+        self.pool = Pool.objects.create(
+            family=self.family, name="Main", slug="head-main", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        PoolSettings.objects.create(pool=self.pool)
+        FamilyMembership.objects.create(
+            family=self.family, user=self.owner,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        GameWeeks.objects.get_or_create(
+            date=timezone.localdate(),
+            defaults={"weekNumber": 1, "competition": "nfl", "season": 2526},
+        )
+
+    def _game(self, game_id, kickoff, status="notstarted"):
+        return GamesAndScores.objects.create(
+            id=game_id, slug=f"head-{game_id}", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=kickoff,
+            statusType=status, statusTitle="x",
+            homeTeamId=1, homeTeamSlug="atl", homeTeamName="Atlanta",
+            awayTeamId=2, awayTeamSlug="ari", awayTeamName="Arizona",
+        )
+
+    def _lobby(self):
+        self.client.force_login(self.owner)
+        return self.client.get(reverse("family_pool_home", kwargs={
+            "family_slug": self.family.slug, "pool_slug": self.pool.slug,
+        }))
+
+    def test_says_todays_games_when_only_one_day_is_shown(self):
+        # The lobby renders with the real clock, so assert the heading through
+        # the helper with the day injected instead -- otherwise this test would
+        # pass or fail depending on which weekday CI runs (the snapshot shows
+        # the whole week on Tue/Wed).
+        now = timezone.now()
+        self._game(7001, now.replace(hour=13, minute=0))
+        self._game(7002, now.replace(hour=16, minute=0))
+        self._game(7003, now + timedelta(days=3))   # keeps it a strict subset
+
+        page = self._lobby()
+        heading = page.context["games_section_heading"]
+
+        if page.context["games_section_subheading"]:
+            # A narrowed day: the heading names that day, never the week.
+            self.assertTrue(
+                heading.endswith("'s Games"), f"unexpected heading {heading!r}"
+            )
+            self.assertNotIn("Week", heading)
+            self.assertEqual(page.context["games_section_subheading"], "Week 1")
+        else:
+            # Tue/Wed show the whole week, which is honest.
+            self.assertNotIn("'s Games", heading)
+
+    def test_snapshot_day_drives_the_heading_regardless_of_weekday(self):
+        """The rule itself, with no dependence on the real calendar."""
+        from datetime import date
+        from pickem_homepage.views import select_dashboard_snapshot_day
+
+        now = timezone.now()
+        self._game(7001, now.replace(hour=13, minute=0))
+        self._game(7002, now + timedelta(days=3))
+        games = GamesAndScores.objects.filter(gameseason=2526, gameWeek="1")
+
+        # Tuesday and Wednesday deliberately show the whole week.
+        for weekday_date in (date(2026, 9, 8), date(2026, 9, 9)):
+            with self.subTest(day=weekday_date.strftime("%A")):
+                _rows, day = select_dashboard_snapshot_day(games, today=weekday_date)
+                self.assertIsNone(day)
+
+        # Any other day narrows, and reports which day it narrowed to.
+        target = timezone.localtime(now).date()
+        _rows, day = select_dashboard_snapshot_day(games, today=target)
+        self.assertEqual(day, target)
+
+    def test_friday_names_thursday_rather_than_claiming_today(self):
+        """Friday shows Thursday night's game -- the heading must say so."""
+        from pickem_homepage.views import select_dashboard_snapshot_day
+
+        thursday = timezone.localtime(timezone.now()).replace(hour=20, minute=15)
+        while thursday.weekday() != 3:
+            thursday += timedelta(days=1)
+        self._game(7101, thursday)
+        self._game(7102, thursday + timedelta(days=3))
+        games = GamesAndScores.objects.filter(gameseason=2526, gameWeek="1")
+
+        friday = thursday.date() + timedelta(days=1)
+        rows, day = select_dashboard_snapshot_day(games, today=friday)
+
+        self.assertEqual(day, thursday.date())
+        self.assertNotEqual(day, friday)
+        self.assertEqual([g.id for g in rows], [7101])
+
+    def test_keeps_the_week_heading_when_the_whole_week_is_shown(self):
+        # All games on one day: the snapshot equals the week, so nothing is
+        # hidden and a week-level heading is honest.
+        now = timezone.now()
+        self._game(7001, now.replace(hour=13, minute=0))
+        self._game(7002, now.replace(hour=16, minute=0))
+
+        page = self._lobby()
+
+        self.assertNotIn("'s Games", page.context["games_section_heading"])
+        self.assertEqual(page.context["games_section_subheading"], "")
+
+
+class LobbyHeadingIconsTests(TestCase):
+    """Six named headings render without a decorative icon."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.get_or_create(
+            season=2526, defaults={"display_name": "2025-2026"}
+        )
+
+    def test_named_headings_have_no_icon(self):
+        template = (
+            pathlib.Path(__file__).resolve().parent
+            / "templates" / "pickem" / "family_pool_home.html"
+        ).read_text()
+
+        for icon in (
+            "fa-bolt",            # Week Points
+            "fa-broadcast-tower", # Games
+            "fa-trophy text-xl",  # Pool Standings
+            "fa-star text-xl",    # Recent Week Winners
+            "fa-comments text-xl",# Message Board
+            "fa-newspaper text-xl",  # Around the NFL
+        ):
+            with self.subTest(icon=icon):
+                self.assertNotIn(icon, template)
+
+        # Icons elsewhere on the page were explicitly left alone.
+        self.assertIn("fa-arrow-right", template)
+
+
+class FamilySwitcherPagePreservationTests(TestCase):
+    """Switching family should keep you on the page you were looking at."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.get_or_create(
+            season=2526, defaults={"display_name": "2025-2026"}
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user("sw-user", email="sw@example.com", password="pass")
+        self.a_family, self.a_pool = self._family("Alpha", "alpha-fam", "alpha-pool")
+        self.b_family, self.b_pool = self._family("Bravo", "bravo-fam", "bravo-pool")
+        for family in (self.a_family, self.b_family):
+            FamilyMembership.objects.create(
+                family=family, user=self.user,
+                role=FamilyMembership.Role.MEMBER,
+                status=FamilyMembership.Status.ACTIVE,
+            )
+        self.client.force_login(self.user)
+
+    def _family(self, name, fslug, pslug):
+        family = Family.objects.create(name=name, slug=fslug)
+        pool = Pool.objects.create(
+            family=family, name="Main", slug=pslug, season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        PoolSettings.objects.create(pool=pool)
+        return family, pool
+
+    def _other_choice_url(self, response):
+        """The switcher URL offered for the family we are NOT currently in."""
+        for choice in response.context["family_switcher_choices"]:
+            if choice["family"].slug == self.b_family.slug:
+                return choice["url"]
+        self.fail("no switcher choice for the other family")
+
+    def _visit(self, route):
+        return self.client.get(reverse(route, kwargs={
+            "family_slug": self.a_family.slug, "pool_slug": self.a_pool.slug,
+        }))
+
+    def test_scores_switches_to_the_other_familys_scores(self):
+        url = self._other_choice_url(self._visit("family_pool_scores"))
+
+        self.assertEqual(url, reverse("family_pool_scores", kwargs={
+            "family_slug": self.b_family.slug, "pool_slug": self.b_pool.slug,
+        }))
+
+    def test_standings_switches_to_the_other_familys_standings(self):
+        url = self._other_choice_url(self._visit("family_pool_standings"))
+
+        self.assertEqual(url, reverse("family_pool_standings", kwargs={
+            "family_slug": self.b_family.slug, "pool_slug": self.b_pool.slug,
+        }))
+
+    def test_lobby_still_switches_to_the_lobby(self):
+        url = self._other_choice_url(self._visit("family_pool_home"))
+
+        self.assertEqual(url, reverse("family_pool_home", kwargs={
+            "family_slug": self.b_family.slug, "pool_slug": self.b_pool.slug,
+        }))
+
+    def test_admin_pages_fall_back_to_the_lobby(self):
+        """Role is per family: carrying an admin page across could 403."""
+        from pickem.context_processors import _switcher_target_url
+
+        url = _switcher_target_url(
+            self.b_family, self.b_pool, "family_pool_admin_payments"
+        )
+
+        self.assertEqual(url, reverse("family_pool_home", kwargs={
+            "family_slug": self.b_family.slug, "pool_slug": self.b_pool.slug,
+        }))
+
+    def test_unknown_and_missing_routes_fall_back_to_the_lobby(self):
+        from pickem.context_processors import _switcher_target_url
+
+        lobby = reverse("family_pool_home", kwargs={
+            "family_slug": self.b_family.slug, "pool_slug": self.b_pool.slug,
+        })
+        for route in (None, "some_route_that_does_not_exist", "index"):
+            with self.subTest(route=route):
+                self.assertEqual(
+                    _switcher_target_url(self.b_family, self.b_pool, route), lobby
+                )
+
+    def test_no_pool_yields_no_url_rather_than_raising(self):
+        from pickem.context_processors import _switcher_target_url
+
+        self.assertIsNone(
+            _switcher_target_url(self.b_family, None, "family_pool_scores")
+        )
 

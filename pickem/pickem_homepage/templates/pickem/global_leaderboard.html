@@ -89,8 +89,8 @@
                 </div>
                 {% if e.rank == 1 %}<i class="fas fa-crown text-yellow-400 mt-2"></i>{% endif %}
                 <h3 class="mt-2 text-sm font-black text-white truncate max-w-full uppercase tracking-wide">{{ uname|default:"Player" }}</h3>
-                <div class="text-2xl font-black text-white tabular-nums">{{ e.points }}</div>
-                <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">points</div>
+                <div class="text-2xl font-black text-white tabular-nums">{{ e.correct }}</div>
+                <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">correct</div>
             </div>
             {% endwith %}
             {% endwith %}
@@ -103,7 +103,7 @@
             <div class="hidden sm:grid grid-cols-[3rem_1fr_5rem_5rem_5rem] items-center gap-2 border-b border-white/10 px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
                 <span class="text-center">Rank</span>
                 <span>Player</span>
-                <span class="text-right">Points</span>
+                <span class="text-right">Correct</span>
                 <span class="text-right">Acc</span>
                 <span class="text-right">Leagues</span>
             </div>
@@ -134,12 +134,12 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Points (mobile) -->
+                    <!-- Correct picks (mobile) -->
                     <div class="text-right sm:hidden">
-                        <div class="text-base font-black text-white tabular-nums">{{ e.points }}</div>
-                        <div class="text-[10px] font-black uppercase text-slate-400">pts</div>
+                        <div class="text-base font-black text-white tabular-nums">{{ e.correct }}</div>
+                        <div class="text-[10px] font-black uppercase text-slate-400">correct</div>
                     </div>
-                    <div class="hidden sm:block text-right text-base font-black text-white tabular-nums">{{ e.points }}</div>
+                    <div class="hidden sm:block text-right text-base font-black text-white tabular-nums">{{ e.correct }}</div>
                     <div class="hidden sm:block text-right text-sm font-semibold text-slate-300 tabular-nums">
                         {% if e.accuracy != None %}{{ e.accuracy }}%{% else %}&ndash;{% endif %}
                     </div>
@@ -152,7 +152,7 @@
         </div>
 
         <p class="mt-5 text-center text-xs text-slate-400">
-            Points are summed across every pool a player competes in. Accuracy is their blended correct-pick rate this season.
+            Ranked by correct picks across every pool a player competes in. A game picked in two pools counts once. Accuracy is their blended correct-pick rate this season.
         </p>
         {% else %}
         <div class="gl-empty rounded-3xl border border-dashed border-white/15 bg-slate-950/60 p-14 text-center backdrop-blur-xl">
