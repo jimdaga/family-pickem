@@ -33,6 +33,7 @@
           <tr>
             <th class="sticky left-0 z-10" style="background:#f4f6f8">family / pool</th>
             <th>season</th>
+            <th>sideline</th>
             <th>win</th>
             <th>tie</th>
             <th>wk win</th>
@@ -47,7 +48,6 @@
             <th>missed pick</th>
             <th>late join</th>
             <th>payout</th>
-            <th>sideline</th>
             <th class="text-[#98a2b3]">pick type 🔒</th>
             <th class="text-[#98a2b3]">playoffs 🔒</th>
           </tr>
@@ -61,6 +61,9 @@
               <td class="sa-mono">
                 {% if row.form %}<input type="hidden" name="{{ row.settings.pk }}-updated_at" value="{{ row.settings.updated_at.isoformat }}">{% endif %}
                 {{ row.pool.season }}
+              </td>
+              <td class="text-center" title="Run Sideline's AI weekly recaps for this pool">
+                {% if row.form %}{{ row.form.ai_summaries_enabled }}{% endif %}
               </td>
               {% if row.form %}
                 <td>{{ row.form.win_points }}</td>
@@ -77,11 +80,10 @@
                 <td>{{ row.form.missed_pick_policy }}</td>
                 <td>{{ row.form.late_join_policy }}</td>
                 <td>{{ row.form.payout_structure }}</td>
-                <td class="text-center" title="Run Sideline's AI weekly recaps for this pool">{{ row.form.ai_summaries_enabled }}</td>
                 <td class="sa-locked" title="Not implemented yet.">{{ row.form.pick_type }}</td>
                 <td class="sa-locked text-center" title="Not implemented yet.">{{ row.form.include_playoffs }}</td>
               {% else %}
-                <td colspan="17" class="sa-locked">
+                <td colspan="16" class="sa-locked">
                   <span class="sa-pill sa-pill-warn">no settings</span>
                   backfill from Overview
                 </td>
