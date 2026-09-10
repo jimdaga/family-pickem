@@ -880,7 +880,10 @@ class TenantDashboardIsolationTests(TestCase):
         response = self.client.get(self._tenant_url(smith_family, smith_pool))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Live This Week")
+        # The class fixture also has a week-1 game tomorrow, so the lobby shows
+        # only today's slate -- the heading must say so rather than claiming to
+        # list the week.
+        self.assertContains(response, "Today&#x27;s Games")
         self.assertContains(response, "Buffalo Bills")
         self.assertContains(response, "New York Jets")
         self.assertContains(response, "In Progress")
