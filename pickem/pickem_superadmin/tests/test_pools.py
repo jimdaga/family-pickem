@@ -2,7 +2,9 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from pickem_api.models import Family, FamilyAuditLog, Pool, PoolSettings
+from pickem_api.models import (
+    Family, FamilyAuditLog, Pool, PoolSettings, currentSeason,
+)
 from pickem_superadmin.models import SuperAdminAuditLog
 
 
@@ -135,3 +137,88 @@ class PoolsMatrixTests(TestCase):
         self.assertEqual(other_settings.win_points, 5)   # good edit landed
         self.assertEqual(self.settings.win_points, 1)    # bad edit did not
         self.assertContains(response, 'could not be saved')
+
+
+class PoolsMatrixLayoutTests(TestCase):
+    """Header and body column counts must agree.
+
+    The matrix is a wide horizontally-scrolled table; a miscounted colspan
+    shifts every cell after it under the wrong header, which is invisible in a
+    diff and easy to miss by eye.
+    """
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            'pm-admin', email='pm@example.com', password='x',
+            is_superuser=True, is_staff=True,
+        )
+        self.client.force_login(self.admin)
+        currentSeason.objects.get_or_create(
+            season=2627, defaults={'display_name': '2026-2027'}
+        )
+
+    def _pool(self, slug, *, with_settings=True):
+        family = Family.objects.create(name=slug, slug=slug)
+        pool = Pool.objects.create(
+            family=family, name='Main', slug=f'{slug}-pool', season=2627,
+            competition='nfl', status=Pool.Status.ACTIVE, is_default=True,
+        )
+        if with_settings:
+            PoolSettings.objects.create(pool=pool)
+        return pool
+
+    def _counts(self, html):
+        import re
+        thead = html.split('<thead>', 1)[1].split('</thead>', 1)[0]
+        headers = len(re.findall(r'<th[^>]*>', thead))
+        body = html.split('<tbody', 1)[1]
+        rows = []
+        for chunk in body.split('<tr')[1:]:
+            row = chunk.split('</tr>', 1)[0]
+            width = 0
+            for cell in re.findall(r'<td[^>]*>', row):
+                m = re.search(r'colspan="(\d+)"', cell)
+                width += int(m.group(1)) if m else 1
+            if width:
+                rows.append(width)
+        return headers, rows
+
+    def test_editable_rows_match_the_header_width(self):
+        self._pool('withsettings')
+
+        headers, rows = self._counts(
+            self.client.get(reverse('superadmin:pools')).content.decode()
+        )
+
+        self.assertTrue(rows, 'no body rows rendered')
+        for width in rows:
+            self.assertEqual(width, headers)
+
+    def test_rows_without_settings_match_the_header_width(self):
+        """The no-settings branch uses a colspan, which drifts silently."""
+        self._pool('nosettings', with_settings=False)
+
+        headers, rows = self._counts(
+            self.client.get(reverse('superadmin:pools')).content.decode()
+        )
+
+        self.assertTrue(rows, 'no body rows rendered')
+        for width in rows:
+            self.assertEqual(width, headers)
+
+    def test_sideline_toggle_is_near_the_front_of_the_table(self):
+        """It sits in a horizontally scrolled table; buried at column 17 it was
+        off-screen and effectively invisible."""
+        import re
+
+        self._pool('placement')
+        html = self.client.get(reverse('superadmin:pools')).content.decode()
+        thead = html.split('<thead>', 1)[1].split('</thead>', 1)[0]
+        headers = [
+            re.sub(r'<[^>]+>|\s+', ' ', h).strip()
+            for h in re.findall(r'<th[^>]*>(.*?)</th>', thead, re.S)
+        ]
+
+        self.assertIn('sideline', headers)
+        self.assertLessEqual(headers.index('sideline'), 3)
+
