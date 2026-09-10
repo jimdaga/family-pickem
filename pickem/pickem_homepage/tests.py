@@ -10737,3 +10737,102 @@ class LobbyHeadingIconsTests(TestCase):
         # Icons elsewhere on the page were explicitly left alone.
         self.assertIn("fa-arrow-right", template)
 
+
+class FamilySwitcherPagePreservationTests(TestCase):
+    """Switching family should keep you on the page you were looking at."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.get_or_create(
+            season=2526, defaults={"display_name": "2025-2026"}
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user("sw-user", email="sw@example.com", password="pass")
+        self.a_family, self.a_pool = self._family("Alpha", "alpha-fam", "alpha-pool")
+        self.b_family, self.b_pool = self._family("Bravo", "bravo-fam", "bravo-pool")
+        for family in (self.a_family, self.b_family):
+            FamilyMembership.objects.create(
+                family=family, user=self.user,
+                role=FamilyMembership.Role.MEMBER,
+                status=FamilyMembership.Status.ACTIVE,
+            )
+        self.client.force_login(self.user)
+
+    def _family(self, name, fslug, pslug):
+        family = Family.objects.create(name=name, slug=fslug)
+        pool = Pool.objects.create(
+            family=family, name="Main", slug=pslug, season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        PoolSettings.objects.create(pool=pool)
+        return family, pool
+
+    def _other_choice_url(self, response):
+        """The switcher URL offered for the family we are NOT currently in."""
+        for choice in response.context["family_switcher_choices"]:
+            if choice["family"].slug == self.b_family.slug:
+                return choice["url"]
+        self.fail("no switcher choice for the other family")
+
+    def _visit(self, route):
+        return self.client.get(reverse(route, kwargs={
+            "family_slug": self.a_family.slug, "pool_slug": self.a_pool.slug,
+        }))
+
+    def test_scores_switches_to_the_other_familys_scores(self):
+        url = self._other_choice_url(self._visit("family_pool_scores"))
+
+        self.assertEqual(url, reverse("family_pool_scores", kwargs={
+            "family_slug": self.b_family.slug, "pool_slug": self.b_pool.slug,
+        }))
+
+    def test_standings_switches_to_the_other_familys_standings(self):
+        url = self._other_choice_url(self._visit("family_pool_standings"))
+
+        self.assertEqual(url, reverse("family_pool_standings", kwargs={
+            "family_slug": self.b_family.slug, "pool_slug": self.b_pool.slug,
+        }))
+
+    def test_lobby_still_switches_to_the_lobby(self):
+        url = self._other_choice_url(self._visit("family_pool_home"))
+
+        self.assertEqual(url, reverse("family_pool_home", kwargs={
+            "family_slug": self.b_family.slug, "pool_slug": self.b_pool.slug,
+        }))
+
+    def test_admin_pages_fall_back_to_the_lobby(self):
+        """Role is per family: carrying an admin page across could 403."""
+        from pickem.context_processors import _switcher_target_url
+
+        url = _switcher_target_url(
+            self.b_family, self.b_pool, "family_pool_admin_payments"
+        )
+
+        self.assertEqual(url, reverse("family_pool_home", kwargs={
+            "family_slug": self.b_family.slug, "pool_slug": self.b_pool.slug,
+        }))
+
+    def test_unknown_and_missing_routes_fall_back_to_the_lobby(self):
+        from pickem.context_processors import _switcher_target_url
+
+        lobby = reverse("family_pool_home", kwargs={
+            "family_slug": self.b_family.slug, "pool_slug": self.b_pool.slug,
+        })
+        for route in (None, "some_route_that_does_not_exist", "index"):
+            with self.subTest(route=route):
+                self.assertEqual(
+                    _switcher_target_url(self.b_family, self.b_pool, route), lobby
+                )
+
+    def test_no_pool_yields_no_url_rather_than_raising(self):
+        from pickem.context_processors import _switcher_target_url
+
+        self.assertIsNone(
+            _switcher_target_url(self.b_family, None, "family_pool_scores")
+        )
+

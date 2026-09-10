@@ -77,7 +77,7 @@ in `pickem_homepage/templates/pickem/family_pool_home.html`:
 
 ---
 
-## [ ] 4. Family switcher always lands on the lobby
+## [x] 4. Family switcher always lands on the lobby
 
 **Root cause:** `_switcher_choice_for_membership`
 (`pickem/context_processors.py:100`) always reverses `family_pool_home`.

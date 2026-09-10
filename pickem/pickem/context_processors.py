@@ -9,7 +9,7 @@ from datetime import date
 from django.conf import settings
 from django.core.cache import cache
 from django.db.models import F, Q
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 from pickem_api.authz import (
     AuthenticationRequired,
@@ -97,17 +97,48 @@ def _default_active_pool_for_family(family):
     )
 
 
-def _switcher_choice_for_membership(membership):
+#: Member-facing tenant pages that take exactly (family_slug, pool_slug) and so
+#: can be carried across a family switch. Deliberately excludes admin routes --
+#: the user may hold a lesser role in the family they are switching to, and
+#: landing them on a 403 would be worse than the lobby -- and any route needing
+#: extra kwargs (a user id, a week), which cannot be translated meaningfully.
+PORTABLE_TENANT_ROUTES = frozenset({
+    'family_pool_home',
+    'family_pool_game_picks',
+    'family_pool_scores',
+    'family_pool_standings',
+    'family_pool_rules',
+    'family_pool_players',
+    'family_pool_messages',
+})
+
+
+def _switcher_target_url(family, pool, route_name):
+    """Where the switcher should land for this family, staying on the same page.
+
+    Falls back to the lobby for anything not portable. Never raises: this runs
+    in a context processor, so a bad mapping must degrade to the lobby rather
+    than break every page render.
+    """
+    if pool is None:
+        return None
+    kwargs = {'family_slug': family.slug, 'pool_slug': pool.slug}
+    if route_name in PORTABLE_TENANT_ROUTES:
+        try:
+            return reverse(route_name, kwargs=kwargs)
+        except NoReverseMatch:
+            pass
+    return reverse('family_pool_home', kwargs=kwargs)
+
+
+def _switcher_choice_for_membership(membership, route_name=None):
     family = membership.family
     pool = _default_active_pool_for_family(family)
     return {
         'membership': membership,
         'family': family,
         'pool': pool,
-        'url': reverse(
-            'family_pool_home',
-            kwargs={'family_slug': family.slug, 'pool_slug': pool.slug},
-        ) if pool else None,
+        'url': _switcher_target_url(family, pool, route_name),
     }
 
 
@@ -159,8 +190,12 @@ def family_switcher_context(request):
         return context
 
     try:
+        # Carry the page the user is on across the switch: someone comparing
+        # scores between families should land on scores, not the lobby.
+        resolver_match = getattr(request, 'resolver_match', None)
+        current_route = getattr(resolver_match, 'url_name', None)
         choices = [
-            _switcher_choice_for_membership(membership)
+            _switcher_choice_for_membership(membership, route_name=current_route)
             for membership in get_real_user_family_memberships(request.user)
         ]
         context['family_switcher_choices'] = choices
