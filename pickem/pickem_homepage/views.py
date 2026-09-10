@@ -388,11 +388,13 @@ def get_family_pool_choices(user):
     return choices
 
 
-def build_family_admin_sections(family, pool, user=None):
+def build_family_admin_sections(family, pool, user=None, pool_settings=None):
     route_kwargs = {'family_slug': family.slug, 'pool_slug': pool.slug}
-    payment_tracking_on = PoolSettings.objects.filter(
-        pool=pool, payment_tracking_enabled=True
-    ).exists()
+    if pool_settings is None:
+        pool_settings = PoolSettings.objects.filter(pool=pool).first()
+    payment_tracking_on = bool(
+        pool_settings and pool_settings.payment_tracking_enabled
+    )
     sections = [
         {
             'label': 'Settings',
@@ -1332,7 +1334,9 @@ def family_pool_home(request, family_slug, pool_slug):
     )
     unpaid_amount = (
         pool_settings_row.entry_fee_amount
-        if pool_settings_row and pool_settings_row.entry_fee_amount
+        if pool_settings_row
+        and pool_settings_row.entry_fee_enabled
+        and pool_settings_row.entry_fee_amount
         else 0
     )
 
@@ -1396,7 +1400,9 @@ def family_pool_admin(request, family_slug, pool_slug):
         'membership': tenant_context.membership,
         'gameseason': pool.season or get_season(),
         'recent_audit_logs': recent_audit_logs,
-        'admin_sections': build_family_admin_sections(family, pool, request.user),
+        'admin_sections': build_family_admin_sections(
+            family, pool, request.user, pool_settings=pool_settings,
+        ),
         'active_member_count': active_member_count,
         'active_invite_count': active_invite_count,
         'invites_url': reverse(
@@ -2343,14 +2349,21 @@ def family_pool_admin_payments(request, family_slug, pool_slug):
             # not be able to write payment rows for a pool that opted out.
             return HttpResponseForbidden('Payment tracking is disabled for this pool.')
 
-        target_user_id = request.POST.get('user_id') or ''
-        if not target_user_id.isdigit():
+        # Bounds-check before the query: a huge numeric string passes
+        # isdigit() but overflows the integer PK column (DataError -> 500).
+        # Same guard the banner path uses.
+        try:
+            target_user_pk = int(request.POST.get('user_id') or '')
+        except (TypeError, ValueError):
+            raise Http404()
+        if not 0 < target_user_pk <= 2 ** 31 - 1:
             raise Http404()
         target = (
             FamilyMembership.objects.filter(
                 family=family,
-                user_id=int(target_user_id),
+                user_id=target_user_pk,
                 status=FamilyMembership.Status.ACTIVE,
+                user__is_active=True,
             )
             .select_related('user')
             .first()
@@ -2360,33 +2373,41 @@ def family_pool_admin_payments(request, family_slug, pool_slug):
 
         paid = request.POST.get('paid') == 'on'
         note = (request.POST.get('note') or '').strip()[:200]
-        payment, _created = PoolMemberPayment.objects.update_or_create(
-            pool=pool,
-            user=target.user,
-            gameseason=gameseason,
-            defaults={
-                'paid': paid,
-                'note': note,
-                'marked_by': request.user,
-                'marked_at': timezone.now(),
-            },
-        )
-        FamilyAuditLog.objects.create(
-            family=family,
-            pool=pool,
-            actor=request.user,
-            action=FamilyAuditLog.Action.PAYMENT_UPDATED,
-            target_type='PoolMemberPayment',
-            target_id=str(payment.id),
-            metadata={
-                'target_user_id': target.user_id,
-                'gameseason': gameseason,
-                'paid': paid,
-                'summary': (
-                    f'Marked {target.user.username} '
-                    f'{"paid" if paid else "unpaid"} for {gameseason}'
-                ),
-            },
+        # One transaction: a payment recorded without its audit row is exactly
+        # what the audit table exists to prevent.
+        with transaction.atomic():
+            payment, _created = PoolMemberPayment.objects.update_or_create(
+                pool=pool,
+                user=target.user,
+                gameseason=gameseason,
+                defaults={
+                    'paid': paid,
+                    'note': note,
+                    'marked_by': request.user,
+                    'marked_at': timezone.now(),
+                },
+            )
+            FamilyAuditLog.objects.create(
+                family=family,
+                pool=pool,
+                actor=request.user,
+                action=FamilyAuditLog.Action.PAYMENT_UPDATED,
+                target_type='PoolMemberPayment',
+                target_id=str(payment.id),
+                metadata={
+                    'target_user_id': target.user_id,
+                    'gameseason': gameseason,
+                    'paid': paid,
+                    'summary': (
+                        f'Marked {target.user.username} '
+                        f'{"paid" if paid else "unpaid"} for {gameseason}'
+                    ),
+                },
+                **get_invite_audit_context(request),
+            )
+        messages.success(
+            request,
+            f'{target.user.username} marked {"paid" if paid else "unpaid"}.',
         )
         return redirect('family_pool_admin_payments',
                         family_slug=family.slug, pool_slug=pool.slug)

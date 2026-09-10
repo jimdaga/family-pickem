@@ -1,3 +1,4 @@
+import re
 from datetime import date, timedelta
 from io import BytesIO, StringIO
 from importlib import import_module
@@ -10306,4 +10307,232 @@ class PaymentTrackerTests(TestCase):
         self.client.force_login(self.owner)
 
         self.assertContains(self._lobby(), 'data-testid="unpaid-notice"')
+
+    # --- gaps found by mutation testing -------------------------------------
+
+    def test_one_member_paying_does_not_silence_another(self):
+        """The notice query must filter on the VIEWER.
+
+        Dropping `user=request.user` from that .exists() used to leave the whole
+        suite green while silencing the notice for everyone in the pool as soon
+        as any single member paid -- the worst possible failure, since a member
+        who owes money would be told nothing.
+        """
+        self._enable()
+        self._mark_paid(self.member)
+        self.client.force_login(self.owner)
+
+        self.assertContains(self._lobby(), 'data-testid="unpaid-notice"')
+
+        self.client.force_login(self.member)
+        self.assertNotContains(self._lobby(), 'data-testid="unpaid-notice"')
+
+    def test_commissioner_can_turn_tracking_on_and_off_through_the_form(self):
+        """Round-trip through the real settings form, not the model.
+
+        Every other test reaches the feature via _enable(), which writes the
+        field directly -- so removing the field from ADMIN_POOL_SETTINGS_FIELDS
+        or from the settings template left the suite green while the
+        commissioner had no way to switch it on. That is the PR #175 shape.
+        """
+        self.client.force_login(self.owner)
+        url = reverse("family_pool_admin_settings", kwargs={
+            "family_slug": self.family.slug, "pool_slug": self.pool.slug,
+        })
+
+        page = self.client.get(url)
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'name="payment_tracking_enabled"')
+
+        form = page.context["form"]
+        payload = {}
+        for name, field in form.fields.items():
+            value = form.initial.get(name, field.initial)
+            if value is None or isinstance(value, bool):
+                continue
+            payload[name] = str(value)
+        payload["family_name"] = self.family.name
+        payload["pool_name"] = self.pool.name
+        payload["payment_tracking_enabled"] = "on"
+
+        self.client.post(url, payload)
+        self.settings.refresh_from_db()
+        self.assertTrue(self.settings.payment_tracking_enabled)
+
+        # An unchecked box sends nothing at all -- the off direction matters.
+        payload.pop("payment_tracking_enabled")
+        self.client.post(url, payload)
+        self.settings.refresh_from_db()
+        self.assertFalse(self.settings.payment_tracking_enabled)
+
+    def test_cannot_mark_an_active_member_of_another_family(self):
+        """The sharp cross-tenant case.
+
+        The existing test used a user with no membership anywhere, so dropping
+        `family=family` from the target lookup still 404'd. This uses a real
+        active member of a DIFFERENT family, which is what actually pins the
+        family scope.
+        """
+        self._enable()
+        other_family = Family.objects.create(name="Other", slug="other-family")
+        other_pool = Pool.objects.create(
+            family=other_family, name="Other Pool", slug="other-pool",
+            season=2526, competition="nfl", status=Pool.Status.ACTIVE,
+            is_default=True,
+        )
+        PoolSettings.objects.create(pool=other_pool)
+        stranger = User.objects.create_user("pay-stranger", email="s@example.com", password="pass")
+        FamilyMembership.objects.create(
+            family=other_family, user=stranger,
+            role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.post(self._url("family_pool_admin_payments"), {
+            "user_id": str(stranger.id), "paid": "on",
+        })
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(PoolMemberPayment.objects.filter(user=stranger).exists())
+
+    def test_member_gets_403_on_both_verbs(self):
+        self._enable()
+        self.client.force_login(self.member)
+        url = self._url("family_pool_admin_payments")
+
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(
+            self.client.post(url, {"user_id": str(self.member.id), "paid": "on"}).status_code,
+            403,
+        )
+        self.assertFalse(PoolMemberPayment.objects.exists())
+
+    def test_oversized_user_id_is_404_not_a_500(self):
+        self._enable()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(self._url("family_pool_admin_payments"), {
+            "user_id": "99999999999999999999", "paid": "on",
+        })
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_table_lists_exactly_this_family_and_marks_state_correctly(self):
+        """The table body was entirely unasserted.
+
+        Six mutations survived, including dropping the family scope (which
+        leaks every family's roster) and skipping members with no payment row
+        (which destroys absence-means-unpaid).
+        """
+        self._enable()
+        self._mark_paid(self.member)
+        inactive = User.objects.create_user("pay-inactive", email="i@example.com", password="pass")
+        FamilyMembership.objects.create(
+            family=self.family, user=inactive, role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.INACTIVE,
+        )
+        other_family = Family.objects.create(name="Other2", slug="other-family-2")
+        stranger = User.objects.create_user("pay-stranger2", email="s2@example.com", password="pass")
+        FamilyMembership.objects.create(
+            family=other_family, user=stranger, role=FamilyMembership.Role.MEMBER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        self.client.force_login(self.owner)
+
+        html = self.client.get(self._url("family_pool_admin_payments")).content.decode()
+        listed = set(re.findall(r'data-testid="payment-row" data-user-id="(\d+)"', html))
+
+        self.assertEqual(
+            listed,
+            {str(self.owner.id), str(self.admin_user.id), str(self.member.id)},
+        )
+        self.assertNotIn(str(stranger.id), listed)
+        self.assertNotIn(str(inactive.id), listed)
+
+        # The paid member's row is checked; an unpaid one is not.
+        paid_row = html.split(f'data-user-id="{self.member.id}"', 1)[1].split("</tr>", 1)[0]
+        unpaid_row = html.split(f'data-user-id="{self.owner.id}"', 1)[1].split("</tr>", 1)[0]
+        self.assertIn("checked", paid_row)
+        self.assertNotIn("checked", unpaid_row)
+        self.assertIn("Paid", paid_row)
+        self.assertIn("Unpaid", unpaid_row)
+
+    def test_a_prior_season_payment_does_not_mark_this_season_paid(self):
+        self._enable()
+        self._mark_paid(self.member, gameseason=2425)
+        self.client.force_login(self.owner)
+
+        html = self.client.get(self._url("family_pool_admin_payments")).content.decode()
+        row = html.split(f'data-user-id="{self.member.id}"', 1)[1].split("</tr>", 1)[0]
+
+        self.assertNotIn("checked", row)
+
+    def test_the_rendered_row_carries_every_field_the_save_posts(self):
+        """Post exactly what the page renders, scoped to one row's form."""
+        self._enable()
+        self.client.force_login(self.owner)
+        html = self.client.get(self._url("family_pool_admin_payments")).content.decode()
+
+        form_html = html.split(f'id="pay-{self.member.id}"', 1)[1].split("</form>", 1)[0]
+        self.assertIn("csrfmiddlewaretoken", form_html)
+        self.assertIn(f'name="user_id" value="{self.member.id}"', form_html)
+        # The controls live in the table and bind back by id.
+        self.assertIn(f'form="pay-{self.member.id}" name="paid"', html)
+        self.assertIn(f'form="pay-{self.member.id}" name="note"', html)
+
+        self.client.post(self._url("family_pool_admin_payments"), {
+            "user_id": str(self.member.id), "paid": "on", "note": "cash",
+        })
+        self.assertTrue(
+            PoolMemberPayment.objects.get(pool=self.pool, user=self.member).paid
+        )
+
+    def test_audit_metadata_records_the_actual_paid_value_each_time(self):
+        self._enable()
+        self.client.force_login(self.owner)
+        url = self._url("family_pool_admin_payments")
+
+        self.client.post(url, {"user_id": str(self.member.id), "paid": "on"})
+        self.client.post(url, {"user_id": str(self.member.id)})
+
+        entries = list(
+            FamilyAuditLog.objects.filter(
+                action=FamilyAuditLog.Action.PAYMENT_UPDATED
+            ).order_by("created_at", "id")
+        )
+        self.assertEqual([e.metadata["paid"] for e in entries], [True, False])
+        self.assertEqual({e.metadata["gameseason"] for e in entries}, {2526})
+        self.assertTrue(all(e.ip_address is not None for e in entries))
+
+    def test_summary_counts_and_collected_total(self):
+        self._enable()
+        self._mark_paid(self.member)
+        self.client.force_login(self.owner)
+
+        page = self.client.get(self._url("family_pool_admin_payments"))
+
+        self.assertEqual(page.context["member_count"], 3)
+        self.assertEqual(page.context["paid_count"], 1)
+        self.assertEqual(page.context["collected_amount"], 25)
+        self.assertContains(page, "1 of 3")
+
+    def test_notice_quotes_no_amount_when_the_entry_fee_is_switched_off(self):
+        self._enable()
+        self.settings.entry_fee_enabled = False
+        self.settings.save(update_fields=["entry_fee_enabled"])
+        self.client.force_login(self.member)
+
+        page = self._lobby()
+        self.assertContains(page, 'data-testid="unpaid-notice"')
+        self.assertNotContains(page, "$25")
+
+    def test_hub_card_points_at_the_payments_url(self):
+        self._enable()
+        self.client.force_login(self.owner)
+
+        self.assertContains(
+            self.client.get(self._url("family_pool_admin")),
+            self._url("family_pool_admin_payments"),
+        )
 
