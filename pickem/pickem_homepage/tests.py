@@ -9456,14 +9456,23 @@ class UsernameTemplateRegressionTests(TestCase):
         )
         UserProfile.objects.create(user=self.viewer, username_confirmed=True)
 
-    def test_public_profile_shows_username_not_real_name(self):
+    def test_profile_identity_is_the_username_with_first_name_alongside(self):
+        """Issue #127 keeps the USERNAME as the display identity.
+
+        The first name is now shown alongside it so a league member can tell
+        who is behind a chosen username; the surname is still never rendered,
+        and the username remains what labels the player everywhere. This page
+        requires login (it is not in the middleware's public paths), so the
+        name is not exposed publicly -- unlike the global leaderboard, which
+        deliberately carries no real names at all.
+        """
         self.client.force_login(self.viewer)
         response = self.client.get(reverse("user_profile", args=[self.target.id]))
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
         # capfirst titles the username for display ("coolcat" -> "Coolcat").
         self.assertIn("Coolcat", content)
-        self.assertNotIn(self.DISTINCT_FIRST_NAME, content)
+        self.assertIn(self.DISTINCT_FIRST_NAME, content)
         self.assertNotIn("Lastnamedistinct", content)
 
 
@@ -11096,11 +11105,14 @@ class RealFirstNameDisplayTests(TestCase):
         self.assertContains(page, "PaPa_Jim")   # username is still the identity
         self.assertNotContains(page, "Dagostino")
 
-    def test_non_tenant_profile_still_hides_the_real_name(self):
-        """Issue #127 keeps the site-wide profile username-only."""
+    def test_non_tenant_profile_also_shows_the_first_name(self):
+        """Login-gated, so this is not a public exposure -- unlike the
+        leaderboard, which is public and carries no names."""
         page = self.client.get(reverse("user_profile", args=[self.target.id]))
 
-        self.assertNotContains(page, 'data-testid="profile-real-name"')
+        self.assertContains(page, 'data-testid="profile-real-name"')
+        self.assertContains(page, "Jim")
+        self.assertNotContains(page, "Dagostino")
 
     def test_public_leaderboard_never_exposes_real_names(self):
         self.client.logout()

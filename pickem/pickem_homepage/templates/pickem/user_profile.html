@@ -33,7 +33,7 @@
                         {{ profile_user|display_name }}
                     </h1>
                     {% with real_name=profile_user|real_first_name %}
-                    {% if real_name and pool %}
+                    {% if real_name %}
                     <p class="text-sm text-text-secondary-light dark:text-text-secondary" data-testid="profile-real-name">{{ real_name }}</p>
                     {% endif %}
                     {% endwith %}
