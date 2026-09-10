@@ -47,6 +47,7 @@
             <th>missed pick</th>
             <th>late join</th>
             <th>payout</th>
+            <th>sideline</th>
             <th class="text-[#98a2b3]">pick type 🔒</th>
             <th class="text-[#98a2b3]">playoffs 🔒</th>
           </tr>
@@ -76,10 +77,11 @@
                 <td>{{ row.form.missed_pick_policy }}</td>
                 <td>{{ row.form.late_join_policy }}</td>
                 <td>{{ row.form.payout_structure }}</td>
+                <td class="text-center" title="Run Sideline's AI weekly recaps for this pool">{{ row.form.ai_summaries_enabled }}</td>
                 <td class="sa-locked" title="Not implemented yet.">{{ row.form.pick_type }}</td>
                 <td class="sa-locked text-center" title="Not implemented yet.">{{ row.form.include_playoffs }}</td>
               {% else %}
-                <td colspan="16" class="sa-locked">
+                <td colspan="17" class="sa-locked">
                   <span class="sa-pill sa-pill-warn">no settings</span>
                   backfill from Overview
                 </td>

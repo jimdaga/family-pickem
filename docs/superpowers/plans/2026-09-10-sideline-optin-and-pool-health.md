@@ -9,7 +9,7 @@ starting the next.
 
 ---
 
-## [ ] 1. Sideline (AI recaps) runs only where enabled
+## [x] 1. Sideline (AI recaps) runs only where enabled
 
 `generate_weekly_summaries` currently runs for every active pool in the season
 (`pickem_api/management/commands/generate_weekly_summaries.py:29`).

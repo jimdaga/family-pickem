@@ -291,6 +291,13 @@ class PoolSettings(models.Model):
         default=False,
         help_text="Whether this pool collects an entry fee",
     )
+    ai_summaries_enabled = models.BooleanField(
+        default=False,
+        help_text=(
+            "Run Sideline's AI weekly recaps for this pool. Opt-in: while off "
+            "the pool is skipped entirely and no provider call is made for it."
+        ),
+    )
     payment_tracking_enabled = models.BooleanField(
         default=False,
         help_text=(

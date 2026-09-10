@@ -1,4 +1,8 @@
+from io import StringIO
+from unittest import mock
 from unittest.mock import MagicMock, patch
+
+from django.core.management import call_command
 
 import requests
 from django.contrib.auth.models import User
@@ -11,7 +15,10 @@ from pickem_api.ai_weekly_summaries import (
 )
 from pickem_api.management.commands import update_season_winners as update_season_winners_cmd
 from pickem_api.management.commands.update_all import PIPELINE as UPDATE_ALL_PIPELINE
-from pickem_api.models import Family, FamilyMembership, GamePicks, GamesAndScores, Pool, userSeasonPoints
+from pickem_api.models import (
+    Family, FamilyMembership, GamePicks, GamesAndScores, Pool, PoolSettings,
+    userSeasonPoints,
+)
 from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
 from pickem_superadmin.models import AIProviderSettings
 
@@ -487,3 +494,74 @@ class PerfectWeeksStreaksAndMissedPicksTests(TestCase):
 
         members_with_streaks = {entry['member'] for entry in facts['notable_picks']['hot_streaks']}
         self.assertNotIn('dave', members_with_streaks)
+
+
+class SidelineOptInTests(TestCase):
+    """Recaps run only for pools that opted in."""
+
+    def setUp(self):
+        from pickem_superadmin.models import AIProviderSettings
+        settings_row = AIProviderSettings.load()
+        settings_row.enabled = True
+        settings_row.provider = 'anthropic'
+        settings_row.set_api_key('test-key')
+        settings_row.save()
+
+        self.family = Family.objects.create(name='Opt Family', slug='opt-family')
+        self.pool = Pool.objects.create(
+            family=self.family, name='Main', slug='opt-main', season=2627,
+            competition='nfl', status=Pool.Status.ACTIVE, is_default=True,
+        )
+        self.settings = PoolSettings.objects.create(pool=self.pool)
+
+    def test_flag_defaults_to_off(self):
+        self.assertFalse(PoolSettings.objects.get(pool=self.pool).ai_summaries_enabled)
+
+    def test_disabled_pool_is_never_passed_to_the_generator(self):
+        """No provider call, and therefore no cost, for an opted-out pool."""
+        with mock.patch(
+            'pickem_api.management.commands.generate_weekly_summaries.generate_weekly_summary'
+        ) as gen, mock.patch(
+            'pickem_api.management.commands.generate_weekly_summaries.latest_complete_week',
+            return_value=1,
+        ):
+            call_command('generate_weekly_summaries', season=2627, stdout=StringIO())
+
+        gen.assert_not_called()
+
+    def test_enabled_pool_is_generated(self):
+        self.settings.ai_summaries_enabled = True
+        self.settings.save(update_fields=['ai_summaries_enabled'])
+
+        with mock.patch(
+            'pickem_api.management.commands.generate_weekly_summaries.generate_weekly_summary'
+        ) as gen, mock.patch(
+            'pickem_api.management.commands.generate_weekly_summaries.latest_complete_week',
+            return_value=1,
+        ):
+            gen.return_value = mock.Mock(status='ok')
+            call_command('generate_weekly_summaries', season=2627, stdout=StringIO())
+
+        self.assertEqual(gen.call_count, 1)
+        self.assertEqual(gen.call_args.args[0].id, self.pool.id)
+
+    def test_enabling_one_pool_does_not_enable_its_siblings(self):
+        other_pool = Pool.objects.create(
+            family=self.family, name='Second', slug='opt-second', season=2627,
+            competition='nfl', status=Pool.Status.ACTIVE,
+        )
+        PoolSettings.objects.create(pool=other_pool)
+        self.settings.ai_summaries_enabled = True
+        self.settings.save(update_fields=['ai_summaries_enabled'])
+
+        with mock.patch(
+            'pickem_api.management.commands.generate_weekly_summaries.generate_weekly_summary'
+        ) as gen, mock.patch(
+            'pickem_api.management.commands.generate_weekly_summaries.latest_complete_week',
+            return_value=1,
+        ):
+            gen.return_value = mock.Mock(status='ok')
+            call_command('generate_weekly_summaries', season=2627, stdout=StringIO())
+
+        self.assertEqual([c.args[0].id for c in gen.call_args_list], [self.pool.id])
+
