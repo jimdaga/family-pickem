@@ -42,7 +42,7 @@ profile; weekly ties behave the same; pre-scoring hiding still works.
 
 ---
 
-## [ ] 2. Lobby games heading says "Week N Games" while showing one day
+## [x] 2. Lobby games heading says "Week N Games" while showing one day
 
 **Root cause:** `select_dashboard_snapshot_games` (`views.py:210`) narrows to a
 single day on most weekdays, but `games_section_heading` (`views.py:1198`) is
@@ -59,7 +59,7 @@ week subtitle.
 
 ---
 
-## [ ] 3. Remove icons beside six lobby headings
+## [x] 3. Remove icons beside six lobby headings
 
 Purely presentational. Remove the `<i class="fas ...">` beside exactly these,
 in `pickem_homepage/templates/pickem/family_pool_home.html`:

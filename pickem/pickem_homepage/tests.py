@@ -1,3 +1,4 @@
+import pathlib
 import re
 from datetime import date, timedelta
 from io import BytesIO, StringIO
@@ -10627,4 +10628,109 @@ class CompetitionRankTests(TestCase):
         # Same shape as the stored ranking, so a fresh pool never shows blanks
         # where the hero badge shows a number.
         self.assertEqual(season_rank_map(rows), {"1": 1, "2": 1, "3": 3})
+
+
+class LobbyGamesHeadingTests(TestCase):
+    """The heading must not claim a full week while showing one day."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.get_or_create(
+            season=2526, defaults={"display_name": "2025-2026"}
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user("head-owner", email="h@example.com", password="pass")
+        self.family = Family.objects.create(name="Head Family", slug="head-family")
+        self.pool = Pool.objects.create(
+            family=self.family, name="Main", slug="head-main", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        PoolSettings.objects.create(pool=self.pool)
+        FamilyMembership.objects.create(
+            family=self.family, user=self.owner,
+            role=FamilyMembership.Role.OWNER,
+            status=FamilyMembership.Status.ACTIVE,
+        )
+        GameWeeks.objects.get_or_create(
+            date=timezone.localdate(),
+            defaults={"weekNumber": 1, "competition": "nfl", "season": 2526},
+        )
+
+    def _game(self, game_id, kickoff, status="notstarted"):
+        return GamesAndScores.objects.create(
+            id=game_id, slug=f"head-{game_id}", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526, startTimestamp=kickoff,
+            statusType=status, statusTitle="x",
+            homeTeamId=1, homeTeamSlug="atl", homeTeamName="Atlanta",
+            awayTeamId=2, awayTeamSlug="ari", awayTeamName="Arizona",
+        )
+
+    def _lobby(self):
+        self.client.force_login(self.owner)
+        return self.client.get(reverse("family_pool_home", kwargs={
+            "family_slug": self.family.slug, "pool_slug": self.pool.slug,
+        }))
+
+    def test_says_todays_games_when_only_one_day_is_shown(self):
+        now = timezone.now()
+        self._game(7001, now.replace(hour=13, minute=0))
+        self._game(7002, now.replace(hour=16, minute=0))
+        self._game(7003, now + timedelta(days=3))   # keeps it a strict subset
+
+        page = self._lobby()
+
+        self.assertEqual(page.context["games_section_heading"], "Today's Games")
+        self.assertEqual(page.context["games_section_subheading"], "Week 1")
+        self.assertContains(page, "Today&#x27;s Games")
+        self.assertContains(page, "Week 1")
+
+    def test_keeps_the_week_heading_when_the_whole_week_is_shown(self):
+        # All games on one day: the snapshot equals the week, so nothing is
+        # hidden and a week-level heading is honest.
+        now = timezone.now()
+        self._game(7001, now.replace(hour=13, minute=0))
+        self._game(7002, now.replace(hour=16, minute=0))
+
+        page = self._lobby()
+
+        self.assertNotEqual(page.context["games_section_heading"], "Today's Games")
+        self.assertEqual(page.context["games_section_subheading"], "")
+
+
+class LobbyHeadingIconsTests(TestCase):
+    """Six named headings render without a decorative icon."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.get_or_create(
+            season=2526, defaults={"display_name": "2025-2026"}
+        )
+
+    def test_named_headings_have_no_icon(self):
+        template = (
+            pathlib.Path(__file__).resolve().parent
+            / "templates" / "pickem" / "family_pool_home.html"
+        ).read_text()
+
+        for icon in (
+            "fa-bolt",            # Week Points
+            "fa-broadcast-tower", # Games
+            "fa-trophy text-xl",  # Pool Standings
+            "fa-star text-xl",    # Recent Week Winners
+            "fa-comments text-xl",# Message Board
+            "fa-newspaper text-xl",  # Around the NFL
+        ):
+            with self.subTest(icon=icon):
+                self.assertNotIn(icon, template)
+
+        # Icons elsewhere on the page were explicitly left alone.
+        self.assertIn("fa-arrow-right", template)
 

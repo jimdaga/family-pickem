@@ -1260,8 +1260,19 @@ def family_pool_home(request, family_slug, pool_slug):
     # Status-aware heading for the games section: "Live This Week" only makes
     # sense when something is actually live (or recently played).
     week_statuses = set(current_week_games.values_list('statusType', flat=True))
+    dashboard_snapshot_games = list(
+        select_dashboard_snapshot_games(current_week_games).order_by('startTimestamp', 'id')
+    )
+    # The snapshot narrows to a single day on most weekdays, so a week-level
+    # heading would claim to list games it is not showing.
+    showing_day_subset = len(dashboard_snapshot_games) < current_week_games.count()
+
     first_kickoff = None
-    if 'inprogress' in week_statuses:
+    games_section_subheading = ''
+    if showing_day_subset:
+        games_section_heading = "Today's Games"
+        games_section_subheading = f'Week {current_week}'
+    elif 'inprogress' in week_statuses:
         games_section_heading = 'Live This Week'
     elif week_statuses and week_statuses == {'notstarted'}:
         games_section_heading = f'Upcoming: Week {current_week}'
@@ -1271,9 +1282,6 @@ def family_pool_home(request, family_slug, pool_slug):
         games_section_heading = f'Week {current_week} Games'
     else:
         games_section_heading = 'Upcoming Games'
-    dashboard_snapshot_games = list(
-        select_dashboard_snapshot_games(current_week_games).order_by('startTimestamp', 'id')
-    )
     attach_dashboard_pick_groups(
         dashboard_snapshot_games,
         pool=pool,
@@ -1401,6 +1409,7 @@ def family_pool_home(request, family_slug, pool_slug):
         'current_week_games': dashboard_snapshot_games,
         'current_games': current_games,
         'games_section_heading': games_section_heading,
+        'games_section_subheading': games_section_subheading,
         'first_kickoff': first_kickoff,
         'user_picks_count': user_picks_count,
         'user_pick_status': user_pick_status,

@@ -286,7 +286,6 @@
     <div class="lobby-section section-container mb-6">
         <div class="flex items-center justify-between gap-3 mb-4">
             <div class="flex items-center gap-3">
-                <i class="fas fa-bolt text-xl text-primary"></i>
                 <div>
                     <h2 class="text-lg font-bold text-text-dark dark:text-white leading-tight">Week Points</h2>
                     <p class="text-xs text-text-secondary-light dark:text-text-secondary">Week {{ current_week }}</p>
@@ -335,9 +334,11 @@
     <div class="lobby-section section-container mb-6">
         <div class="flex items-center justify-between gap-3 mb-4">
             <div class="flex items-center gap-3">
-                <i class="fas fa-broadcast-tower text-xl text-primary"></i>
                 <div>
                     <h2 class="text-lg font-bold text-text-dark dark:text-white leading-tight">{{ games_section_heading }}</h2>
+                    {% if games_section_subheading %}
+                    <p class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary">{{ games_section_subheading }}</p>
+                    {% endif %}
                     {% if first_kickoff %}
                     <p class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary">Kicks off {{ first_kickoff|date:"l, N j" }}</p>
                     {% endif %}
@@ -438,7 +439,6 @@
         <div class="lobby-section section-container mb-0">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
-                    <i class="fas fa-trophy text-xl text-yellow-500"></i>
                     <h2 class="text-lg font-bold text-text-dark dark:text-white">Pool Standings</h2>
                 </div>
                 <a href="{% url 'family_pool_standings' family.slug pool.slug %}"
@@ -475,7 +475,6 @@
         <div class="flex flex-col gap-6">
             <div class="lobby-section section-container mb-0 flex-1">
                 <div class="flex items-center gap-3 mb-4">
-                    <i class="fas fa-star text-xl text-yellow-500"></i>
                     <h2 class="text-lg font-bold text-text-dark dark:text-white">Recent Week Winners</h2>
                 </div>
                 {% if recent_winners %}
@@ -503,7 +502,6 @@
     <div class="lobby-section section-container mb-6" data-testid="lobby-message-board">
         <div class="flex items-center justify-between gap-3 mb-4">
             <div class="flex items-center gap-3">
-                <i class="fas fa-comments text-xl text-primary"></i>
                 <h2 class="text-lg font-bold text-text-dark dark:text-white">Message Board</h2>
             </div>
             <a href="{% url 'family_pool_messages' family.slug pool.slug %}"
@@ -549,7 +547,6 @@
     {% if espn_news %}
     <div class="lobby-section section-container mb-6" data-testid="espn-news">
         <div class="flex items-center gap-3 mb-4">
-            <i class="fas fa-newspaper text-xl text-primary"></i>
             <h2 class="text-lg font-bold text-text-dark dark:text-white">Around the NFL</h2>
             <span class="text-xs text-text-secondary-light dark:text-text-secondary">via ESPN</span>
         </div>
