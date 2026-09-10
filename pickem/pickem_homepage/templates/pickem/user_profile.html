@@ -32,6 +32,11 @@
                     <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-text-dark dark:text-white truncate">
                         {{ profile_user|display_name }}
                     </h1>
+                    {% with real_name=profile_user|real_first_name %}
+                    {% if real_name %}
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary" data-testid="profile-real-name">{{ real_name }}</p>
+                    {% endif %}
+                    {% endwith %}
                     <div class="mt-1 flex flex-wrap items-center gap-2">
                         {% if user_profile.tagline %}
                         <p class="text-sm italic text-text-secondary-light dark:text-text-secondary truncate">&ldquo;{{ user_profile.tagline }}&rdquo;</p>

@@ -138,6 +138,7 @@
             <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}"
                class="standings-row block bg-white/60 dark:bg-bg-dark/30 rounded-lg px-3 py-2 border border-border-light dark:border-border-subtle hover:border-primary/50 dark:hover:border-primary/50 hover:shadow-card-hover transition-all duration-200"
                style="animation-delay: {{ forloop.counter0|add:1|floatformat:2 }}s"
+               {% if first_names %}title="{{ first_names|lookup:player.userID }}"{% endif %}
                data-user-id="{{ player.userID }}"
                data-total-points="{{ player.total_points|default:0 }}">
                 {% with usernames|lookup:player.userID as username %}
