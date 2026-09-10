@@ -525,3 +525,33 @@ def message_icon(tag):
         'danger': 'times-circle',
     }
     return icon_map.get(tag, 'info-circle')
+
+
+@register.filter
+def real_first_name(user):
+    """The player's real first name, for identifying who is behind a username.
+
+    Deliberately NOT a display name: ``display_name`` remains the single source
+    of truth for how a player is labelled (issue #127). This is supplementary —
+    shown outright on a profile, and as a hover title elsewhere — so a
+    commissioner can tell who "PaPa_Jim" is.
+
+    Returns "" when unknown, so callers can render nothing rather than a
+    placeholder. Never used on the public global leaderboard.
+    """
+    if not user:
+        return ""
+    first = (getattr(user, "first_name", "") or "").strip()
+    if first:
+        return first
+    # Fall back to the Google profile for accounts created before first_name
+    # was populated. Guarded: this runs in templates, where an exception would
+    # take down the whole page.
+    try:
+        account = user.socialaccount_set.filter(provider="google").first()
+    except Exception:
+        return ""
+    if not account:
+        return ""
+    return ((account.extra_data or {}).get("given_name") or "").strip()
+

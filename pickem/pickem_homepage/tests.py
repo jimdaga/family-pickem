@@ -4143,13 +4143,28 @@ class UserProfileBestRankTest(TestCase):
 
         self.assertEqual(self._profile_stats(self.target)["best_rank"], 2)
 
-    def test_best_rank_ties_broken_by_userid(self):
-        # Same points: lower userID sorts first (order_by('-total_points',
-        # 'userID')); "000000" is lexicographically below any real auto-pk.
+    def test_best_rank_shares_a_rank_on_a_tie(self):
+        """Equal points tie, matching current_season_rank on the same page.
+
+        This previously broke ties on userID compared as a STRING, so '10'
+        sorted ahead of '7' and eight tied players pushed a co-leader to rank
+        9 -- while current_season_rank on the same profile said 1.
+        """
         userSeasonPoints.objects.create(userID="000000", gameseason=2526, total_points=50)
         userSeasonPoints.objects.create(userID=str(self.target.id), gameseason=2526, total_points=50)
 
-        self.assertEqual(self._profile_stats(self.target)["best_rank"], 2)
+        self.assertEqual(self._profile_stats(self.target)["best_rank"], 1)
+
+    def test_best_rank_is_not_distorted_by_string_userid_ordering(self):
+        """The production shape: numeric ids whose string order differs."""
+        for uid in ("10", "12", "20", "30", "45", "47", "49", "51"):
+            userSeasonPoints.objects.create(userID=uid, gameseason=2526, total_points=1)
+        userSeasonPoints.objects.create(
+            userID=str(self.target.id), gameseason=2526, total_points=1,
+        )
+
+        # All nine are tied, so every one of them is first.
+        self.assertEqual(self._profile_stats(self.target)["best_rank"], 1)
 
     def test_best_rank_treats_null_total_points_as_zero(self):
         userSeasonPoints.objects.create(userID=str(self.leader.id), gameseason=2526, total_points=None)
@@ -10931,4 +10946,167 @@ class FamilySwitcherPagePreservationTests(TestCase):
         self.assertIsNone(
             _switcher_target_url(self.b_family, None, "family_pool_scores")
         )
+
+
+class ProfilePoolScopedStatsTests(TestCase):
+    """The pool profile showed 0% accuracy next to a non-zero points total."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(id=1, defaults={"domain": "testserver", "name": "testserver"})
+        currentSeason.objects.get_or_create(season=2526, defaults={"display_name": "2025-2026"})
+
+    def setUp(self):
+        self.client = Client()
+        self.viewer = User.objects.create_user("ps-viewer", email="v@example.com", password="x", first_name="Vera")
+        self.target = User.objects.create_user("SillyName99", email="t@example.com", password="x", first_name="Jim")
+        UserProfile.objects.create(user=self.viewer, username_confirmed=True)
+        UserProfile.objects.create(user=self.target, username_confirmed=True)
+        self.family = Family.objects.create(name="PS Family", slug="ps-family")
+        self.pool = Pool.objects.create(
+            family=self.family, name="Main", slug="ps-main", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        PoolSettings.objects.create(pool=self.pool)
+        for u in (self.viewer, self.target):
+            FamilyMembership.objects.create(
+                family=self.family, user=u, role=FamilyMembership.Role.MEMBER,
+                status=FamilyMembership.Status.ACTIVE,
+            )
+        self.client.force_login(self.viewer)
+
+    def _game(self, gid, scored=True):
+        return GamesAndScores.objects.create(
+            id=gid, slug=f"ps-{gid}", competition="nfl", gameWeek="1", gameyear="2025",
+            gameseason=2526, startTimestamp=timezone.now() - timedelta(days=1),
+            statusType="finished", statusTitle="Final", gameScored=scored,
+            gameWinner="atl", homeTeamId=1, homeTeamSlug="atl", homeTeamName="Atlanta",
+            awayTeamId=2, awayTeamSlug="ari", awayTeamName="Arizona",
+        )
+
+    def _pick(self, game, correct):
+        return GamePicks.objects.create(
+            id=f"p-{game.id}-{self.target.id}", pool=self.pool, userID=str(self.target.id),
+            uid=self.target.id, gameseason=2526, gameWeek="1", competition="nfl",
+            pick_game_id=game.id, pick="atl" if correct else "ari",
+            pick_correct=correct, auto_pick=False,
+        )
+
+    def _profile(self):
+        return self.client.get(reverse("family_pool_user_profile", kwargs={
+            "family_slug": self.family.slug, "pool_slug": self.pool.slug,
+            "user_id": self.target.id,
+        }))
+
+    def test_accuracy_comes_from_this_pools_picks_without_a_userStats_row(self):
+        """No per-pool userStats row exists on a normal deployment."""
+        self._pick(self._game(8001), correct=True)
+        self._pick(self._game(8002), correct=True)
+        self._pick(self._game(8003), correct=False)
+        self.assertFalse(userStats.objects.filter(pool=self.pool).exists())
+
+        stats = self._profile().context["stats"]
+
+        self.assertEqual(stats["correct_picks"], 2)
+        self.assertEqual(stats["total_picks_made"], 3)
+        self.assertEqual(stats["pick_accuracy_current"], 67)
+
+    def test_accuracy_ignores_another_pools_picks(self):
+        other_family = Family.objects.create(name="Other PS", slug="ps-other")
+        other_pool = Pool.objects.create(
+            family=other_family, name="Other", slug="ps-other-pool", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE,
+        )
+        PoolSettings.objects.create(pool=other_pool)
+        game = self._game(8001)
+        self._pick(game, correct=True)
+        GamePicks.objects.create(
+            id="p-other", pool=other_pool, userID=str(self.target.id), uid=self.target.id,
+            gameseason=2526, gameWeek="1", competition="nfl", pick_game_id=game.id,
+            pick="ari", pick_correct=False, auto_pick=False,
+        )
+
+        stats = self._profile().context["stats"]
+
+        # Only this pool's pick counts: 1 for 1, not 1 for 2.
+        self.assertEqual(stats["total_picks_made"], 1)
+        self.assertEqual(stats["pick_accuracy_current"], 100)
+
+    def test_auto_picks_are_excluded_from_accuracy(self):
+        self._pick(self._game(8001), correct=True)
+        GamePicks.objects.create(
+            id="p-auto", pool=self.pool, userID=str(self.target.id), uid=self.target.id,
+            gameseason=2526, gameWeek="1", competition="nfl",
+            pick_game_id=self._game(8002).id, pick="ari",
+            pick_correct=False, auto_pick=True,
+        )
+
+        stats = self._profile().context["stats"]
+
+        self.assertEqual(stats["total_picks_made"], 1)
+        self.assertEqual(stats["pick_accuracy_current"], 100)
+
+
+class RealFirstNameDisplayTests(TestCase):
+    """Real names help identify silly usernames -- but never publicly."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(id=1, defaults={"domain": "testserver", "name": "testserver"})
+        currentSeason.objects.get_or_create(season=2526, defaults={"display_name": "2025-2026"})
+
+    def setUp(self):
+        self.client = Client()
+        self.viewer = User.objects.create_user("rn-viewer", email="rv@example.com", password="x", first_name="Vera")
+        self.target = User.objects.create_user("PaPa_Jim", email="rt@example.com", password="x", first_name="Jim", last_name="Dagostino")
+        UserProfile.objects.create(user=self.viewer, username_confirmed=True)
+        UserProfile.objects.create(user=self.target, username_confirmed=True)
+        self.family = Family.objects.create(name="RN Family", slug="rn-family")
+        self.pool = Pool.objects.create(
+            family=self.family, name="Main", slug="rn-main", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        PoolSettings.objects.create(pool=self.pool)
+        for u in (self.viewer, self.target):
+            FamilyMembership.objects.create(
+                family=self.family, user=u, role=FamilyMembership.Role.MEMBER,
+                status=FamilyMembership.Status.ACTIVE,
+            )
+        self.client.force_login(self.viewer)
+
+    def test_filter_returns_the_first_name_only(self):
+        from pickem_homepage.templatetags.pickem_homepage_extras import real_first_name
+
+        self.assertEqual(real_first_name(self.target), "Jim")
+        self.assertNotIn("Dagostino", real_first_name(self.target))
+        self.assertEqual(real_first_name(None), "")
+        self.assertEqual(
+            real_first_name(User.objects.create_user("nameless", email="n@example.com", password="x")),
+            "",
+        )
+
+    def test_pool_profile_shows_the_first_name_under_the_username(self):
+        page = self.client.get(reverse("family_pool_user_profile", kwargs={
+            "family_slug": self.family.slug, "pool_slug": self.pool.slug,
+            "user_id": self.target.id,
+        }))
+
+        self.assertContains(page, 'data-testid="profile-real-name"')
+        self.assertContains(page, "Jim")
+        self.assertContains(page, "PaPa_Jim")   # username is still the identity
+        self.assertNotContains(page, "Dagostino")
+
+    def test_non_tenant_profile_still_hides_the_real_name(self):
+        """Issue #127 keeps the site-wide profile username-only."""
+        page = self.client.get(reverse("user_profile", args=[self.target.id]))
+
+        self.assertNotContains(page, 'data-testid="profile-real-name"')
+
+    def test_public_leaderboard_never_exposes_real_names(self):
+        self.client.logout()
+        page = self.client.get(reverse("global_leaderboard"))
+
+        self.assertEqual(page.status_code, 200)
+        self.assertNotIn("first_names", page.context)
+        self.assertNotContains(page, "Dagostino")
 

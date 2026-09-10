@@ -168,6 +168,23 @@ def _coerce_json_bool(value):
     raise ValueError("invalid_setting_value")
 
 
+def build_first_name_map(user_ids):
+    """{userID: real first name} for identifying who is behind a username.
+
+    Deliberately separate from build_user_display_maps so the PUBLIC global
+    leaderboard, which uses that helper, can never pick real names up by
+    accident. Only tenant pages (visible to fellow league members) call this.
+    """
+    raw_ids = {str(uid) for uid in user_ids if uid}
+    numeric_ids = {int(uid) for uid in raw_ids if uid.isdigit()}
+    names = {}
+    for uid, user in User.objects.in_bulk(numeric_ids).items():
+        first = (user.first_name or '').strip()
+        if first:
+            names[str(uid)] = first
+    return names
+
+
 def build_user_display_maps(user_ids):
     """Return ({userID: display_name}, {userID: avatar_url}) with two queries.
 
@@ -3683,10 +3700,12 @@ def render_standings_page(request, *, tenant_context=None):
     if season_winner:
         display_ids.append(season_winner.userID)
     usernames, avatars = build_user_display_maps(display_ids)
+    first_names = build_first_name_map(display_ids)
 
     context = {
         'players': players,
         'usernames': usernames,
+        'first_names': first_names,
         'avatars': avatars,
         'player_points': player_points,
         'season_has_started': season_has_started,
@@ -4540,6 +4559,42 @@ def tenant_user_profile(request, family_slug, pool_slug, user_id):
     return render_user_profile(request, user_id, tenant_context=request.tenant_context)
 
 
+def pool_scoped_pick_stats(*, user_id, pool, season):
+    """One player's pick accuracy within a single pool.
+
+    Reads GamePicks directly rather than userStats: per-pool userStats rows are
+    only written by an explicit ``update_stats --pool`` run, so on a normally
+    scheduled deployment they are absent and the profile showed 0% next to a
+    non-zero points total.
+
+    "Lifetime" here means lifetime *in this pool*, which is what a pool-scoped
+    page should say. Auto-picks are excluded from accuracy, matching
+    update_stats.
+    """
+    graded = GamePicks.objects.filter(
+        pool=pool, userID=str(user_id), auto_pick=False, pick_correct__isnull=False,
+    ).filter(pick_game_id__in=GamesAndScores.objects.filter(
+        gameScored=True
+    ).values('id'))
+
+    def _tally(qs):
+        total = qs.values('pick_game_id').distinct().count()
+        correct = qs.filter(pick_correct=True).values('pick_game_id').distinct().count()
+        return correct, total, (round(correct / total * 100) if total else 0)
+
+    season_correct, season_total, season_pct = _tally(graded.filter(gameseason=season))
+    life_correct, life_total, life_pct = _tally(graded)
+
+    return {
+        'pick_accuracy_current': season_pct,
+        'pick_accuracy_lifetime': life_pct,
+        'correct_picks': life_correct,
+        'total_picks_made': life_total,
+        'correct_picks_season': season_correct,
+        'total_picks_season': season_total,
+    }
+
+
 def render_user_profile(request, user_id, *, tenant_context=None):
     if tenant_context is None and not request.user.is_authenticated:
         raise Http404
@@ -4643,14 +4698,16 @@ def render_user_profile(request, user_id, *, tenant_context=None):
             # Python: count rows that sort ahead under the same
             # ('-total_points', 'userID') ordering (nulls treated as 0),
             # then +1.
+            # Competition ranking: everyone on the same total shares a rank,
+            # matching current_season_rank and every other rank on the site.
+            # The old tiebreak compared userID as a STRING, so '10' sorted
+            # before '7' and eight tied players counted as ahead -- the profile
+            # showed rank 1 and rank 9 for the same user in the same season.
             better_count = points_scope.filter(
                 gameseason=best_season.gameseason,
             ).annotate(
                 _points=Coalesce('total_points', 0)
-            ).filter(
-                Q(_points__gt=best_points)
-                | Q(_points=best_points, userID__lt=str(user_id))
-            ).count()
+            ).filter(_points__gt=best_points).count()
             stats['best_rank'] = better_count + 1
         stats['weeks_won_total'] = sum(
             1
@@ -4660,7 +4717,18 @@ def render_user_profile(request, user_id, *, tenant_context=None):
         )
         stats['years_playing'] = all_season_points.values('gameseason').distinct().count()
 
-    if user_stats_obj:
+    if tenant_context:
+        # Compute this one user's pick stats directly from their picks in THIS
+        # pool. update_stats only writes per-pool userStats rows when given an
+        # explicit --pool, which the scheduler never does, so the pool-scoped
+        # row usually does not exist and the page rendered zeros next to a
+        # non-zero points total. One user, a couple of queries, never stale.
+        stats.update(
+            pool_scoped_pick_stats(
+                user_id=user_id, pool=tenant_context.pool, season=gameseason,
+            )
+        )
+    elif user_stats_obj:
         stats['perfect_weeks'] = user_stats_obj.perfectWeeksSeason or 0
         stats['pick_accuracy_current'] = user_stats_obj.pickPercentSeason or 0
         stats['pick_accuracy_lifetime'] = user_stats_obj.pickPercentTotal or 0

@@ -306,7 +306,7 @@
                     <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}" alt="" class="h-8 w-8 flex-shrink-0 rounded-full border border-border-light dark:border-border-subtle object-cover" onerror="this.src='https://www.gravatar.com/avatar/?d=identicon&s=64'">
                     {% endwith %}
                     <span class="truncate text-sm font-bold text-text-dark dark:text-white">
-                        {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors">{{ row.user|display_name }}</a>{% else %}Player {{ row.points.userID }}{% endif %}
+                        {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors" title="{{ row.user|real_first_name }}">{{ row.user|display_name }}</a>{% else %}Player {{ row.points.userID }}{% endif %}
                     </span>
                 </div>
                 <span class="flex-shrink-0 text-sm font-black text-text-dark dark:text-white" data-user-week-points>{{ row.week_points }} pts</span>
@@ -403,7 +403,7 @@
                             <span class="font-bold text-green-600 dark:text-green-400">{{ group.team_name }}</span>
                             <span class="text-green-700/80 dark:text-green-300/80">
                                 {% for picker in group.users %}
-                                    <a href="{% url 'family_pool_user_profile' family.slug pool.slug picker.id %}" class="hover:underline">{{ picker|display_name }}</a>{% if not forloop.last %}, {% endif %}
+                                    <a href="{% url 'family_pool_user_profile' family.slug pool.slug picker.id %}" class="hover:underline" title="{{ picker|real_first_name }}">{{ picker|display_name }}</a>{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             </span>
                         </div>
@@ -412,7 +412,7 @@
                             <span class="font-bold text-text-dark dark:text-white">{{ group.team_name }}</span>
                             <span class="text-text-secondary-light dark:text-text-secondary">
                                 {% for picker in group.users %}
-                                    <a href="{% url 'family_pool_user_profile' family.slug pool.slug picker.id %}" class="hover:text-primary hover:underline transition-colors">{{ picker|display_name }}</a>{% if not forloop.last %}, {% endif %}
+                                    <a href="{% url 'family_pool_user_profile' family.slug pool.slug picker.id %}" class="hover:text-primary hover:underline transition-colors" title="{{ picker|real_first_name }}">{{ picker|display_name }}</a>{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             </span>
                         </div>
@@ -459,7 +459,7 @@
                         {% if row.rank %}{{ row.rank }}{% else %}<span title="Standings begin after the first game">&ndash;</span>{% endif %}
                     </div>
                     <div class="flex-1 min-w-0 font-semibold text-text-dark dark:text-white truncate text-sm">
-                        {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors">{{ row.user|display_name }}</a>{% else %}Player {{ row.points.userID }}{% endif %}
+                        {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors" title="{{ row.user|real_first_name }}">{{ row.user|display_name }}</a>{% else %}Player {{ row.points.userID }}{% endif %}
                     </div>
                     {% if row.rank == 1 %}<i class="fas fa-crown text-yellow-500 text-xs flex-shrink-0"></i>{% endif %}
                     <div class="text-sm font-bold text-text-dark dark:text-white flex-shrink-0 tabular-nums">{{ row.points.total_points|default:0 }} pts</div>
@@ -484,7 +484,7 @@
                         <div class="flex items-center gap-3">
                             <span class="px-2.5 py-1 text-xs font-bold bg-primary text-white rounded-full">W{{ row.week }}</span>
                             <span class="font-semibold text-text-dark dark:text-white text-sm">
-                                {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors">{{ row.user|display_name }}</a>{% else %}Player {{ row.winner.userID }}{% endif %}
+                                {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors" title="{{ row.user|real_first_name }}">{{ row.user|display_name }}</a>{% else %}Player {{ row.winner.userID }}{% endif %}
                             </span>
                         </div>
                         <i class="fas fa-trophy text-yellow-500 text-sm"></i>
@@ -518,7 +518,7 @@
                     {% with avatar=post.user.socialaccount_set.first %}
                     {% if avatar %}<img src="{{ avatar.get_avatar_url }}" alt="" class="h-5 w-5 rounded-full object-cover ring-1 ring-border-light dark:ring-border-subtle" onerror="this.style.display='none'">{% else %}<span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">{{ post.user|display_name|slice:":1"|upper }}</span>{% endif %}
                     {% endwith %}
-                    <span class="truncate font-semibold text-text-dark dark:text-white">{{ post.user|display_name }}</span>
+                    <span class="truncate font-semibold text-text-dark dark:text-white" title="{{ post.user|real_first_name }}">{{ post.user|display_name }}</span>
                     {% if post.is_pinned %}<i class="fas fa-thumbtack text-yellow-500" title="Pinned"></i>{% endif %}
                 </div>
                 <p class="mt-2 flex-1 text-sm font-bold text-text-dark dark:text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors">
