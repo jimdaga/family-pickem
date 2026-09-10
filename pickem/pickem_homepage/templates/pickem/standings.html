@@ -152,7 +152,7 @@
                                 {% elif forloop.counter == 3 %}bg-amber-700
                                 {% else %}bg-surface-hover{% endif %}
                                 flex items-center justify-center font-black text-white text-sm shadow-md">
-                        {% if season_has_started %}{{ forloop.counter }}{% else %}<span title="Standings begin after the first game">&ndash;</span>{% endif %}
+                        {% if season_has_started %}{{ player.display_rank|default:forloop.counter }}{% else %}<span title="Standings begin after the first game">&ndash;</span>{% endif %}
                     </div>
 
                     <!-- Player Avatar & Info -->

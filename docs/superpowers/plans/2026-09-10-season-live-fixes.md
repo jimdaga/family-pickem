@@ -10,7 +10,7 @@ next, so an interruption never leaves two half-done.
 
 ---
 
-## [ ] 1. Ranks are positional, not tie-aware
+## [x] 1. Ranks are positional, not tie-aware
 
 **Reported:** many users have 1 correct pick but are not all shown tied for
 first; different pages disagree.

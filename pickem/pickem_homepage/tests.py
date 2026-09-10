@@ -721,7 +721,8 @@ class TenantDashboardIsolationTests(TestCase):
         )
         response = self.client.get(self._tenant_url(smith_family, smith_pool))
         self.assertTrue(response.context["season_has_started"])
-        self.assertEqual([row["rank"] for row in response.context["standings"]], [1, 2])
+        # Equal totals tie rather than reading first and second.
+        self.assertEqual([row["rank"] for row in response.context["standings"]], [1, 1])
 
     def test_lobby_game_cards_show_weekday_and_date(self):
         smith_family, smith_pool = self._family_with_pool("Smith Family", "smith-family")
@@ -9813,7 +9814,21 @@ class BuildWeekPointsSummaryTests(TestCase):
         summary = build_week_points_summary(
             self.pool, self.season, "1", week_has_completed_game=True
         )
-        self.assertEqual([row['rank'] for row in summary], [1, 2])
+        # Both on zero: a tie, not first and second. Positional numbering used
+        # to render this as [1, 2].
+        self.assertEqual([row['rank'] for row in summary], [1, 1])
+
+    def test_weekly_ties_share_a_rank_and_the_next_score_skips(self):
+        from pickem_homepage.views import build_week_points_summary
+        for name in ("a", "b", "c"):
+            self._member(name, 5)
+        self._member("trailing", 2)
+
+        summary = build_week_points_summary(
+            self.pool, self.season, "1", week_has_completed_game=True
+        )
+
+        self.assertEqual([row['rank'] for row in summary], [1, 1, 1, 4])
 
     def test_orders_by_week_points_desc_treating_null_as_zero(self):
         from pickem_homepage.views import build_week_points_summary
@@ -10551,4 +10566,65 @@ class PaymentTrackerTests(TestCase):
         ):
             with self.subTest(label=label):
                 self.assertIn(f'aria-label="{label}"', html)
+
+
+class CompetitionRankTests(TestCase):
+    """Ranks must express ties, and every page must show the same number."""
+
+    @classmethod
+    def setUpTestData(cls):
+        Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        currentSeason.objects.get_or_create(
+            season=2526, defaults={"display_name": "2025-2026"}
+        )
+
+    def test_eight_tied_share_first_and_the_next_player_is_ninth(self):
+        from pickem_homepage.views import competition_ranks
+
+        rows = [{"p": 1} for _ in range(8)] + [{"p": 0}, {"p": 0}]
+        ranks = [rank for rank, _ in competition_ranks(rows, lambda r: r["p"])]
+
+        self.assertEqual(ranks, [1] * 8 + [9, 9])
+
+    def test_distinct_scores_rank_sequentially(self):
+        from pickem_homepage.views import competition_ranks
+
+        rows = [{"p": 9}, {"p": 5}, {"p": 1}]
+
+        self.assertEqual(
+            [rank for rank, _ in competition_ranks(rows, lambda r: r["p"])],
+            [1, 2, 3],
+        )
+
+    def test_empty_input_is_safe(self):
+        from pickem_homepage.views import competition_ranks
+
+        self.assertEqual(list(competition_ranks([], lambda r: r)), [])
+
+    def test_season_rank_map_prefers_the_stored_rank(self):
+        """The hero badge reads current_rank; the lists must match it."""
+        from pickem_homepage.views import season_rank_map
+
+        rows = [
+            SimpleNamespace(userID="1", total_points=10, current_rank=1),
+            SimpleNamespace(userID="2", total_points=10, current_rank=1),
+            SimpleNamespace(userID="3", total_points=4, current_rank=3),
+        ]
+
+        self.assertEqual(season_rank_map(rows), {"1": 1, "2": 1, "3": 3})
+
+    def test_season_rank_map_falls_back_when_the_pipeline_has_not_run(self):
+        from pickem_homepage.views import season_rank_map
+
+        rows = [
+            SimpleNamespace(userID="1", total_points=10, current_rank=None),
+            SimpleNamespace(userID="2", total_points=10, current_rank=None),
+            SimpleNamespace(userID="3", total_points=4, current_rank=None),
+        ]
+
+        # Same shape as the stored ranking, so a fresh pool never shows blanks
+        # where the hero badge shows a number.
+        self.assertEqual(season_rank_map(rows), {"1": 1, "2": 1, "3": 3})
 
