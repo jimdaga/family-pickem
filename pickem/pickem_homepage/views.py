@@ -175,13 +175,28 @@ def build_first_name_map(user_ids):
     leaderboard, which uses that helper, can never pick real names up by
     accident. Only tenant pages (visible to fellow league members) call this.
     """
+    from allauth.socialaccount.models import SocialAccount
+
     raw_ids = {str(uid) for uid in user_ids if uid}
     numeric_ids = {int(uid) for uid in raw_ids if uid.isdigit()}
     names = {}
+    missing = []
     for uid, user in User.objects.in_bulk(numeric_ids).items():
         first = (user.first_name or '').strip()
         if first:
             names[str(uid)] = first
+        else:
+            missing.append(uid)
+
+    # One batched query for accounts created before first_name was populated,
+    # so a tooltip is never blank where real_first_name would have found a name.
+    if missing:
+        for account in SocialAccount.objects.filter(
+            provider='google', user_id__in=missing
+        ):
+            given = ((account.extra_data or {}).get('given_name') or '').strip()
+            if given:
+                names[str(account.user_id)] = given
     return names
 
 
@@ -3700,7 +3715,12 @@ def render_standings_page(request, *, tenant_context=None):
     if season_winner:
         display_ids.append(season_winner.userID)
     usernames, avatars = build_user_display_maps(display_ids)
-    first_names = build_first_name_map(display_ids)
+    # Real names are for fellow league members only. The non-tenant branch of
+    # this page spans every pool, so it must never carry them -- today the
+    # middleware blocks that branch (it redirects anonymous users to login and
+    # authenticated ones to their own pool), but one config change should not
+    # be all that stands between a roster and a name leak.
+    first_names = build_first_name_map(display_ids) if tenant_context else {}
 
     context = {
         'players': players,

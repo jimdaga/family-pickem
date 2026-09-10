@@ -11122,3 +11122,58 @@ class RealFirstNameDisplayTests(TestCase):
         self.assertNotIn("first_names", page.context)
         self.assertNotContains(page, "Dagostino")
 
+    def _points_row(self, user, total=3):
+        return userSeasonPoints.objects.create(
+            pool=self.pool, gameseason=2526, userID=str(user.id),
+            userEmail=user.email, total_points=total,
+        )
+
+    def test_non_tenant_standings_carries_no_real_names(self):
+        """Defence in depth: that branch spans every pool.
+
+        Unreachable today (the middleware redirects anonymous users to login
+        and authenticated ones to their own pool), but a config change must not
+        be all that separates a cross-pool roster from a name leak.
+        """
+        from django.test import RequestFactory
+        from pickem_homepage.views import render_standings_page
+
+        self._points_row(self.target)
+        request = RequestFactory().get("/standings/")
+        request.user = self.viewer
+        html = render_standings_page(request).content.decode()
+
+        # NB: assert the tooltip, not the bare name -- "Jim" is a substring of
+        # the username "PaPa_Jim", which legitimately appears. (Other title
+        # attributes on the row, like the rank badge's explainer, are fine.)
+        self.assertNotIn('title="Jim"', html)
+        self.assertIn("PaPa_Jim", html)  # the player IS listed, just unnamed
+
+    def test_tenant_standings_does_carry_real_names(self):
+        self._points_row(self.target)
+
+        page = self.client.get(reverse("family_pool_standings", kwargs={
+            "family_slug": self.family.slug, "pool_slug": self.pool.slug,
+        }))
+
+        self.assertEqual(page.context["first_names"].get(str(self.target.id)), "Jim")
+        self.assertContains(page, 'title="Jim"')
+
+    def test_first_name_map_falls_back_to_the_google_profile(self):
+        """Matches real_first_name, so a tooltip is never blank where the
+        filter would have found a name."""
+        from allauth.socialaccount.models import SocialAccount
+        from pickem_homepage.views import build_first_name_map
+
+        legacy = User.objects.create_user("legacy", email="l@example.com", password="x")
+        SocialAccount.objects.create(
+            user=legacy, provider="google", uid="g-legacy",
+            extra_data={"given_name": "Dana", "family_name": "Doe"},
+        )
+
+        names = build_first_name_map([legacy.id, self.target.id])
+
+        self.assertEqual(names[str(legacy.id)], "Dana")
+        self.assertEqual(names[str(self.target.id)], "Jim")
+        self.assertNotIn("Doe", names.values())
+
