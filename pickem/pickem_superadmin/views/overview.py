@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db import transaction
@@ -5,8 +7,6 @@ from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-
-from datetime import timedelta
 
 from pickem_api.models import (
     Family, FamilyMembership, GamePicks, GamesAndScores, GameWeeks, Pool,
@@ -65,12 +65,36 @@ def _anomalies(season):
 
 
 #: A pool younger than this has simply not started yet, not been abandoned.
-#: Grounded in live data: at 14 days this flags the three genuinely dead pools
-#: and none of the several created within the last week.
+#: Grounded in live data: at 14 days this flags the genuinely dead pools and
+#: none of the several created within the last week.
 ABANDONED_AFTER_DAYS = 14
 
 #: Window for the "new pools" feed.
 NEW_POOL_WINDOW_DAYS = 30
+
+#: Cap the lists like stuck_games does -- a landing card must stay readable.
+POOL_HEALTH_LIMIT = 20
+
+
+def _current_week_for_health(season):
+    """(week, competition) for today, or (None, None) if it cannot be resolved.
+
+    Mirrors current_week_for_today() in update_games: today's row, else the most
+    recent row that has already started. The season__isnull=True arm matters --
+    historical GameWeeks rows predate the season column, and update_standings
+    carries the same fallback. Returning None (rather than guessing) lets the
+    caller say "not checked" instead of showing a false all-clear.
+    """
+    if not season:
+        return None, None
+    today = timezone.localdate()
+    weeks = GameWeeks.objects.filter(Q(season=season) | Q(season__isnull=True))
+    row = weeks.filter(date=today).first() or (
+        weeks.filter(date__lte=today).order_by('-date').first()
+    )
+    if row is None:
+        return None, None
+    return str(row.weekNumber), row.competition
 
 
 def _pool_health(season):
@@ -81,72 +105,97 @@ def _pool_health(season):
     advance and then legitimately gone silent, so "no picks in N days" flags
     healthy pools. Instead:
 
-    * abandoned - never received a single pick, and old enough that this is not
-      just a pool that has yet to get going;
-    * went quiet - has picks in its history, but nothing for the CURRENT week
-      once that week has actually kicked off.
+    * abandoned - a current-season pool with no picks THIS SEASON, old enough
+      that this is not simply a pool yet to get going. Season-scoped
+      deliberately: an all-time count would permanently exempt a pool that
+      played once and died, and would accumulate every historical never-used
+      pool forever.
+    * went quiet - has picks this season, but nothing for the current week once
+      that week has actually kicked off.
+
+    Constant query count regardless of pool count: this card sits on the
+    landing page, which holds itself to cheap checks only.
     """
     now = timezone.now()
     cutoff = now - timedelta(days=ABANDONED_AFTER_DAYS)
+    current_week, week_competition = _current_week_for_health(season)
 
-    pools = (
+    # 1: pools, with both a season-scoped and an all-time pick count.
+    pools = list(
         Pool.objects.filter(status=Pool.Status.ACTIVE)
         .select_related('family')
-        .annotate(pick_count=Count('game_picks', distinct=True))
+        .annotate(
+            season_picks=Count(
+                'game_picks', filter=Q(game_picks__gameseason=season)
+            ),
+            total_picks=Count('game_picks'),
+        )
     )
 
-    abandoned = [
-        {
+    # 2: one grouped count instead of a query per pool.
+    member_counts = dict(
+        FamilyMembership.objects.filter(
+            status=FamilyMembership.Status.ACTIVE
+        ).values_list('family').annotate(n=Count('id'))
+    )
+
+    # 3: one set instead of an exists() per pool.
+    picked_this_week = set()
+    week_started = False
+    if season and current_week:
+        week_games = GamesAndScores.objects.filter(
+            gameseason=season, gameWeek=current_week
+        )
+        if week_competition:
+            week_games = week_games.filter(competition=week_competition)
+        week_started = week_games.filter(startTimestamp__lte=now).exists()
+        if week_started:
+            picked_this_week = set(
+                GamePicks.objects.filter(
+                    gameseason=season, gameWeek=current_week
+                ).values_list('pool_id', flat=True)
+            )
+
+    def _row(pool, **extra):
+        return {
             'pool': pool,
             'age_days': (now - pool.created_at).days,
-            'members': FamilyMembership.objects.filter(
-                family=pool.family, status=FamilyMembership.Status.ACTIVE
-            ).count(),
+            'members': member_counts.get(pool.family_id, 0),
+            **extra,
         }
-        for pool in pools
-        if pool.pick_count == 0 and pool.created_at <= cutoff
-    ]
-    abandoned.sort(key=lambda row: row['age_days'], reverse=True)
 
-    # "Went quiet" needs a week that has actually started; before kickoff a
-    # pool with no picks for it is early, not quiet.
+    abandoned = sorted(
+        (
+            _row(pool)
+            for pool in pools
+            if pool.season == season
+            and pool.season_picks == 0
+            and pool.created_at <= cutoff
+        ),
+        key=lambda row: row['age_days'],
+        reverse=True,
+    )[:POOL_HEALTH_LIMIT]
+
     quiet = []
-    current_week = None
-    if season:
-        today = timezone.localdate()
-        week_row = (
-            GameWeeks.objects.filter(season=season, date__lte=today)
-            .order_by('-date').first()
-        )
-        current_week = str(week_row.weekNumber) if week_row else None
-    if current_week:
-        week_started = GamesAndScores.objects.filter(
-            gameseason=season,
-            gameWeek=current_week,
-            startTimestamp__lte=now,
-        ).exists()
-        if week_started:
-            for pool in pools.filter(season=season):
-                if not pool.pick_count:
-                    continue  # already counted as abandoned, or simply new
-                has_current = GamePicks.objects.filter(
-                    pool=pool, gameseason=season, gameWeek=current_week
-                ).exists()
-                if not has_current:
-                    quiet.append({'pool': pool, 'picks': pool.pick_count})
+    if week_started:
+        quiet = [
+            _row(pool, picks=pool.season_picks)
+            for pool in pools
+            if pool.season == season
+            and pool.season_picks
+            and pool.id not in picked_this_week
+        ][:POOL_HEALTH_LIMIT]
 
     new_cutoff = now - timedelta(days=NEW_POOL_WINDOW_DAYS)
-    new_pools = [
-        {
-            'pool': pool,
-            'age_days': (now - pool.created_at).days,
-            'members': FamilyMembership.objects.filter(
-                family=pool.family, status=FamilyMembership.Status.ACTIVE
-            ).count(),
-            'picks': pool.pick_count,
-        }
-        for pool in pools.filter(created_at__gte=new_cutoff).order_by('-created_at')
-    ]
+    new_pools = sorted(
+        (
+            _row(pool, picks=pool.total_picks)
+            for pool in pools
+            if pool.created_at >= new_cutoff
+        ),
+        key=lambda row: row['pool'].created_at,
+        reverse=True,
+    )[:POOL_HEALTH_LIMIT]
 
     return {
         'abandoned': abandoned,
@@ -155,6 +204,7 @@ def _pool_health(season):
         'abandoned_after_days': ABANDONED_AFTER_DAYS,
         'new_window_days': NEW_POOL_WINDOW_DAYS,
         'current_week': current_week,
+        'week_checked': week_started,
     }
 
 

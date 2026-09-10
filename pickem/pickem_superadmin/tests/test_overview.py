@@ -405,3 +405,60 @@ class PoolHealthTests(TestCase):
             with self.subTest(card=testid):
                 self.assertContains(page, f'data-testid="{testid}"')
 
+    def test_a_pool_that_played_once_then_died_is_abandoned(self):
+        """The shape the feature most needs to catch.
+
+        An all-time pick count would exempt it forever: it HAS picks, just none
+        this season. Season-scoping is what makes it visible.
+        """
+        pool = self._pool('diedafter', age_days=40)
+        old_game = GamesAndScores.objects.create(
+            id=6100, slug='ph-old', competition='nfl', gameWeek='1', gameyear='2025',
+            gameseason=2526, startTimestamp=timezone.now() - timedelta(days=300),
+            statusType='finished', statusTitle='Final',
+            homeTeamId=1, homeTeamSlug='atl', homeTeamName='Atlanta',
+            awayTeamId=2, awayTeamSlug='ari', awayTeamName='Arizona',
+        )
+        GamePicks.objects.create(
+            id='ph-old-pick', pool=pool, userID='1', uid=1, gameseason=2526,
+            gameWeek='1', competition='nfl', pick_game_id=old_game.id, pick='atl',
+        )
+
+        slugs = [r['pool'].slug for r in self._health()['abandoned']]
+
+        self.assertIn(pool.slug, slugs)
+
+    def test_prior_season_pools_are_not_listed_as_abandoned(self):
+        """They would otherwise accumulate forever and drown the card."""
+        stale = self._pool('priorseason', age_days=400, season=2526)
+
+        slugs = [r['pool'].slug for r in self._health()['abandoned']]
+
+        self.assertNotIn(stale.slug, slugs)
+
+    def test_quiet_reports_not_checked_rather_than_a_false_all_clear(self):
+        """No started week means nothing was verified -- saying "everyone has
+        picked" would be an affirmatively false clean bill of health."""
+        self._pool('somepool', age_days=30)
+
+        health = self._health()
+
+        self.assertFalse(health['week_checked'])
+        page = self.client.get(reverse('superadmin:overview'))
+        self.assertContains(page, 'Not checked')
+        self.assertNotContains(page, 'Every active pool has picked this week.')
+
+    def test_pool_health_query_count_does_not_grow_with_pools(self):
+        """This card sits on the landing page, which allows only cheap checks."""
+        for i in range(3):
+            self._pool(f'q{i}', age_days=30)
+        with self.assertNumQueries(4):
+            from pickem_superadmin.views.overview import _pool_health
+            _pool_health(2627)
+
+        for i in range(3, 12):
+            self._pool(f'q{i}', age_days=30)
+        with self.assertNumQueries(4):
+            from pickem_superadmin.views.overview import _pool_health
+            _pool_health(2627)
+

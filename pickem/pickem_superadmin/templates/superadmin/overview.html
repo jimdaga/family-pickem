@@ -122,7 +122,7 @@
         <span class="font-medium text-[#1b212b]">Abandoned pools</span>
         <span class="sa-pill {% if pool_health.abandoned %}sa-pill-warn{% else %}sa-pill-ok{% endif %}">{{ pool_health.abandoned|length }}</span>
       </div>
-      <div class="mb-2 text-[12px] text-[#98a2b3]">No pick ever submitted, and older than {{ pool_health.abandoned_after_days }} days.</div>
+      <div class="mb-2 text-[12px] text-[#98a2b3]">Current-season pool, no picks this season, older than {{ pool_health.abandoned_after_days }} days.</div>
       {% for row in pool_health.abandoned %}
         <div class="flex items-baseline justify-between py-0.5 text-[13px]">
           <span class="sa-mono">{{ row.pool.family.slug }}/{{ row.pool.slug }}</span>
@@ -134,15 +134,21 @@
     <div class="sa-card p-4" data-testid="quiet-pools">
       <div class="mb-2 flex items-center justify-between">
         <span class="font-medium text-[#1b212b]">Pools that went quiet</span>
-        <span class="sa-pill {% if pool_health.quiet %}sa-pill-warn{% else %}sa-pill-ok{% endif %}">{{ pool_health.quiet|length }}</span>
+        <span class="sa-pill {% if pool_health.quiet %}sa-pill-warn{% elif pool_health.week_checked %}sa-pill-ok{% else %}sa-pill-muted{% endif %}">{{ pool_health.quiet|length }}</span>
       </div>
-      <div class="mb-2 text-[12px] text-[#98a2b3]">Have picked before, but nothing for week {{ pool_health.current_week|default:"-" }} since it kicked off.</div>
+      <div class="mb-2 text-[12px] text-[#98a2b3]">Have picked this season, but nothing for week {{ pool_health.current_week|default:"-" }} since it kicked off.</div>
       {% for row in pool_health.quiet %}
         <div class="flex items-baseline justify-between py-0.5 text-[13px]">
           <span class="sa-mono">{{ row.pool.family.slug }}/{{ row.pool.slug }}</span>
-          <span class="text-[#98a2b3]">{{ row.picks }} pick{{ row.picks|pluralize }} all-time</span>
+          <span class="text-[#98a2b3]">{{ row.picks }} pick{{ row.picks|pluralize }} this season</span>
         </div>
-      {% empty %}<div class="text-[12px] text-[#98a2b3]">Every active pool has picked this week.</div>{% endfor %}
+      {% empty %}
+        {% if pool_health.week_checked %}
+          <div class="text-[12px] text-[#98a2b3]">Every active pool has picked this week.</div>
+        {% else %}
+          <div class="text-[12px] text-[#98a2b3]">Not checked &mdash; no started week to compare against.</div>
+        {% endif %}
+      {% endfor %}
     </div>
 
     <div class="sa-card p-4" data-testid="new-pools">

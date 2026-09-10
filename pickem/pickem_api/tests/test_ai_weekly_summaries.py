@@ -500,7 +500,6 @@ class SidelineOptInTests(TestCase):
     """Recaps run only for pools that opted in."""
 
     def setUp(self):
-        from pickem_superadmin.models import AIProviderSettings
         settings_row = AIProviderSettings.load()
         settings_row.enabled = True
         settings_row.provider = 'anthropic'
