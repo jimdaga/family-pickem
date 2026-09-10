@@ -1,0 +1,126 @@
+{% extends "pickem/base.html" %}
+
+{% block title %}Payments - {{ family.name }}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-gray-50 dark:bg-bg-dark">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="text-sm font-semibold uppercase tracking-wide text-primary">Family Admin</div>
+                <h1 class="mt-2 text-3xl font-bold text-text-dark dark:text-white">Payments</h1>
+                <p class="mt-2 text-text-secondary-light dark:text-text-secondary">
+                    {{ family.name }} - {{ pool.name }} - {{ gameseason }} {{ pool.competition|upper }}
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'family_pool_admin' family.slug pool.slug %}" class="inline-flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle px-4 py-2 text-sm font-semibold text-text-dark dark:text-white hover:bg-white dark:hover:bg-surface transition-colors">
+                    <i class="fas fa-arrow-left"></i>
+                    Admin Hub
+                </a>
+                <span class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">
+                    <i class="fas fa-shield-alt"></i>
+                    {{ membership.get_role_display }}
+                </span>
+            </div>
+        </header>
+
+        {% if not tracking_enabled %}
+        <div class="rounded-xl border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-6" data-testid="payments-disabled">
+            <h2 class="text-lg font-bold text-text-dark dark:text-white">Payment tracking is off for this pool</h2>
+            <p class="mt-2 text-sm text-text-secondary-light dark:text-text-secondary">
+                Nothing is recorded and members see no payment notice. Turn it on in Pool Settings to start tracking who has paid the entry fee.
+            </p>
+            <p class="mt-2 text-sm text-text-secondary-light dark:text-text-secondary">
+                Everyone shows as unpaid until you mark them, so expect to spend a minute on the list right after enabling it.
+            </p>
+            <a href="{{ settings_url }}" class="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+                <i class="fas fa-sliders-h"></i>
+                Open Pool Settings
+            </a>
+        </div>
+        {% else %}
+        <div class="grid gap-4 sm:grid-cols-3" data-testid="payments-summary">
+            <div class="rounded-xl border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-4">
+                <div class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Paid</div>
+                <div class="mt-1 text-2xl font-bold text-text-dark dark:text-white">{{ paid_count }} of {{ member_count }}</div>
+            </div>
+            <div class="rounded-xl border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-4">
+                <div class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Entry fee</div>
+                <div class="mt-1 text-2xl font-bold text-text-dark dark:text-white">{% if entry_fee_amount %}${{ entry_fee_amount }}{% else %}Not set{% endif %}</div>
+            </div>
+            <div class="rounded-xl border border-border-light dark:border-border-subtle bg-white dark:bg-surface p-4">
+                <div class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Collected</div>
+                <div class="mt-1 text-2xl font-bold text-text-dark dark:text-white">{% if entry_fee_amount %}${{ collected_amount }}{% else %}&mdash;{% endif %}</div>
+            </div>
+        </div>
+
+        <!-- Forms live OUTSIDE the table: a <form> is not valid content for
+             <tr>, and browsers only keep such a form working through parser
+             error recovery. Cells below associate with these by id via the
+             HTML form attribute, which is spec-supported and survives any
+             later row reordering or DOM manipulation. -->
+        {% for row in rows %}
+        <form id="pay-{{ row.user.id }}" method="post" action="{% url 'family_pool_admin_payments' family.slug pool.slug %}" class="hidden">
+            {% csrf_token %}
+            <input type="hidden" name="user_id" value="{{ row.user.id }}">
+        </form>
+        {% endfor %}
+
+        <div class="rounded-xl border border-border-light dark:border-border-subtle bg-white dark:bg-surface overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-bg-dark">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-semibold text-text-dark dark:text-white">Member</th>
+                            <th class="px-4 py-3 text-left font-semibold text-text-dark dark:text-white">Status</th>
+                            <th class="px-4 py-3 text-left font-semibold text-text-dark dark:text-white">Note</th>
+                            <th class="px-4 py-3 text-left font-semibold text-text-dark dark:text-white">Last marked</th>
+                            <th class="px-4 py-3 text-right font-semibold text-text-dark dark:text-white">Save</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr class="border-t border-border-light dark:border-border-subtle" data-testid="payment-row" data-user-id="{{ row.user.id }}">
+                            <td class="px-4 py-3 font-semibold text-text-dark dark:text-white">{{ row.user.username }}</td>
+                            <td class="px-4 py-3">
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="checkbox" form="pay-{{ row.user.id }}" name="paid"
+                                           aria-label="Paid status for {{ row.user.username }}" {% if row.paid %}checked{% endif %}
+                                           class="h-5 w-5 rounded border-border-light text-primary focus:ring-primary/20">
+                                    <span class="{% if row.paid %}text-green-600 dark:text-green-400{% else %}text-text-secondary-light dark:text-text-secondary{% endif %} font-semibold" data-testid="payment-status">
+                                        {% if row.paid %}Paid{% else %}Unpaid{% endif %}
+                                    </span>
+                                </label>
+                            </td>
+                            <td class="px-4 py-3">
+                                <input type="text" form="pay-{{ row.user.id }}" name="note" value="{{ row.payment.note|default:'' }}" maxlength="200"
+                                       aria-label="Payment note for {{ row.user.username }}"
+                                       placeholder="Venmo, cash, ..."
+                                       class="w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-1.5 text-sm text-text-dark dark:text-white">
+                            </td>
+                            <td class="px-4 py-3 text-text-secondary-light dark:text-text-secondary">
+                                {% if row.payment and row.payment.marked_at %}
+                                    {{ row.payment.marked_at|date:"M j, Y" }}
+                                    {% if row.payment.marked_by %}by {{ row.payment.marked_by.username }}{% endif %}
+                                {% else %}
+                                    &mdash;
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <button type="submit" form="pay-{{ row.user.id }}" aria-label="Save payment for {{ row.user.username }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+                                    Save
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-text-secondary-light dark:text-text-secondary">No active members yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</main>
+{% endblock %}

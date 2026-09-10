@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import (
+    PoolMemberPayment,
     Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, GamePicks,
     GamesAndScores, GameWeeks, Pool, PoolSettings, Teams, userPoints,
     userSeasonPoints, userStats, currentSeason, UserProfile,
@@ -195,3 +196,11 @@ class currentSeasonAdmin(admin.ModelAdmin):
         """Show the computed display season"""
         return obj.get_display_season()
     get_display_season.short_description = 'Computed Display Name'
+
+
+@admin.register(PoolMemberPayment)
+class PoolMemberPaymentAdmin(admin.ModelAdmin):
+    list_display = ('pool', 'user', 'gameseason', 'paid', 'marked_by', 'marked_at')
+    list_filter = ('paid', 'gameseason', 'pool')
+    search_fields = ('user__username', 'user__email', 'note')
+    raw_id_fields = ('pool', 'user', 'marked_by')

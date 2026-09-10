@@ -87,6 +87,11 @@ urlpatterns = [
         name='family_pool_admin_pick_user_picks',
     ),
     path(
+        'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/payments/',
+        views.family_pool_admin_payments,
+        name='family_pool_admin_payments',
+    ),
+    path(
         'families/<slug:family_slug>/pools/<slug:pool_slug>/admin/winners/',
         views.family_pool_admin_winners,
         name='family_pool_admin_winners',

@@ -291,6 +291,13 @@ class PoolSettings(models.Model):
         default=False,
         help_text="Whether this pool collects an entry fee",
     )
+    payment_tracking_enabled = models.BooleanField(
+        default=False,
+        help_text=(
+            "Track which members have paid the entry fee. Opt-in: while off, "
+            "no payment page and no lobby notice appear anywhere."
+        ),
+    )
     entry_fee_amount = models.PositiveIntegerField(
         default=0,
         help_text="Entry fee per player, in whole dollars",
@@ -398,6 +405,7 @@ class FamilyAuditLog(models.Model):
         POOL_SETTINGS_UPDATED = 'pool_settings_updated', 'Pool settings updated'
         MANUAL_PICK_UPDATED = 'manual_pick_updated', 'Manual pick updated'
         WEEK_WINNER_UPDATED = 'week_winner_updated', 'Week winner updated'
+        PAYMENT_UPDATED = 'payment_updated', 'Payment status updated'
         FAMILY_STATUS_UPDATED = 'family_status_updated', 'Family status updated'
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT, related_name='audit_logs')
@@ -444,6 +452,7 @@ class FamilyAuditLog(models.Model):
                     'manual_pick_updated',
                     'week_winner_updated',
                     'family_status_updated',
+                    'payment_updated',
                 ]),
                 name='family_audit_log_action_valid',
             ),
@@ -944,6 +953,54 @@ class ScheduledJobConfig(models.Model):
                 job_id=job_id,
                 defaults={'interval_minutes': default_minutes},
             )
+
+
+class PoolMemberPayment(models.Model):
+    """Whether one member has paid one pool's entry fee for one season.
+
+    Absence of a row means unpaid. That is deliberate: enabling
+    ``PoolSettings.payment_tracking_enabled`` needs no backfill, and nothing is
+    written until a commissioner actually marks someone.
+    """
+    # PROTECT, matching GamePicks: payment history must not disappear because a
+    # pool was deleted out from under it.
+    pool = models.ForeignKey(
+        Pool, on_delete=models.PROTECT, related_name='member_payments',
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='pool_payments',
+    )
+    gameseason = models.IntegerField(help_text="Season in YYZZ form.")
+    paid = models.BooleanField(default=False)
+    note = models.CharField(max_length=200, blank=True, default='')
+    # SET_NULL: who marked it is useful history, but a departing commissioner
+    # must not take the payment record with them.
+    marked_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='payments_marked',
+    )
+    marked_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = (('pool', 'user', 'gameseason'),)
+        indexes = [
+            models.Index(
+                fields=['pool', 'gameseason', 'paid'],
+                name='payment_pool_season_idx',
+            ),
+        ]
+        ordering = ['pool', 'user']
+
+    def __str__(self):
+        return f'{self.user} @ {self.pool} {self.gameseason}: ' + (
+            'paid' if self.paid else 'unpaid'
+        )
 
 
 class RunningJobMarker(models.Model):

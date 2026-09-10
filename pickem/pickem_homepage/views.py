@@ -60,7 +60,10 @@ from pickem_api.authz import (
     require_tenant_context,
     role_allows,
 )
-from pickem_api.models import Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, Pool, PoolSettings
+from pickem_api.models import (
+    Family, FamilyAuditLog, FamilyInvitation, FamilyMembership, Pool,
+    PoolMemberPayment, PoolSettings,
+)
 from pickem_api.logo_processing import LogoValidationError, process_family_logo
 from pickem_homepage.authz import family_member_required
 from pickem_homepage.emailing import (
@@ -385,8 +388,13 @@ def get_family_pool_choices(user):
     return choices
 
 
-def build_family_admin_sections(family, pool, user=None):
+def build_family_admin_sections(family, pool, user=None, pool_settings=None):
     route_kwargs = {'family_slug': family.slug, 'pool_slug': pool.slug}
+    if pool_settings is None:
+        pool_settings = PoolSettings.objects.filter(pool=pool).first()
+    payment_tracking_on = bool(
+        pool_settings and pool_settings.payment_tracking_enabled
+    )
     sections = [
         {
             'label': 'Settings',
@@ -415,6 +423,14 @@ def build_family_admin_sections(family, pool, user=None):
             'icon': 'fas fa-user-shield',
             'url': reverse('family_pool_admin_members', kwargs=route_kwargs),
             'status': 'Manage members',
+        },
+        {
+            'label': 'Payments',
+            'description': 'Track who has paid this pool\'s entry fee.',
+            'icon': 'fas fa-dollar-sign',
+            'url': reverse('family_pool_admin_payments', kwargs=route_kwargs),
+            'status': 'Manage payments',
+            'requires_payment_tracking': True,
         },
         {
             'label': 'Invites',
@@ -449,7 +465,13 @@ def build_family_admin_sections(family, pool, user=None):
             'url': '/superadmin/',
             'status': 'Open console',
         })
-    return sections
+    # Opt-in sections stay hidden until the pool turns them on, so a
+    # commissioner who has not enabled payment tracking never sees a card for a
+    # page that would only tell them it is off.
+    return [
+        section for section in sections
+        if not section.get('requires_payment_tracking') or payment_tracking_on
+    ]
 
 
 def get_current_week_context(gameseason):
@@ -1280,10 +1302,9 @@ def family_pool_home(request, family_slug, pool_slug):
     # so the card stays up.
     #
     # The role test runs first so a plain member never pays for the query.
-    show_commissioner_setup = role_allows(
-        tenant_context.membership.role, FamilyMembership.Role.ADMIN
-    )
-    if show_commissioner_setup:
+    # One phase string rather than two booleans, so exactly one card can render.
+    commissioner_card = ''
+    if role_allows(tenant_context.membership.role, FamilyMembership.Role.ADMIN):
         season_kickoff = (
             GamesAndScores.objects.filter(
                 gameseason=gameseason,
@@ -1293,15 +1314,39 @@ def family_pool_home(request, family_slug, pool_slug):
             .values_list('startTimestamp', flat=True)
             .first()
         )
-        show_commissioner_setup = (
-            season_kickoff is None or timezone.now() < season_kickoff
+        commissioner_card = (
+            'preseason'
+            if season_kickoff is None or timezone.now() < season_kickoff
+            else 'inseason'
         )
+
+    # Quiet nudge for an unpaid member, and only where the pool opted in.
+    # Absence of a paid row means unpaid, so this is an existence check rather
+    # than a join -- and it is scoped to this pool AND season, so paying in one
+    # pool never silences another.
+    pool_settings_row = PoolSettings.objects.filter(pool=pool).first()
+    show_unpaid_notice = bool(
+        pool_settings_row
+        and pool_settings_row.payment_tracking_enabled
+        and not PoolMemberPayment.objects.filter(
+            pool=pool, user=request.user, gameseason=gameseason, paid=True
+        ).exists()
+    )
+    unpaid_amount = (
+        pool_settings_row.entry_fee_amount
+        if pool_settings_row
+        and pool_settings_row.entry_fee_enabled
+        and pool_settings_row.entry_fee_amount
+        else 0
+    )
 
     context = {
         'family': family,
         'pool': pool,
         'membership': tenant_context.membership,
-        'show_commissioner_setup': show_commissioner_setup,
+        'commissioner_card': commissioner_card,
+        'show_unpaid_notice': show_unpaid_notice,
+        'unpaid_amount': unpaid_amount,
         'gameseason': gameseason,
         'current_week': current_week,
         'current_competition': current_competition,
@@ -1355,7 +1400,9 @@ def family_pool_admin(request, family_slug, pool_slug):
         'membership': tenant_context.membership,
         'gameseason': pool.season or get_season(),
         'recent_audit_logs': recent_audit_logs,
-        'admin_sections': build_family_admin_sections(family, pool, request.user),
+        'admin_sections': build_family_admin_sections(
+            family, pool, request.user, pool_settings=pool_settings,
+        ),
         'active_member_count': active_member_count,
         'active_invite_count': active_invite_count,
         'invites_url': reverse(
@@ -1382,6 +1429,7 @@ ADMIN_POOL_SETTINGS_FIELDS = [
     'perfect_week_bonus_amount',
     'entry_fee_enabled',
     'entry_fee_amount',
+    'payment_tracking_enabled',
     'pick_type',
     'missed_pick_policy',
     'include_playoffs',
@@ -2251,6 +2299,139 @@ def render_family_admin_winners(request, tenant_context, form=None, *, status=20
         'can_override': tenant_context.membership.role == FamilyMembership.Role.OWNER,
     }
     return render(request, 'pickem/family_admin_winners.html', context, status=status)
+
+
+def _payment_rows(pool, gameseason):
+    """Active members joined to their payment row for this pool + season.
+
+    A member with no row is unpaid -- that is the whole point of the absence
+    convention, so this must LEFT JOIN in Python rather than filter rows out.
+    """
+    memberships = (
+        FamilyMembership.objects.filter(
+            family=pool.family,
+            status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+        )
+        .select_related('user')
+        .order_by('user__username')
+    )
+    payments = {
+        p.user_id: p
+        for p in PoolMemberPayment.objects.filter(
+            pool=pool, gameseason=gameseason
+        ).select_related('marked_by')
+    }
+    rows = []
+    for membership in memberships:
+        payment = payments.get(membership.user_id)
+        rows.append({
+            'user': membership.user,
+            'membership': membership,
+            'payment': payment,
+            'paid': bool(payment and payment.paid),
+        })
+    return rows
+
+
+@family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
+def family_pool_admin_payments(request, family_slug, pool_slug):
+    tenant_context = request.tenant_context
+    family = tenant_context.family
+    pool = tenant_context.pool
+    gameseason = pool.season or get_season()
+    pool_settings = PoolSettings.objects.filter(pool=pool).first()
+    tracking_enabled = bool(pool_settings and pool_settings.payment_tracking_enabled)
+
+    if request.method == 'POST':
+        if not tracking_enabled:
+            # Defence in depth: the UI hides the controls, but a stale form must
+            # not be able to write payment rows for a pool that opted out.
+            return HttpResponseForbidden('Payment tracking is disabled for this pool.')
+
+        # Bounds-check before the query: a huge numeric string passes
+        # isdigit() but overflows the integer PK column (DataError -> 500).
+        # Same guard the banner path uses.
+        try:
+            target_user_pk = int(request.POST.get('user_id') or '')
+        except (TypeError, ValueError):
+            raise Http404()
+        if not 0 < target_user_pk <= 2 ** 31 - 1:
+            raise Http404()
+        target = (
+            FamilyMembership.objects.filter(
+                family=family,
+                user_id=target_user_pk,
+                status=FamilyMembership.Status.ACTIVE,
+                user__is_active=True,
+            )
+            .select_related('user')
+            .first()
+        )
+        if target is None:
+            raise Http404()
+
+        paid = request.POST.get('paid') == 'on'
+        note = (request.POST.get('note') or '').strip()[:200]
+        # One transaction: a payment recorded without its audit row is exactly
+        # what the audit table exists to prevent.
+        with transaction.atomic():
+            payment, _created = PoolMemberPayment.objects.update_or_create(
+                pool=pool,
+                user=target.user,
+                gameseason=gameseason,
+                defaults={
+                    'paid': paid,
+                    'note': note,
+                    'marked_by': request.user,
+                    'marked_at': timezone.now(),
+                },
+            )
+            FamilyAuditLog.objects.create(
+                family=family,
+                pool=pool,
+                actor=request.user,
+                action=FamilyAuditLog.Action.PAYMENT_UPDATED,
+                target_type='PoolMemberPayment',
+                target_id=str(payment.id),
+                metadata={
+                    'target_user_id': target.user_id,
+                    'gameseason': gameseason,
+                    'paid': paid,
+                    'summary': (
+                        f'Marked {target.user.username} '
+                        f'{"paid" if paid else "unpaid"} for {gameseason}'
+                    ),
+                },
+                **get_invite_audit_context(request),
+            )
+        messages.success(
+            request,
+            f'{target.user.username} marked {"paid" if paid else "unpaid"}.',
+        )
+        return redirect('family_pool_admin_payments',
+                        family_slug=family.slug, pool_slug=pool.slug)
+
+    rows = _payment_rows(pool, gameseason) if tracking_enabled else []
+    paid_count = sum(1 for row in rows if row['paid'])
+    entry_fee = (pool_settings.entry_fee_amount if pool_settings else 0) or 0
+    context = {
+        'family': family,
+        'pool': pool,
+        'membership': tenant_context.membership,
+        'gameseason': gameseason,
+        'tracking_enabled': tracking_enabled,
+        'rows': rows,
+        'paid_count': paid_count,
+        'member_count': len(rows),
+        'entry_fee_amount': entry_fee,
+        'collected_amount': paid_count * entry_fee if entry_fee else 0,
+        'settings_url': reverse(
+            'family_pool_admin_settings',
+            kwargs={'family_slug': family.slug, 'pool_slug': pool.slug},
+        ),
+    }
+    return render(request, 'pickem/family_admin_payments.html', context)
 
 
 @family_member_required(minimum_role=FamilyMembership.Role.ADMIN)
