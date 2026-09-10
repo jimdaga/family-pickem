@@ -26,9 +26,20 @@ class Command(BaseCommand):
         if week is None:
             self.stdout.write('No completed week yet; nothing to summarize.')
             return
-        pools = Pool.objects.filter(status=Pool.Status.ACTIVE, season=season, family__status=Family.Status.ACTIVE)
+        # Opt-in per pool: a pool without the flag is skipped entirely, so no
+        # provider call (and no cost) is incurred for it. This is the hook a
+        # paid tier will hang off later.
+        pools = Pool.objects.filter(
+            status=Pool.Status.ACTIVE,
+            season=season,
+            family__status=Family.Status.ACTIVE,
+            settings__ai_summaries_enabled=True,
+        )
         if options['pool']:
             pools = pools.filter(id=options['pool'])
+        if not pools.exists():
+            self.stdout.write('No pools have AI recaps enabled; nothing to do.')
+            return
         for pool in pools:
             run = generate_weekly_summary(pool, season, week, force=options['force'])
             self.stdout.write(f' - {pool}: {run.status}')

@@ -26,6 +26,7 @@ class PoolSettingsRowForm(forms.ModelForm):
             'entry_fee_enabled', 'entry_fee_amount',
             'missed_pick_policy', 'late_join_policy', 'payout_structure',
             'pick_type', 'include_playoffs',
+            'ai_summaries_enabled',
         )
         widgets = {
             'win_points': forms.NumberInput(attrs={'class': NUM_CELL}),
