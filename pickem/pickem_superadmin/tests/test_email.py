@@ -801,10 +801,16 @@ class MissedPicksReminderTests(TestCase):
         GameWeeks.objects.create(
             weekNumber=1, competition='nfl', date=datetime(2026, 9, 10).date(), season=2627,
         )
+        # Kickoffs are relative to now: _user_pools_with_missing_picks() decides
+        # "open" against the real wall clock (via is_pick_locked_for_pool), so
+        # hardcoded near-future dates rot into the past and break these tests
+        # once the calendar passes them. Keep the open game ahead of now and the
+        # locked game behind it.
+        now = timezone.now()
         self.open_game = GamesAndScores.objects.create(
             id=1, slug='bears-packers', competition='nfl', gameWeek='1', gameyear='2026',
             gameseason=2627,
-            startTimestamp=timezone.make_aware(datetime(2026, 9, 13, 13, 0)),
+            startTimestamp=now + timedelta(days=3),
             statusType='notstarted', statusTitle='Scheduled',
             homeTeamId=1, homeTeamSlug='packers', homeTeamName='Green Bay Packers',
             awayTeamId=2, awayTeamSlug='bears', awayTeamName='Chicago Bears',
@@ -812,7 +818,7 @@ class MissedPicksReminderTests(TestCase):
         self.locked_game = GamesAndScores.objects.create(
             id=2, slug='chiefs-bills', competition='nfl', gameWeek='1', gameyear='2026',
             gameseason=2627,
-            startTimestamp=timezone.make_aware(datetime(2026, 9, 10, 20, 20)),
+            startTimestamp=now - timedelta(days=2),
             statusType='final', statusTitle='Final',
             homeTeamId=3, homeTeamSlug='bills', homeTeamName='Buffalo Bills',
             awayTeamId=4, awayTeamSlug='chiefs', awayTeamName='Kansas City Chiefs',

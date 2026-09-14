@@ -794,7 +794,7 @@
                                 </label>
                                 <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     {% for target_pool in multi_family_pick_targets %}
-                                        <label class="flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle bg-bg-light/70 dark:bg-surface/70 px-3 py-2 text-sm text-text-dark dark:text-white">
+                                        <label class="edit-target-pool-label flex items-center gap-2 rounded-lg border border-border-light dark:border-border-subtle bg-bg-light/70 dark:bg-surface/70 px-3 py-2 text-sm text-text-dark dark:text-white">
                                             <input type="checkbox"
                                                    name="edit_target_pool_ids"
                                                    value="{{ target_pool.id }}"
@@ -806,6 +806,10 @@
                                                 <span class="block truncate text-xs text-text-secondary-light dark:text-text-secondary">
                                                     {{ target_pool.name }}{% if target_pool.id == pool.id %} &bull; current{% endif %}
                                                 </span>
+                                            </span>
+                                            <span class="target-pool-locked-badge ml-auto hidden shrink-0 rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-500"
+                                                  data-testid="edit-target-pool-locked">
+                                                <i class="fas fa-lock mr-1"></i>Locked
                                             </span>
                                         </label>
                                     {% endfor %}
@@ -882,6 +886,67 @@
     <script>
     const pickSubmitUrl = "{% if is_tenant_pick_page %}{% url 'family_pool_game_picks' family_slug=family.slug pool_slug=pool.slug %}{% else %}{% url 'game_picks' %}{% endif %}";
     const pickEditUrl = "{% if is_tenant_pick_page %}{% url 'family_pool_edit_game_pick' family_slug=family.slug pool_slug=pool.slug %}{% else %}{% url 'edit_game_pick' %}{% endif %}";
+
+    // Per-game map of family pools that are already locked for that game.
+    // { "<gameId>": [lockedPoolId, ...] }. Drives both the lock-aware target
+    // checkboxes and a client-side guard so a locked pool is never submitted.
+    const poolLockMap = JSON.parse('{{ pool_lock_map_json|escapejs }}' || '{}');
+
+    // Return the set of pool ids locked for a given game id (as strings).
+    function lockedPoolIdsForGame(gameId) {
+        const ids = poolLockMap[String(gameId)] || [];
+        return new Set(ids.map(String));
+    }
+
+    // Summarize a save/edit response's saved + skipped pools into one line.
+    function summarizeSaveResult(payload) {
+        const saved = Array.isArray(payload.saved_pools) ? payload.saved_pools : [];
+        const skipped = Array.isArray(payload.skipped_pools) ? payload.skipped_pools : [];
+        const savedNames = saved.map(p => p.family).filter(Boolean);
+        let msg;
+        if (savedNames.length) {
+            msg = `Saved for ${savedNames.join(', ')}`;
+        } else {
+            const savedCount = Number(payload.saved_count || 0);
+            msg = savedCount ? `Saved to ${savedCount} pool${savedCount === 1 ? '' : 's'}` : 'Saved';
+        }
+        if (skipped.length) {
+            const lockedNames = skipped.map(p => p.family).filter(Boolean).join(', ');
+            // Only attach a reason when every skipped pool shares it; mixed lock
+            // rules (e.g. kickoff vs Sunday-1PM) would otherwise mislabel some.
+            const reasons = [...new Set(skipped.map(p => p.reason).filter(Boolean))];
+            const reason = reasons.length === 1 ? ` — ${reasons[0]}` : '';
+            msg += `. Locked (not changed): ${lockedNames}${reason}`;
+        }
+        return msg;
+    }
+
+    // Reflect a game's per-pool lock state onto the edit modal's family target
+    // checkboxes: locked pools get unchecked, disabled, and badged; open pools
+    // are re-enabled and re-checked. Called each time the modal opens so state
+    // never leaks between games (the modal is shared across all games).
+    function applyLockStateToEditTargets(gameId) {
+        const lockedIds = lockedPoolIdsForGame(gameId);
+        // Reset the "apply to all" master toggle so it can't read as unchecked
+        // while we (re-)check every open pool below for this freshly-opened game.
+        const master = document.getElementById('edit-apply-to-all-families');
+        if (master) {
+            master.checked = true;
+        }
+        document.querySelectorAll('input[name="edit_target_pool_ids"]').forEach(input => {
+            const label = input.closest('.edit-target-pool-label');
+            const badge = label ? label.querySelector('.target-pool-locked-badge') : null;
+            const isLocked = lockedIds.has(String(input.value));
+            input.disabled = isLocked;
+            input.checked = !isLocked;
+            if (label) {
+                label.classList.toggle('opacity-60', isLocked);
+            }
+            if (badge) {
+                badge.classList.toggle('hidden', !isLocked);
+            }
+        });
+    }
 
     // Modal helper functions
     function openEditModal() {
@@ -1089,8 +1154,14 @@
             const applyToAllFamilies = document.getElementById('apply-to-all-families');
             if (applyToAllFamilies && applyToAllFamilies.checked) {
                 formData.set('apply_to_all_families', '1');
+                // Only submit to pools that are still open for THIS game — a pool
+                // can be locked for one game while open for another. The server
+                // enforces this too; this just avoids a pointless skip round-trip.
+                const lockedIds = lockedPoolIdsForGame(gameCard.dataset.gameId);
                 document.querySelectorAll('input[name="target_pool_ids"]:checked').forEach(input => {
-                    formData.append('target_pool_ids', input.value);
+                    if (!lockedIds.has(String(input.value))) {
+                        formData.append('target_pool_ids', input.value);
+                    }
                 });
             }
             console.log('About to submit form data:', formData);
@@ -1113,11 +1184,7 @@
                     const successIndicator = saveStatus.querySelector('.success');
                     const successText = successIndicator.querySelector('span');
                     if (successText) {
-                        const savedCount = Number(payload.saved_count || 1);
-                        const poolLabel = savedCount === 1 ? 'pool' : 'pools';
-                        const skippedCount = Number(payload.skipped_count || 0);
-                        const skippedText = skippedCount > 0 ? `, ${skippedCount} skipped` : '';
-                        successText.textContent = `Saved to ${savedCount} ${poolLabel}${skippedText}`;
+                        successText.textContent = summarizeSaveResult(payload);
                     }
                     successIndicator.style.display = 'flex';
                     
@@ -1157,6 +1224,7 @@
             button.dataset.editBound = '1';
             button.addEventListener('click', function() {
                 const pickId = this.dataset.pickId;
+                const gameId = this.dataset.gameId;
                 const currentPick = this.dataset.currentPick;
                 const awayTeam = this.dataset.awayTeam;
                 const awayName = this.dataset.awayName;
@@ -1342,6 +1410,9 @@
                     gameFooter.style.display = 'none';
                 }
 
+                // Reflect this game's per-pool lock state on the family targets
+                applyLockStateToEditTargets(gameId);
+
                 // Show modal
                 openEditModal();
             });
@@ -1413,17 +1484,23 @@
                     'X-Requested-With': 'XMLHttpRequest',
                 },
             })
-            .then(response => {
+            .then(async response => {
+                const payload = await response.json().catch(() => ({}));
                 if (response.ok) {
-                    // Close modal and reload page
+                    // If any pool was locked and skipped, tell the user plainly
+                    // before reloading — otherwise a silent reload reads as
+                    // "everything saved".
+                    if (Number(payload.skipped_count || 0) > 0) {
+                        alert(summarizeSaveResult(payload));
+                    }
                     closeEditModal();
                     window.location.reload();
                 } else {
-                    throw new Error('Update failed');
+                    throw new Error(payload.message || 'Update failed');
                 }
             })
             .catch(error => {
-                alert('Error updating pick. Please try again.');
+                alert(error.message || 'Error updating pick. Please try again.');
                 console.error('Error updating pick:', error);
             })
             .finally(() => {
@@ -1440,6 +1517,11 @@
             }
             const editTargetPools = document.querySelectorAll('input[name="edit_target_pool_ids"]');
             editTargetPools.forEach(input => {
+                // Never (re)check a pool that's locked for this game.
+                if (input.disabled) {
+                    input.checked = false;
+                    return;
+                }
                 input.checked = editApplyToAllFamilies.checked;
             });
         }

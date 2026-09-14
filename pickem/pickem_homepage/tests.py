@@ -1749,6 +1749,165 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertEqual(response.json()["saved_pool_ids"], [self.smith_pool.id])
         self.assertFalse(GamePicks.objects.filter(pool=outsider_pool, userID=str(self.member.id)).exists())
 
+    def _late_sunday_game(self):
+        """A late-Sunday game so KICKOFF and SUNDAY_1PM pools disagree on lock."""
+        import pytz
+        from datetime import datetime as _dt
+
+        est = pytz.timezone("US/Eastern")
+        kickoff = est.localize(_dt(2025, 9, 7, 16, 25))  # Sun 4:25 PM ET
+        return GamesAndScores.objects.create(
+            id=2050,
+            slug="ari-atl-2025-week-3-late",
+            competition="nfl",
+            gameWeek="3",
+            gameyear="2025",
+            gameseason=2526,
+            startTimestamp=kickoff,
+            statusType="notstarted",
+            statusTitle="Scheduled",
+            homeTeamId=1,
+            homeTeamSlug="atl",
+            homeTeamName="Atlanta Falcons",
+            awayTeamId=2,
+            awayTeamSlug="ari",
+            awayTeamName="Arizona Cardinals",
+        )
+
+    @staticmethod
+    def _frozen_utils_datetime(frozen):
+        """A datetime subclass whose now() is pinned, leaving combine() intact."""
+        from datetime import datetime as _dt
+
+        class _Frozen(_dt):
+            @classmethod
+            def now(cls, tz=None):
+                return frozen.astimezone(tz) if tz is not None else frozen
+
+        return _Frozen
+
+    def test_multi_family_edit_skips_pool_locked_for_that_game(self):
+        # Reproduces the reported backdoor: member is in a KICKOFF pool (Smith,
+        # still open) and a SUNDAY_1PM pool (Jones, already past its cutoff).
+        # Editing via "apply to all" must NOT write into the locked Jones pool.
+        import pytz
+        from datetime import datetime as _dt
+
+        self._active_membership(self.member, self.jones_family)
+        PoolSettings.objects.create(
+            pool=self.jones_pool,
+            picks_lock_mode=PoolSettings.PicksLockMode.SUNDAY_1PM,
+        )
+        game = self._late_sunday_game()
+        smith_pick = self._create_pick(user=self.member, pool=self.smith_pool, game=game, pick=game.homeTeamSlug)
+        jones_pick = self._create_pick(user=self.member, pool=self.jones_pool, game=game, pick=game.homeTeamSlug)
+        self.client.force_login(self.member)
+
+        est = pytz.timezone("US/Eastern")
+        frozen = est.localize(_dt(2025, 9, 7, 14, 0))  # Sun 2 PM ET: past 1PM cutoff, before 4:25 kickoff
+        with patch("pickem.utils.datetime", self._frozen_utils_datetime(frozen)):
+            response = self.client.post(
+                self._tenant_edit_url(),
+                {
+                    "pick_id": smith_pick.id,
+                    "pick": game.awayTeamSlug,
+                    "apply_to_all_families": "1",
+                    "target_pool_ids": [str(self.smith_pool.id), str(self.jones_pool.id)],
+                },
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["saved_pool_ids"], [self.smith_pool.id])
+        self.assertEqual([p["pool_id"] for p in body["skipped_pools"]], [self.jones_pool.id])
+
+        smith_pick.refresh_from_db()
+        jones_pick.refresh_from_db()
+        self.assertEqual(smith_pick.pick, game.awayTeamSlug)  # open pool changed
+        self.assertEqual(jones_pick.pick, game.homeTeamSlug)  # locked pool untouched
+
+    def test_picks_page_exposes_pool_lock_map(self):
+        self._active_membership(self.member, self.jones_family)
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_picks_url())
+
+        self.assertEqual(response.status_code, 200)
+        lock_map = json.loads(response.context["pool_lock_map_json"])
+        # Every game in the week is represented, keyed by string game id, with a
+        # list of locked pool ids. The week's games are all in the future here,
+        # so nothing is locked yet.
+        self.assertIn(str(self.game.id), lock_map)
+        self.assertEqual(lock_map[str(self.game.id)], [])
+        self.assertContains(response, "poolLockMap")
+
+    def test_multi_family_edit_400s_when_all_selected_pools_locked(self):
+        # Current pool (Smith, KICKOFF) is still open so the edit passes the
+        # per-pool gate, but the only *selected* target (Jones, SUNDAY_1PM) is
+        # locked -> nothing saves and the request is rejected.
+        import pytz
+        from datetime import datetime as _dt
+
+        self._active_membership(self.member, self.jones_family)
+        PoolSettings.objects.create(
+            pool=self.jones_pool,
+            picks_lock_mode=PoolSettings.PicksLockMode.SUNDAY_1PM,
+        )
+        game = self._late_sunday_game()
+        smith_pick = self._create_pick(user=self.member, pool=self.smith_pool, game=game, pick=game.homeTeamSlug)
+        jones_pick = self._create_pick(user=self.member, pool=self.jones_pool, game=game, pick=game.homeTeamSlug)
+        self.client.force_login(self.member)
+
+        est = pytz.timezone("US/Eastern")
+        frozen = est.localize(_dt(2025, 9, 7, 14, 0))
+        with patch("pickem.utils.datetime", self._frozen_utils_datetime(frozen)):
+            response = self.client.post(
+                self._tenant_edit_url(),
+                {
+                    "pick_id": smith_pick.id,
+                    "pick": game.awayTeamSlug,
+                    "apply_to_all_families": "1",
+                    "target_pool_ids": [str(self.jones_pool.id)],
+                },
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(response.status_code, 400)
+        body = response.json()
+        self.assertIn("locked", body["message"].lower())
+        self.assertEqual([p["pool_id"] for p in body["skipped_pools"]], [self.jones_pool.id])
+        smith_pick.refresh_from_db()
+        jones_pick.refresh_from_db()
+        self.assertEqual(smith_pick.pick, game.homeTeamSlug)  # unchanged
+        self.assertEqual(jones_pick.pick, game.homeTeamSlug)  # unchanged
+
+    def test_partition_target_pools_by_lock_splits_by_pool(self):
+        from pickem_homepage.views import partition_target_pools_by_lock
+
+        with patch("pickem.utils.is_pick_locked_for_pool") as locked:
+            locked.side_effect = lambda game, pool, week_games=None: (
+                (True, "locked") if pool is self.jones_pool else (False, "open")
+            )
+            writable, locked_pairs = partition_target_pools_by_lock(
+                self.game, [self.smith_pool, self.jones_pool]
+            )
+
+        self.assertEqual(writable, [self.smith_pool])
+        self.assertEqual([pool for pool, _reason in locked_pairs], [self.jones_pool])
+        self.assertEqual(locked_pairs[0][1], "locked")
+
+    def test_build_pool_lock_map_maps_game_to_locked_pool_ids(self):
+        from pickem_homepage.views import build_pool_lock_map
+
+        with patch("pickem.utils.is_pick_locked_for_pool") as locked:
+            locked.side_effect = lambda game, pool, week_games=None: (
+                (True, "locked") if pool is self.jones_pool else (False, "open")
+            )
+            lock_map = build_pool_lock_map([self.game], [self.smith_pool, self.jones_pool])
+
+        self.assertEqual(lock_map, {str(self.game.id): [self.jones_pool.id]})
+
     def test_superuser_without_real_membership_cannot_open_or_submit_picks(self):
         site_admin = User.objects.create_user(
             "site-admin-picks",
