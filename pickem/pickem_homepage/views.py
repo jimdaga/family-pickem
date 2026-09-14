@@ -753,13 +753,17 @@ def get_multi_family_pick_target_choices(*, user, current_pool, season, competit
     return sorted(by_id.values(), key=lambda pool: (pool.id != current_pool.id, pool.family.name, pool.name))
 
 
-def partition_target_pools_by_lock(game, pools):
+def partition_target_pools_by_lock(game, pools, week_games=None):
     """Split target pools into (writable, locked) by each pool's lock state for this game.
 
     Locking is a function of (game, pool) because pools can use different
     ``picks_lock_mode`` values, so a single game may be open in one pool and
     locked in another. This is the single choke point every pick write must go
     through — do not write a pick to a pool without consulting it.
+
+    ``week_games`` is an optional pre-fetched list of the game's week (same
+    season/week/competition). Pass it when checking many games at once so the
+    Sunday-1PM cutoff lookup doesn't re-query the week per pool.
 
     Returns:
         (writable, locked) where ``writable`` is a list of Pool objects and
@@ -770,7 +774,7 @@ def partition_target_pools_by_lock(game, pools):
     writable = []
     locked = []
     for pool in pools:
-        is_locked, reason = is_pick_locked_for_pool(game, pool)
+        is_locked, reason = is_pick_locked_for_pool(game, pool, week_games=week_games)
         if is_locked:
             locked.append((pool, reason))
         else:
@@ -786,9 +790,14 @@ def build_pool_lock_map(games, target_pools):
     ``is_pick_locked_for_pool`` path as the write handlers so the UI can never
     disagree with server enforcement.
     """
+    # Materialize once and reuse as the week-games window for every game so a
+    # SUNDAY_1PM pool's cutoff lookup doesn't re-query the week per (game, pool).
+    week_games = list(games)
     lock_map = {}
-    for game in games:
-        _writable, locked = partition_target_pools_by_lock(game, target_pools)
+    for game in week_games:
+        _writable, locked = partition_target_pools_by_lock(
+            game, target_pools, week_games=week_games
+        )
         lock_map[str(game.id)] = [pool.id for pool, _reason in locked]
     return lock_map
 

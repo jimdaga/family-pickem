@@ -924,6 +924,12 @@
     // never leaks between games (the modal is shared across all games).
     function applyLockStateToEditTargets(gameId) {
         const lockedIds = lockedPoolIdsForGame(gameId);
+        // Reset the "apply to all" master toggle so it can't read as unchecked
+        // while we (re-)check every open pool below for this freshly-opened game.
+        const master = document.getElementById('edit-apply-to-all-families');
+        if (master) {
+            master.checked = true;
+        }
         document.querySelectorAll('input[name="edit_target_pool_ids"]').forEach(input => {
             const label = input.closest('.edit-target-pool-label');
             const badge = label ? label.querySelector('.target-pool-locked-badge') : null;

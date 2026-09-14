@@ -1835,9 +1835,52 @@ class TenantPickFlowIsolationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         lock_map = json.loads(response.context["pool_lock_map_json"])
-        # Every game in the week is represented, keyed by string game id.
+        # Every game in the week is represented, keyed by string game id, with a
+        # list of locked pool ids. The week's games are all in the future here,
+        # so nothing is locked yet.
         self.assertIn(str(self.game.id), lock_map)
+        self.assertEqual(lock_map[str(self.game.id)], [])
         self.assertContains(response, "poolLockMap")
+
+    def test_multi_family_edit_400s_when_all_selected_pools_locked(self):
+        # Current pool (Smith, KICKOFF) is still open so the edit passes the
+        # per-pool gate, but the only *selected* target (Jones, SUNDAY_1PM) is
+        # locked -> nothing saves and the request is rejected.
+        import pytz
+        from datetime import datetime as _dt
+
+        self._active_membership(self.member, self.jones_family)
+        PoolSettings.objects.create(
+            pool=self.jones_pool,
+            picks_lock_mode=PoolSettings.PicksLockMode.SUNDAY_1PM,
+        )
+        game = self._late_sunday_game()
+        smith_pick = self._create_pick(user=self.member, pool=self.smith_pool, game=game, pick=game.homeTeamSlug)
+        jones_pick = self._create_pick(user=self.member, pool=self.jones_pool, game=game, pick=game.homeTeamSlug)
+        self.client.force_login(self.member)
+
+        est = pytz.timezone("US/Eastern")
+        frozen = est.localize(_dt(2025, 9, 7, 14, 0))
+        with patch("pickem.utils.datetime", self._frozen_utils_datetime(frozen)):
+            response = self.client.post(
+                self._tenant_edit_url(),
+                {
+                    "pick_id": smith_pick.id,
+                    "pick": game.awayTeamSlug,
+                    "apply_to_all_families": "1",
+                    "target_pool_ids": [str(self.jones_pool.id)],
+                },
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(response.status_code, 400)
+        body = response.json()
+        self.assertIn("locked", body["message"].lower())
+        self.assertEqual([p["pool_id"] for p in body["skipped_pools"]], [self.jones_pool.id])
+        smith_pick.refresh_from_db()
+        jones_pick.refresh_from_db()
+        self.assertEqual(smith_pick.pick, game.homeTeamSlug)  # unchanged
+        self.assertEqual(jones_pick.pick, game.homeTeamSlug)  # unchanged
 
     def test_partition_target_pools_by_lock_splits_by_pool(self):
         from pickem_homepage.views import partition_target_pools_by_lock
