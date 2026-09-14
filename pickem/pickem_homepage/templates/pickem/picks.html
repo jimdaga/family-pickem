@@ -911,8 +911,11 @@
             msg = savedCount ? `Saved to ${savedCount} pool${savedCount === 1 ? '' : 's'}` : 'Saved';
         }
         if (skipped.length) {
-            const reason = skipped[0].reason ? ` — ${skipped[0].reason}` : '';
             const lockedNames = skipped.map(p => p.family).filter(Boolean).join(', ');
+            // Only attach a reason when every skipped pool shares it; mixed lock
+            // rules (e.g. kickoff vs Sunday-1PM) would otherwise mislabel some.
+            const reasons = [...new Set(skipped.map(p => p.reason).filter(Boolean))];
+            const reason = reasons.length === 1 ? ` — ${reasons[0]}` : '';
             msg += `. Locked (not changed): ${lockedNames}${reason}`;
         }
         return msg;

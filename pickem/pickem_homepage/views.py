@@ -712,7 +712,7 @@ def get_multi_family_pick_target_pools(
             season=game.gameseason,
             competition=game.competition,
         )
-        .select_related("family")
+        .select_related("family", "settings")
         .distinct()
         .order_by("family__name", "name")
     )
@@ -744,7 +744,7 @@ def get_multi_family_pick_target_choices(*, user, current_pool, season, competit
             season=season,
             competition=competition,
         )
-        .select_related("family")
+        .select_related("family", "settings")
         .distinct()
         .order_by("family__name", "name")
     )
