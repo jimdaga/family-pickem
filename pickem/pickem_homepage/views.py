@@ -753,6 +753,46 @@ def get_multi_family_pick_target_choices(*, user, current_pool, season, competit
     return sorted(by_id.values(), key=lambda pool: (pool.id != current_pool.id, pool.family.name, pool.name))
 
 
+def partition_target_pools_by_lock(game, pools):
+    """Split target pools into (writable, locked) by each pool's lock state for this game.
+
+    Locking is a function of (game, pool) because pools can use different
+    ``picks_lock_mode`` values, so a single game may be open in one pool and
+    locked in another. This is the single choke point every pick write must go
+    through — do not write a pick to a pool without consulting it.
+
+    Returns:
+        (writable, locked) where ``writable`` is a list of Pool objects and
+        ``locked`` is a list of ``(pool, reason)`` tuples.
+    """
+    from pickem.utils import is_pick_locked_for_pool
+
+    writable = []
+    locked = []
+    for pool in pools:
+        is_locked, reason = is_pick_locked_for_pool(game, pool)
+        if is_locked:
+            locked.append((pool, reason))
+        else:
+            writable.append(pool)
+    return writable, locked
+
+
+def build_pool_lock_map(games, target_pools):
+    """Map ``str(game_id) -> [locked pool ids]`` for the given games and pools.
+
+    Consumed by the picks template so the "apply to all families" checkboxes can
+    reflect, per game, which pools are already locked. Uses the same
+    ``is_pick_locked_for_pool`` path as the write handlers so the UI can never
+    disagree with server enforcement.
+    """
+    lock_map = {}
+    for game in games:
+        _writable, locked = partition_target_pools_by_lock(game, target_pools)
+        lock_map[str(game.id)] = [pool.id for pool, _reason in locked]
+    return lock_map
+
+
 def get_invite_audit_context(request):
     return {
         'ip_address': request.META.get('REMOTE_ADDR'),
@@ -4176,6 +4216,7 @@ def render_pick_page(request, *, tenant_context=None):
 
     wins_losses = Teams.objects.filter(gameseason=gameseason)
     multi_family_pick_targets = []
+    pool_lock_map = {}
     if tenant_context and request.user.is_authenticated:
         multi_family_pick_targets = get_multi_family_pick_target_choices(
             user=request.user,
@@ -4183,6 +4224,8 @@ def render_pick_page(request, *, tenant_context=None):
             season=gameseason,
             competition=game_competition,
         )
+        if len(multi_family_pick_targets) > 1:
+            pool_lock_map = build_pool_lock_map(game_list, multi_family_pick_targets)
 
     context = {
         'game_list': game_list,
@@ -4201,6 +4244,7 @@ def render_pick_page(request, *, tenant_context=None):
         'is_tenant_pick_page': tenant_context is not None,
         'multi_family_pick_targets': multi_family_pick_targets,
         'can_submit_to_multiple_families': len(multi_family_pick_targets) > 1,
+        'pool_lock_map_json': json.dumps(pool_lock_map),
         'pool_allow_tiebreaker': (
             pool_allows_tiebreaker(tenant_context.pool) if tenant_context else True
         ),
@@ -4255,18 +4299,10 @@ def render_pick_page(request, *, tenant_context=None):
             selected_pool_ids=selected_pool_ids,
             always_include_current_when_selected=False,
         )
+        writable_pools, locked_pools = partition_target_pools_by_lock(game, target_pools)
         saved_picks = []
-        skipped_pools = []
-        for target_pool in target_pools:
-            target_locked, target_lock_reason = is_pick_locked_for_pool(game, target_pool)
-            if target_locked:
-                skipped_pools.append({
-                    'pool_id': target_pool.id,
-                    'family': target_pool.family.name,
-                    'pool': target_pool.name,
-                    'reason': target_lock_reason,
-                })
-                continue
+        saved_pools = []
+        for target_pool in writable_pools:
             saved_picks.append(save_server_derived_pick(
                 user=request.user,
                 pool=target_pool,
@@ -4275,6 +4311,20 @@ def render_pick_page(request, *, tenant_context=None):
                 tiebreaker_score=tiebreaker_score if game.tieBreakerGame else None,
                 tiebreaker_yards=tiebreaker_yards if game.tieBreakerGame else None,
             ))
+            saved_pools.append({
+                'pool_id': target_pool.id,
+                'family': target_pool.family.name,
+                'pool': target_pool.name,
+            })
+        skipped_pools = [
+            {
+                'pool_id': pool.id,
+                'family': pool.family.name,
+                'pool': pool.name,
+                'reason': reason,
+            }
+            for pool, reason in locked_pools
+        ]
 
         if not saved_picks:
             return JsonResponse({
@@ -4293,6 +4343,7 @@ def render_pick_page(request, *, tenant_context=None):
                 'pick_id': current_pick.id,
                 'saved_count': len(saved_picks),
                 'saved_pool_ids': [saved_pick.pool_id for saved_pick in saved_picks],
+                'saved_pools': saved_pools,
                 'skipped_count': len(skipped_pools),
                 'skipped_pools': skipped_pools,
             })
@@ -4403,19 +4454,10 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
             always_include_current_when_selected=False,
         )
 
+        writable_pools, locked_pools = partition_target_pools_by_lock(game, target_pools)
         saved_picks = []
-        skipped_pools = []
-        for target_pool in target_pools:
-            target_locked, target_lock_reason = is_pick_locked_for_pool(game, target_pool)
-            if target_locked:
-                skipped_pools.append({
-                    'pool_id': target_pool.id,
-                    'family': target_pool.family.name,
-                    'pool': target_pool.name,
-                    'reason': target_lock_reason,
-                })
-                continue
-
+        saved_pools = []
+        for target_pool in writable_pools:
             saved_picks.append(save_server_derived_pick(
                 user=request.user,
                 pool=target_pool,
@@ -4424,6 +4466,20 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
                 tiebreaker_score=int(tiebreaker_score) if game.tieBreakerGame and tiebreaker_score else None,
                 tiebreaker_yards=int(tiebreaker_yards) if game.tieBreakerGame and tiebreaker_yards else None,
             ))
+            saved_pools.append({
+                'pool_id': target_pool.id,
+                'family': target_pool.family.name,
+                'pool': target_pool.name,
+            })
+        skipped_pools = [
+            {
+                'pool_id': pool.id,
+                'family': pool.family.name,
+                'pool': pool.name,
+                'reason': reason,
+            }
+            for pool, reason in locked_pools
+        ]
 
         if not saved_picks:
             return JsonResponse({
@@ -4431,7 +4487,7 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
                 'message': 'Cannot edit pick: all selected family pools are locked',
                 'skipped_pools': skipped_pools,
             }, status=400)
-        
+
         # Return success response
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
@@ -4439,6 +4495,7 @@ def tenant_edit_game_pick(request, family_slug, pool_slug):
                 'message': 'Pick updated successfully',
                 'saved_count': len(saved_picks),
                 'saved_pool_ids': [saved_pick.pool_id for saved_pick in saved_picks],
+                'saved_pools': saved_pools,
                 'skipped_count': len(skipped_pools),
                 'skipped_pools': skipped_pools,
             })
