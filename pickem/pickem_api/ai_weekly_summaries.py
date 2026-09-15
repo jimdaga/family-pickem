@@ -201,15 +201,25 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
             sorted(previous_totals, key=lambda uid: (-previous_totals[uid], uid)), start=1,
         )
     }
+    # On the opening week everyone was tied at zero, so there is no real prior
+    # standing to move from. Ranking that all-zero field would hand back an
+    # arbitrary tiebreak order and manufacture "movement" the model then
+    # narrates ("so-and-so jumped 4 spots"). Report no movement instead.
+    has_prior_standings = any(previous_totals.values())
     standings = []
     for row in standings_rows:
         user_id = str(row.userID)
-        previous_rank = previous_ranks[user_id]
+        if has_prior_standings:
+            previous_rank = previous_ranks[user_id]
+            rank_change = previous_rank - row.current_rank
+        else:
+            previous_rank = row.current_rank
+            rank_change = 0
         standings.append({
             'member': membership_names[user_id],
             'rank': row.current_rank,
             'previous_rank': previous_rank,
-            'rank_change': previous_rank - row.current_rank,
+            'rank_change': rank_change,
             'total_points': row.total_points or 0,
             'week_points': getattr(row, week_field) or 0,
             'week_winner': getattr(row, f'week_{week}_winner'),
@@ -240,6 +250,7 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
         'week': week,
         'nfl_results_source': ('Family Pickem schedule preview' if allow_unscored else 'Family Pickem scored NFL game results'),
         'is_final_week': week == FINAL_WEEK,
+        'is_first_scored_week': not has_prior_standings,
         'season_champion': sorted(membership_names[str(row.userID)] for row in champion_rows),
         'results': results,
         'pool': {
@@ -393,7 +404,11 @@ def _provider_request(config, facts):
                 '`rank_change` (positive = moved up that many spots since last week, negative = dropped, 0 '
                 '= held) and `points_behind_next` (points that member needs to catch whoever is one rank '
                 'better, 0 for the leader) — use these for real movement and rivalry lines: someone closing '
-                'in, someone free-falling, a razor-thin gap. `notable_picks.lonely_correct` lists members '
+                'in, someone free-falling, a razor-thin gap. When `is_first_scored_week` is true this is the '
+                'opening week: everyone started from zero, there is no previous week, and `rank_change` is 0 '
+                'for everyone — do NOT describe anyone as climbing, falling, or jumping positions or reference '
+                'a prior week; frame it as the season\'s first leaderboard taking shape. '
+                '`notable_picks.lonely_correct` lists members '
                 'who were the ONLY one to correctly pick a game\'s winner — name them and the team. '
                 '`notable_picks.upset_calls` lists members who correctly picked a clear underdog to win (a '
                 'statement pick — hype it). `notable_picks.bad_beats` lists members who confidently picked '
@@ -501,14 +516,21 @@ def generate_weekly_summary(pool, season, week, *, force=False, preview=False):
     try:
         facts = build_summary_facts(pool, season, week, allow_unscored=preview)
         body, usage = _provider_request(config, facts)
+        # Real recaps auto-publish so members see them without a manual review
+        # step (author stays None — there's no human reviewer). Preview drafts
+        # (the DEBUG/mock-only escape hatch) stay unpublished so the local
+        # review-and-publish flow can still be exercised.
+        publish = not preview
         with transaction.atomic():
             publication, _created = FamilyPublication.objects.update_or_create(
                 family=pool.family, pool=pool,
                 source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
                 defaults={
                     'title': f"Week {week} recap{' (preview)' if preview else ''}", 'body': body,
-                    'generation_reference': str(run.pk), 'is_published': False,
-                    'published_at': None, 'author': None,
+                    'generation_reference': str(run.pk),
+                    'is_published': publish,
+                    'published_at': timezone.now() if publish else None,
+                    'author': None,
                 },
             )
             run.status = AIWeeklySummaryRun.Status.SUCCESS

@@ -1994,7 +1994,10 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
                 pool, pool.season or get_season(), week, force=True, preview=preview,
             )
             if run.status == 'success':
-                messages.success(request, f"Week {week} AI recap {'preview ' if preview else ''}draft created for review.")
+                if preview:
+                    messages.success(request, f"Week {week} AI recap preview draft created for review.")
+                else:
+                    messages.success(request, f"Week {week} AI recap generated and published. Unpublish it below if you want to edit first.")
             elif run.status == 'disabled':
                 messages.error(request, 'AI weekly recaps are disabled for this environment.')
             elif run.error_code == 'run_limit':

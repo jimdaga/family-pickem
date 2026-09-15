@@ -10934,12 +10934,15 @@ class LobbyGamesHeadingTests(TestCase):
 
     def test_snapshot_day_drives_the_heading_regardless_of_weekday(self):
         """The rule itself, with no dependence on the real calendar."""
-        from datetime import date
+        from datetime import date, datetime
         from pickem_homepage.views import select_dashboard_snapshot_day
 
-        now = timezone.now()
-        self._game(7001, now.replace(hour=13, minute=0))
-        self._game(7002, now + timedelta(days=3))
+        # Fixed reference week so the narrowing assertion can't drift with the
+        # real calendar (e.g. onto a Tue/Wed, which deliberately shows the whole
+        # week): Tue 2026-09-08, Wed 09-09, Thu 09-10.
+        thursday = timezone.make_aware(datetime(2026, 9, 10, 13, 0))
+        self._game(7001, thursday)
+        self._game(7002, thursday + timedelta(days=3))
         games = GamesAndScores.objects.filter(gameseason=2526, gameWeek="1")
 
         # Tuesday and Wednesday deliberately show the whole week.
@@ -10948,8 +10951,8 @@ class LobbyGamesHeadingTests(TestCase):
                 _rows, day = select_dashboard_snapshot_day(games, today=weekday_date)
                 self.assertIsNone(day)
 
-        # Any other day narrows, and reports which day it narrowed to.
-        target = timezone.localtime(now).date()
+        # A day with games narrows, and reports which day it narrowed to.
+        target = date(2026, 9, 10)  # Thursday
         _rows, day = select_dashboard_snapshot_day(games, today=target)
         self.assertEqual(day, target)
 

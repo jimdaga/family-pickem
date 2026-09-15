@@ -109,6 +109,57 @@ class AIWeeklySummaryTests(TestCase):
         self.assertEqual(first.status, AIWeeklySummaryRun.Status.SUCCESS)
         self.assertEqual(second.status, AIWeeklySummaryRun.Status.SUCCESS)
 
+    @override_settings(
+        OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
+        OPENAI_WEEKLY_SUMMARIES_MOCK=True,
+        OPENAI_API_KEY='',
+    )
+    def test_successful_recap_auto_publishes(self):
+        run = generate_weekly_summary(self.pool, 2627, 1, force=True)
+
+        self.assertEqual(run.status, AIWeeklySummaryRun.Status.SUCCESS)
+        publication = run.publication
+        self.assertTrue(publication.is_published)
+        self.assertIsNotNone(publication.published_at)
+        # Auto-published: no human reviewer is implied.
+        self.assertIsNone(publication.author)
+
+    @override_settings(
+        OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
+        OPENAI_WEEKLY_SUMMARIES_MOCK=True,
+        OPENAI_API_KEY='',
+    )
+    def test_preview_recap_stays_unpublished(self):
+        GamesAndScores.objects.filter(id=10001).update(gameScored=False)
+
+        run = generate_weekly_summary(self.pool, 2627, 1, force=True, preview=True)
+
+        self.assertEqual(run.status, AIWeeklySummaryRun.Status.SUCCESS)
+        self.assertFalse(run.publication.is_published)
+        self.assertIsNone(run.publication.published_at)
+
+    def test_first_scored_week_reports_no_standings_movement(self):
+        # Everyone started at zero in week 1, so the facts must not manufacture
+        # rank movement from an arbitrary tiebreak of the all-zero prior totals.
+        # Make the week-1 state self-consistent: total == week-1 points.
+        userSeasonPoints.objects.filter(pool=self.pool, userID=str(self.user.id)).update(
+            total_points=4, week_1_points=4, current_rank=1,
+        )
+        other = User.objects.create_user('pat', 'pat@example.com', 'pw', first_name='Pat')
+        FamilyMembership.objects.create(family=self.family, user=other)
+        userSeasonPoints.objects.create(
+            pool=self.pool, userID=str(other.id), gameseason=2627,
+            total_points=2, week_1_points=2, current_rank=2,
+        )
+
+        facts = build_summary_facts(self.pool, 2627, 1)
+
+        self.assertTrue(facts['is_first_scored_week'])
+        self.assertEqual(len(facts['pool']['standings']), 2)
+        for entry in facts['pool']['standings']:
+            self.assertEqual(entry['rank_change'], 0, entry)
+            self.assertEqual(entry['previous_rank'], entry['rank'], entry)
+
     @override_settings(OPENAI_WEEKLY_SUMMARIES_MOCK=True)
     def test_saved_provider_key_overrides_stale_mock_environment_flag(self):
         provider_settings = AIProviderSettings.load()
