@@ -109,6 +109,35 @@ class AIWeeklySummaryTests(TestCase):
         self.assertEqual(first.status, AIWeeklySummaryRun.Status.SUCCESS)
         self.assertEqual(second.status, AIWeeklySummaryRun.Status.SUCCESS)
 
+    @override_settings(
+        OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
+        OPENAI_WEEKLY_SUMMARIES_MOCK=True,
+        OPENAI_API_KEY='',
+    )
+    def test_successful_recap_auto_publishes(self):
+        run = generate_weekly_summary(self.pool, 2627, 1, force=True)
+
+        self.assertEqual(run.status, AIWeeklySummaryRun.Status.SUCCESS)
+        publication = run.publication
+        self.assertTrue(publication.is_published)
+        self.assertIsNotNone(publication.published_at)
+        # Auto-published: no human reviewer is implied.
+        self.assertIsNone(publication.author)
+
+    @override_settings(
+        OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
+        OPENAI_WEEKLY_SUMMARIES_MOCK=True,
+        OPENAI_API_KEY='',
+    )
+    def test_preview_recap_stays_unpublished(self):
+        GamesAndScores.objects.filter(id=10001).update(gameScored=False)
+
+        run = generate_weekly_summary(self.pool, 2627, 1, force=True, preview=True)
+
+        self.assertEqual(run.status, AIWeeklySummaryRun.Status.SUCCESS)
+        self.assertFalse(run.publication.is_published)
+        self.assertIsNone(run.publication.published_at)
+
     @override_settings(OPENAI_WEEKLY_SUMMARIES_MOCK=True)
     def test_saved_provider_key_overrides_stale_mock_environment_flag(self):
         provider_settings = AIProviderSettings.load()

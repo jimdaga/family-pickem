@@ -501,14 +501,21 @@ def generate_weekly_summary(pool, season, week, *, force=False, preview=False):
     try:
         facts = build_summary_facts(pool, season, week, allow_unscored=preview)
         body, usage = _provider_request(config, facts)
+        # Real recaps auto-publish so members see them without a manual review
+        # step (author stays None — there's no human reviewer). Preview drafts
+        # (the DEBUG/mock-only escape hatch) stay unpublished so the local
+        # review-and-publish flow can still be exercised.
+        publish = not preview
         with transaction.atomic():
             publication, _created = FamilyPublication.objects.update_or_create(
                 family=pool.family, pool=pool,
                 source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
                 defaults={
                     'title': f"Week {week} recap{' (preview)' if preview else ''}", 'body': body,
-                    'generation_reference': str(run.pk), 'is_published': False,
-                    'published_at': None, 'author': None,
+                    'generation_reference': str(run.pk),
+                    'is_published': publish,
+                    'published_at': timezone.now() if publish else None,
+                    'author': None,
                 },
             )
             run.status = AIWeeklySummaryRun.Status.SUCCESS
