@@ -582,13 +582,13 @@ class TenantDashboardIsolationTests(TestCase):
         )
         self.client.force_login(self.member)
 
-        # Lobby Week Points block: grid hook, page size 12, per-row value attr
+        # Lobby Week Points block: grid hook, page size, per-row value attr
         # (asserted with its value so it matches a rendered row, not the JS
         # literal), and the pagination re-init hook the refetch calls.
         lobby = self.client.get(self._tenant_url(family, pool))
         self.assertEqual(lobby.status_code, 200)
         self.assertContains(lobby, "data-week-points-grid")
-        self.assertContains(lobby, 'data-week-points-page-size="12"')
+        self.assertContains(lobby, 'data-week-points-page-size="18"')
         # The row-identity hook (data-user-id) must sit on the same row as the
         # reorder value attr — the SSE client finds the row by data-user-id.
         self.assertRegex(
@@ -11480,6 +11480,31 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         # The weighted total (20), not the raw correct count (2), is the headline.
         self.assertIn(">20<", html.replace(" ", "").replace("\n", ""))
 
+    def test_scores_week_winner_card_enriched(self):
+        family, pool = self._family_pool("Scores Winner Fam", "scores-winner-fam", win_points=10)
+        winner = self._member("scoreswinner", family)
+        g1 = self._game(game_id=5701, winner="atl", scored=True)
+        g2 = self._game(game_id=5702, winner="atl", scored=True)
+        self._pick(user=winner, pool=pool, game=g1, pick="atl")  # both right ->
+        self._pick(user=winner, pool=pool, game=g2, pick="atl")  # perfect week
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=winner.email, userID=str(winner.id),
+            gameseason=self.season, gameyear="2025",
+            week_1_points=20, week_1_winner=True, total_points=20,
+        )
+        self.client.force_login(winner)
+        resp = self.client.get(
+            f"/families/{family.slug}/pools/{pool.slug}/scores/competition/1/season/{self.season}/week/1"
+        )
+        self.assertEqual(resp.status_code, 200)
+        winners = list(resp.context["week_winner"])
+        self.assertEqual(len(winners), 1)
+        self.assertEqual(winners[0].week_points_value, 20)
+        self.assertEqual(winners[0].correct_count, 2)
+        self.assertTrue(winners[0].is_perfect)
+        self.assertContains(resp, "Week 1 Winner")
+        self.assertContains(resp, "Perfect Week")
+
     # ---- Global leaderboard ----------------------------------------------
     def _google(self, user):
         from allauth.socialaccount.models import SocialAccount
@@ -11527,6 +11552,85 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         self.assertContains(resp, "Reigning Champ")
         self.assertContains(resp, "Weeks Won:")
         self.assertContains(resp, "Perfect Week")
+
+    def test_lobby_standings_carry_avatar_stats_and_badges(self):
+        family, pool = self._family_pool("Lobby Stats Fam", "lobby-stats-fam")
+        member = self._member("lobbystats", family)
+        g1 = self._game(game_id=5401, winner="atl", scored=True)
+        g2 = self._game(game_id=5402, winner="atl", scored=True)
+        self._pick(user=member, pool=pool, game=g1, pick="atl")   # correct
+        self._pick(user=member, pool=pool, game=g2, pick="ari")   # wrong
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=member.email, userID=str(member.id),
+            gameseason=self.season, gameyear="2025",
+            week_1_points=1, week_1_winner=True, total_points=3,
+        )
+        self.client.force_login(member)
+        resp = self.client.get(reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+        self.assertEqual(resp.status_code, 200)
+        row = next(
+            r for r in resp.context["standings"]
+            if str(r["points"].userID) == str(member.id)
+        )
+        self.assertEqual(row["correct"], 1)
+        self.assertEqual(row["accuracy"], 50)      # 1 correct of 2 graded picks
+        self.assertEqual(row["weeks_won"], 1)
+        self.assertEqual(row["perfect_weeks"], 0)  # missed g2, so not perfect
+        self.assertIsNotNone(row["avatar"])
+        self.assertContains(resp, "correct")
+        self.assertContains(resp, "1W")            # weeks-won badge
+
+    def test_recent_week_winner_card_shows_correct_and_perfect(self):
+        family, pool = self._family_pool("Winner Fam", "winner-fam")
+        winner = self._member("weekwinner", family)
+        g1 = self._game(game_id=5501, winner="atl", scored=True)
+        g2 = self._game(game_id=5502, winner="atl", scored=True)
+        self._pick(user=winner, pool=pool, game=g1, pick="atl")  # both right ->
+        self._pick(user=winner, pool=pool, game=g2, pick="atl")  # perfect week
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=winner.email, userID=str(winner.id),
+            gameseason=self.season, gameyear="2025",
+            week_1_points=2, week_1_winner=True, total_points=4,
+        )
+        self.client.force_login(winner)
+        resp = self.client.get(reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+        self.assertEqual(resp.status_code, 200)
+        winners = resp.context["recent_winners"]
+        self.assertEqual(len(winners), 1)
+        self.assertEqual(winners[0]["correct"], 2)
+        self.assertTrue(winners[0]["is_perfect"])
+        self.assertIsNotNone(winners[0]["avatar"])
+        self.assertContains(resp, "Recent Week Winners")
+        self.assertContains(resp, "Perfect")
+
+    def test_lobby_podium_splits_top_three(self):
+        family, pool = self._family_pool("Podium Fam", "podium-fam")
+        self._game(game_id=5601, winner="atl", scored=True)  # season under way
+        members = []
+        for i, pts in enumerate([40, 30, 20, 10]):
+            m = self._member(f"pod{i}", family)
+            members.append(m)
+            userSeasonPoints.objects.create(
+                pool=pool, userEmail=m.email, userID=str(m.id),
+                gameseason=self.season, gameyear="2025",
+                week_1_points=pts, total_points=pts,
+            )
+        self.client.force_login(members[0])
+        resp = self.client.get(reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.context["podium"]), 3)          # top 3
+        self.assertEqual(len(resp.context["standings_table"]), 1)  # 4th place
+        self.assertEqual(resp.context["podium"][0]["points"].total_points, 40)
+        self.assertContains(resp, "grid grid-cols-3 gap-2 mb-4")   # podium block
 
     def test_leaderboard_keeps_everyone_before_season_starts(self):
         family, pool = self._family_pool("Pre Family", "pre-family")

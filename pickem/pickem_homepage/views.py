@@ -1315,6 +1315,74 @@ def family_picker(request):
     return render(request, 'pickem/family_picker.html', context)
 
 
+def build_pool_standings_stats(pool, gameseason, competition):
+    """Per-user season stats for a pool's standings row: correct picks,
+    accuracy, and perfect weeks.
+
+    Pool-scoped and computed live from GamePicks (auto picks excluded, matching
+    userStats), so the lobby's standings badges/columns never depend on the
+    optional per-pool userStats rows the scheduled pipeline doesn't write.
+    Returns ``{userID(str): {'correct', 'accuracy', 'perfect_weeks'}}``.
+    """
+    finished_ids = set(
+        GamesAndScores.objects.filter(
+            gameseason=gameseason, competition=competition, statusType='finished'
+        ).values_list('id', flat=True)
+    )
+    if not finished_ids:
+        return {}
+
+    stats = {}
+    graded = (
+        GamePicks.objects.filter(
+            pool=pool, gameseason=gameseason,
+            pick_game_id__in=finished_ids, auto_pick=False,
+        )
+        .values('userID')
+        .annotate(
+            correct=Count('pick_game_id', filter=Q(pick_correct=True), distinct=True),
+            total=Count('pick_game_id', distinct=True),
+        )
+    )
+    for row in graded:
+        uid = str(row['userID'])
+        total = row['total'] or 0
+        correct = row['correct'] or 0
+        stats[uid] = {
+            'correct': correct,
+            'accuracy': round(correct / total * 100) if total else None,
+            'perfect_weeks': 0,
+        }
+
+    # Perfect weeks: weeks where the user picked every scored game and got them
+    # all right (mirrors update_stats' definition, scoped to this pool).
+    scored_by_week = {}
+    for week in GamesAndScores.objects.filter(
+        gameseason=gameseason, competition=competition, gameScored=True
+    ).values_list('gameWeek', flat=True):
+        scored_by_week[week] = scored_by_week.get(week, 0) + 1
+    if scored_by_week:
+        per_week = (
+            GamePicks.objects.filter(
+                pool=pool, gameseason=gameseason, auto_pick=False,
+            )
+            .values('userID', 'gameWeek')
+            .annotate(
+                correct=Count('pick_game_id', filter=Q(pick_correct=True), distinct=True),
+                total=Count('pick_game_id', distinct=True),
+            )
+        )
+        for row in per_week:
+            scored_count = scored_by_week.get(row['gameWeek'], 0)
+            if scored_count and row['correct'] == scored_count and row['total'] == scored_count:
+                uid = str(row['userID'])
+                entry = stats.setdefault(
+                    uid, {'correct': 0, 'accuracy': None, 'perfect_weeks': 0}
+                )
+                entry['perfect_weeks'] += 1
+    return stats
+
+
 @family_member_required
 def family_pool_home(request, family_slug, pool_slug):
     tenant_context = request.tenant_context
@@ -1342,14 +1410,45 @@ def family_pool_home(request, family_slug, pool_slug):
         gameScored=True,
     ).exists()
     lobby_ranks = season_rank_map(top_standings)
-    standings = [
-        {
-            'rank': lobby_ranks.get(str(points.userID)) if season_has_started else None,
+
+    # Richer standings rows — avatar, per-pool correct/accuracy, weeks won,
+    # perfect weeks, and last season's champion — so the lobby's Pool Standings
+    # mirrors the global leaderboard's badges and stat columns.
+    standings_stats = build_pool_standings_stats(pool, gameseason, current_competition)
+    prev_champion_ids = {
+        str(uid)
+        for uid in userSeasonPoints.objects.filter(
+            pool__family=family, gameseason=gameseason - 101, year_winner=True
+        ).values_list('userID', flat=True)
+        if uid
+    }
+    _, standing_avatars = build_user_display_maps(
+        [str(points.userID) for points in top_standings]
+    )
+    week_winner_fields = [f'week_{week}_winner' for week in range(1, 19)]
+
+    standings = []
+    for points in top_standings:
+        uid = str(points.userID)
+        row_stats = standings_stats.get(uid, {})
+        standings.append({
+            'rank': lobby_ranks.get(uid) if season_has_started else None,
             'points': points,
-            'user': standing_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
-        }
-        for points in top_standings
-    ]
+            'user': standing_users.get(int(points.userID)) if uid.isdigit() else None,
+            'avatar': standing_avatars.get(uid),
+            'correct': row_stats.get('correct', 0),
+            'accuracy': row_stats.get('accuracy'),
+            'weeks_won': sum(1 for field in week_winner_fields if getattr(points, field, False)),
+            'perfect_weeks': row_stats.get('perfect_weeks', 0),
+            'prev_champion': uid in prev_champion_ids,
+        })
+
+    # Split off a top-3 podium (once the season is under way and there are
+    # enough players) so the lobby can echo the global leaderboard's podium;
+    # the rest fall through to the table below it.
+    show_podium = season_has_started and len(standings) >= 3
+    podium = standings[:3] if show_podium else []
+    standings_table = standings[3:] if show_podium else standings
 
     # Every pool member's week points — 0 to start, all members shown; the
     # template paginates client-side. See build_week_points_summary(). Ranks are
@@ -1387,6 +1486,34 @@ def family_pool_home(request, family_slug, pool_slug):
                 'user': winner_user,
             })
     recent_winners = recent_winners[-3:]
+
+    # Enrich the shown winners with an avatar, how many correct picks they made
+    # that week, and whether it was a perfect week (every scored game right).
+    if recent_winners:
+        winner_avatars = build_user_display_maps(
+            [str(row['winner'].userID) for row in recent_winners]
+        )[1]
+        scored_by_week = {}
+        for week_value in GamesAndScores.objects.filter(
+            gameseason=gameseason, competition=current_competition, gameScored=True
+        ).values_list('gameWeek', flat=True):
+            scored_by_week[week_value] = scored_by_week.get(week_value, 0) + 1
+        for row in recent_winners:
+            uid = str(row['winner'].userID)
+            week_str = str(row['week'])
+            correct = (
+                GamePicks.objects.filter(
+                    pool=pool, gameseason=gameseason, userID=uid,
+                    gameWeek=week_str, auto_pick=False, pick_correct=True,
+                )
+                .values('pick_game_id').distinct().count()
+            )
+            scored_count = scored_by_week.get(week_str, 0)
+            row['avatar'] = winner_avatars.get(uid)
+            row['correct'] = correct
+            # A pick is only correct on a scored game, so matching the scored
+            # count means every game that week was picked right — a perfect week.
+            row['is_perfect'] = bool(scored_count) and correct == scored_count
 
     current_week_games = GamesAndScores.objects.filter(
         gameseason=gameseason,
@@ -1548,6 +1675,8 @@ def family_pool_home(request, family_slug, pool_slug):
         'current_week': current_week,
         'current_competition': current_competition,
         'standings': standings,
+        'podium': podium,
+        'standings_table': standings_table,
         'season_has_started': season_has_started,
         'viewer_favorite_team': viewer_favorite_team,
         'espn_news': get_espn_nfl_news(6),
@@ -4018,7 +4147,24 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
     week_winner = userSeasonPoints.objects.filter(**{winner_object: True}, gameseason=gameseason)
     if tenant_context:
         week_winner = week_winner.filter(pool=tenant_context.pool)
-    week_winner = week_winner.distinct()
+    week_winner = list(week_winner.distinct())
+
+    # Enrich the winner card: their weighted week points, correct picks that
+    # week, and whether it was a perfect week (every scored game right).
+    if week_winner and str(game_week).isdigit():
+        week_points_field = f"week_{game_week}_points"
+        scored_count = game_list.filter(gameScored=True).count()
+        for winner in week_winner:
+            winner.week_points_value = getattr(winner, week_points_field, 0) or 0
+            winner_correct_qs = GamePicks.objects.filter(
+                gameseason=gameseason, gameWeek=game_week, userID=str(winner.userID),
+                auto_pick=False, pick_correct=True,
+            )
+            if tenant_context:
+                winner_correct_qs = winner_correct_qs.filter(pool=tenant_context.pool)
+            correct = winner_correct_qs.values('pick_game_id').distinct().count()
+            winner.correct_count = correct
+            winner.is_perfect = bool(scored_count) and correct == scored_count
 
     # TODO: Give zero points to users that didn't win yet
     user_weekly_stats = {}

@@ -297,9 +297,9 @@
             </a>
         </div>
         {% if week_points_summary %}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" data-week-points-grid data-week-points-page-size="12">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" data-week-points-grid data-week-points-page-size="18">
             {% for row in week_points_summary %}
-            <div class="flex items-center justify-between gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3" data-user-id="{{ row.points.userID }}" data-week-points-value="{{ row.week_points }}" data-week-points-row>
+            <div class="flex items-center justify-between gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3 transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/50 hover:shadow-card-hover" data-user-id="{{ row.points.userID }}" data-week-points-value="{{ row.week_points }}" data-week-points-row>
                 <div class="flex items-center gap-3 min-w-0">
                     <span class="w-6 flex-shrink-0 text-center text-sm font-black {% if row.rank %}text-primary{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">{% if row.rank %}{{ row.rank }}{% else %}<span title="Ranking begins after the first completed game">&ndash;</span>{% endif %}</span>
                     {% with row.points.userID|lookupavatar as avatar %}
@@ -352,7 +352,7 @@
         {% if current_week_games %}
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" data-lobby-games-grid>
             {% for game in current_week_games %}
-            <div class="lobby-live-card rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-4" data-lobby-game-card data-game-id="{{ game.id }}" data-game-status="{{ game.statusType|lower }}">
+            <div class="lobby-live-card rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-4 transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/50 hover:shadow-card-hover" data-lobby-game-card data-game-id="{{ game.id }}" data-game-status="{{ game.statusType|lower }}">
                 <div class="flex items-center justify-between gap-3 mb-3">
                     <span class="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-bold
                         {% if game.statusType == 'inprogress' %}bg-green-500/15 text-green-700 dark:text-green-300
@@ -452,67 +452,118 @@
     <!-- ═════════════════════════════ STANDINGS + RECENT WINNERS ════════════════════════ -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 
-        <!-- Pool Standings -->
-        <div class="lobby-section section-container mb-0">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <h2 class="text-lg font-bold text-text-dark dark:text-white">Pool Standings</h2>
-                </div>
-                <a href="{% url 'family_pool_standings' family.slug pool.slug %}"
-                   class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white transition-colors">
-                    Full standings <i class="fas fa-arrow-right ml-1 text-[10px]"></i>
-                </a>
+    <!-- Pool Standings -->
+    <div class="lobby-section section-container mb-0">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <h2 class="text-lg font-bold text-text-dark dark:text-white">Pool Standings</h2>
             </div>
-            {% if standings %}
-            <div class="divide-y divide-border-light dark:divide-border-subtle rounded-xl border border-border-light dark:border-border-subtle overflow-hidden">
-                {% for row in standings %}
-                <div class="flex items-center gap-3 px-3 py-2 bg-surface-light dark:bg-surface">
-                    <div class="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full font-bold text-xs
-                        {% if not row.rank %}bg-white dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary
-                        {% elif row.rank == 1 %}bg-yellow-500 text-white
-                        {% elif row.rank == 2 %}bg-slate-400 text-white
-                        {% elif row.rank == 3 %}bg-amber-700 text-white
-                        {% else %}bg-white dark:bg-slate-700 text-text-secondary-light dark:text-text-secondary{% endif %}">
-                        {% if row.rank %}{{ row.rank }}{% else %}<span title="Standings begin after the first game">&ndash;</span>{% endif %}
+            <a href="{% url 'family_pool_standings' family.slug pool.slug %}"
+               class="text-xs font-semibold text-text-secondary-light dark:text-text-secondary hover:text-text-dark dark:hover:text-white transition-colors">
+                Full standings <i class="fas fa-arrow-right ml-1 text-[10px]"></i>
+            </a>
+        </div>
+        {% if standings %}
+        {% if podium %}
+        <!-- Podium (top 3) — compact equal tiles, left → right -->
+        <div class="grid grid-cols-3 gap-2 mb-4">
+            {% for row in podium %}
+            <div class="flex flex-col items-center rounded-xl border p-2 text-center transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-card-hover
+                {% if row.rank == 1 %}border-yellow-500/50 bg-gradient-to-b from-yellow-500/15 to-transparent
+                {% elif row.rank == 2 %}border-slate-400/50 bg-gradient-to-b from-slate-400/15 to-transparent
+                {% else %}border-amber-600/50 bg-gradient-to-b from-amber-600/15 to-transparent{% endif %}">
+                <div class="relative">
+                    <img src="{{ row.avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=96' }}" alt=""
+                         class="h-10 w-10 rounded-full object-cover border-2
+                            {% if row.rank == 1 %}border-yellow-500{% elif row.rank == 2 %}border-slate-400{% else %}border-amber-600{% endif %}">
+                    <span class="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-black text-white
+                        {% if row.rank == 1 %}bg-yellow-500{% elif row.rank == 2 %}bg-slate-400{% else %}bg-amber-600{% endif %}">{{ row.rank }}</span>
+                </div>
+                <div class="mt-1 w-full truncate text-[11px] font-bold text-text-dark dark:text-white">
+                    {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors" title="{{ row.user|real_first_name }}">{{ row.user|display_name }}</a>{% else %}Player {{ row.points.userID }}{% endif %}
+                </div>
+                <div class="mt-0.5 text-base font-black tabular-nums text-text-dark dark:text-white leading-none">{{ row.points.total_points|default:0 }}</div>
+                <div class="text-[9px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">pts</div>
+                <div class="mt-1 flex flex-wrap items-center justify-center gap-x-1 text-[10px] tabular-nums text-text-secondary-light dark:text-text-secondary">
+                    <span>{{ row.correct }} correct</span>{% if row.accuracy != None %}<span class="opacity-40">&middot;</span><span>{{ row.accuracy }}%</span>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if standings_table %}
+        <div class="divide-y divide-border-light dark:divide-border-subtle rounded-xl border border-border-light dark:border-border-subtle overflow-hidden">
+            {% for row in standings_table %}
+            <div class="flex items-center gap-3 px-3 py-2.5 bg-surface-light dark:bg-surface hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-colors">
+                <!-- Rank -->
+                <span class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-black
+                    {% if not row.rank %}bg-black/5 dark:bg-white/10 text-text-secondary-light dark:text-text-secondary
+                    {% elif row.rank == 1 %}bg-yellow-500 text-white
+                    {% elif row.rank == 2 %}bg-slate-400 text-white
+                    {% elif row.rank == 3 %}bg-amber-700 text-white
+                    {% else %}bg-black/5 dark:bg-white/10 text-text-secondary-light dark:text-text-secondary{% endif %}">
+                    {% if row.rank %}{{ row.rank }}{% else %}<span title="Standings begin after the first game">&ndash;</span>{% endif %}
+                </span>
+                <!-- Avatar -->
+                <img src="{{ row.avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}" alt="" class="h-8 w-8 flex-shrink-0 rounded-full border border-border-light dark:border-border-subtle object-cover">
+                <!-- Name + meta/badges -->
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="truncate text-sm font-bold text-text-dark dark:text-white">
+                            {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors" title="{{ row.user|real_first_name }}">{{ row.user|display_name }}</a>{% else %}Player {{ row.points.userID }}{% endif %}
+                        </span>
+                        {% if row.rank == 1 %}<i class="fas fa-crown text-[11px] text-yellow-500 flex-shrink-0"></i>{% endif %}
                     </div>
-                    <div class="flex-1 min-w-0 font-semibold text-text-dark dark:text-white truncate text-sm">
-                        {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors" title="{{ row.user|real_first_name }}">{{ row.user|display_name }}</a>{% else %}Player {{ row.points.userID }}{% endif %}
+                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-secondary-light dark:text-text-secondary">
+                        <span class="tabular-nums">{{ row.correct }} correct{% if row.accuracy != None %} &middot; {{ row.accuracy }}%{% endif %}</span>
+                        {% if row.prev_champion %}<span class="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300" title="Won last season"><i class="fas fa-crown"></i>Champ</span>{% endif %}
+                        {% if row.weeks_won %}<span class="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-700 dark:text-sky-300" title="Weekly winner {{ row.weeks_won }} time{{ row.weeks_won|pluralize }}"><i class="fas fa-trophy"></i>{{ row.weeks_won }}W</span>{% endif %}
+                        {% if row.perfect_weeks %}<span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300" title="Perfect week{{ row.perfect_weeks|pluralize }}"><i class="fas fa-star"></i>Perfect</span>{% endif %}
                     </div>
-                    {% if row.rank == 1 %}<i class="fas fa-crown text-yellow-500 text-xs flex-shrink-0"></i>{% endif %}
-                    <div class="text-sm font-bold text-text-dark dark:text-white flex-shrink-0 tabular-nums">{{ row.points.total_points|default:0 }} pts</div>
+                </div>
+                <!-- Points -->
+                <div class="flex-shrink-0 text-right">
+                    <div class="text-lg font-black leading-none text-text-dark dark:text-white tabular-nums">{{ row.points.total_points|default:0 }}</div>
+                    <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">pts</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="text-sm text-text-secondary-light dark:text-text-secondary py-4 text-center">No standings yet for {{ pool.name }}.</p>
+        {% endif %}
+    </div>
+
+        <!-- Recent Winners -->
+        <div class="lobby-section section-container mb-0">
+            <div class="flex items-center gap-3 mb-4">
+                <h2 class="text-lg font-bold text-text-dark dark:text-white">Recent Week Winners</h2>
+            </div>
+            {% if recent_winners %}
+            <div class="space-y-2">
+                {% for row in recent_winners %}
+                <div class="flex items-center gap-3 p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/50 hover:shadow-card-hover">
+                    <span class="flex-shrink-0 px-2.5 py-1 text-xs font-bold bg-primary text-white rounded-full">W{{ row.week }}</span>
+                    <img src="{{ row.avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}" alt="" class="h-8 w-8 flex-shrink-0 rounded-full border border-border-light dark:border-border-subtle object-cover">
+                    <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm font-bold text-text-dark dark:text-white">
+                            {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors" title="{{ row.user|real_first_name }}">{{ row.user|display_name }}</a>{% else %}Player {{ row.winner.userID }}{% endif %}
+                        </div>
+                        <div class="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-text-secondary-light dark:text-text-secondary">
+                            <span class="tabular-nums">{{ row.correct }} correct</span>
+                            {% if row.is_perfect %}<span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300" title="Perfect week — every game right"><i class="fas fa-star"></i>Perfect</span>{% endif %}
+                        </div>
+                    </div>
+                    <i class="fas fa-trophy text-yellow-500 text-sm flex-shrink-0"></i>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="text-sm text-text-secondary-light dark:text-text-secondary py-4 text-center">No standings yet for {{ pool.name }}.</p>
+            <p class="text-sm text-text-secondary-light dark:text-text-secondary py-4 text-center">No weekly winners yet.</p>
             {% endif %}
         </div>
 
-        <!-- Recent Winners -->
-        <div class="flex flex-col gap-6">
-            <div class="lobby-section section-container mb-0 flex-1">
-                <div class="flex items-center gap-3 mb-4">
-                    <h2 class="text-lg font-bold text-text-dark dark:text-white">Recent Week Winners</h2>
-                </div>
-                {% if recent_winners %}
-                <div class="space-y-2">
-                    {% for row in recent_winners %}
-                    <div class="flex items-center justify-between p-3 bg-surface-light dark:bg-surface rounded-xl border border-border-light dark:border-border-subtle">
-                        <div class="flex items-center gap-3">
-                            <span class="px-2.5 py-1 text-xs font-bold bg-primary text-white rounded-full">W{{ row.week }}</span>
-                            <span class="font-semibold text-text-dark dark:text-white text-sm">
-                                {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors" title="{{ row.user|real_first_name }}">{{ row.user|display_name }}</a>{% else %}Player {{ row.winner.userID }}{% endif %}
-                            </span>
-                        </div>
-                        <i class="fas fa-trophy text-yellow-500 text-sm"></i>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-sm text-text-secondary-light dark:text-text-secondary py-4 text-center">No weekly winners yet.</p>
-                {% endif %}
-            </div>
-        </div>
     </div>
 
     <!-- ═════════════════════════════ MESSAGE BOARD ACTIVITY ════════════════════════════ -->
@@ -530,7 +581,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {% for post in recent_message_posts %}
             <a href="{% url 'family_pool_messages' family.slug pool.slug %}"
-               class="group flex flex-col rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-3 hover:border-primary/50 hover:shadow-card-hover transition-all">
+               class="group flex flex-col rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface p-3 transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/50 hover:shadow-card-hover">
                 <div class="flex items-center gap-2 text-xs text-text-secondary-light dark:text-text-secondary">
                     {% with avatar=post.user.socialaccount_set.first %}
                     {% if avatar %}<img src="{{ avatar.get_avatar_url }}" alt="" class="h-5 w-5 rounded-full object-cover ring-1 ring-border-light dark:ring-border-subtle" onerror="this.style.display='none'">{% else %}<span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">{{ post.user|display_name|slice:":1"|upper }}</span>{% endif %}
@@ -570,7 +621,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {% for article in espn_news %}
             <a href="{{ article.url }}" target="_blank" rel="noopener noreferrer"
-               class="group flex flex-col overflow-hidden rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface hover:border-primary/50 hover:shadow-card-hover transition-all">
+               class="group flex flex-col overflow-hidden rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/50 hover:shadow-card-hover">
                 {% if article.image %}
                 <div class="aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-bg-dark/40">
                     <img src="{{ article.image }}" alt="" loading="lazy"
