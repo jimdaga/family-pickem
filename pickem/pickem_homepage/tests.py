@@ -11516,6 +11516,9 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         self.assertIn(str(champ.id), entries)
         self.assertIn(str(grinder.id), entries)
         self.assertNotIn(str(abandoned.id), entries)  # zero-correct pruned
+        # ...but the "Players" hero stat still counts everyone, so hiding
+        # abandoned rows doesn't shrink the reported competitor base.
+        self.assertEqual(resp.context["total_players"], 3)
 
         champ_entry = entries[str(champ.id)]
         self.assertTrue(champ_entry["prev_champion"])

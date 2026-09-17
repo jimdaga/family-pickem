@@ -3638,7 +3638,9 @@ def global_leaderboard(request):
     # Hide abandoned entries — players with zero correct picks are almost always
     # signups who never played. But before any game is scored *everyone* is at
     # zero, so only prune once the season is under way; otherwise the board would
-    # be empty in the preseason.
+    # be empty in the preseason. Capture the full competitor count first so the
+    # "Players" hero stat still reflects real participation, not the pruned list.
+    total_competitors = len(entries)
     season_started = any(e['correct'] for e in entries)
     if season_started:
         entries = [e for e in entries if e['correct'] > 0]
@@ -3680,7 +3682,7 @@ def global_leaderboard(request):
         'usernames': usernames,
         'avatars': avatars,
         'has_scores': has_scores,
-        'total_players': len(entries),
+        'total_players': total_competitors,
         'total_leagues': season_pools.count(),
     }
     return render(request, 'pickem/global_leaderboard.html', context)
