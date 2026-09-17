@@ -174,7 +174,7 @@
     {% endfor %}
         
         <!-- Week Points Leaderboard - Two Columns on Large Screens -->
-        <div class="scores-compact-week-points rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 mb-5" x-data="{ open: true }">
+        <div class="scores-compact-week-points overflow-hidden rounded-xl border border-border-light dark:border-border-subtle bg-surface-light/80 dark:bg-surface/80 mb-5" x-data="{ open: true }">
             <button @click="open = !open"
                     class="w-full flex items-center justify-between px-4 py-2.5 hover:bg-surface-light/50 dark:hover:bg-surface-hover/50 rounded-xl transition-colors"
                     type="button">
@@ -187,11 +187,11 @@
                  x-transition:enter="transition ease-out duration-100"
                  x-transition:enter-start="opacity-0 -translate-y-2"
                  x-transition:enter-end="opacity-100 translate-y-0"
-                 class="points-leaderboard points-leaderboard-multi-column bg-transparent px-3 pb-3"
+                 class="points-leaderboard points-leaderboard-multi-column border-t border-border-light dark:border-border-subtle"
                  id="week-points-leaderboard">
                         {% for player in user_points %}
-                        <div data-player-card class="w-full flex items-center gap-3 px-3 py-2 rounded-lg border transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-card-hover mb-1.5
-                            {% if forloop.counter == 1 %}border-yellow-500/40 bg-gradient-to-r from-yellow-500/10 to-transparent{% else %}border-border-light dark:border-border-subtle bg-white/60 dark:bg-bg-dark/30{% endif %}">
+                        <div data-player-card class="w-full flex items-center gap-3 px-4 py-2.5 border-b border-border-light dark:border-border-subtle last:border-b-0 transition-colors
+                            {% if forloop.counter == 1 %}bg-gradient-to-r from-yellow-500/10 to-transparent{% else %}bg-white/60 dark:bg-bg-dark/30 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]{% endif %}">
                             {% with player.uid|lookupname as username %}
                             {% with player.uid|lookupavatar as avatar %}
                             <span class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-black
@@ -216,7 +216,7 @@
 
                         {% for player in players_ids %}
                         {% if player not in users_w_points %}
-                        <div data-player-card class="w-full flex items-center gap-3 px-3 py-2 bg-white/60 dark:bg-bg-dark/30 rounded-lg border border-border-light dark:border-border-subtle transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-card-hover mb-1.5">
+                        <div data-player-card class="w-full flex items-center gap-3 px-4 py-2.5 bg-white/60 dark:bg-bg-dark/30 border-b border-border-light dark:border-border-subtle last:border-b-0 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.05]">
                             {% with player|lookupname as username %}
                             {% with player|lookupavatar as avatar %}
                             <span class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 text-[11px] font-black text-text-secondary-light dark:text-text-secondary">&ndash;</span>
@@ -280,7 +280,7 @@
                                     const leftColumn = document.createElement('div');
                                     leftColumn.className = 'points-column flex-1 min-w-0';
                                     const rightColumn = document.createElement('div');
-                                    rightColumn.className = 'points-column flex-1 min-w-0';
+                                    rightColumn.className = 'points-column flex-1 min-w-0 border-l border-border-light dark:border-border-subtle';
 
                                     // Calculate split point (first half goes to left, second half to right)
                                     const halfPoint = Math.ceil(totalCards / 2);
@@ -296,7 +296,7 @@
 
                                     // Create wrapper with flex
                                     const wrapper = document.createElement('div');
-                                    wrapper.className = 'w-full flex gap-4';
+                                    wrapper.className = 'w-full flex';
                                     wrapper.appendChild(leftColumn);
                                     wrapper.appendChild(rightColumn);
                                     container.appendChild(wrapper);
