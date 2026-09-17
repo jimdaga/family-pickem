@@ -52,3 +52,31 @@ current data. Converge with the lobby game-card language.
 ## Done so far on v2
 - Removed the redundant centered LIVE/FINAL badge (status now lives only in
   the header). Everything else still matches the recolor version.
+
+## Local preview environment (for a fresh session)
+- Dev server: http://localhost:8000. If not running, from `pickem/` with these
+  env vars set (DB below): `uv run python manage.py runserver`.
+- Env vars: `DEBUG=True`, `SECRET_KEY=<any>`, `DATABASE_HOST=127.0.0.1`,
+  `DATABASE_PORT=5433`, `DATABASE_NAME=pickem`, `DATABASE_USER=postgres`,
+  `DATABASE_PASS=localdev`. (The `settings.py` DATABASE_HOST branch triggers on
+  DATABASE_HOST being set.)
+- Local DB: docker container `pickem-local-db` (postgres:17-alpine, port 5433,
+  postgres/localdev, db `pickem`), loaded from a prod `pg_dump`. If gone,
+  recreate by streaming a dump from the prod pod:
+  `ssh jim@192.168.1.222 'kubectl exec -n pickem-prd <django-pod> -c family-pickem
+  -- bash -lc "PGPASSWORD=\$DATABASE_PASS pg_dump -h \$DATABASE_HOST -U \$DATABASE_USER
+  -d \$DATABASE_NAME --no-owner --no-privileges -Fc"' > dump.pgc` then
+  `pg_restore` into the container.
+- Login: username `jimbo` / password `pickem123` (set locally via
+  `user.set_password`; jimbo is superuser). Log in at /admin/ then browse.
+- Preview note: the local `currentSeason` is 2627; today's `GameWeeks` row was
+  set to weekNumber=1 so scored week-1 data shows on lobby/scores. Real prod
+  tracks the live week.
+- Verify renders without a browser via the Django test client:
+  `Client(); c.force_login(User.objects.get(id=2)); c.get(<url>)`.
+
+## Ship flow (when ready, not before user says)
+Branch off main → PR → `gh pr merge --merge --admin` → `gh release create
+family-pickem-0.0.<next>` (see latest tag) → workflow builds Docker+Helm+ArgoCD
+→ `ssh jim@192.168.1.222` refresh `root` then `pickem-prd` argocd apps → verify
+rollout to the new image + healthz 200.
