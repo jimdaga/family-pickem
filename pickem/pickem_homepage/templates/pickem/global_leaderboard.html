@@ -132,6 +132,25 @@
                             <div class="sm:hidden text-[11px] text-slate-400">
                                 {% if e.accuracy != None %}{{ e.accuracy }}% acc &bull; {% endif %}{{ e.leagues }} league{{ e.leagues|pluralize }}
                             </div>
+                            {% if e.prev_champion or e.weeks_won or e.perfect_weeks %}
+                            <div class="mt-1 flex flex-wrap items-center gap-1">
+                                {% if e.prev_champion %}
+                                <span class="inline-flex items-center gap-1 rounded-full bg-yellow-400/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-yellow-300" title="Won last season">
+                                    <i class="fas fa-crown"></i>Reigning Champ
+                                </span>
+                                {% endif %}
+                                {% if e.weeks_won %}
+                                <span class="inline-flex items-center gap-1 rounded-full bg-sky-400/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-sky-300" title="Weekly winner {{ e.weeks_won }} time{{ e.weeks_won|pluralize }} this season">
+                                    <i class="fas fa-trophy"></i>Weeks Won: {{ e.weeks_won }}
+                                </span>
+                                {% endif %}
+                                {% if e.perfect_weeks %}
+                                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-300" title="Picked a whole week correctly">
+                                    <i class="fas fa-star"></i>Perfect Week{% if e.perfect_weeks > 1 %}s: {{ e.perfect_weeks }}{% else %} Winner{% endif %}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                     <!-- Correct picks (mobile) -->
