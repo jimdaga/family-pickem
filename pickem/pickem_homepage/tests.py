@@ -11528,6 +11528,55 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         self.assertEqual(len(winners), 1)
         self.assertEqual(winners[0].correct_count, 2)  # pool A only, not the pool B pick
 
+    # ---- Lobby AI recap staleness ----------------------------------------
+    def _week2_game(self, *, game_id, kickoff):
+        return GamesAndScores.objects.create(
+            id=game_id, slug=f"w2-{game_id}", competition="nfl", gameWeek="2",
+            gameyear="2025", gameseason=self.season, startTimestamp=kickoff,
+            statusType="notstarted", statusTitle="Scheduled",
+            homeTeamId=game_id + 1, homeTeamSlug="atl", homeTeamName="Atlanta Falcons",
+            awayTeamId=game_id + 2, awayTeamSlug="ari", awayTeamName="Arizona Cardinals",
+        )
+
+    def _ai_recap(self, pool, *, week=1):
+        from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
+        pub = FamilyPublication.objects.create(
+            family=pool.family, pool=pool, title=f"Week {week} recap", body="recap",
+            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
+            is_published=True, published_at=timezone.now(), generation_reference="1",
+        )
+        AIWeeklySummaryRun.objects.create(
+            family=pool.family, pool=pool, season=self.season, week=week,
+            status=AIWeeklySummaryRun.Status.SUCCESS, publication=pub,
+        )
+        return pub
+
+    def test_lobby_hides_stale_ai_recap_once_next_week_kicks_off(self):
+        family, pool = self._family_pool("Recap Fam", "recap-fam")
+        viewer = self._member("recapviewer", family)
+        self._ai_recap(pool, week=1)
+        self._week2_game(game_id=5901, kickoff=timezone.now() - timedelta(hours=2))
+        self.client.force_login(viewer)
+        resp = self.client.get(reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual([p.pk for p in resp.context["publications"]], [])
+
+    def test_lobby_keeps_ai_recap_before_next_week_kicks_off(self):
+        family, pool = self._family_pool("Recap Fam2", "recap-fam2")
+        viewer = self._member("recapviewer2", family)
+        pub = self._ai_recap(pool, week=1)
+        self._week2_game(game_id=5911, kickoff=timezone.now() + timedelta(days=3))
+        self.client.force_login(viewer)
+        resp = self.client.get(reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(pub.pk, [p.pk for p in resp.context["publications"]])
+
     # ---- Global leaderboard ----------------------------------------------
     def _google(self, user):
         from allauth.socialaccount.models import SocialAccount
