@@ -96,15 +96,20 @@
   }
 
   .team-score-row {
-    @apply py-3 px-4 flex items-center gap-4;
+    @apply py-3.5 px-4 flex items-center gap-4 transition-colors;
+  }
+
+  /* Divider between the two team rows (matches the site's connected look). */
+  .team-score-row + .team-score-row {
+    @apply border-t border-border-light dark:border-border-subtle;
   }
 
   .team-score-row.winning-team {
-    @apply bg-green-50 dark:bg-green-950/20 border-l-4 border-green-500 dark:border-green-400 pl-4;
+    @apply bg-gradient-to-r from-green-500/10 to-transparent border-l-4 border-green-500 dark:border-green-400 pl-3;
   }
 
   .quarter-score {
-    @apply px-2 py-1 text-xs min-w-6 text-center bg-surface-light dark:bg-slate-700 rounded border border-border-light dark:border-slate-600 text-text-dark dark:text-gray-200;
+    @apply px-2 py-1 text-xs min-w-6 text-center bg-black/[0.03] dark:bg-white/[0.05] rounded border border-border-light dark:border-border-subtle text-text-dark dark:text-gray-200;
   }
 
   .game-status-display {
