@@ -1464,6 +1464,16 @@ def family_pool_home(request, family_slug, pool_slug):
     week_points_summary = build_week_points_summary(
         pool, gameseason, current_week, week_has_completed_game
     )
+    # Blank filler tiles to square off the last row of the 3-column Week Points
+    # grid on desktop. Only when the whole roster fits on one page (18 = the
+    # template's page size, itself divisible by 3, so full pages never gap); the
+    # template hides these on mobile, which is a single column.
+    _week_points_count = len(week_points_summary)
+    week_points_fillers = range(
+        3 - _week_points_count % 3
+        if _week_points_count and _week_points_count <= 18 and _week_points_count % 3
+        else 0
+    )
 
     recent_winners = []
     for week_num in range(1, 19):
@@ -1587,11 +1597,40 @@ def family_pool_home(request, family_slug, pool_slug):
         .select_related('user')
         .order_by('user__username')[:10]
     )
-    publications = (
+    publications = list(
         FamilyPublication.objects.filter(
             family=family, pool=pool, is_published=True
         ).select_related('author')[:5]
     )
+    # Drop a stale AI weekly recap from the lobby once the *next* week's games
+    # have kicked off — last week's recap shouldn't hang over this week's live
+    # slate. The recap row is reused per pool (one per pool/source), so we read
+    # its week from the linked run rather than the publication. The scores page
+    # still shows it under its own week, so nothing is lost.
+    ai_recap = next(
+        (p for p in publications if p.source == FamilyPublication.Source.AI_WEEKLY_SUMMARY),
+        None,
+    )
+    if ai_recap is not None:
+        recap_week = (
+            AIWeeklySummaryRun.objects.filter(publication=ai_recap)
+            .order_by('-created_at')
+            .values_list('week', flat=True)
+            .first()
+        )
+        if recap_week:
+            next_week_kickoff = (
+                GamesAndScores.objects.filter(
+                    gameseason=gameseason,
+                    competition=pool.competition,
+                    gameWeek=str(recap_week + 1),
+                )
+                .order_by('startTimestamp')
+                .values_list('startTimestamp', flat=True)
+                .first()
+            )
+            if next_week_kickoff and timezone.now() >= next_week_kickoff:
+                publications = [p for p in publications if p is not ai_recap]
     recent_message_posts = (
         MessageBoardPost.objects.filter(family=family, is_active=True)
         .select_related('user')
@@ -1682,6 +1721,7 @@ def family_pool_home(request, family_slug, pool_slug):
         'viewer_favorite_team': viewer_favorite_team,
         'espn_news': get_espn_nfl_news(6),
         'week_points_summary': week_points_summary,
+        'week_points_fillers': week_points_fillers,
         'recent_winners': recent_winners,
         'current_week_games': dashboard_snapshot_games,
         'current_games': current_games,

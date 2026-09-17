@@ -297,9 +297,10 @@
             </a>
         </div>
         {% if week_points_summary %}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" data-week-points-grid data-week-points-page-size="18">
+        <div class="overflow-hidden rounded-xl border border-border-light dark:border-border-subtle">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-px bg-border-light dark:bg-border-subtle" data-week-points-grid data-week-points-page-size="18">
             {% for row in week_points_summary %}
-            <div class="flex items-center justify-between gap-3 rounded-xl border border-border-light dark:border-border-subtle bg-surface-light dark:bg-surface px-4 py-3 transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/50 hover:shadow-card-hover" data-user-id="{{ row.points.userID }}" data-week-points-value="{{ row.week_points }}" data-week-points-row>
+            <div class="flex items-center justify-between gap-3 bg-surface-light dark:bg-surface px-4 py-3 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.05]" data-user-id="{{ row.points.userID }}" data-week-points-value="{{ row.week_points }}" data-week-points-row>
                 <div class="flex items-center gap-3 min-w-0">
                     <span class="w-6 flex-shrink-0 text-center text-sm font-black {% if row.rank %}text-primary{% else %}text-text-secondary-light dark:text-text-secondary{% endif %}">{% if row.rank %}{{ row.rank }}{% else %}<span title="Ranking begins after the first completed game">&ndash;</span>{% endif %}</span>
                     {% with row.points.userID|lookupavatar as avatar %}
@@ -312,6 +313,11 @@
                 <span class="flex-shrink-0 text-sm font-black text-text-dark dark:text-white" data-user-week-points>{{ row.week_points }} pts</span>
             </div>
             {% endfor %}
+            {# Blank tiles to square off the last row on desktop (3 cols); hidden on mobile. #}
+            {% for _ in week_points_fillers %}
+            <div class="hidden sm:block bg-surface-light dark:bg-surface" aria-hidden="true" data-week-points-filler></div>
+            {% endfor %}
+        </div>
         </div>
         {# Pager: shown only when there are more members than one page (JS-driven). #}
         <div class="mt-4 flex items-center justify-center gap-4 hidden" data-week-points-pager>
@@ -899,6 +905,12 @@
             }
             current.appendChild(node);  // moving an existing node keeps it alive
         });
+        // Keep blank filler tiles (last-row squaring on desktop) trailing after
+        // the reorder above re-appended every real row to the end.
+        Array.prototype.forEach.call(
+            current.querySelectorAll('[data-week-points-filler]'),
+            function (filler) { current.appendChild(filler); }
+        );
         // Remove members no longer present.
         currentRows.forEach(function (r) {
             if (!seen[r.getAttribute('data-user-id')]) {
