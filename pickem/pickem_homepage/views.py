@@ -1364,7 +1364,8 @@ def build_pool_standings_stats(pool, gameseason, competition):
     if scored_by_week:
         per_week = (
             GamePicks.objects.filter(
-                pool=pool, gameseason=gameseason, auto_pick=False,
+                pool=pool, gameseason=gameseason, competition=competition,
+                auto_pick=False,
             )
             .values('userID', 'gameWeek')
             .annotate(
@@ -4156,13 +4157,16 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
         scored_count = game_list.filter(gameScored=True).count()
         for winner in week_winner:
             winner.week_points_value = getattr(winner, week_points_field, 0) or 0
-            winner_correct_qs = GamePicks.objects.filter(
-                gameseason=gameseason, gameWeek=game_week, userID=str(winner.userID),
-                auto_pick=False, pick_correct=True,
+            # Scope to the pool this winner actually won in (winner.pool_id) so
+            # the count stays pool-correct even on the public, cross-pool page
+            # where week_winner spans one row per pool.
+            correct = (
+                GamePicks.objects.filter(
+                    gameseason=gameseason, gameWeek=game_week, userID=str(winner.userID),
+                    pool_id=winner.pool_id, auto_pick=False, pick_correct=True,
+                )
+                .values('pick_game_id').distinct().count()
             )
-            if tenant_context:
-                winner_correct_qs = winner_correct_qs.filter(pool=tenant_context.pool)
-            correct = winner_correct_qs.values('pick_game_id').distinct().count()
             winner.correct_count = correct
             winner.is_perfect = bool(scored_count) and correct == scored_count
 

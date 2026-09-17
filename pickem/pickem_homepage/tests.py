@@ -11505,6 +11505,29 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         self.assertContains(resp, "Week 1 Winner")
         self.assertContains(resp, "Perfect Week")
 
+    def test_scores_winner_correct_count_is_pool_scoped(self):
+        family_a, pool_a = self._family_pool("Winner Scope A", "winner-scope-a")
+        family_b, pool_b = self._family_pool("Winner Scope B", "winner-scope-b")
+        winner = self._member("scopewinner", family_a)
+        g1 = self._game(game_id=5801, winner="atl", scored=True)
+        g2 = self._game(game_id=5802, winner="atl", scored=True)
+        self._pick(user=winner, pool=pool_a, game=g1, pick="atl")  # pool A correct
+        self._pick(user=winner, pool=pool_a, game=g2, pick="atl")  # pool A correct
+        self._pick(user=winner, pool=pool_b, game=g1, pick="atl")  # pool B correct (must NOT count)
+        userSeasonPoints.objects.create(
+            pool=pool_a, userEmail=winner.email, userID=str(winner.id),
+            gameseason=self.season, gameyear="2025",
+            week_1_points=2, week_1_winner=True, total_points=2,
+        )
+        self.client.force_login(winner)
+        resp = self.client.get(
+            f"/families/{family_a.slug}/pools/{pool_a.slug}/scores/competition/1/season/{self.season}/week/1"
+        )
+        self.assertEqual(resp.status_code, 200)
+        winners = list(resp.context["week_winner"])
+        self.assertEqual(len(winners), 1)
+        self.assertEqual(winners[0].correct_count, 2)  # pool A only, not the pool B pick
+
     # ---- Global leaderboard ----------------------------------------------
     def _google(self, user):
         from allauth.socialaccount.models import SocialAccount
