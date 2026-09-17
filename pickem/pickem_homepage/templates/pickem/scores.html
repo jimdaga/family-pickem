@@ -191,8 +191,9 @@
 	                                </div>
 	                            </div>
 	                            <div class="flex items-baseline gap-1 flex-shrink-0">
-	                                <span class="text-lg font-black text-text-dark dark:text-white">{{ player.wins }}</span>
+	                                <span class="text-lg font-black text-text-dark dark:text-white">{{ player.points }}</span>
 	                                <span class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold uppercase">pts</span>
+	                                {% if player.points != player.wins %}<span class="text-[11px] text-text-secondary-light dark:text-text-secondary font-semibold ml-1">({{ player.wins }} correct)</span>{% endif %}
                             </div>
                             {% endwith %}
                             {% endwith %}

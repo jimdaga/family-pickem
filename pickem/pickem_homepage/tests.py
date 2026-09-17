@@ -11339,3 +11339,205 @@ class RealFirstNameDisplayTests(TestCase):
         self.assertEqual(names[str(self.target.id)], "Jim")
         self.assertNotIn("Doe", names.values())
 
+
+
+class PickIndicatorsLeaderboardScoringTests(TestCase):
+    """Lobby pick indicators, per-pool weighted scores, and leaderboard
+    badges + zero-correct pruning."""
+
+    @classmethod
+    def setUpTestData(cls):
+        site, _ = Site.objects.get_or_create(
+            id=1, defaults={"domain": "testserver", "name": "testserver"}
+        )
+        social_app, _ = SocialApp.objects.get_or_create(
+            provider="google",
+            defaults={"name": "Google", "client_id": "test-id", "secret": "test-secret"},
+        )
+        social_app.sites.add(site)
+        cls.season = 2526
+        cls.prev_season = 2425  # season - 101
+        currentSeason.objects.create(season=cls.season, display_name="2025-2026")
+        GameWeeks.objects.create(
+            weekNumber=1, competition="nfl", date=timezone.localdate(), season=cls.season
+        )
+
+    def _game(self, *, game_id, status="finished", winner="atl", scored=True):
+        return GamesAndScores.objects.create(
+            id=game_id,
+            slug=f"ari-atl-week1-{game_id}",
+            competition="nfl",
+            gameWeek="1",
+            gameyear="2025",
+            gameseason=self.season,
+            startTimestamp=timezone.now() - timedelta(hours=3),
+            statusType=status,
+            statusTitle="Final" if status == "finished" else "Scheduled",
+            homeTeamId=game_id + 1,
+            homeTeamSlug="atl",
+            homeTeamName="Atlanta Falcons",
+            homeTeamScore=24 if scored else None,
+            awayTeamId=game_id + 2,
+            awayTeamSlug="ari",
+            awayTeamName="Arizona Cardinals",
+            awayTeamScore=17 if scored else None,
+            gameWinner=winner if scored else "",
+            gameScored=scored,
+        )
+
+    def _family_pool(self, name, slug, *, win_points=1):
+        family = Family.objects.create(name=name, slug=slug)
+        pool = Pool.objects.create(
+            family=family, name="Pickem", slug="pickem-pool", season=self.season,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        PoolSettings.objects.create(pool=pool, win_points=win_points)
+        return family, pool
+
+    def _member(self, username, family, role=FamilyMembership.Role.MEMBER):
+        user = User.objects.create_user(username, email=f"{username}@ex.com", password="x")
+        FamilyMembership.objects.create(
+            family=family, user=user, role=role, status=FamilyMembership.Status.ACTIVE
+        )
+        return user
+
+    def _pick(self, *, user, pool, game, pick):
+        return GamePicks.objects.create(
+            id=f"{pool.id}-{user.id}-{game.id}",
+            pool=pool, userEmail=user.email, uid=user.id, userID=str(user.id),
+            slug=game.slug, competition="nfl", gameWeek="1", gameyear="2025",
+            gameseason=self.season, pick_game_id=game.id, pick=pick,
+            pick_correct=(pick == game.gameWinner and bool(game.gameWinner)),
+        )
+
+    # ---- Lobby viewer-pick indicator -------------------------------------
+    def test_viewer_pick_status_correct_incorrect_pending_and_absent(self):
+        from pickem_homepage.views import attach_dashboard_pick_groups
+
+        family, pool = self._family_pool("Ind Family", "ind-family")
+        viewer = self._member("viewer", family)
+        won = self._game(game_id=5001, winner="atl", scored=True)
+        lost = self._game(game_id=5002, winner="atl", scored=True)
+        upcoming = self._game(game_id=5003, status="notstarted", scored=False)
+        no_pick_game = self._game(game_id=5004, winner="atl", scored=True)
+
+        self._pick(user=viewer, pool=pool, game=won, pick="atl")   # correct
+        self._pick(user=viewer, pool=pool, game=lost, pick="ari")  # incorrect
+        self._pick(user=viewer, pool=pool, game=upcoming, pick="atl")  # pending
+
+        games = [won, lost, upcoming, no_pick_game]
+        attach_dashboard_pick_groups(games, pool=pool, family=family, viewer=viewer)
+
+        self.assertEqual(won.viewer_pick["status"], "correct")
+        self.assertEqual(won.viewer_pick["team_name"], "Atlanta Falcons")
+        self.assertEqual(lost.viewer_pick["status"], "incorrect")
+        self.assertEqual(upcoming.viewer_pick["status"], "pending")
+        self.assertIsNone(no_pick_game.viewer_pick)
+
+    def test_anonymous_viewer_gets_no_pick(self):
+        from pickem_homepage.views import attach_dashboard_pick_groups
+
+        family, pool = self._family_pool("Anon Family", "anon-family")
+        game = self._game(game_id=5101, winner="atl", scored=True)
+        attach_dashboard_pick_groups([game], pool=pool, family=family, viewer=AnonymousUser())
+        self.assertIsNone(game.viewer_pick)
+
+    def test_lobby_renders_your_pick_markup(self):
+        family, pool = self._family_pool("Lobby Family", "lobby-family")
+        viewer = self._member("lobbyviewer", family)
+        won = self._game(game_id=5201, winner="atl", scored=True)
+        self._pick(user=viewer, pool=pool, game=won, pick="atl")
+
+        self.client.force_login(viewer)
+        resp = self.client.get(reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Your pick")
+        self.assertContains(resp, 'data-viewer-pick-status="correct"')
+
+    # ---- Scores page weighted points -------------------------------------
+    def test_scores_weights_points_by_pool_win_points(self):
+        family, pool = self._family_pool("Heavy Family", "heavy-family", win_points=10)
+        member = self._member("heavy", family)
+        g1 = self._game(game_id=5301, winner="atl", scored=True)
+        g2 = self._game(game_id=5302, winner="atl", scored=True)
+        self._pick(user=member, pool=pool, game=g1, pick="atl")  # correct
+        self._pick(user=member, pool=pool, game=g2, pick="atl")  # correct
+        # Authoritative per-pool weekly total: 2 correct * 10 pts = 20
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=member.email, userID=str(member.id),
+            gameseason=self.season, gameyear="2025", week_1_points=20, total_points=20,
+        )
+        self.client.force_login(member)
+        resp = self.client.get(
+            f"/families/{family.slug}/pools/{pool.slug}/scores/competition/1/season/{self.season}/week/1"
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "(2 correct)")  # raw count shown alongside
+        html = resp.content.decode()
+        # The weighted total (20), not the raw correct count (2), is the headline.
+        self.assertIn(">20<", html.replace(" ", "").replace("\n", ""))
+
+    # ---- Global leaderboard ----------------------------------------------
+    def _google(self, user):
+        from allauth.socialaccount.models import SocialAccount
+        SocialAccount.objects.create(user=user, provider="google", uid=f"g-{user.id}")
+
+    def _global_stats(self, user, *, correct, weeks_won=0, perfect=0):
+        userStats.objects.create(
+            userID=str(user.id), pool=None, userEmail=user.email,
+            correctPickTotalSeason=correct, totalPicksSeason=max(correct, 1),
+            weeksWonSeason=weeks_won, perfectWeeksSeason=perfect,
+        )
+
+    def test_leaderboard_hides_zero_correct_and_shows_badges(self):
+        family, pool = self._family_pool("LB Family", "lb-family")
+        champ = self._member("champ", family)
+        grinder = self._member("grinder", family)
+        abandoned = self._member("abandoned", family)
+        for u in (champ, grinder, abandoned):
+            self._google(u)
+
+        self._global_stats(champ, correct=9, weeks_won=1, perfect=1)
+        self._global_stats(grinder, correct=5)
+        self._global_stats(abandoned, correct=0)  # never played -> hidden
+
+        # champ won the previous season
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=champ.email, userID=str(champ.id),
+            gameseason=self.prev_season, gameyear="2024", year_winner=True, total_points=50,
+        )
+
+        resp = self.client.get(reverse("global_leaderboard"))
+        self.assertEqual(resp.status_code, 200)
+        entries = {e["userID"]: e for e in resp.context["entries"]}
+        self.assertIn(str(champ.id), entries)
+        self.assertIn(str(grinder.id), entries)
+        self.assertNotIn(str(abandoned.id), entries)  # zero-correct pruned
+        # ...but the "Players" hero stat still counts everyone, so hiding
+        # abandoned rows doesn't shrink the reported competitor base.
+        self.assertEqual(resp.context["total_players"], 3)
+
+        champ_entry = entries[str(champ.id)]
+        self.assertTrue(champ_entry["prev_champion"])
+        self.assertEqual(champ_entry["weeks_won"], 1)
+        self.assertEqual(champ_entry["perfect_weeks"], 1)
+        self.assertContains(resp, "Reigning Champ")
+        self.assertContains(resp, "Weeks Won:")
+        self.assertContains(resp, "Perfect Week")
+
+    def test_leaderboard_keeps_everyone_before_season_starts(self):
+        family, pool = self._family_pool("Pre Family", "pre-family")
+        a = self._member("prea", family)
+        b = self._member("preb", family)
+        for u in (a, b):
+            self._google(u)
+            self._global_stats(u, correct=0)  # nothing scored yet
+
+        resp = self.client.get(reverse("global_leaderboard"))
+        self.assertEqual(resp.status_code, 200)
+        ids = {e["userID"] for e in resp.context["entries"]}
+        # Preseason: everyone is at zero, so nobody is pruned.
+        self.assertEqual(ids, {str(a.id), str(b.id)})

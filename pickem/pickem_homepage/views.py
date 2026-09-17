@@ -270,7 +270,7 @@ def select_dashboard_snapshot_day(games, *, today=None):
         return day_games, target_date
     return games, None
 
-def attach_dashboard_pick_groups(games, *, pool, family):
+def attach_dashboard_pick_groups(games, *, pool, family, viewer=None):
     game_ids = [game.id for game in games]
     if not game_ids:
         return games
@@ -286,6 +286,15 @@ def attach_dashboard_pick_groups(games, *, pool, family):
         pool=pool,
         pick_game_id__in=game_ids,
     ).order_by('pick_game_id', 'pick', 'uid', 'userID')
+
+    # The viewer's own pick per game, so each card can show "You picked X" with a
+    # correct/incorrect indicator once the game is scored. Keyed by game id.
+    viewer_pick_by_game = {}
+    if viewer is not None and getattr(viewer, 'is_authenticated', False):
+        for game_id, pick_slug in current_user_picks(
+            GamePicks.objects.filter(pool=pool, pick_game_id__in=game_ids), viewer
+        ).values_list('pick_game_id', 'pick'):
+            viewer_pick_by_game[game_id] = pick_slug
 
     pick_user_ids = set()
     for pick in picks:
@@ -322,6 +331,28 @@ def attach_dashboard_pick_groups(games, *, pool, family):
                     'users': users_for_team,
                 })
         game.dashboard_pick_groups = groups
+
+        # The viewer's own pick, resolved to a display name + correct/incorrect
+        # state (None until the game is scored). Used for the card's "Your pick".
+        viewer_slug = viewer_pick_by_game.get(game.id)
+        if viewer_slug:
+            if viewer_slug == game.homeTeamSlug:
+                viewer_team_name = game.homeTeamName
+            elif viewer_slug == game.awayTeamSlug:
+                viewer_team_name = game.awayTeamName
+            else:
+                viewer_team_name = viewer_slug
+            # 'pending' until the game is scored, then 'correct'/'incorrect'.
+            viewer_status = 'pending'
+            if game.gameScored and game.gameWinner:
+                viewer_status = 'correct' if viewer_slug == game.gameWinner else 'incorrect'
+            game.viewer_pick = {
+                'team_slug': viewer_slug,
+                'team_name': viewer_team_name,
+                'status': viewer_status,
+            }
+        else:
+            game.viewer_pick = None
 
     return games
 
@@ -1401,6 +1432,7 @@ def family_pool_home(request, family_slug, pool_slug):
         dashboard_snapshot_games,
         pool=pool,
         family=family,
+        viewer=request.user,
     )
     user_picks_count = GamePicks.objects.filter(
         pool=pool,
@@ -3565,10 +3597,23 @@ def global_leaderboard(request):
             correct=Coalesce(Sum('correctPickTotalSeason'), 0),
             total=Coalesce(Sum('totalPicksSeason'), 0),
             weeks_won=Coalesce(Sum('weeksWonSeason'), 0),
+            perfect_weeks=Coalesce(Sum('perfectWeeksSeason'), 0),
         )
     ):
         if row['userID']:
             stats_by_user[str(row['userID'])] = row
+
+    # Reigning champions: anyone flagged year_winner for the immediately prior
+    # season. YYZZ increments by 101 per year (both the start and end year rise
+    # by one), so last season is this one minus 101.
+    prev_season = season - 101
+    prev_champion_ids = {
+        str(uid)
+        for uid in userSeasonPoints.objects.filter(
+            year_winner=True, gameseason=prev_season
+        ).values_list('userID', flat=True)
+        if uid
+    }
 
     entries = []
     for uid in sorted(competitor_ids, key=int):
@@ -3584,9 +3629,21 @@ def global_leaderboard(request):
             # a points ranking, which is exactly the confusion this removes.
             'leagues': row.get('leagues') or 0,
             'weeks_won': s.get('weeks_won') or 0,
+            'perfect_weeks': s.get('perfect_weeks') or 0,
+            'prev_champion': uid in prev_champion_ids,
             'correct': correct,
             'accuracy': accuracy,
         })
+
+    # Hide abandoned entries — players with zero correct picks are almost always
+    # signups who never played. But before any game is scored *everyone* is at
+    # zero, so only prune once the season is under way; otherwise the board would
+    # be empty in the preseason. Capture the full competitor count first so the
+    # "Players" hero stat still reflects real participation, not the pruned list.
+    total_competitors = len(entries)
+    season_started = any(e['correct'] for e in entries)
+    if season_started:
+        entries = [e for e in entries if e['correct'] > 0]
 
     # Rank on CORRECT PICKS, not points. Points are summed across pools whose
     # scoring schemes differ -- a pool paying 10 per win buried everyone else --
@@ -3625,7 +3682,7 @@ def global_leaderboard(request):
         'usernames': usernames,
         'avatars': avatars,
         'has_scores': has_scores,
-        'total_players': len(entries),
+        'total_players': total_competitors,
         'total_leagues': season_pools.count(),
     }
     return render(request, 'pickem/global_leaderboard.html', context)
@@ -3895,9 +3952,33 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
     if tenant_context:
         points = points.filter(pool=tenant_context.pool)
     points_total = points.count()
-    
-    user_points = points.values('uid').annotate(wins=Coalesce(Count('uid'), 0)).order_by('-wins', '-uid')
-    users_w_points = user_points.values_list('uid', flat=True).distinct()
+
+    user_points = list(
+        points.values('uid').annotate(wins=Coalesce(Count('uid'), 0))
+    )
+    # "Week Points" must reflect each pool's scoring, not a raw correct-pick
+    # count: a pool paying 10 per correct pick should show 100 for 10 right, not
+    # 10. On a tenant (single-pool) page read the authoritative per-pool
+    # week_N_points from userSeasonPoints (which already folds in tie_points and
+    # matches standings exactly); the public cross-pool page has no single
+    # scoring scheme, so it falls back to the correct-pick count.
+    weighted_by_uid = {}
+    if tenant_context and str(game_week).isdigit():
+        week_points_field = f"week_{game_week}_points"
+        for userid_val, wk_points in userSeasonPoints.objects.filter(
+            pool=tenant_context.pool, gameseason=gameseason
+        ).values_list('userID', week_points_field):
+            if str(userid_val).isdigit():
+                weighted_by_uid[int(userid_val)] = wk_points or 0
+    for entry in user_points:
+        entry['points'] = (
+            weighted_by_uid.get(entry['uid'], entry['wins'])
+            if tenant_context else entry['wins']
+        )
+    # Order by weighted points (then correct count, then uid) so a non-default
+    # scoring pool ranks by real points, not the raw win count.
+    user_points.sort(key=lambda e: (-(e['points'] or 0), -(e['wins'] or 0), -(e['uid'] or 0)))
+    users_w_points = {e['uid'] for e in user_points}
     
     players = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)
     if tenant_context:
