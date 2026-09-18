@@ -191,11 +191,11 @@
                  id="week-points-leaderboard">
                         {% for player in user_points %}
                         <div data-player-card class="w-full flex items-center gap-3 px-4 py-2.5 border-b border-border-light dark:border-border-subtle last:border-b-0 transition-colors
-                            {% if forloop.counter == 1 %}bg-gradient-to-r from-yellow-500/10 to-transparent{% else %}bg-white/60 dark:bg-bg-dark/30 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]{% endif %}">
+                            {% if player.rank == 1 %}bg-gradient-to-r from-yellow-500/10 to-transparent{% else %}bg-white/60 dark:bg-bg-dark/30 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]{% endif %}">
                             {% with player.uid|lookupname as username %}
                             {% with player.uid|lookupavatar as avatar %}
                             <span class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-black
-                                {% if forloop.counter == 1 %}bg-yellow-500 text-white{% elif forloop.counter == 2 %}bg-slate-400 text-white{% elif forloop.counter == 3 %}bg-amber-600 text-white{% else %}bg-black/5 dark:bg-white/10 text-text-secondary-light dark:text-text-secondary{% endif %}">{{ forloop.counter }}</span>
+                                {% if player.rank == 1 %}bg-yellow-500 text-white{% elif player.rank == 2 %}bg-slate-400 text-white{% elif player.rank == 3 %}bg-amber-600 text-white{% else %}bg-black/5 dark:bg-white/10 text-text-secondary-light dark:text-text-secondary{% endif %}">{{ player.rank }}</span>
                             <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.uid %}{% else %}{% url 'user_profile' player.uid %}{% endif %}" class="flex-shrink-0 group">
                                 <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
                                      alt="Profile picture for {{ username }}"

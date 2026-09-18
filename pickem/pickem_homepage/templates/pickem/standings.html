@@ -255,6 +255,14 @@
                         <p class="text-sm text-text-secondary-light dark:text-text-secondary">
                             Total: <strong class="text-text-dark dark:text-white">{{ player.total_points|default:0 }} points</strong>
                         </p>
+                        {% if player.prev_champion or player.weeks_won or player.perfect_weeks %}
+                        <!-- Badges (same meaning as the lobby standings + leaderboard rows) -->
+                        <div class="mt-1 flex flex-wrap items-center gap-1">
+                            {% if player.prev_champion %}<span class="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300" title="Won last season"><i class="fas fa-crown"></i>Champ</span>{% endif %}
+                            {% if player.weeks_won %}<span class="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-700 dark:text-sky-300" title="Weekly winner {{ player.weeks_won }} time{{ player.weeks_won|pluralize }}"><i class="fas fa-trophy"></i>{{ player.weeks_won }}W</span>{% endif %}
+                            {% if player.perfect_weeks %}<span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300" title="Perfect week{{ player.perfect_weeks|pluralize }}"><i class="fas fa-star"></i>{% if player.perfect_weeks > 1 %}{{ player.perfect_weeks }} {% endif %}Perfect</span>{% endif %}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endwith %}
