@@ -105,6 +105,22 @@ class Command(BaseCommand):
         for g in scored_games:
             key = (g["gameseason"], g["gameWeek"])
             scored_by_week[key] = scored_by_week.get(key, 0) + 1
+        # Perfect weeks only count once a week is fully complete (every game
+        # final + graded) — a perfect week means every game in the week was
+        # picked right, which can't be judged mid-week. Drop any (season, week)
+        # that still has a non-final game so a partial "scored so far" slate
+        # (e.g. a lone 1/1) can't register as a perfect week. Mirrors
+        # weekly_winners.week_is_complete's finished+scored definition.
+        incomplete_weeks = set(
+            GamesAndScores.objects.filter(gameseason__isnull=False)
+            .exclude(statusType="finished", gameScored=True)
+            .values_list("gameseason", "gameWeek")
+            .distinct()
+        )
+        scored_by_week = {
+            key: n for key, n in scored_by_week.items()
+            if key not in incomplete_weeks
+        }
 
         if pool_id is not None:
             # Pool-scoped: identify users by their (string) userID within this
