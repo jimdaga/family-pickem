@@ -2371,6 +2371,48 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertEqual(response.context["picks"].first().pool, self.smith_pool)
         self.assertEqual(list(response.context["week_winner"]), list(userSeasonPoints.objects.filter(pool=self.smith_pool)))
 
+    def test_week_points_winner_highlight_waits_for_a_crowned_winner(self):
+        """Regression: mid-week a points tie (several members 1/1 after the only
+        game played) lit every tied leader as a gold rank-1 winner. The gold
+        winner styling must wait until a week winner is actually crowned."""
+        # Finish the week-1 game; both Smith members nail it -> tie at 1 point.
+        self.week_one_game.statusType = "finished"
+        self.week_one_game.gameScored = True
+        self.week_one_game.gameWinner = self.week_one_game.homeTeamSlug
+        self.week_one_game.save()
+        for member in (self.smith_member, self.smith_player):
+            GamePicks.objects.create(
+                id=f"{self.smith_pool.id}-{member.id}-{self.week_one_game.id}",
+                pool=self.smith_pool, userEmail=member.email, uid=member.id,
+                userID=str(member.id), slug=self.week_one_game.slug,
+                competition="nfl", gameWeek="1", gameyear="2025", gameseason=2526,
+                pick_game_id=self.week_one_game.id,
+                pick=self.week_one_game.homeTeamSlug, pick_correct=True,
+            )
+        self.client.force_login(self.smith_member)
+        url = self._tenant_url("family_pool_scores")
+
+        # No winner crowned yet -> nobody flagged, so no gold highlight anywhere.
+        ctx = self.client.get(url).context
+        self.assertFalse(ctx["week_has_winner"])
+        self.assertTrue(
+            all(not p["is_winner"] for p in ctx["user_points"]),
+            "no member should be flagged winner before the week is decided",
+        )
+
+        # Crown one member -> only they are the winner; the other stays unflagged.
+        for member, won in ((self.smith_member, True), (self.smith_player, False)):
+            userSeasonPoints.objects.create(
+                pool=self.smith_pool, userEmail=member.email,
+                userID=str(member.id), gameseason=2526, gameyear="2025",
+                week_1_points=1, week_1_winner=won,
+            )
+        ctx2 = self.client.get(url).context
+        self.assertTrue(ctx2["week_has_winner"])
+        winners = [p for p in ctx2["user_points"] if p["is_winner"]]
+        self.assertEqual(len(winners), 1)
+        self.assertEqual(str(winners[0]["uid"]), str(self.smith_member.id))
+
     def test_tenant_scores_page_includes_gsap_polish_hooks(self):
         self._seed_private_pool_data()
         self.client.force_login(self.smith_member)
