@@ -370,75 +370,22 @@
                      class="games-grid pt-4 grid grid-cols-1 md:grid-cols-2 gap-6"
                      id="games-{{ time_group.grouper|date:'Y-m-d-Hi' }}">
                             {% for game in time_group.list %}
-                            <div class="scores-game-card game-score-card bg-surface-light dark:bg-slate-700 rounded-xl overflow-hidden border border-border-light dark:border-slate-600 transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/50 hover:shadow-card-hover flex flex-col {% if game.statusType == 'inprogress' %}scores-live-game{% endif %}" data-game-status="{{ game.statusType|lower }}" data-game-id="{{ game.id }}" data-scores-card>
-                                <!-- Game Status Header -->
-                                <div class="flex items-center justify-between px-3 py-1 text-sm font-semibold text-white {% if game.statusType == 'inprogress' %}bg-gradient-to-r from-green-600 to-green-700{% elif game.statusType == 'finished' %}bg-gradient-to-r from-blue-600 to-blue-700{% else %}bg-gradient-to-r from-gray-600 to-gray-700 dark:from-gray-700 dark:to-gray-800{% endif %}">
-                                    <div class="flex items-center gap-2">
-                                        <i class="fas {% if game.statusType == 'inprogress' %}fa-circle animate-pulse{% elif game.statusType == 'finished' %}fa-check-circle{% else %}fa-clock{% endif %}"></i>
+                            <div class="scores-game-card game-score-card bg-surface-light dark:bg-surface rounded-xl overflow-hidden border border-border-light dark:border-border-subtle transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/50 hover:shadow-card-hover flex flex-col {% if game.statusType == 'inprogress' %}scores-live-game{% endif %}" data-game-status="{{ game.statusType|lower }}" data-game-id="{{ game.id }}" data-scores-card>
+                                <!-- Game Status Header (lobby "This Week's Games" language) -->
+                                <div class="flex items-center justify-between gap-3 px-3 py-2 border-b border-border-light dark:border-border-subtle">
+                                    <span class="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide
+                                        {% if game.statusType == 'inprogress' %}bg-green-500/15 text-green-700 dark:text-green-300
+                                        {% elif game.statusType == 'finished' %}bg-slate-500/15 text-slate-700 dark:text-slate-300
+                                        {% else %}bg-blue-500/15 text-blue-700 dark:text-blue-300{% endif %}">
+                                        {% if game.statusType == 'inprogress' %}<span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                                        {% elif game.statusType == 'finished' %}<i class="fas fa-check text-[10px]"></i>
+                                        {% else %}<i class="fas fa-clock text-[10px]"></i>{% endif %}
                                         <span data-status-title>{{ game.statusTitle }}</span>
-                                    </div>
-                                    <span class="text-xs opacity-90">{{ game|game_start_label }}</span>
+                                    </span>
+                                    <span class="text-right text-xs font-semibold text-text-secondary-light dark:text-text-secondary">
+                                        {{ game.startTimestamp|date:"D, M j" }}{% with game|game_start_label as start_label %}{% if start_label %}<span class="mx-1 opacity-50">&middot;</span>{{ start_label }}{% endif %}{% endwith %}
+                                    </span>
                                 </div>
-
-                                <!-- Game Info (Spread, Weather, etc.) -->
-                                {% if game.spread or game.overUnder or game.temperature or game.weatherCondition %}
-                                <div class="flex flex-wrap items-center justify-center gap-3 px-3 py-1 text-xs text-text-dark dark:text-text-secondary border-b border-border-light dark:border-slate-600 bg-border-light dark:bg-slate-800">
-                                    {% if game.spread %}
-                                    <div class="flex items-center gap-1">
-                                        <i class="fas fa-chart-line"></i>
-                                        <span class="font-medium">Spread:</span>
-                                        <span class="flex items-center gap-1 font-semibold text-text-dark dark:text-white">
-                                            {% if game.spread > 0 %}
-                                                {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="w-4 h-4 max-w-4 max-h-4 flex-shrink-0 object-contain" style="width: 16px; height: 16px;">
-                                                {% endwith %}
-                                                -{{ game.spread|floatformat:1 }}
-                                            {% else %}
-                                                {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="w-4 h-4 max-w-4 max-h-4 flex-shrink-0 object-contain" style="width: 16px; height: 16px;">
-                                                {% endwith %}
-                                                -{{ game.spread|floatformat:1|cut:"-" }}
-                                            {% endif %}
-                                        </span>
-                                    </div>
-                                    {% endif %}
-                                    {% if game.overUnder %}
-                                    <div class="flex items-center gap-1">
-                                        <i class="fas fa-calculator"></i>
-                                        <span class="font-medium">O/U:</span>
-                                        <span class="font-semibold text-text-dark dark:text-white">{{ game.overUnder|floatformat:1 }}</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if game.temperature and game.weatherCondition %}
-                                    <div class="flex items-center gap-1">
-                                        {% if 'Sun' in game.weatherCondition or 'Clear' in game.weatherCondition %}
-                                            <i class="fas fa-sun text-yellow-500"></i>
-                                        {% elif 'Cloud' in game.weatherCondition %}
-                                            <i class="fas fa-cloud"></i>
-                                        {% elif 'Rain' in game.weatherCondition or 'Shower' in game.weatherCondition %}
-                                            <i class="fas fa-cloud-rain text-blue-500"></i>
-                                        {% elif 'Snow' in game.weatherCondition %}
-                                            <i class="fas fa-snowflake text-blue-300"></i>
-                                        {% elif 'Storm' in game.weatherCondition or 'Thunder' in game.weatherCondition %}
-                                            <i class="fas fa-bolt text-purple-500"></i>
-                                        {% elif 'Wind' in game.weatherCondition %}
-                                            <i class="fas fa-wind"></i>
-                                        {% elif 'Fog' in game.weatherCondition %}
-                                            <i class="fas fa-smog"></i>
-                                        {% else %}
-                                            <i class="fas fa-thermometer-half"></i>
-                                        {% endif %}
-                                        <span>{{ game.temperature }}°F</span>
-                                    </div>
-                                    {% endif %}
-                                    {% if game.venueIndoor %}
-                                    <div class="flex items-center gap-1">
-                                        <i class="fas fa-home"></i>
-                                        <span>Indoor</span>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                {% endif %}
 
                                 <!-- Teams and Scores -->
                                 <div class="teams-matchup">
@@ -453,7 +400,7 @@
                                                 <div class="team-name {% if game.statusType == 'finished' and game.gameWinner != game.awayTeamSlug %}text-muted{% endif %}">
                                                     {{ game.awayTeamName }}
                                                     {% if game.statusType == 'finished' and game.gameWinner == game.awayTeamSlug %}
-                                                        <i class="fas fa-chevron-right ms-1 winner-indicator"></i>
+                                                        <i class="fas fa-trophy ms-1.5 text-sm text-yellow-500" title="{{ game.awayTeamName }} won" aria-label="Winner"></i>
                                                     {% endif %}
                                                 </div>
                                                 <div class="team-details">
@@ -484,24 +431,36 @@
                                         </div>
                                         
                                         {% if game.statusType != 'notstarted' %}
-                                        <div class="score-breakdown">
-                                            <div class="flex items-center gap-2">
-                                                <div class="quarters">
-                                                    <span class="quarter-score" data-away-period="1">{{ game.awayTeamPeriod1|default:"—" }}</span>
-                                                    <span class="quarter-score" data-away-period="2">{{ game.awayTeamPeriod2|default:"—" }}</span>
-                                                    <span class="quarter-score" data-away-period="3">{{ game.awayTeamPeriod3|default:"—" }}</span>
-                                                    <span class="quarter-score" data-away-period="4">{{ game.awayTeamPeriod4|default:"—" }}</span>
-                                                </div>
-                                                <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3" data-away-score>{{ game.awayTeamScore|default:"0" }}</div>
-                                            </div>
+                                        <div class="score-breakdown{% if game.statusType == 'finished' and game.gameWinner != game.awayTeamSlug %} opacity-40{% endif %}">
+                                            <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3" data-away-score>{{ game.awayTeamScore|default:"0" }}</div>
                                         </div>
                                         {% endif %}
                                     </div>
+                                    <!-- Away Team Picks (inline) -->
+                                    {% if picks and game.statusType == 'finished' or picks and game.statusType == 'inprogress' %}
+                                    <div class="team-picks-inline" data-team="{{ game.awayTeamSlug }}">
+                                        {% for pick in picks %}
+                                            {% if pick.pick == game.awayTeamSlug %}
+                                            {% with pick.uid|lookupname as username %}{% with pick.uid|lookupavatar as avatar %}
+                                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}"
+                                               class="pick-chip group{% if game.statusType == 'finished' and game.gameWinner != pick.pick %} opacity-60{% endif %}"
+                                               title="{{ username|default:'Unknown' }}{% if pick.tieBreakerScore != None %} · TB {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}{% endif %}">
+                                                <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
+                                                     alt="{{ username|default:'Unknown' }}"
+                                                     class="pick-chip-avatar {% if game.statusType == 'inprogress' %}border-yellow-500 dark:border-yellow-400 animate-pulse{% elif game.gameWinner == pick.pick %}border-green-500 dark:border-green-400{% else %}border-red-500 dark:border-red-400{% endif %}">
+                                                <span class="pick-chip-name">{{ username|default:'Unknown' }}</span>
+                                                {% if pick.tieBreakerScore != None %}<span class="pick-chip-tb">TB {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>{% endif %}
+                                            </a>
+                                            {% endwith %}{% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
                                     {% endwith %}
 
                                     <!-- Home Team -->
                                     {% with game.homeTeamSlug|lookuplogo as home_team %}
-                                    <div class="team-score-row {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}winning-team{% endif %}">
+                                    <div class="team-score-row team-score-row-divider {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}winning-team{% endif %}">
                                         <div class="team-info">
                                             <img src="{{ home_team.teamLogo|default:'/static/images/nfl.svg' }}"
                                                  alt="{{ game.homeTeamName }} logo"
@@ -510,7 +469,7 @@
                                                 <div class="team-name {% if game.statusType == 'finished' and game.gameWinner != game.homeTeamSlug %}text-muted{% endif %}">
                                                     {{ game.homeTeamName }}
                                                     {% if game.statusType == 'finished' and game.gameWinner == game.homeTeamSlug %}
-                                                        <i class="fas fa-chevron-right ms-1 winner-indicator"></i>
+                                                        <i class="fas fa-trophy ms-1.5 text-sm text-yellow-500" title="{{ game.homeTeamName }} won" aria-label="Winner"></i>
                                                     {% endif %}
                                                 </div>
                                                 <div class="team-details">
@@ -541,213 +500,59 @@
                                         </div>
                                         
                                         {% if game.statusType != 'notstarted' %}
-                                        <div class="score-breakdown">
-                                            <div class="flex items-center gap-2">
-                                                <div class="quarters">
-                                                    <span class="quarter-score" data-home-period="1">{{ game.homeTeamPeriod1|default:"—" }}</span>
-                                                    <span class="quarter-score" data-home-period="2">{{ game.homeTeamPeriod2|default:"—" }}</span>
-                                                    <span class="quarter-score" data-home-period="3">{{ game.homeTeamPeriod3|default:"—" }}</span>
-                                                    <span class="quarter-score" data-home-period="4">{{ game.homeTeamPeriod4|default:"—" }}</span>
-                                                </div>
-                                                <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3" data-home-score>{{ game.homeTeamScore|default:"0" }}</div>
-                                            </div>
+                                        <div class="score-breakdown{% if game.statusType == 'finished' and game.gameWinner != game.homeTeamSlug %} opacity-40{% endif %}">
+                                            <div class="total-score text-3xl md:text-4xl font-black text-text-dark dark:text-white pl-3" data-home-score>{{ game.homeTeamScore|default:"0" }}</div>
                                         </div>
                                         {% endif %}
                                     </div>
+                                    <!-- Home Team Picks (inline) -->
+                                    {% if picks and game.statusType == 'finished' or picks and game.statusType == 'inprogress' %}
+                                    <div class="team-picks-inline" data-team="{{ game.homeTeamSlug }}">
+                                        {% for pick in picks %}
+                                            {% if pick.pick == game.homeTeamSlug %}
+                                            {% with pick.uid|lookupname as username %}{% with pick.uid|lookupavatar as avatar %}
+                                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}"
+                                               class="pick-chip group{% if game.statusType == 'finished' and game.gameWinner != pick.pick %} opacity-60{% endif %}"
+                                               title="{{ username|default:'Unknown' }}{% if pick.tieBreakerScore != None %} · TB {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}{% endif %}">
+                                                <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
+                                                     alt="{{ username|default:'Unknown' }}"
+                                                     class="pick-chip-avatar {% if game.statusType == 'inprogress' %}border-yellow-500 dark:border-yellow-400 animate-pulse{% elif game.gameWinner == pick.pick %}border-green-500 dark:border-green-400{% else %}border-red-500 dark:border-red-400{% endif %}">
+                                                <span class="pick-chip-name">{{ username|default:'Unknown' }}</span>
+                                                {% if pick.tieBreakerScore != None %}<span class="pick-chip-tb">TB {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>{% endif %}
+                                            </a>
+                                            {% endwith %}{% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
                                     {% endwith %}
                                 </div>
 
-                                <!-- Preview and Broadcast Info -->
-                                {% if game.broadcast or game.gamecastUrl %}
-                                <div class="flex items-center justify-between px-4 py-3 border-t border-border-light dark:border-border-subtle bg-border-light dark:bg-surface-hover">
-                                    {% if game.gamecastUrl %}
-                                    <a href="{{ game.gamecastUrl }}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-3 py-1 bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 rounded-lg transition-colors">
-                                        <i class="fas fa-external-link-alt text-primary"></i>
-                                        <span class="text-sm font-semibold text-text-secondary-light dark:text-text-secondary">Game Preview</span>
-                                    </a>
-                                    {% else %}
-                                    <div></div>
-                                    {% endif %}
-                                    {% if game.broadcast %}
-                                    <div class="flex items-center gap-2 ml-auto">
-                                        <i class="fas fa-tv text-primary"></i>
-                                        <span class="text-sm font-semibold text-text-dark dark:text-white">{{ game.broadcast }}</span>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                {% endif %}
-
-                                <!-- Game Status Badge -->
+                                <!-- Box Score (per-quarter, collapsible) -->
                                 {% if game.statusType != 'notstarted' %}
-                                <div class="flex items-center justify-center py-2 mt-1 mb-0">
-                                    {% if game.statusType|lower == 'inprogress' %}
-                                        <span class="px-4 py-1.5 bg-gradient-to-r from-green-600 to-green-700 text-white text-xs font-bold uppercase tracking-wider rounded-full">LIVE</span>
-                                    {% elif game.statusType|lower == 'finished' %}
-                                        <span class="px-4 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-bold uppercase tracking-wider rounded-full">FINAL</span>
-                                    {% endif %}
-                                </div>
-                                {% endif %}
-
-                                <!-- Player Picks Section -->
-                                {% if picks %}
-                                    {% if game.statusType == 'finished' or game.statusType == 'inprogress' %}
-                                <div class="border-t border-border-light dark:border-border-subtle mt-3 pt-3">
-                                    <div class="px-4">
-                                        <div class="flex items-center gap-2 text-sm font-semibold text-text-dark dark:text-white mb-3">
-                                            <i class="fas fa-users"></i>
-                                            <span>Player Picks</span>
-                                        </div>
-
-                                        <!-- Team Picks Grid (Responsive: stacked on mobile, side-by-side on larger screens) -->
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
-                                    <!-- Away Team Picks -->
-                                    <div class="space-y-2" data-team="{{ game.awayTeamSlug }}">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
-                                                 alt="{{ game.awayTeamName }} logo"
-                                                 class="flex-shrink-0 object-contain"
-                                                 style="width: 20px !important; height: 20px !important; max-width: none !important;">
-                                            {% endwith %}
-                                            <span class="text-sm font-semibold text-text-dark dark:text-white truncate">{{ game.awayTeamName }}</span>
-                                        </div>
-                                        <div class="flex flex-wrap gap-2">
-                                            {% for pick in picks %}
-                                                {% if pick.pick == game.awayTeamSlug %}
-                                                    {% with pick.uid|lookupname as username %}
-                                                    {% with pick.uid|lookupavatar as avatar %}
-                                                    {% if game.statusType == 'finished' %}
-                                                        {% if game.gameWinner == pick.pick %}
-                                                            <div class="flex flex-col items-center gap-1">
-                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
-                                                                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
-                                                                         alt="{{ username|default:'Unknown' }}"
-                                                                         class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
-                                                                         style="box-shadow: 0 0 12px rgba(40, 167, 69, 0.7), 0 0 24px rgba(40, 167, 69, 0.4);"
-                                                                         title="{{ username|default:'Unknown' }} - Correct Pick">
-                                                                </a>
-                                                                <span class="text-xs text-text-dark dark:text-white font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
-                                                                {% if pick.tieBreakerScore != None %}
-                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
-                                                                {% endif %}
-                                                            </div>
-                                                        {% else %}
-                                                            <div class="flex flex-col items-center gap-1 opacity-60">
-                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
-                                                                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
-                                                                         alt="{{ username|default:'Unknown' }}"
-                                                                         class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
-                                                                         style="box-shadow: 0 0 12px rgba(220, 53, 69, 0.7), 0 0 24px rgba(220, 53, 69, 0.4);"
-                                                                         title="{{ username|default:'Unknown' }} - Incorrect Pick">
-                                                                </a>
-                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
-                                                                {% if pick.tieBreakerScore != None %}
-                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
-                                                                {% endif %}
-                                                            </div>
-                                                        {% endif %}
-                                                    {% elif game.statusType == 'inprogress' %}
-                                                        <div class="flex flex-col items-center gap-1">
-                                                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
-                                                                <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
-                                                                     alt="{{ username|default:'Unknown' }}"
-                                                                     class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
-                                                                     style="box-shadow: 0 0 12px rgba(255, 193, 7, 0.7), 0 0 24px rgba(255, 193, 7, 0.4);"
-                                                                     title="{{ username|default:'Unknown' }} - Game In Progress">
-                                                            </a>
-                                                            <span class="text-xs text-text-dark dark:text-white font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
-                                                            {% if pick.tieBreakerScore != None %}
-                                                            <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
-                                                            {% endif %}
-                                                        </div>
-                                                    {% endif %}
-                                                    {% endwith %}
-                                                    {% endwith %}
-                                                {% endif %}
-                                            {% empty %}
-                                            {% endfor %}
-                                            {% if not picks %}
-                                                <span class="no-picks-message">No picks available</span>
-                                            {% endif %}
-                                        </div>
+                                <details class="box-score">
+                                    <summary>
+                                        <i class="fas fa-chevron-right box-score-caret"></i>
+                                        <span>Box score</span>
+                                    </summary>
+                                    <div class="box-score-grid">
+                                        <div class="box-score-head"></div>
+                                        <div class="box-score-head">1</div>
+                                        <div class="box-score-head">2</div>
+                                        <div class="box-score-head">3</div>
+                                        <div class="box-score-head">4</div>
+                                        <div class="box-score-team">{{ game.awayTeamName }}</div>
+                                        <span class="quarter-score" data-away-period="1">{{ game.awayTeamPeriod1|default:"—" }}</span>
+                                        <span class="quarter-score" data-away-period="2">{{ game.awayTeamPeriod2|default:"—" }}</span>
+                                        <span class="quarter-score" data-away-period="3">{{ game.awayTeamPeriod3|default:"—" }}</span>
+                                        <span class="quarter-score" data-away-period="4">{{ game.awayTeamPeriod4|default:"—" }}</span>
+                                        <div class="box-score-team">{{ game.homeTeamName }}</div>
+                                        <span class="quarter-score" data-home-period="1">{{ game.homeTeamPeriod1|default:"—" }}</span>
+                                        <span class="quarter-score" data-home-period="2">{{ game.homeTeamPeriod2|default:"—" }}</span>
+                                        <span class="quarter-score" data-home-period="3">{{ game.homeTeamPeriod3|default:"—" }}</span>
+                                        <span class="quarter-score" data-home-period="4">{{ game.homeTeamPeriod4|default:"—" }}</span>
                                     </div>
-
-                                    <!-- Home Team Picks -->
-                                    <div class="space-y-2" data-team="{{ game.homeTeamSlug }}">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}"
-                                                 alt="{{ game.homeTeamName }} logo"
-                                                 class="flex-shrink-0 object-contain"
-                                                 style="width: 20px !important; height: 20px !important; max-width: none !important;">
-                                            {% endwith %}
-                                            <span class="text-sm font-semibold text-text-dark dark:text-white truncate">{{ game.homeTeamName }}</span>
-                                        </div>
-                                        <div class="flex flex-wrap gap-2">
-                                            {% for pick in picks %}
-                                                {% if pick.pick == game.homeTeamSlug %}
-                                                    {% with pick.uid|lookupname as username %}
-                                                    {% with pick.uid|lookupavatar as avatar %}
-                                                    {% if game.statusType == 'finished' %}
-                                                        {% if game.gameWinner == pick.pick %}
-                                                            <div class="flex flex-col items-center gap-1">
-                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
-                                                                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
-                                                                         alt="{{ username|default:'Unknown' }}"
-                                                                         class="w-8 h-8 rounded-full border-2 border-green-500 dark:border-green-400 hover:scale-110 transition-transform"
-                                                                         style="box-shadow: 0 0 12px rgba(40, 167, 69, 0.7), 0 0 24px rgba(40, 167, 69, 0.4);"
-                                                                         title="{{ username|default:'Unknown' }} - Correct Pick">
-                                                                </a>
-                                                                <span class="text-xs text-text-dark dark:text-white font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
-                                                                {% if pick.tieBreakerScore != None %}
-                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
-                                                                {% endif %}
-                                                            </div>
-                                                        {% else %}
-                                                            <div class="flex flex-col items-center gap-1 opacity-60">
-                                                                <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
-                                                                    <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
-                                                                         alt="{{ username|default:'Unknown' }}"
-                                                                         class="w-8 h-8 rounded-full border-2 border-red-500 dark:border-red-400 hover:scale-110 transition-transform"
-                                                                         style="box-shadow: 0 0 12px rgba(220, 53, 69, 0.7), 0 0 24px rgba(220, 53, 69, 0.4);"
-                                                                         title="{{ username|default:'Unknown' }} - Incorrect Pick">
-                                                                </a>
-                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
-                                                                {% if pick.tieBreakerScore != None %}
-                                                                <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
-                                                                {% endif %}
-                                                            </div>
-                                                        {% endif %}
-                                                    {% elif game.statusType == 'inprogress' %}
-                                                        <div class="flex flex-col items-center gap-1">
-                                                            <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug pick.uid %}{% else %}{% url 'user_profile' pick.uid %}{% endif %}" class="group">
-                                                                <img src="{{ avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=64' }}"
-                                                                     alt="{{ username|default:'Unknown' }}"
-                                                                     class="w-8 h-8 rounded-full border-2 border-yellow-500 dark:border-yellow-400 hover:scale-110 transition-transform animate-pulse"
-                                                                     style="box-shadow: 0 0 12px rgba(255, 193, 7, 0.7), 0 0 24px rgba(255, 193, 7, 0.4);"
-                                                                     title="{{ username|default:'Unknown' }} - Game In Progress">
-                                                            </a>
-                                                            <span class="text-xs text-text-dark dark:text-white font-medium text-center uppercase" style="min-width: 80px;">{{ username|default:'Unknown' }}</span>
-                                                            {% if pick.tieBreakerScore != None %}
-                                                            <span class="text-xs text-text-secondary-light dark:text-text-secondary text-center" style="min-width: 80px;">TB: {{ pick.tieBreakerScore }}/{{ pick.tieBreakerYards }}</span>
-                                                            {% endif %}
-                                                        </div>
-                                                    {% endif %}
-                                                    {% endwith %}
-                                                    {% endwith %}
-                                                {% endif %}
-                                            {% empty %}
-                                            {% endfor %}
-                                            {% if not picks %}
-                                                <span class="no-picks-message">No picks available</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    </div>
-                                </div>
-                            </div>
-                                    {% endif %}
+                                </details>
                                 {% endif %}
 
                                 <!-- User's Pick Highlight - Always show -->
@@ -858,6 +663,76 @@
                                         }
                                     })();
                                 </script>
+                                {% endif %}
+
+                                <!-- Metadata (whisper footer) -->
+                                {% if game.spread or game.overUnder or game.temperature or game.venueIndoor or game.broadcast or game.gamecastUrl %}
+                                <div class="card-meta-footer">
+                                    {% if game.spread %}
+                                    <span class="meta-chip">
+                                        <i class="fas fa-chart-line"></i>
+                                        <span>Spread</span>
+                                        {% if game.spread > 0 %}
+                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="w-3.5 h-3.5 flex-shrink-0 object-contain" style="width: 14px; height: 14px;">
+                                            {% endwith %}
+                                            <span class="meta-strong">-{{ game.spread|floatformat:1 }}</span>
+                                        {% else %}
+                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
+                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="w-3.5 h-3.5 flex-shrink-0 object-contain" style="width: 14px; height: 14px;">
+                                            {% endwith %}
+                                            <span class="meta-strong">-{{ game.spread|floatformat:1|cut:"-" }}</span>
+                                        {% endif %}
+                                    </span>
+                                    {% endif %}
+                                    {% if game.overUnder %}
+                                    <span class="meta-chip">
+                                        <i class="fas fa-calculator"></i>
+                                        <span>O/U</span>
+                                        <span class="meta-strong">{{ game.overUnder|floatformat:1 }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% if game.temperature and game.weatherCondition %}
+                                    <span class="meta-chip">
+                                        {% if 'Sun' in game.weatherCondition or 'Clear' in game.weatherCondition %}
+                                            <i class="fas fa-sun text-yellow-500"></i>
+                                        {% elif 'Cloud' in game.weatherCondition %}
+                                            <i class="fas fa-cloud"></i>
+                                        {% elif 'Rain' in game.weatherCondition or 'Shower' in game.weatherCondition %}
+                                            <i class="fas fa-cloud-rain text-blue-500"></i>
+                                        {% elif 'Snow' in game.weatherCondition %}
+                                            <i class="fas fa-snowflake text-blue-300"></i>
+                                        {% elif 'Storm' in game.weatherCondition or 'Thunder' in game.weatherCondition %}
+                                            <i class="fas fa-bolt text-purple-500"></i>
+                                        {% elif 'Wind' in game.weatherCondition %}
+                                            <i class="fas fa-wind"></i>
+                                        {% elif 'Fog' in game.weatherCondition %}
+                                            <i class="fas fa-smog"></i>
+                                        {% else %}
+                                            <i class="fas fa-thermometer-half"></i>
+                                        {% endif %}
+                                        <span class="meta-strong">{{ game.temperature }}°F</span>
+                                    </span>
+                                    {% endif %}
+                                    {% if game.venueIndoor %}
+                                    <span class="meta-chip">
+                                        <i class="fas fa-home"></i>
+                                        <span>Indoor</span>
+                                    </span>
+                                    {% endif %}
+                                    {% if game.broadcast %}
+                                    <span class="meta-chip">
+                                        <i class="fas fa-tv"></i>
+                                        <span class="meta-strong">{{ game.broadcast }}</span>
+                                    </span>
+                                    {% endif %}
+                                    {% if game.gamecastUrl %}
+                                    <a href="{{ game.gamecastUrl }}" target="_blank" rel="noopener noreferrer" class="meta-chip meta-link ml-auto">
+                                        <i class="fas fa-external-link-alt"></i>
+                                        <span>Game Preview</span>
+                                    </a>
+                                    {% endif %}
+                                </div>
                                 {% endif %}
                             </div>
                             {% endfor %}
