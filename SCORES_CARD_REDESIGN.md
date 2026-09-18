@@ -51,7 +51,37 @@ current data. Converge with the lobby game-card language.
 
 ## Done so far on v2
 - Removed the redundant centered LIVE/FINAL badge (status now lives only in
-  the header). Everything else still matches the recolor version.
+  the header).
+- **All 3 zones implemented** (checkpoint tag `scores-v2-checkpoint-before-zones`
+  marks the pre-zones state — `git reset --hard` it to revert):
+  - Zone 2 (matchup hero): losing team's SCORE now dims too (`opacity-40`), not
+    just the name. Per-quarter scores moved out of the always-on team rows into
+    a collapsible `<details class="box-score">` below the matchup (native
+    details = survives the SSE innerHTML swap with no JS state). The home team
+    row got `team-score-row-divider` since the inline picks now sit between the
+    two rows (old adjacent-sibling divider no longer applied).
+  - Zone 3 (signature): the bottom Player Picks grid is gone; pick avatars now
+    render INLINE under each team (`.team-picks-inline` / `.pick-chip`), ring
+    green/red/yellow for correct/incorrect/in-progress. Username under each,
+    tiebreaker as tiny text + in the hover title. "Your Pick" + "Missing Picks"
+    sections kept as-is.
+  - Zone 4 (whisper): spread / O-U / weather / indoor + TV + Game Preview all
+    collapsed into ONE muted `.card-meta-footer` at the bottom (was a top info
+    bar + a separate broadcast band).
+- **Lobby "This Week's Games" language borrowed into the header** (converging
+  with `family_pool_home.html` `data-lobby-game-card`): the full-width tinted
+  status bar is now a soft rounded-full **status pill** — green + pulse dot
+  (live), slate + check (final), blue + clock (upcoming); the date reads
+  `Wed, Sep 9 · 8:20 PM` on the right. The winner's chunky chevron badge
+  (`.winner-indicator`, now unused) became the lobby's small yellow
+  `fa-trophy`. Kept the richer scores-only bits (48px logos, records, win-chance
+  bars, inline pick avatars, box score).
+- SSE contract preserved: `data-*-score`, `data-status-title`, `data-*-period`
+  (now inside the box-score details, still queryable), `.total-score` /
+  `.quarter-score` (poll diff), `scores-live-game`. Verified via the Django
+  test client against `moran-relatives/pickem-pool` season 2627 wk 1 (finished
+  games w/ picks): 16 cards, 256 pick chips (165 correct / 91 incorrect), 16
+  box scores, 16 meta footers, no template errors. CSS rebuilt (`build:prod`).
 
 ## Local preview environment (for a fresh session)
 - Dev server: http://localhost:8000. If not running, from `pickem/` with these

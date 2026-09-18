@@ -99,8 +99,10 @@
     @apply py-3.5 px-4 flex items-center gap-4 transition-colors;
   }
 
-  /* Divider between the two team rows (matches the site's connected look). */
-  .team-score-row + .team-score-row {
+  /* Divider between the home team block and the away block above it (the
+     inline pick cluster now sits between the two team rows, so the old
+     adjacent-sibling selector no longer connects them). */
+  .team-score-row-divider {
     @apply border-t border-border-light dark:border-border-subtle;
   }
 
@@ -108,8 +110,88 @@
     @apply bg-gradient-to-r from-green-500/10 to-transparent border-l-4 border-green-500 dark:border-green-400 pl-3;
   }
 
+  /* Inline pick avatars under each team ("who's on ATL"). */
+  .team-picks-inline {
+    @apply flex flex-wrap gap-2.5 px-4 pb-3 pt-0.5;
+  }
+
+  .pick-chip {
+    @apply flex flex-col items-center gap-0.5 w-14 transition-transform;
+  }
+
+  .pick-chip:hover {
+    @apply -translate-y-0.5;
+  }
+
+  .pick-chip-avatar {
+    @apply w-9 h-9 rounded-full border-2 object-cover transition-transform;
+  }
+
+  .pick-chip:hover .pick-chip-avatar {
+    @apply scale-110;
+  }
+
+  .pick-chip-name {
+    @apply text-[0.625rem] leading-tight font-semibold uppercase text-center text-text-dark dark:text-white truncate max-w-[3.5rem];
+  }
+
+  .pick-chip-tb {
+    @apply text-[0.5625rem] leading-tight text-center text-text-secondary-light dark:text-text-secondary;
+  }
+
+  /* Collapsible per-quarter box score. */
+  .box-score {
+    @apply border-t border-border-light dark:border-border-subtle;
+  }
+
+  .box-score > summary {
+    @apply cursor-pointer select-none list-none flex items-center gap-2 px-4 py-2 text-[0.6875rem] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary transition-colors hover:text-text-dark dark:hover:text-white;
+  }
+
+  .box-score > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .box-score-caret {
+    @apply text-[0.625rem] transition-transform duration-200;
+  }
+
+  .box-score[open] .box-score-caret {
+    @apply rotate-90;
+  }
+
+  .box-score-grid {
+    @apply grid gap-1 px-4 pb-3 items-center;
+    grid-template-columns: minmax(0, 1fr) repeat(4, auto);
+  }
+
+  .box-score-head {
+    @apply text-[0.625rem] font-bold uppercase text-center text-text-secondary-light dark:text-text-secondary;
+  }
+
+  .box-score-team {
+    @apply text-xs font-semibold text-text-dark dark:text-white truncate;
+  }
+
   .quarter-score {
     @apply px-2 py-1 text-xs min-w-6 text-center bg-black/[0.03] dark:bg-white/[0.05] rounded border border-border-light dark:border-border-subtle text-text-dark dark:text-gray-200;
+  }
+
+  /* Metadata whisper footer (spread / O-U / weather / TV / preview). */
+  .card-meta-footer {
+    @apply flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 border-t border-border-light dark:border-border-subtle bg-black/[0.02] dark:bg-white/[0.03] text-[0.6875rem] text-text-secondary-light dark:text-text-secondary;
+  }
+
+  .meta-chip {
+    @apply inline-flex items-center gap-1;
+  }
+
+  .meta-strong {
+    @apply font-semibold text-text-dark dark:text-white;
+  }
+
+  .meta-link {
+    @apply px-2 py-0.5 rounded-md bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 text-primary font-semibold transition-colors;
   }
 
   .game-status-display {
