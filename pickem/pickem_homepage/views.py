@@ -1354,13 +1354,22 @@ def build_pool_standings_stats(pool, gameseason, competition):
             'perfect_weeks': 0,
         }
 
-    # Perfect weeks: weeks where the user picked every scored game and got them
-    # all right (mirrors update_stats' definition, scoped to this pool).
+    # Perfect weeks: weeks where the user picked every game and got them all
+    # right (mirrors update_stats' definition, scoped to this pool). Only
+    # fully-complete weeks count — a perfect week means every game in the week
+    # was picked correctly, which cannot be judged until the whole week is
+    # final. Counting games "scored so far" mid-week would let a lone 1/1 pick
+    # masquerade as a perfect week.
+    from pickem_api.weekly_winners import week_is_complete
     scored_by_week = {}
     for week in GamesAndScores.objects.filter(
         gameseason=gameseason, competition=competition, gameScored=True
     ).values_list('gameWeek', flat=True):
         scored_by_week[week] = scored_by_week.get(week, 0) + 1
+    scored_by_week = {
+        wk: n for wk, n in scored_by_week.items()
+        if week_is_complete(gameseason, wk, competition)
+    }
     if scored_by_week:
         per_week = (
             GamePicks.objects.filter(
@@ -1501,14 +1510,22 @@ def family_pool_home(request, family_slug, pool_slug):
     # Enrich the shown winners with an avatar, how many correct picks they made
     # that week, and whether it was a perfect week (every scored game right).
     if recent_winners:
+        from pickem_api.weekly_winners import week_is_complete
         winner_avatars = build_user_display_maps(
             [str(row['winner'].userID) for row in recent_winners]
         )[1]
+        # Only fully-complete weeks can be perfect (every game final + graded);
+        # excluding in-progress weeks keeps a partial "all scored-so-far right"
+        # from reading as perfect.
         scored_by_week = {}
         for week_value in GamesAndScores.objects.filter(
             gameseason=gameseason, competition=current_competition, gameScored=True
         ).values_list('gameWeek', flat=True):
             scored_by_week[week_value] = scored_by_week.get(week_value, 0) + 1
+        scored_by_week = {
+            wk: n for wk, n in scored_by_week.items()
+            if week_is_complete(gameseason, wk, current_competition)
+        }
         for row in recent_winners:
             uid = str(row['winner'].userID)
             week_str = str(row['week'])
@@ -2495,7 +2512,15 @@ def get_perfect_week_members(family, pool, week):
 
     Auto picks don't count — a perfect week (and its cash bonus, when the pool
     enables one) has to be earned by the member's own picks.
+
+    Only awarded once the week is fully complete: a perfect week means every
+    game in the week was picked right, which cannot be judged (nor its bonus
+    paid) until every game is final. Otherwise, mid-week, a member whose only
+    graded pick so far is correct would wrongly qualify.
     """
+    from pickem_api.weekly_winners import week_is_complete
+    if not week_is_complete(pool.season, week, pool.competition):
+        return []
     scored_games = GamesAndScores.objects.filter(
         gameseason=pool.season,
         competition=pool.competition,
@@ -4193,7 +4218,12 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
     # Enrich the winner card: their weighted week points, correct picks that
     # week, and whether it was a perfect week (every scored game right).
     if week_winner and str(game_week).isdigit():
+        from pickem_api.weekly_winners import week_is_complete
         week_points_field = f"week_{game_week}_points"
+        # A perfect week requires every game in the week to be final + graded;
+        # until then scored_count is only "games played so far", so force
+        # is_perfect False for an incomplete week rather than comparing to it.
+        week_complete = week_is_complete(gameseason, game_week, game_competition)
         scored_count = game_list.filter(gameScored=True).count()
         for winner in week_winner:
             winner.week_points_value = getattr(winner, week_points_field, 0) or 0
@@ -4208,7 +4238,7 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
                 .values('pick_game_id').distinct().count()
             )
             winner.correct_count = correct
-            winner.is_perfect = bool(scored_count) and correct == scored_count
+            winner.is_perfect = week_complete and bool(scored_count) and correct == scored_count
 
     # TODO: Give zero points to users that didn't win yet
     user_weekly_stats = {}

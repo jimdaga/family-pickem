@@ -2126,6 +2126,72 @@ class UpdateStatsCommandTest(TestCase):
         # And an auto-assisted week is never perfect.
         self.assertEqual(stats.perfectWeeksSeason, 0)
 
+    def _unfinished_game(self, gid, slug, week="1"):
+        return GamesAndScores.objects.create(
+            id=gid, slug=slug, competition="nfl", gameWeek=week, gameyear="2025",
+            gameseason=2526, startTimestamp=timezone.now(),
+            statusType="notstarted", statusTitle="Scheduled", gameWinner="",
+            gameScored=False, homeTeamId=1, homeTeamSlug="eagles",
+            homeTeamName="Eagles", awayTeamId=2, awayTeamSlug="chiefs",
+            awayTeamName="Chiefs",
+        )
+
+    def test_perfect_week_requires_complete_week(self):
+        """A perfect week can't be awarded until every game in the week is
+        final. Regression: a lone 1/1 correct pick while other games in the
+        week were still unplayed registered as a perfect week.
+        """
+        from django.core.management import call_command
+
+        # Week 1: one finished game alice nailed + one still unplayed, so the
+        # week is incomplete. Only the finished game is scored.
+        g1 = self._game(30, "g30", week="1")
+        self._unfinished_game(31, "g31", week="1")
+        self._pick(self.alice, g1, "eagles", correct=True, week="1")
+
+        call_command("update_stats", season=2526)
+        stats = userStats.objects.get(userID=str(self.alice.id), pool__isnull=True)
+        # 1/1 on scored games, but the week isn't over -> NOT perfect.
+        self.assertEqual(stats.perfectWeeksSeason, 0)
+
+        # Straggler finishes and alice had it right too -> now a real perfect week.
+        GamesAndScores.objects.filter(id=31).update(
+            statusType="finished", statusTitle="Final", gameWinner="eagles",
+            gameScored=True,
+        )
+        self._pick(
+            self.alice, GamesAndScores.objects.get(id=31),
+            "eagles", correct=True, week="1",
+        )
+        call_command("update_stats", season=2526)
+        stats.refresh_from_db()
+        self.assertEqual(stats.perfectWeeksSeason, 1)
+
+    def test_pool_standings_perfect_badge_requires_complete_week(self):
+        """The live lobby standings 'Perfect' badge (build_pool_standings_stats)
+        must not fire mid-week off a partial slate. Regression for the reported
+        1/1-shows-Perfect bug."""
+        from pickem_homepage.views import build_pool_standings_stats
+
+        g1 = self._game(40, "g40", week="1")
+        self._unfinished_game(41, "g41", week="1")
+        self._pick(self.alice, g1, "eagles", correct=True, week="1")
+
+        stats = build_pool_standings_stats(self.pool, 2526, "nfl")
+        # Week still open -> no perfect week credited.
+        self.assertEqual(stats.get(str(self.alice.id), {}).get("perfect_weeks"), 0)
+
+        # Complete the week with alice correct on both -> badge earns its keep.
+        GamesAndScores.objects.filter(id=41).update(
+            statusType="finished", statusTitle="Final", gameWinner="eagles",
+            gameScored=True,
+        )
+        self._pick(
+            self.alice, GamesAndScores.objects.get(id=41),
+            "eagles", correct=True, week="1",
+        )
+        stats = build_pool_standings_stats(self.pool, 2526, "nfl")
+        self.assertEqual(stats[str(self.alice.id)]["perfect_weeks"], 1)
 
     def test_cross_season_repeat_matchup_not_graded_before_game_finishes(self):
         from django.core.management import call_command
