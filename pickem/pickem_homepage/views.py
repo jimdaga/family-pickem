@@ -4013,6 +4013,36 @@ def render_standings_page(request, *, tenant_context=None):
     for entry in player_points:
         entry.display_rank = _ranks.get(str(entry.userID))
 
+    # Detailed-breakdown badges (mirror the lobby/leaderboard rows): weeks won
+    # this season, perfect weeks (pool-scoped, complete weeks only), and last
+    # season's champion. Non-tenant (cross-pool) view has no single pool to
+    # scope perfect weeks / prior champion to, so it shows weeks-won only.
+    perfect_by_uid = {}
+    prev_champion_ids = set()
+    if tenant_context and str(selected_season).isdigit():
+        season_int = int(selected_season)
+        perfect_by_uid = {
+            uid: stat.get('perfect_weeks', 0)
+            for uid, stat in build_pool_standings_stats(
+                target_pool, season_int, target_pool.competition
+            ).items()
+        }
+        prev_champion_ids = {
+            str(uid)
+            for uid in userSeasonPoints.objects.filter(
+                pool__family=tenant_context.family,
+                gameseason=season_int - 101,
+                year_winner=True,
+            ).values_list('userID', flat=True)
+            if uid
+        }
+    for entry in player_points:
+        entry.weeks_won = sum(
+            1 for i in range(1, 19) if getattr(entry, f'week_{i}_winner', False)
+        )
+        entry.perfect_weeks = perfect_by_uid.get(str(entry.userID), 0)
+        entry.prev_champion = str(entry.userID) in prev_champion_ids
+
     display_ids = [entry.userID for entry in player_points]
     for winners in weekly_winners.values():
         display_ids.extend(winner.userID for winner in winners)
@@ -4165,14 +4195,44 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
         ).values_list('userID', week_points_field):
             if str(userid_val).isdigit():
                 weighted_by_uid[int(userid_val)] = wk_points or 0
+    # The week's tiebreaker winner (once the week is scored) is elevated to sole
+    # rank 1; everyone else is competition-ranked by points, so a points tie
+    # below the winner shares a rank (winner = 1, the rest of a 12-pt tie = 2).
+    # Before a winner is crowned there's no elevation and tied leaders share
+    # rank 1. On the public cross-pool page there's no single winner, so the
+    # set is empty and it degrades to plain points competition ranking.
+    week_winner_uids = set()
+    if str(game_week).isdigit():
+        winner_field = f"week_{game_week}_winner"
+        winner_rows = userSeasonPoints.objects.filter(
+            **{winner_field: True}, gameseason=gameseason
+        )
+        if tenant_context:
+            winner_rows = winner_rows.filter(pool=tenant_context.pool)
+        for uid_val in winner_rows.values_list('userID', flat=True):
+            if str(uid_val).isdigit():
+                week_winner_uids.add(int(uid_val))
+
     for entry in user_points:
         entry['points'] = (
             weighted_by_uid.get(entry['uid'], entry['wins'])
             if tenant_context else entry['wins']
         )
-    # Order by weighted points (then correct count, then uid) so a non-default
-    # scoring pool ranks by real points, not the raw win count.
-    user_points.sort(key=lambda e: (-(e['points'] or 0), -(e['wins'] or 0), -(e['uid'] or 0)))
+        entry['is_winner'] = entry['uid'] in week_winner_uids
+    # Order by (points, winner) desc so the winner leads their points tier, then
+    # correct count / uid for a stable order within a tie.
+    user_points.sort(key=lambda e: (
+        -(e['points'] or 0), -(1 if e['is_winner'] else 0),
+        -(e['wins'] or 0), -(e['uid'] or 0),
+    ))
+    # Competition ranking keyed on (points, winner): the winner's tier is unique
+    # so they take rank 1 alone and the next points tier starts at 2 (ties within
+    # it share it). Replaces the template's old forloop.counter, which numbered
+    # rows 1..N and mislabelled/mis-highlighted point ties.
+    for rank, entry in competition_ranks(
+        user_points, lambda e: ((e['points'] or 0), 1 if e['is_winner'] else 0)
+    ):
+        entry['rank'] = rank
     users_w_points = {e['uid'] for e in user_points}
     
     players = GamePicks.objects.filter(gameseason=gameseason, gameWeek=game_week, competition=game_competition)

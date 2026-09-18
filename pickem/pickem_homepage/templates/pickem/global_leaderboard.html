@@ -91,6 +91,14 @@
                 <h3 class="mt-2 text-sm font-black text-white truncate max-w-full uppercase tracking-wide">{{ uname|default:"Player" }}</h3>
                 <div class="text-2xl font-black text-white tabular-nums">{{ e.correct }}</div>
                 <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">correct</div>
+                {% if e.prev_champion or e.weeks_won or e.perfect_weeks %}
+                <!-- Badges (compact — same meaning as the ranking-table rows below) -->
+                <div class="mt-2 flex flex-wrap items-center justify-center gap-1">
+                    {% if e.prev_champion %}<span class="inline-flex items-center rounded-full bg-yellow-400/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-yellow-300" title="Won last season"><i class="fas fa-crown"></i></span>{% endif %}
+                    {% if e.weeks_won %}<span class="inline-flex items-center gap-1 rounded-full bg-sky-400/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-sky-300" title="Weekly winner {{ e.weeks_won }} time{{ e.weeks_won|pluralize }} this season"><i class="fas fa-trophy"></i>{{ e.weeks_won }}W</span>{% endif %}
+                    {% if e.perfect_weeks %}<span class="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-300" title="Perfect week{{ e.perfect_weeks|pluralize }}"><i class="fas fa-star"></i>{% if e.perfect_weeks > 1 %}{{ e.perfect_weeks }}{% endif %}</span>{% endif %}
+                </div>
+                {% endif %}
             </div>
             {% endwith %}
             {% endwith %}

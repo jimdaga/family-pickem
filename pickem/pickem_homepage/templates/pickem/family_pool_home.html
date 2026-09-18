@@ -493,6 +493,14 @@
                 <div class="mt-1 flex flex-wrap items-center justify-center gap-x-1 text-[10px] tabular-nums text-text-secondary-light dark:text-text-secondary">
                     <span>{{ row.correct }} correct</span>{% if row.accuracy != None %}<span class="opacity-40">&middot;</span><span>{{ row.accuracy }}%</span>{% endif %}
                 </div>
+                {% if row.prev_champion or row.weeks_won or row.perfect_weeks %}
+                <!-- Badges (compact — same meaning as the standings-table rows below) -->
+                <div class="mt-1 flex flex-wrap items-center justify-center gap-1">
+                    {% if row.prev_champion %}<span class="inline-flex items-center rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300" title="Won last season"><i class="fas fa-crown"></i></span>{% endif %}
+                    {% if row.weeks_won %}<span class="inline-flex items-center gap-0.5 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sky-700 dark:text-sky-300" title="Weekly winner {{ row.weeks_won }} time{{ row.weeks_won|pluralize }}"><i class="fas fa-trophy"></i>{{ row.weeks_won }}W</span>{% endif %}
+                    {% if row.perfect_weeks %}<span class="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300" title="Perfect week{{ row.perfect_weeks|pluralize }}"><i class="fas fa-star"></i>{% if row.perfect_weeks > 1 %}{{ row.perfect_weeks }}{% endif %}</span>{% endif %}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
