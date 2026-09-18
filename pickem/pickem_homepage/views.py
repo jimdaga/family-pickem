@@ -4369,6 +4369,11 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
         'picks': picks,
         'week': game_week,
         'user_points': user_points,
+        # Gates the gold "winner" styling in the Week Points list: until the
+        # week is decided and a winner is crowned there's no winner, so a
+        # mid-week points tie (e.g. 8 people 1/1 after the only game played)
+        # must not light everyone up as rank-1 winners.
+        'week_has_winner': bool(week_winner_uids),
         'users_w_points': users_w_points,
         'players_names': players_names,
         'players_ids': players_ids,
