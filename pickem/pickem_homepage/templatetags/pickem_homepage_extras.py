@@ -143,6 +143,31 @@ def lookupavatar(user_id):
     return avatar_url
 
 @register.filter
+def spread_favorite(game):
+    """Resolve which team ``game.spread`` favors, and by how much.
+
+    ``GamesAndScores.spread`` is stored exactly as ESPN sends it: the home
+    team's own line — negative when the home team is favored, positive when
+    the home team is the underdog (i.e. the away team is favored), zero for
+    a pick'em. (Confirmed by ESPN payloads: ``spread: -3`` pairs with
+    ``homeTeamOdds.favorite: true``.) Templates must not infer the favorite
+    from the sign directly — that inversion is the bug this filter fixes.
+
+    Returns ``None`` for a pick'em or missing spread. Otherwise a dict with
+    the favored team's slug/name and the spread's magnitude, always shown
+    as the favorite's own (negative) line.
+    """
+    spread = getattr(game, "spread", None)
+    if not spread:
+        return None
+    if spread < 0:
+        slug, name = getattr(game, "homeTeamSlug", None), getattr(game, "homeTeamName", "")
+    else:
+        slug, name = getattr(game, "awayTeamSlug", None), getattr(game, "awayTeamName", "")
+    return {"slug": slug, "name": name, "magnitude": abs(spread)}
+
+
+@register.filter
 def lookuplogo(slug):
     if slug != None:
         # Handle comma-separated team names (ties) by taking the first team

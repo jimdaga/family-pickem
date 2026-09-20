@@ -1345,6 +1345,34 @@ class TenantPickFlowIsolationTests(TestCase):
         self.assertContains(response, "Your Pick")
         self.assertNotContains(response, self.other_member.email)
 
+    def _spread_row_logo_alt(self, response):
+        """Both teams' logos legitimately appear elsewhere on the page (the
+        pick buttons), so a plain assertContains can't tell which team the
+        spread row itself is showing. Pull the alt text out of that row."""
+        content = response.content.decode()
+        match = re.search(r'Spread:</span>.{0,400}?alt="([^"]+)"', content, re.S)
+        self.assertIsNotNone(match, "spread row not found in response")
+        return match.group(1)
+
+    def test_picks_page_shows_home_favorite_logo_for_negative_spread(self):
+        # self.game: home=Atlanta Falcons (atl), away=Arizona Cardinals (ari).
+        self.game.spread = -2.5
+        self.game.save()
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_picks_url())
+
+        self.assertEqual(self._spread_row_logo_alt(response), "Atlanta Falcons logo")
+
+    def test_picks_page_shows_away_favorite_logo_for_positive_spread(self):
+        self.game.spread = 2.5
+        self.game.save()
+        self.client.force_login(self.member)
+
+        response = self.client.get(self._tenant_picks_url())
+
+        self.assertEqual(self._spread_row_logo_alt(response), "Arizona Cardinals logo")
+
     def test_tenant_picks_page_lock_filter_called_once_per_game(self):
         # Regression guard for the picks.html N+1: `is_game_locked_for_pool`
         # was previously called ~8x per game (once per lock gate: LOCKED
@@ -2370,6 +2398,47 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertEqual(response.context["picks"].count(), 1)
         self.assertEqual(response.context["picks"].first().pool, self.smith_pool)
         self.assertEqual(list(response.context["week_winner"]), list(userSeasonPoints.objects.filter(pool=self.smith_pool)))
+
+    def _spread_chip_logo_alt(self, response):
+        """Both teams' logos legitimately appear elsewhere on the page (the
+        matchup header), so a plain assertContains can't tell which team the
+        spread chip itself is showing. Pull the alt text out of the chip."""
+        content = response.content.decode()
+        match = re.search(r'>\s*Spread\s*</span>.{0,400}?alt="([^"]+)"', content, re.S)
+        self.assertIsNotNone(match, "spread chip not found in response")
+        return match.group(1)
+
+    def test_scores_page_shows_home_favorite_logo_for_negative_spread(self):
+        # week_one_game: home=Atlanta Falcons (atl), away=Arizona Cardinals (ari).
+        # A negative spread favors the home team (Atlanta).
+        self.week_one_game.spread = -2.5
+        self.week_one_game.save()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertEqual(self._spread_chip_logo_alt(response), "Atlanta Falcons logo")
+        self.assertContains(response, "-2.5")
+
+    def test_scores_page_shows_away_favorite_logo_for_positive_spread(self):
+        # Same game, positive spread now favors the away team (Arizona).
+        self.week_one_game.spread = 2.5
+        self.week_one_game.save()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertEqual(self._spread_chip_logo_alt(response), "Arizona Cardinals logo")
+        self.assertContains(response, "-2.5")
+
+    def test_scores_page_hides_spread_chip_for_pickem(self):
+        self.week_one_game.spread = 0
+        self.week_one_game.save()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_scores"))
+
+        self.assertNotContains(response, "Spread</span>")
 
     def test_week_points_winner_highlight_waits_for_a_crowned_winner(self):
         """Regression: mid-week a points tie (several members 1/1 after the only
@@ -11759,3 +11828,55 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         ids = {e["userID"] for e in resp.context["entries"]}
         # Preseason: everyone is at zero, so nobody is pruned.
         self.assertEqual(ids, {str(a.id), str(b.id)})
+
+
+class SpreadFavoriteFilterTests(TestCase):
+    """`GamesAndScores.spread` is the home team's own line, exactly as ESPN
+    sends it: negative favors home, positive favors away, 0 is a pick'em
+    (confirmed by the real ESPN payload in
+    UpdateGamesCommandTest.test_upserts_game_with_scores_odds_and_weather,
+    where spread=-3 pairs with homeTeamOdds.favorite=True). Regression
+    coverage for the inverted-logo bug: the template used to treat a
+    positive spread as "home favored", backwards from this convention."""
+
+    def _game(self, spread):
+        from pickem_homepage.templatetags.pickem_homepage_extras import spread_favorite
+        game = SimpleNamespace(
+            spread=spread,
+            homeTeamSlug="car", homeTeamName="Carolina Panthers",
+            awayTeamSlug="atl", awayTeamName="Atlanta Falcons",
+        )
+        return spread_favorite(game)
+
+    def test_home_team_favored_negative_spread(self):
+        # CAR (home) -2.5: Carolina is favored.
+        fav = self._game(-2.5)
+        self.assertEqual(fav["slug"], "car")
+        self.assertEqual(fav["name"], "Carolina Panthers")
+        self.assertEqual(fav["magnitude"], 2.5)
+
+    def test_away_team_favored_positive_spread(self):
+        # CAR (home) +2.5: Atlanta (away) is favored.
+        fav = self._game(2.5)
+        self.assertEqual(fav["slug"], "atl")
+        self.assertEqual(fav["name"], "Atlanta Falcons")
+        self.assertEqual(fav["magnitude"], 2.5)
+
+    def test_home_team_underdog_is_the_same_as_away_favored(self):
+        # A positive home spread means the home team is the underdog, which
+        # is just the away-favored case viewed from the other side.
+        fav = self._game(3.0)
+        self.assertEqual(fav["slug"], "atl")
+        self.assertEqual(fav["magnitude"], 3.0)
+
+    def test_away_team_underdog_is_the_same_as_home_favored(self):
+        fav = self._game(-3.0)
+        self.assertEqual(fav["slug"], "car")
+        self.assertEqual(fav["magnitude"], 3.0)
+
+    def test_pickem_zero_spread_has_no_favorite(self):
+        self.assertIsNone(self._game(0))
+        self.assertIsNone(self._game(0.0))
+
+    def test_missing_spread_has_no_favorite(self):
+        self.assertIsNone(self._game(None))

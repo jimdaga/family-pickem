@@ -141,25 +141,20 @@
                                     <!-- Spread / Weather row (darker slate, edge-to-edge) -->
                                     {% if game.spread or game.overUnder or game.temperature or game.weatherCondition %}
                                     <div class="flex flex-wrap items-center justify-center gap-3 px-3 py-1.5 text-xs text-text-dark dark:text-text-secondary border-b border-border-light dark:border-slate-600 bg-border-light dark:bg-slate-800">
-                                        {% if game.spread %}
+                                        {% with game|spread_favorite as fav %}
+                                        {% if fav %}
                                         <div class="flex items-center gap-1">
                                             <i class="fas fa-chart-line"></i>
                                             <span class="font-medium">Spread:</span>
                                             <span class="flex items-center gap-1 font-semibold text-text-dark dark:text-white">
-                                                {% if game.spread > 0 %}
-                                                    {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="w-4 h-4">
-                                                    {% endwith %}
-                                                    -{{ game.spread|floatformat:1 }}
-                                                {% else %}
-                                                    {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                                    <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="w-4 h-4">
-                                                    {% endwith %}
-                                                    -{{ game.spread|floatformat:1|cut:"-" }}
-                                                {% endif %}
+                                                {% with fav.slug|lookuplogo as logo_url %}
+                                                <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ fav.name }} logo" class="w-4 h-4">
+                                                {% endwith %}
+                                                -{{ fav.magnitude|floatformat:1 }}
                                             </span>
                                         </div>
                                         {% endif %}
+                                        {% endwith %}
                                         {% if game.overUnder %}
                                         <div class="flex items-center gap-1">
                                             <i class="fas fa-calculator"></i>
@@ -1332,16 +1327,20 @@
 
                 let hasStats = false;
 
-                // Show spread if available
-                if (spread && spread !== '') {
+                // Show spread if available. `spread` is the home team's own
+                // line (ESPN's raw odds.spread): negative when the home team
+                // is favored, positive when the away team is favored, and
+                // zero for a pick'em (no favorite to show).
+                if (spread && spread !== '' && parseFloat(spread) !== 0) {
                     const spreadValue = parseFloat(spread);
+                    const homeFavored = spreadValue < 0;
                     const spreadElement = document.getElementById('editSpreadValue');
 
                     // Build with DOM APIs (not innerHTML) so team names/logos
                     // are treated as data, never markup.
                     const favoredLogo = document.createElement('img');
-                    favoredLogo.src = spreadValue > 0 ? homeLogo : awayLogo;
-                    favoredLogo.alt = `${spreadValue > 0 ? homeName : awayName} logo`;
+                    favoredLogo.src = homeFavored ? homeLogo : awayLogo;
+                    favoredLogo.alt = `${homeFavored ? homeName : awayName} logo`;
                     favoredLogo.className = 'w-4 h-4 object-contain inline-block align-middle';
                     spreadElement.replaceChildren(
                         favoredLogo,

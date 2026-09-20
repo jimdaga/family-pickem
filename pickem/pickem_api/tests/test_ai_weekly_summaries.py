@@ -375,14 +375,17 @@ class NotablePicksAndStandingsMovementTests(TestCase):
             startTimestamp='2026-09-17T17:00:00Z', statusType='finished', statusTitle='Final',
             homeTeamId=1, homeTeamSlug='chiefs', homeTeamName='Kansas City Chiefs', homeTeamScore=17,
             awayTeamId=2, awayTeamSlug='raiders', awayTeamName='Las Vegas Raiders', awayTeamScore=20,
-            gameWinner='raiders', gameScored=True, spread=7.0,
+            # spread is the home team's own line: negative favors home, so
+            # Chiefs (home) are favored by 7.
+            gameWinner='raiders', gameScored=True, spread=-7.0,
         )
         GamesAndScores.objects.create(
             id=20002, slug='dolphins-at-jets', competition='1', gameWeek='2', gameyear='2026', gameseason=2627,
             startTimestamp='2026-09-17T20:00:00Z', statusType='finished', statusTitle='Final',
             homeTeamId=3, homeTeamSlug='jets', homeTeamName='New York Jets', homeTeamScore=24,
             awayTeamId=4, awayTeamSlug='dolphins', awayTeamName='Miami Dolphins', awayTeamScore=10,
-            gameWinner='jets', gameScored=True, spread=2.0,
+            # Jets (home) favored by 2 -- below the upset threshold either way.
+            gameWinner='jets', gameScored=True, spread=-2.0,
         )
 
         picks = [
@@ -463,6 +466,54 @@ class NotablePicksAndStandingsMovementTests(TestCase):
         teams_in_upsets = {entry['team'] for entry in facts['notable_picks']['upset_calls'] + facts['notable_picks']['bad_beats']}
         self.assertNotIn('New York Jets', teams_in_upsets)
         self.assertNotIn('Miami Dolphins', teams_in_upsets)
+
+
+class NotablePicksAwayFavoriteTests(TestCase):
+    """Regression coverage for the inverted favorite/underdog bug: a positive
+    ``game.spread`` favors the AWAY team (the home team's own line), not the
+    home team. The prior implementation had this backwards."""
+
+    def setUp(self):
+        self.family = Family.objects.create(name='Away Fav', slug='away-fav')
+        self.pool = Pool.objects.create(family=self.family, name='2026', slug='2026', season=2627)
+        self.dave = User.objects.create_user('dave', 'dave@example.com', 'password', first_name='Dave')
+        self.erin = User.objects.create_user('erin', 'erin@example.com', 'password', first_name='Erin')
+        for user in (self.dave, self.erin):
+            FamilyMembership.objects.create(family=self.family, user=user)
+
+        # Home team (Bills) is the underdog here: spread is positive, so the
+        # away team (Chiefs) is favored by 7.
+        GamesAndScores.objects.create(
+            id=30001, slug='chiefs-at-bills', competition='1', gameWeek='3', gameyear='2026', gameseason=2627,
+            startTimestamp='2026-09-24T17:00:00Z', statusType='finished', statusTitle='Final',
+            homeTeamId=5, homeTeamSlug='bills', homeTeamName='Buffalo Bills', homeTeamScore=27,
+            awayTeamId=6, awayTeamSlug='chiefs', awayTeamName='Kansas City Chiefs', awayTeamScore=20,
+            gameWinner='bills', gameScored=True, spread=7.0,
+        )
+        picks = [
+            (self.dave, 30001, 'chiefs', False),  # picked the (away) favorite; favorite lost -> bad beat
+            (self.erin, 30001, 'bills', True),    # picked the (home) underdog correctly -> upset call
+        ]
+        for user, game_id, pick, correct in picks:
+            GamePicks.objects.create(
+                id=f'{self.pool.id}-{user.id}-{game_id}', pool=self.pool, pick_game_id=game_id,
+                slug=str(game_id), userID=str(user.id), uid=user.id, userEmail=user.email,
+                gameWeek='3', gameyear='2026', gameseason=2627, competition='1',
+                pick=pick, pick_correct=correct,
+            )
+        userSeasonPoints.objects.create(pool=self.pool, userID=str(self.dave.id), gameseason=2627, current_rank=2, total_points=5)
+        userSeasonPoints.objects.create(pool=self.pool, userID=str(self.erin.id), gameseason=2627, current_rank=1, total_points=6)
+
+    def test_positive_spread_favors_the_away_team(self):
+        facts = build_summary_facts(self.pool, 2627, 3)
+
+        notable = facts['notable_picks']
+        self.assertEqual(notable['upset_calls'], [
+            {'member': 'erin', 'team': 'Buffalo Bills', 'spread': 7.0},
+        ])
+        self.assertEqual(notable['bad_beats'], [
+            {'member': 'dave', 'team': 'Kansas City Chiefs', 'spread': 7.0},
+        ])
 
 
 class PerfectWeeksStreaksAndMissedPicksTests(TestCase):
