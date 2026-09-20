@@ -668,23 +668,18 @@
                                 <!-- Metadata (whisper footer) -->
                                 {% if game.spread or game.overUnder or game.temperature or game.venueIndoor or game.broadcast or game.gamecastUrl %}
                                 <div class="card-meta-footer">
-                                    {% if game.spread %}
+                                    {% with game|spread_favorite as fav %}
+                                    {% if fav %}
                                     <span class="meta-chip">
                                         <i class="fas fa-chart-line"></i>
                                         <span>Spread</span>
-                                        {% if game.spread > 0 %}
-                                            {% with game.homeTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.homeTeamName }} logo" class="w-3.5 h-3.5 flex-shrink-0 object-contain" style="width: 14px; height: 14px;">
-                                            {% endwith %}
-                                            <span class="meta-strong">-{{ game.spread|floatformat:1 }}</span>
-                                        {% else %}
-                                            {% with game.awayTeamSlug|lookuplogo as logo_url %}
-                                            <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ game.awayTeamName }} logo" class="w-3.5 h-3.5 flex-shrink-0 object-contain" style="width: 14px; height: 14px;">
-                                            {% endwith %}
-                                            <span class="meta-strong">-{{ game.spread|floatformat:1|cut:"-" }}</span>
-                                        {% endif %}
+                                        {% with fav.slug|lookuplogo as logo_url %}
+                                        <img src="{{ logo_url.teamLogo|default:'/static/images/nfl.svg' }}" alt="{{ fav.name }} logo" class="w-3.5 h-3.5 flex-shrink-0 object-contain" style="width: 14px; height: 14px;">
+                                        {% endwith %}
+                                        <span class="meta-strong">-{{ fav.magnitude|floatformat:1 }}</span>
                                     </span>
                                     {% endif %}
+                                    {% endwith %}
                                     {% if game.overUnder %}
                                     <span class="meta-chip">
                                         <i class="fas fa-calculator"></i>

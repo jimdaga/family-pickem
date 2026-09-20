@@ -151,8 +151,10 @@ def build_summary_facts(pool, season, week, *, allow_unscored=False):
         game = game_by_id.get(game_id)
         if game is None or game.spread is None or abs(game.spread) < upset_spread_threshold:
             continue
-        favorite_slug = game.homeTeamSlug if game.spread > 0 else game.awayTeamSlug
-        underdog_slug = game.awayTeamSlug if game.spread > 0 else game.homeTeamSlug
+        # game.spread is the home team's own line (ESPN's raw odds.spread):
+        # negative favors home, positive favors away.
+        favorite_slug = game.homeTeamSlug if game.spread < 0 else game.awayTeamSlug
+        underdog_slug = game.awayTeamSlug if game.spread < 0 else game.homeTeamSlug
         if game.gameWinner == favorite_slug:
             continue  # favorite won -- no upset, nothing notable about these picks
         for user_id, pick_slug, pick_team, correct in entries:

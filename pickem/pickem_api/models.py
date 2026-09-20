@@ -532,7 +532,7 @@ class GamesAndScores(models.Model):
     # Betting and Odds Information
     homeTeamWinProbability = models.FloatField(blank=True, null=True, help_text="Home team win probability as percentage (0-100)", db_column='hometeamwinprobability')
     awayTeamWinProbability = models.FloatField(blank=True, null=True, help_text="Away team win probability as percentage (0-100)", db_column='awayteamwinprobability')
-    spread = models.FloatField(blank=True, null=True, help_text="Point spread (positive favors home team)")
+    spread = models.FloatField(blank=True, null=True, help_text="Home team's own point spread, as ESPN sends it: negative favors the home team, positive favors the away team, 0 is a pick'em")
     overUnder = models.FloatField(blank=True, null=True, help_text="Over/under total points line", db_column='overunder')
 
     # Weather and Venue Information
