@@ -238,13 +238,13 @@
         </h3>
 
         <!-- Player Detail Cards -->
-        <div class="space-y-3">
+        <div class="space-y-4">
             {% for player in player_points %}
-            <div class="standings-breakdown-card bg-white/60 dark:bg-bg-dark/30 rounded-lg p-3 border border-border-light dark:border-border-subtle">
+            <div class="standings-breakdown-card bg-white/60 dark:bg-bg-dark/30 rounded-lg p-4 sm:p-5 border border-border-light dark:border-border-subtle">
                 {% with usernames|lookup:player.userID as username %}
 
                 <!-- Player Header -->
-                <div class="flex items-center gap-3 mb-3 pb-3 border-b border-border-light dark:border-border-subtle">
+                <div class="flex items-center gap-3 mb-4 pb-4 border-b border-border-light dark:border-border-subtle">
                     {% with avatars|lookup:player.userID as avatar %}
                     <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}">
 	                        <img src="{{ avatar }}"
@@ -283,39 +283,52 @@
 
                 <!-- Stat ribbon: form and volume. Trophy counts (perfect weeks,
                      weeks won, seasons won) live in the badge row above and are
-                     deliberately not repeated here. -->
-                <div class="flex items-center justify-between gap-4 mb-3 pb-3 border-b border-border-light dark:border-border-subtle">
-                    <div class="flex items-center gap-4 sm:gap-6">
+                     deliberately not repeated here. The sparkline takes the
+                     remaining width rather than sitting in a fixed box — on a
+                     wide card that dead space was the whole middle of the row. -->
+                <div class="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8 mb-4 pb-4 border-b border-border-light dark:border-border-subtle">
+                    <div class="flex items-center gap-6 sm:gap-8 flex-shrink-0">
                         <div>
-                            <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Accuracy</div>
-                            <div class="text-sm font-black text-text-dark dark:text-white">{% if player.accuracy != None %}{{ player.accuracy }}%{% else %}&mdash;{% endif %}</div>
+                            <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-0.5">Accuracy</div>
+                            <div class="text-xl font-black leading-none text-text-dark dark:text-white">{% if player.accuracy != None %}{{ player.accuracy }}<span class="text-sm">%</span>{% else %}&mdash;{% endif %}</div>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Correct</div>
-                            <div class="text-sm font-black text-text-dark dark:text-white">{% if player.total_picks %}{{ player.correct_picks }}/{{ player.total_picks }}{% else %}&mdash;{% endif %}</div>
+                            <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-0.5">Correct</div>
+                            <div class="text-xl font-black leading-none text-text-dark dark:text-white">{% if player.total_picks %}{{ player.correct_picks }}<span class="text-sm font-bold text-text-secondary-light dark:text-text-secondary">/{{ player.total_picks }}</span>{% else %}&mdash;{% endif %}</div>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Best Week</div>
-                            <div class="text-sm font-black text-text-dark dark:text-white">{% if player.best_week_points != None %}{{ player.best_week_points }} <span class="text-[10px] font-semibold text-text-secondary-light dark:text-text-secondary">(W{{ player.best_week_number }})</span>{% else %}&mdash;{% endif %}</div>
+                            <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-0.5">Best Week</div>
+                            <div class="text-xl font-black leading-none text-text-dark dark:text-white">{% if player.best_week_points != None %}{{ player.best_week_points }} <span class="text-sm font-bold text-text-secondary-light dark:text-text-secondary">W{{ player.best_week_number }}</span>{% else %}&mdash;{% endif %}</div>
                         </div>
                     </div>
                     {% if player.sparkline %}
-                    <div class="flex flex-col items-end flex-shrink-0 text-primary">
+                    <div class="flex-1 min-w-0 text-primary">
+                        <div class="flex items-baseline justify-between mb-1">
+                            <span class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Weekly accuracy</span>
+                            <span class="text-[10px] font-semibold text-text-secondary-light dark:text-text-secondary">{{ player.sparkline_range }}</span>
+                        </div>
+                        {# viewBox coordinates are the helper's fixed 0-100 space; the svg
+                           stretches to the row's width. vector-effect keeps the stroke an
+                           even weight despite that non-uniform scaling. #}
                         <svg viewBox="0 0 {{ sparkline_width }} {{ sparkline_height }}"
-                             width="{{ sparkline_width }}" height="{{ sparkline_height }}"
+                             class="w-full h-10 block overflow-visible"
                              role="img" aria-label="{{ player.sparkline_label }}"
                              preserveAspectRatio="none">
                             <title>{{ player.sparkline_label }}</title>
+                            {% if player.sparkline_area %}
+                            <polygon points="{{ player.sparkline_area }}" fill="currentColor" opacity="0.13" />
+                            {% endif %}
                             <polyline points="{{ player.sparkline }}" fill="none"
-                                      stroke="currentColor" stroke-width="1.5"
-                                      stroke-linecap="round" stroke-linejoin="round" />
+                                      stroke="currentColor" stroke-width="2"
+                                      stroke-linecap="round" stroke-linejoin="round"
+                                      vector-effect="non-scaling-stroke" />
                             {# stroke-dasharray "0 1000" with a round cap draws a dot at the
                                first vertex only, so a single graded week still shows up. #}
                             <polyline points="{{ player.sparkline }}" fill="none"
-                                      stroke="currentColor" stroke-width="3"
-                                      stroke-linecap="round" stroke-dasharray="0 1000" />
+                                      stroke="currentColor" stroke-width="5"
+                                      stroke-linecap="round" stroke-dasharray="0 1000"
+                                      vector-effect="non-scaling-stroke" />
                         </svg>
-                        <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Weekly accuracy</div>
                     </div>
                     {% endif %}
                 </div>

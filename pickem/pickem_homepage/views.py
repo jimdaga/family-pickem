@@ -66,7 +66,7 @@ from pickem_api.models import (
 )
 from pickem_api.logo_processing import LogoValidationError, process_family_logo
 from pickem_homepage.sparkline import (
-    SPARKLINE_HEIGHT, SPARKLINE_WIDTH, sparkline_points,
+    SPARKLINE_HEIGHT, SPARKLINE_WIDTH, sparkline_area, sparkline_points,
 )
 from pickem_homepage.authz import family_member_required
 from pickem_homepage.emailing import (
@@ -4135,13 +4135,16 @@ def render_standings_page(request, *, tenant_context=None):
         series = stat.get('weekly_accuracy', [])
         entry.total_picks = sum(s['total'] for s in series)
         entry.sparkline = sparkline_points(series)
+        entry.sparkline_area = sparkline_area(series)
         if series:
             entry.sparkline_label = (
                 f"Weekly accuracy, week {series[0]['week']} to "
                 f"week {series[-1]['week']}: {stat.get('accuracy')}% overall"
             )
+            entry.sparkline_range = f"W{series[0]['week']}–W{series[-1]['week']}"
         else:
             entry.sparkline_label = "No weekly accuracy yet"
+            entry.sparkline_range = ""
 
         # Best single week, straight off the row -- no query.
         best_points, best_week = None, None

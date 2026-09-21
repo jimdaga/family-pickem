@@ -12055,6 +12055,23 @@ class SparklineGeometryTests(TestCase):
         ys = [float(p.split(',')[1]) for p in points.split()]
         self.assertTrue(all(2.0 <= y <= 18.0 for y in ys), points)
 
+    def test_area_closes_the_line_down_to_the_baseline(self):
+        from pickem_homepage.sparkline import sparkline_area, sparkline_points
+        line = sparkline_points(self._series(10, 90), width=100, height=20, pad=2)
+        area = sparkline_area(self._series(10, 90), width=100, height=20, pad=2)
+        # The fill is the line plus a baseline corner at each end.
+        self.assertIn(line, area)
+        self.assertEqual(len(area.split()), len(line.split()) + 2)
+        first, last = area.split()[0], area.split()[-1]
+        self.assertEqual(first.split(',')[1], '18.0')
+        self.assertEqual(last.split(',')[1], '18.0')
+
+    def test_area_is_empty_for_empty_and_single_point_series(self):
+        from pickem_homepage.sparkline import sparkline_area
+        self.assertEqual(sparkline_area([]), "")
+        # One point would fill a vertical sliver that reads as a stray tick.
+        self.assertEqual(sparkline_area(self._series(50)), "")
+
 
 class BuildUserProfileMapTests(TestCase):
     """The standings breakdown renders one entry per player, so this lookup

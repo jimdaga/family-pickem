@@ -52,3 +52,20 @@ def sparkline_points(series, width=SPARKLINE_WIDTH, height=SPARKLINE_HEIGHT, pad
         f"{pad + i * step:.1f},{y_for(entry['accuracy']):.1f}"
         for i, entry in enumerate(series)
     )
+
+
+def sparkline_area(series, width=SPARKLINE_WIDTH, height=SPARKLINE_HEIGHT, pad=2):
+    """The same line closed down to the baseline, for a soft fill under it.
+
+    Returns "" whenever there is nothing to fill — an empty series, or a
+    single point (one vertical sliver would read as a stray tick, not a
+    trend). The fill is decorative: the line itself carries the data.
+    """
+    line = sparkline_points(series, width=width, height=height, pad=pad)
+    if not line or len(series) < 2:
+        return ""
+    points = line.split()
+    first_x = points[0].split(",")[0]
+    last_x = points[-1].split(",")[0]
+    baseline = height - pad
+    return f"{first_x},{baseline:.1f} {line} {last_x},{baseline:.1f}"
