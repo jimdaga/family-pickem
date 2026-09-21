@@ -2193,6 +2193,59 @@ class UpdateStatsCommandTest(TestCase):
         stats = build_pool_standings_stats(self.pool, 2526, "nfl")
         self.assertEqual(stats[str(self.alice.id)]["perfect_weeks"], 1)
 
+    def test_weekly_accuracy_series_is_ordered_and_per_week(self):
+        """The sparkline series behind the standings breakdown cards."""
+        from pickem_homepage.views import build_pool_standings_stats
+
+        g1 = self._game(60, "g60", week="1")
+        g2 = self._game(61, "g61", winner="chiefs", week="1")
+        g3 = self._game(62, "g62", week="2")
+        self._pick(self.alice, g1, "eagles", correct=True, week="1")
+        self._pick(self.alice, g2, "eagles", correct=False, week="1")
+        self._pick(self.alice, g3, "eagles", correct=True, week="2")
+
+        series = build_pool_standings_stats(
+            self.pool, 2526, "nfl"
+        )[str(self.alice.id)]["weekly_accuracy"]
+
+        self.assertEqual([e["week"] for e in series], [1, 2])
+        self.assertEqual(series[0], {"week": 1, "accuracy": 50, "correct": 1, "total": 2})
+        self.assertEqual(series[1], {"week": 2, "accuracy": 100, "correct": 1, "total": 1})
+
+    def test_weekly_accuracy_ignores_picks_on_unplayed_games(self):
+        """A pick on a game that has not finished must not deflate that week's
+        accuracy by inflating the denominator."""
+        from pickem_homepage.views import build_pool_standings_stats
+
+        g1 = self._game(63, "g63", week="1")
+        self._pick(self.alice, g1, "eagles", correct=True, week="1")
+        before = build_pool_standings_stats(
+            self.pool, 2526, "nfl"
+        )[str(self.alice.id)]["weekly_accuracy"]
+
+        unplayed = self._unfinished_game(64, "g64", week="1")
+        self._pick(self.alice, unplayed, "eagles", correct=False, week="1")
+
+        after = build_pool_standings_stats(
+            self.pool, 2526, "nfl"
+        )[str(self.alice.id)]["weekly_accuracy"]
+        self.assertEqual(after, before)
+        self.assertEqual(after[0]["total"], 1)
+        self.assertEqual(after[0]["accuracy"], 100)
+
+    def test_weekly_accuracy_present_before_any_week_is_complete(self):
+        """The series must appear as soon as any game is graded, not only once
+        a whole week is complete (all the perfect-week count ever needed)."""
+        from pickem_homepage.views import build_pool_standings_stats
+
+        g1 = self._game(65, "g65", week="1")
+        self._unfinished_game(66, "g66", week="1")
+        self._pick(self.alice, g1, "eagles", correct=True, week="1")
+
+        stats = build_pool_standings_stats(self.pool, 2526, "nfl")[str(self.alice.id)]
+        self.assertEqual(stats["perfect_weeks"], 0)   # week still open
+        self.assertTrue(stats["weekly_accuracy"])     # but the series is there
+
     def test_cross_season_repeat_matchup_not_graded_before_game_finishes(self):
         from django.core.management import call_command
 

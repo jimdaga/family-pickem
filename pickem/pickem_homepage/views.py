@@ -1352,8 +1352,12 @@ def build_pool_standings_stats(pool, gameseason, competition):
             'correct': correct,
             'accuracy': round(correct / total * 100) if total else None,
             'perfect_weeks': 0,
+            'weekly_accuracy': [],
         }
 
+    # One per-week pass feeds two things: the weekly-accuracy series behind the
+    # standings breakdown sparkline, and the perfect-week count.
+    #
     # Perfect weeks: weeks where the user picked every game and got them all
     # right (mirrors update_stats' definition, scoped to this pool). Only
     # fully-complete weeks count — a perfect week means every game in the week
@@ -1366,30 +1370,57 @@ def build_pool_standings_stats(pool, gameseason, competition):
         gameseason=gameseason, competition=competition, gameScored=True
     ).values_list('gameWeek', flat=True):
         scored_by_week[week] = scored_by_week.get(week, 0) + 1
-    scored_by_week = {
+    complete_weeks = {
         wk: n for wk, n in scored_by_week.items()
         if week_is_complete(gameseason, wk, competition)
     }
-    if scored_by_week:
-        per_week = (
-            GamePicks.objects.filter(
-                pool=pool, gameseason=gameseason, competition=competition,
-                auto_pick=False,
-            )
-            .values('userID', 'gameWeek')
-            .annotate(
-                correct=Count('pick_game_id', filter=Q(pick_correct=True), distinct=True),
-                total=Count('pick_game_id', distinct=True),
-            )
+
+    # Restricted to finished games so a pick on an unplayed game cannot inflate
+    # the denominator. For a complete week this changes nothing (every game in
+    # it is finished), so the perfect-week counts below are unaffected.
+    per_week = (
+        GamePicks.objects.filter(
+            pool=pool, gameseason=gameseason, competition=competition,
+            pick_game_id__in=finished_ids, auto_pick=False,
         )
-        for row in per_week:
-            scored_count = scored_by_week.get(row['gameWeek'], 0)
-            if scored_count and row['correct'] == scored_count and row['total'] == scored_count:
-                uid = str(row['userID'])
-                entry = stats.setdefault(
-                    uid, {'correct': 0, 'accuracy': None, 'perfect_weeks': 0}
-                )
-                entry['perfect_weeks'] += 1
+        .values('userID', 'gameWeek')
+        .annotate(
+            correct=Count('pick_game_id', filter=Q(pick_correct=True), distinct=True),
+            total=Count('pick_game_id', distinct=True),
+        )
+    )
+
+    series_by_uid = {}
+    for row in per_week:
+        uid = str(row['userID'])
+        entry = stats.setdefault(
+            uid,
+            {'correct': 0, 'accuracy': None, 'perfect_weeks': 0, 'weekly_accuracy': []},
+        )
+        row_total = row['total'] or 0
+        row_correct = row['correct'] or 0
+
+        if row_total:
+            # gameWeek is stored as a string; sort and display it as a number.
+            try:
+                week_num = int(row['gameWeek'])
+            except (TypeError, ValueError):
+                week_num = None
+            if week_num is not None:
+                series_by_uid.setdefault(uid, []).append({
+                    'week': week_num,
+                    'accuracy': round(row_correct / row_total * 100),
+                    'correct': row_correct,
+                    'total': row_total,
+                })
+
+        scored_count = complete_weeks.get(row['gameWeek'], 0)
+        if scored_count and row_correct == scored_count and row_total == scored_count:
+            entry['perfect_weeks'] += 1
+
+    for uid, series in series_by_uid.items():
+        stats[uid]['weekly_accuracy'] = sorted(series, key=lambda e: e['week'])
+
     return stats
 
 
