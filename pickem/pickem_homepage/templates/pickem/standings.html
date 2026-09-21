@@ -258,10 +258,19 @@
                 <!-- Player Header -->
                 <div class="flex items-center gap-3 mb-3">
                     {% with avatars|lookup:player.userID as avatar %}
-                    <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}">
-	                        <img src="{{ avatar }}"
-	                             alt="Profile picture for {{ username }}"
-	                             class="w-9 h-9 rounded-full border border-border-light dark:border-border-subtle hover:scale-105 transition-transform">
+                    <a class="relative block flex-shrink-0" href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}">
+                        <img src="{{ avatar }}"
+                             alt="Profile picture for {{ username }}"
+                             class="w-9 h-9 rounded-full border border-border-light dark:border-border-subtle hover:scale-105 transition-transform">
+                        {% if season_has_started and player.display_rank %}
+                        {% comment %}
+                        Rank pip on the avatar corner, same construction as the
+                        lobby's favourite-team chip. min-w keeps a two-digit
+                        rank legible by letting the circle become a short pill.
+                        {% endcomment %}
+                        <span class="absolute -bottom-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[9px] font-black leading-none ring-2 ring-white dark:ring-bg-dark {% if player.accent == 'gold' %}bg-amber-400 text-slate-900{% elif player.accent == 'silver' %}bg-slate-300 text-slate-900{% elif player.accent == 'bronze' %}bg-orange-500 text-white{% else %}bg-slate-600 text-white{% endif %}"
+                              title="Rank {{ player.display_rank }}">{{ player.display_rank }}</span>
+                        {% endif %}
                     </a>
 	                    {% endwith %}
                     <div class="flex-1 min-w-0">

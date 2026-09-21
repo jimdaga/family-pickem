@@ -2920,6 +2920,37 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
                 f"unrendered template syntax {token!r} leaked into the page",
             )
 
+    def test_breakdown_avatar_rank_pip_waits_for_the_season_to_start(self):
+        """Rank is the number the tile was missing; it rides the avatar. But
+        before any game is scored everyone is level, so the page hides numbered
+        positions -- the pip must follow that rule, not invent a rank."""
+        # Gives the member a standings row (and a profile) so they appear in
+        # the breakdown at all.
+        self._give_smith_member_a_profile()
+        self.client.force_login(self.smith_member)
+        url = self._tenant_url("family_pool_standings")
+
+        # Nothing scored yet -> no ranks shown anywhere, pip included.
+        response = self.client.get(url)
+        self.assertFalse(response.context["season_has_started"])
+        self.assertNotIn('title="Rank', response.content.decode())
+
+        # Score a game and the pip appears with the member's stored rank.
+        self.week_one_game.statusType = "finished"
+        self.week_one_game.gameWinner = self.week_one_game.homeTeamSlug
+        self.week_one_game.gameScored = True
+        self.week_one_game.save()
+
+        response = self.client.get(url)
+        self.assertTrue(response.context["season_has_started"])
+        entry = next(
+            e for e in response.context["player_points"]
+            if str(e.userID) == str(self.smith_member.id)
+        )
+        self.assertIsNotNone(entry.display_rank)
+        self.assertIn(f'title="Rank {entry.display_rank}"',
+                      response.content.decode())
+
     def test_breakdown_renders_identity_and_ribbon(self):
         self._give_smith_member_a_profile()
         self.client.force_login(self.smith_member)
