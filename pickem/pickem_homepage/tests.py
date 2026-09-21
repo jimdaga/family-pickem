@@ -12090,6 +12090,57 @@ class SparklineGeometryTests(TestCase):
         # One point would fill a vertical sliver that reads as a stray tick.
         self.assertEqual(sparkline_area(self._series(50)), "")
 
+    def test_end_point_is_the_latest_week(self):
+        from pickem_homepage.sparkline import sparkline_end_point, sparkline_points
+        series = self._series(10, 50, 90)
+        line = sparkline_points(series, width=100, height=20, pad=2)
+        self.assertEqual(sparkline_end_point(series, width=100, height=20, pad=2),
+                         line.split()[-1])
+        self.assertEqual(sparkline_end_point([]), "")
+
+    def test_ticks_always_include_first_and_last_week(self):
+        from pickem_homepage.sparkline import sparkline_ticks
+        series = [{'week': w, 'accuracy': 60, 'correct': 1, 'total': 2}
+                  for w in range(1, 19)]
+        ticks = sparkline_ticks(series, max_ticks=5, width=100, pad=2)
+        self.assertEqual(ticks[0]['week'], 1)
+        self.assertEqual(ticks[-1]['week'], 18)
+        self.assertLessEqual(len(ticks), 5)
+
+    def test_ticks_span_the_full_width_so_labels_sit_under_their_points(self):
+        from pickem_homepage.sparkline import sparkline_ticks
+        series = [{'week': w, 'accuracy': 60, 'correct': 1, 'total': 2}
+                  for w in range(1, 19)]
+        ticks = sparkline_ticks(series, max_ticks=5, width=100, pad=2)
+        # pad=2 of width=100 -> first point at 2%, last at 98%.
+        self.assertAlmostEqual(ticks[0]['left'], 2.0, places=1)
+        self.assertAlmostEqual(ticks[-1]['left'], 98.0, places=1)
+
+    def test_ticks_do_not_duplicate_when_series_is_short(self):
+        from pickem_homepage.sparkline import sparkline_ticks
+        series = self._series(60, 70)
+        ticks = sparkline_ticks(series, max_ticks=5, width=100, pad=2)
+        self.assertEqual([t['week'] for t in ticks], [1, 2])
+
+    def test_ticks_empty_for_empty_series(self):
+        from pickem_homepage.sparkline import sparkline_ticks
+        self.assertEqual(sparkline_ticks([]), [])
+
+    def test_average_line_sits_at_the_accuracy_level(self):
+        from pickem_homepage.sparkline import sparkline_average
+        # 100% pins to the top of the usable band, 0% to the bottom.
+        top = sparkline_average(100, height=20, pad=2)
+        bottom = sparkline_average(0, height=20, pad=2)
+        self.assertAlmostEqual(top['y'], 2.0, places=1)
+        self.assertAlmostEqual(bottom['y'], 18.0, places=1)
+        # `top` is the same level as a percentage, for the HTML label.
+        self.assertAlmostEqual(top['top'], 10.0, places=1)
+        self.assertAlmostEqual(bottom['top'], 90.0, places=1)
+
+    def test_average_is_none_without_an_accuracy(self):
+        from pickem_homepage.sparkline import sparkline_average
+        self.assertIsNone(sparkline_average(None))
+
 
 class BuildUserProfileMapTests(TestCase):
     """The standings breakdown renders one entry per player, so this lookup

@@ -309,35 +309,53 @@
                     </div>
                     {% if player.sparkline %}
                     {% comment %}
-                    The viewBox is a wide 720x56 space and the svg scales
-                    uniformly (no preserveAspectRatio="none"), so the weekly
-                    dots stay round instead of smearing into ellipses.
+                    preserveAspectRatio="none" lets the chart stretch to the
+                    row's width while CSS pins its height, so it stays at
+                    sparkline scale on a wide card. Nothing here is a circle:
+                    that stretch would flatten one into an ellipse.
                     {% endcomment %}
-                    <div class="flex-1 min-w-0 text-primary">
+                    <div class="flex-1 min-w-0">
                         <div class="flex items-baseline justify-between mb-1">
                             <span class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Weekly accuracy</span>
                             <span class="text-[10px] font-semibold text-text-secondary-light dark:text-text-secondary">{{ player.sparkline_range }}</span>
                         </div>
-                        <svg viewBox="0 0 {{ sparkline_width }} {{ sparkline_height }}"
-                             class="w-full block" role="img"
-                             aria-label="{{ player.sparkline_label }}">
-                            <title>{{ player.sparkline_label }}</title>
-                            <line x1="0" y1="{{ sparkline_midline }}" x2="{{ sparkline_width }}" y2="{{ sparkline_midline }}"
-                                  stroke="currentColor" stroke-width="1" stroke-dasharray="4 5" opacity="0.25" />
-                            {% if player.sparkline_area %}
-                            <polygon points="{{ player.sparkline_area }}" fill="currentColor" opacity="0.12" />
-                            {% endif %}
-                            <polyline points="{{ player.sparkline }}" fill="none"
-                                      stroke="currentColor" stroke-width="2.5"
-                                      stroke-linecap="round" stroke-linejoin="round" />
-                            {% for dot in player.sparkline_dots %}
-                            <circle cx="{{ dot.x }}" cy="{{ dot.y }}" r="{% if dot.is_last %}5{% else %}3.5{% endif %}"
-                                    fill="{% if dot.is_last %}currentColor{% else %}var(--spark-dot-bg){% endif %}"
-                                    stroke="currentColor" stroke-width="2">
-                                <title>Week {{ dot.week }}: {{ dot.accuracy }}% ({{ dot.correct }}/{{ dot.total }})</title>
-                            </circle>
-                            {% endfor %}
-                        </svg>
+                        <div class="flex items-stretch gap-2">
+                            <div class="relative w-8 flex-shrink-0 h-9" aria-hidden="true">
+                                {% if player.sparkline_avg %}
+                                <span class="absolute right-0 text-[10px] font-black leading-none text-text-secondary-light dark:text-text-secondary"
+                                      style="top: {{ player.sparkline_avg.top }}%; transform: translateY(-50%);">{{ player.accuracy }}%</span>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1 min-w-0 text-primary">
+                                <svg viewBox="0 0 {{ sparkline_width }} {{ sparkline_height }}"
+                                     class="w-full h-9 block" preserveAspectRatio="none"
+                                     role="img" aria-label="{{ player.sparkline_label }}">
+                                    <title>{{ player.sparkline_label }}</title>
+                                    {% if player.sparkline_avg %}
+                                    <line x1="0" y1="{{ player.sparkline_avg.y }}" x2="{{ sparkline_width }}" y2="{{ player.sparkline_avg.y }}"
+                                          stroke="currentColor" stroke-width="1" stroke-dasharray="4 5" opacity="0.3"
+                                          vector-effect="non-scaling-stroke" />
+                                    {% endif %}
+                                    {% if player.sparkline_area %}
+                                    <polygon points="{{ player.sparkline_area }}" fill="currentColor" opacity="0.12" />
+                                    {% endif %}
+                                    <polyline points="{{ player.sparkline }}" fill="none"
+                                              stroke="currentColor" stroke-width="2"
+                                              stroke-linecap="round" stroke-linejoin="round"
+                                              vector-effect="non-scaling-stroke" />
+                                    <polyline points="{{ player.sparkline_end }}" fill="none"
+                                              stroke="currentColor" stroke-width="5"
+                                              stroke-linecap="round" stroke-dasharray="0 2000"
+                                              vector-effect="non-scaling-stroke" />
+                                </svg>
+                                <div class="relative h-3 mt-0.5">
+                                    {% for tick in player.sparkline_ticks %}
+                                    <span class="absolute text-[9px] font-semibold leading-none text-text-secondary-light dark:text-text-secondary"
+                                          style="left: {{ tick.left }}%; transform: translateX(-50%);">W{{ tick.week }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {% endif %}
                 </div>
