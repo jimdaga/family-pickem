@@ -11941,3 +11941,55 @@ class SparklineGeometryTests(TestCase):
         points = sparkline_points(self._series(-20, 140), width=100, height=20, pad=2)
         ys = [float(p.split(',')[1]) for p in points.split()]
         self.assertTrue(all(2.0 <= y <= 18.0 for y in ys), points)
+
+
+class BuildUserProfileMapTests(TestCase):
+    """The standings breakdown renders one entry per player, so this lookup
+    must stay batched — a per-row `lookuplogo` would be an N+1."""
+
+    def setUp(self):
+        self.with_team = User.objects.create_user('withteam', 'wt@example.com', 'pw')
+        self.no_profile = User.objects.create_user('noprofile', 'np@example.com', 'pw')
+        self.bad_slug = User.objects.create_user('badslug', 'bs@example.com', 'pw')
+        UserProfile.objects.update_or_create(
+            user=self.with_team,
+            defaults={'tagline': "Statistically, I'm due.",
+                      'favorite_team': 'dallas-cowboys'},
+        )
+        UserProfile.objects.update_or_create(
+            user=self.bad_slug,
+            defaults={'tagline': None, 'favorite_team': 'not-a-real-team'},
+        )
+        UserProfile.objects.filter(user=self.no_profile).delete()
+        Teams.objects.update_or_create(
+            teamNameSlug='dallas-cowboys',
+            defaults={'teamNameName': 'Dallas Cowboys', 'teamLogo': 'http://x/dal.png'},
+        )
+
+    def test_returns_tagline_and_resolved_team(self):
+        from pickem_homepage.views import build_user_profile_map
+        entry = build_user_profile_map([self.with_team.id])[str(self.with_team.id)]
+        self.assertEqual(entry['tagline'], "Statistically, I'm due.")
+        self.assertEqual(entry['team'].teamNameName, 'Dallas Cowboys')
+
+    def test_user_without_a_profile_gets_empty_entry(self):
+        from pickem_homepage.views import build_user_profile_map
+        result = build_user_profile_map([self.no_profile.id])
+        self.assertEqual(result[str(self.no_profile.id)],
+                         {'tagline': None, 'team': None})
+
+    def test_unknown_team_slug_resolves_to_none(self):
+        from pickem_homepage.views import build_user_profile_map
+        result = build_user_profile_map([self.bad_slug.id])
+        self.assertIsNone(result[str(self.bad_slug.id)]['team'])
+
+    def test_lookup_is_batched_regardless_of_user_count(self):
+        from pickem_homepage.views import build_user_profile_map
+        ids = [self.with_team.id, self.no_profile.id, self.bad_slug.id]
+        with self.assertNumQueries(2):
+            build_user_profile_map(ids)
+
+    def test_empty_input_makes_no_queries(self):
+        from pickem_homepage.views import build_user_profile_map
+        with self.assertNumQueries(0):
+            self.assertEqual(build_user_profile_map([]), {})

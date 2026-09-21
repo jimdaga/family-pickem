@@ -239,6 +239,38 @@ def build_user_display_maps(user_ids):
             avatars[key] = "https://www.gravatar.com/avatar/?d=identicon&s=64"
     return usernames, avatars
 
+
+def build_user_profile_map(user_ids):
+    """Tagline + favorite-team row for each user, in two queries total.
+
+    Deliberately not the ``lookuplogo`` template filter: that issues a query
+    per call, and the standings breakdown renders one per player. Returns an
+    entry for every requested id, so the template never has to guard a miss.
+    """
+    raw_ids = {str(uid) for uid in user_ids if uid}
+    if not raw_ids:
+        return {}
+    numeric_ids = {int(uid) for uid in raw_ids if uid.isdigit()}
+
+    profiles = {
+        str(p.user_id): p
+        for p in UserProfile.objects.filter(user_id__in=numeric_ids)
+    }
+    slugs = {p.favorite_team for p in profiles.values() if p.favorite_team}
+    teams = {
+        t.teamNameSlug: t
+        for t in Teams.objects.filter(teamNameSlug__in=slugs)
+    } if slugs else {}
+
+    result = {}
+    for key in raw_ids:
+        profile = profiles.get(key)
+        result[key] = {
+            'tagline': (profile.tagline or None) if profile else None,
+            'team': teams.get(profile.favorite_team) if profile else None,
+        }
+    return result
+
 def select_dashboard_snapshot_games(games, *, today=None):
     """The games the lobby should show. See select_dashboard_snapshot_day() for
     which day (if any) was selected -- callers that label the section need it,
