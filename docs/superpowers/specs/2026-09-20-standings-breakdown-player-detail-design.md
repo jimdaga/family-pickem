@@ -30,9 +30,8 @@ Three bands per card. The existing 18-week grid is the third and is unchanged.
 │ AV   "Statistically, I'm due."                         │
 │      👑 CHAMP  🏆 3W  ⭐ 2 PERFECT  🥇 2 SEASONS        │
 ├────────────────────────────────────────────────────────┤
-│ ACCURACY   CORRECT   PERFECT   WEEKS WON   SEASONS     │
-│   68%       94/138      2          3          2        │
-│   trend  ___╱╲___╱‾‾╲__╱‾                              │
+│ ACCURACY   CORRECT   BEST WEEK    ___╱╲___╱‾‾╲__╱‾     │
+│   68%       94/138      12 (W4)   weekly accuracy      │
 ├────────────────────────────────────────────────────────┤
 │ W1  W2  W3  W4  W5  W6  W7 ... W18                     │
 │  9  11🏆  8  12   7  10  11 ...  -                     │
@@ -42,13 +41,16 @@ Three bands per card. The existing 18-week grid is the third and is unchanged.
 1. **Identity strip** — avatar, username, favorite-team logo chip, tagline,
    then the badge row. The badge row keeps today's three badges (champ, weeks
    won, perfect weeks) and gains a seasons-won badge.
-2. **Stat ribbon** — Accuracy, Correct, Perfect Weeks, Weeks Won, Seasons Won,
-   with the sparkline. "Accuracy" is the season figure already returned as
-   `stats['accuracy']`; "Correct" is `correct/total` over **graded** picks only,
-   so the denominator never includes games that have not been played.
-   Perfect Weeks and Weeks Won intentionally appear both as a badge and in the
-   ribbon: the badge is the at-a-glance trophy, the ribbon is the labelled
-   figure that lines up column-wise across cards.
+2. **Stat ribbon** — Accuracy, Correct, Best Week, with the sparkline.
+   "Accuracy" is the season figure already returned as `stats['accuracy']`;
+   "Correct" is `correct/total` over **graded** picks only, so the denominator
+   never includes games that have not been played. "Best Week" is the highest
+   single-week points total, read from the `week_N_points` fields already on
+   the `userSeasonPoints` row (no query).
+
+   Perfect weeks, weeks won and seasons won live in the badge row **only** —
+   they are not repeated in the ribbon. The badge row is the trophy case; the
+   ribbon is form and volume. Nothing appears in both.
 3. **Weeks grid** — unchanged.
 
 ## Sparkline
