@@ -2836,6 +2836,119 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertNotContains(rules_response, "Locking: Lock each game at kickoff")
 
 
+    # --- Detailed Breakdown player-detail cards -------------------------------
+
+    def _give_smith_member_a_profile(self):
+        """The class setUp creates no UserProfile, so tests asserting on
+        identity create one explicitly."""
+        UserProfile.objects.update_or_create(
+            user=self.smith_member,
+            defaults={'tagline': "Statistically, I'm due.",
+                      'favorite_team': 'dallas-cowboys'},
+        )
+        Teams.objects.update_or_create(
+            teamNameSlug='dallas-cowboys',
+            defaults={'teamNameName': 'Dallas Cowboys',
+                      'teamLogo': 'http://example.test/dal.png'},
+        )
+        userSeasonPoints.objects.get_or_create(
+            pool=self.smith_pool, userID=str(self.smith_member.id),
+            gameseason=2526,
+            defaults={'userEmail': self.smith_member.email, 'total_points': 3},
+        )
+
+    def _breakdown_entry(self, response, user):
+        return next(
+            e for e in response.context["player_points"]
+            if str(e.userID) == str(user.id)
+        )
+
+    def test_breakdown_entries_carry_identity(self):
+        self._give_smith_member_a_profile()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+
+        entry = self._breakdown_entry(response, self.smith_member)
+        self.assertEqual(entry.tagline, "Statistically, I'm due.")
+        self.assertEqual(entry.favorite_team.teamNameName, "Dallas Cowboys")
+        self.assertIsInstance(entry.seasons_won, int)
+
+    def test_breakdown_best_week_is_the_highest_single_week(self):
+        self.client.force_login(self.smith_member)
+        row, _ = userSeasonPoints.objects.get_or_create(
+            pool=self.smith_pool, userID=str(self.smith_member.id),
+            gameseason=2526,
+            defaults={'userEmail': self.smith_member.email},
+        )
+        row.week_1_points, row.week_2_points, row.week_3_points = 7, 12, 9
+        row.save()
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+
+        entry = self._breakdown_entry(response, self.smith_member)
+        self.assertEqual(entry.best_week_points, 12)
+        self.assertEqual(entry.best_week_number, 2)
+
+    def test_breakdown_player_with_no_graded_picks_has_no_sparkline(self):
+        GamePicks.objects.filter(pool=self.smith_pool).delete()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+
+        for entry in response.context["player_points"]:
+            self.assertEqual(entry.sparkline, "")
+            self.assertIsNone(entry.accuracy)
+            self.assertEqual(entry.sparkline_label, "No weekly accuracy yet")
+
+    def test_breakdown_renders_identity_and_ribbon(self):
+        self._give_smith_member_a_profile()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+
+        self.assertContains(response, "Statistically, I&#x27;m due.")
+        self.assertContains(response, "Dallas Cowboys logo")
+        self.assertContains(response, "Best Week")
+        self.assertContains(response, "Accuracy")
+
+    def test_breakdown_query_count_does_not_grow_with_player_count(self):
+        """Profile/team lookups are batched and the sparkline reuses the
+        per-week pass, so more players must not mean more queries."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        self._give_smith_member_a_profile()
+        self.client.force_login(self.smith_member)
+        url = self._tenant_url("family_pool_standings")
+        self.client.get(url)  # warm any lazily-populated caches
+
+        with CaptureQueriesContext(connection) as baseline:
+            self.client.get(url)
+
+        for i in range(5):
+            extra = User.objects.create_user(
+                f"extra-bd-{i}", email=f"extra-bd-{i}@example.com", password="pass"
+            )
+            self._active_membership(extra, self.smith_family)
+            UserProfile.objects.update_or_create(
+                user=extra,
+                defaults={'tagline': f'tag {i}', 'favorite_team': 'dallas-cowboys'},
+            )
+            userSeasonPoints.objects.create(
+                pool=self.smith_pool, userID=str(extra.id),
+                userEmail=extra.email, gameseason=2526, total_points=i,
+            )
+
+        with CaptureQueriesContext(connection) as grown:
+            self.client.get(url)
+
+        self.assertEqual(
+            len(grown.captured_queries), len(baseline.captured_queries),
+            "query count grew with player count -- a per-row lookup slipped in",
+        )
+
+
 class Phase4SharedContextScopeTests(TestCase):
     @classmethod
     def setUpTestData(cls):

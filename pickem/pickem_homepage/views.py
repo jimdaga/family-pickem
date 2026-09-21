@@ -65,6 +65,9 @@ from pickem_api.models import (
     PoolMemberPayment, PoolSettings,
 )
 from pickem_api.logo_processing import LogoValidationError, process_family_logo
+from pickem_homepage.sparkline import (
+    SPARKLINE_HEIGHT, SPARKLINE_WIDTH, sparkline_points,
+)
 from pickem_homepage.authz import family_member_required
 from pickem_homepage.emailing import (
     resend_invite_email_is_configured,
@@ -4080,15 +4083,17 @@ def render_standings_page(request, *, tenant_context=None):
     # this season, perfect weeks (pool-scoped, complete weeks only), and last
     # season's champion. Non-tenant (cross-pool) view has no single pool to
     # scope perfect weeks / prior champion to, so it shows weeks-won only.
+    pool_stats = {}
     perfect_by_uid = {}
     prev_champion_ids = set()
+    seasons_won_by_uid = {}
     if tenant_context and str(selected_season).isdigit():
         season_int = int(selected_season)
+        pool_stats = build_pool_standings_stats(
+            target_pool, season_int, target_pool.competition
+        )
         perfect_by_uid = {
-            uid: stat.get('perfect_weeks', 0)
-            for uid, stat in build_pool_standings_stats(
-                target_pool, season_int, target_pool.competition
-            ).items()
+            uid: stat.get('perfect_weeks', 0) for uid, stat in pool_stats.items()
         }
         prev_champion_ids = {
             str(uid)
@@ -4099,12 +4104,57 @@ def render_standings_page(request, *, tenant_context=None):
             ).values_list('userID', flat=True)
             if uid
         }
+        # Seasons won across this family's history. Read from userSeasonPoints
+        # (the same source prev_champion_ids uses) rather than
+        # userStats.seasonsWon, which the scheduled pipeline does not reliably
+        # write per-pool -- the reason build_pool_standings_stats exists.
+        for uid in userSeasonPoints.objects.filter(
+            pool__family=tenant_context.family, year_winner=True,
+        ).values_list('userID', flat=True):
+            if uid:
+                seasons_won_by_uid[str(uid)] = seasons_won_by_uid.get(str(uid), 0) + 1
+
+    # Tenant-only: the non-tenant branch spans every pool in the install, so it
+    # must never carry personal details -- the same rule first_names follows.
+    profile_map = (
+        build_user_profile_map([e.userID for e in player_points])
+        if tenant_context else {}
+    )
     for entry in player_points:
+        uid = str(entry.userID)
         entry.weeks_won = sum(
             1 for i in range(1, 19) if getattr(entry, f'week_{i}_winner', False)
         )
-        entry.perfect_weeks = perfect_by_uid.get(str(entry.userID), 0)
-        entry.prev_champion = str(entry.userID) in prev_champion_ids
+        entry.perfect_weeks = perfect_by_uid.get(uid, 0)
+        entry.prev_champion = uid in prev_champion_ids
+        entry.seasons_won = seasons_won_by_uid.get(uid, 0)
+
+        stat = pool_stats.get(uid, {})
+        entry.accuracy = stat.get('accuracy')
+        entry.correct_picks = stat.get('correct', 0)
+        series = stat.get('weekly_accuracy', [])
+        entry.total_picks = sum(s['total'] for s in series)
+        entry.sparkline = sparkline_points(series)
+        if series:
+            entry.sparkline_label = (
+                f"Weekly accuracy, week {series[0]['week']} to "
+                f"week {series[-1]['week']}: {stat.get('accuracy')}% overall"
+            )
+        else:
+            entry.sparkline_label = "No weekly accuracy yet"
+
+        # Best single week, straight off the row -- no query.
+        best_points, best_week = None, None
+        for i in range(1, 19):
+            points = getattr(entry, f'week_{i}_points', None)
+            if points is not None and (best_points is None or points > best_points):
+                best_points, best_week = points, i
+        entry.best_week_points = best_points
+        entry.best_week_number = best_week
+
+        profile = profile_map.get(uid, {})
+        entry.tagline = profile.get('tagline')
+        entry.favorite_team = profile.get('team')
 
     display_ids = [entry.userID for entry in player_points]
     for winners in weekly_winners.values():
@@ -4136,6 +4186,8 @@ def render_standings_page(request, *, tenant_context=None):
         'pool': tenant_context.pool if tenant_context else None,
         'membership': tenant_context.membership if tenant_context else None,
         'is_tenant_page': tenant_context is not None,
+        'sparkline_width': SPARKLINE_WIDTH,
+        'sparkline_height': SPARKLINE_HEIGHT,
     }
     return render(request, 'pickem/standings.html', context)
 
