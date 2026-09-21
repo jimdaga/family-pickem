@@ -1372,7 +1372,7 @@ def build_pool_standings_stats(pool, gameseason, competition):
     graded = (
         GamePicks.objects.filter(
             pool=pool, gameseason=gameseason,
-            pick_game_id__in=finished_ids, auto_pick=False,
+            pick_game_id__in=finished_ids,
         )
         .values('userID')
         .annotate(
@@ -1417,7 +1417,7 @@ def build_pool_standings_stats(pool, gameseason, competition):
     per_week = (
         GamePicks.objects.filter(
             pool=pool, gameseason=gameseason, competition=competition,
-            pick_game_id__in=finished_ids, auto_pick=False,
+            pick_game_id__in=finished_ids,
         )
         .values('userID', 'gameWeek')
         .annotate(
