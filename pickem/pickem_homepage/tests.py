@@ -11880,3 +11880,64 @@ class SpreadFavoriteFilterTests(TestCase):
 
     def test_missing_spread_has_no_favorite(self):
         self.assertIsNone(self._game(None))
+
+
+class SparklineGeometryTests(TestCase):
+    """The sparkline's y-axis is deliberately pinned to 0-100 rather than
+    auto-scaled to each player's own range: auto-scaling would make a member
+    who ranged 61-64% look as volatile as one who ranged 20-90%, and would
+    make two cards on the same page mutually incomparable."""
+
+    def _series(self, *accuracies):
+        return [
+            {'week': i, 'accuracy': a, 'correct': 0, 'total': 0}
+            for i, a in enumerate(accuracies, 1)
+        ]
+
+    def test_empty_series_has_no_points(self):
+        from pickem_homepage.sparkline import sparkline_points
+        self.assertEqual(sparkline_points([]), "")
+
+    def test_single_point_is_centered_horizontally(self):
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(50), width=100, height=20, pad=2)
+        self.assertEqual(len(points.split()), 1)
+        x, y = points.split(',')
+        self.assertAlmostEqual(float(x), 50.0, places=1)
+
+    def test_zero_and_hundred_map_to_the_full_vertical_range(self):
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(0, 100), width=100, height=20, pad=2)
+        first, last = points.split()
+        # y is inverted: 0% sits at the bottom, 100% at the top.
+        self.assertAlmostEqual(float(first.split(',')[1]), 18.0, places=1)
+        self.assertAlmostEqual(float(last.split(',')[1]), 2.0, places=1)
+
+    def test_flat_series_is_a_horizontal_line(self):
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(60, 60, 60), width=100, height=20, pad=2)
+        ys = {p.split(',')[1] for p in points.split()}
+        self.assertEqual(len(ys), 1)
+
+    def test_axis_is_fixed_not_autoscaled(self):
+        # A narrow band must NOT be stretched to fill the box. If it were
+        # autoscaled, 61 and 64 would land on the extreme top and bottom.
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(61, 64), width=100, height=20, pad=2)
+        ys = [float(p.split(',')[1]) for p in points.split()]
+        self.assertNotAlmostEqual(ys[0], 18.0, places=1)
+        self.assertNotAlmostEqual(ys[1], 2.0, places=1)
+
+    def test_points_are_evenly_spaced_across_the_width(self):
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(10, 20, 30), width=100, height=20, pad=2)
+        xs = [float(p.split(',')[0]) for p in points.split()]
+        self.assertAlmostEqual(xs[0], 2.0, places=1)
+        self.assertAlmostEqual(xs[-1], 98.0, places=1)
+        self.assertAlmostEqual(xs[1], 50.0, places=1)
+
+    def test_out_of_range_accuracy_is_clamped_inside_the_viewbox(self):
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(-20, 140), width=100, height=20, pad=2)
+        ys = [float(p.split(',')[1]) for p in points.split()]
+        self.assertTrue(all(2.0 <= y <= 18.0 for y in ys), points)
