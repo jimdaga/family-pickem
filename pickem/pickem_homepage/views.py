@@ -4145,10 +4145,8 @@ def render_standings_page(request, *, tenant_context=None):
                 f"Weekly accuracy, week {series[0]['week']} to "
                 f"week {series[-1]['week']}: {stat.get('accuracy')}% overall"
             )
-            entry.sparkline_range = f"W{series[0]['week']}–W{series[-1]['week']}"
         else:
             entry.sparkline_label = "No weekly accuracy yet"
-            entry.sparkline_range = ""
 
         # Best single week, straight off the row -- no query.
         best_points, best_week = None, None
