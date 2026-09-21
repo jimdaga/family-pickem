@@ -268,7 +268,7 @@
                         lobby's favourite-team chip. min-w keeps a two-digit
                         rank legible by letting the circle become a short pill.
                         {% endcomment %}
-                        <span class="absolute -bottom-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[9px] font-black leading-none ring-2 ring-white dark:ring-bg-dark {% if player.accent == 'gold' %}bg-amber-400 text-slate-900{% elif player.accent == 'silver' %}bg-slate-300 text-slate-900{% elif player.accent == 'bronze' %}bg-orange-500 text-white{% else %}bg-slate-600 text-white{% endif %}"
+                        <span class="absolute -bottom-1 -right-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[11px] font-black leading-none ring-2 ring-white dark:ring-bg-dark {% if player.accent == 'gold' %}bg-amber-400 text-slate-900{% elif player.accent == 'silver' %}bg-slate-300 text-slate-900{% elif player.accent == 'bronze' %}bg-orange-500 text-white{% else %}bg-slate-600 text-white{% endif %}"
                               title="Rank {{ player.display_rank }}">{{ player.display_rank }}</span>
                         {% endif %}
                     </a>
