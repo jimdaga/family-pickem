@@ -163,8 +163,10 @@
 
                     <div class="flex-1 min-w-0">
                         <h5 class="font-bold text-sm text-text-dark dark:text-white truncate uppercase">{{ username }}</h5>
-                        {# player.tagline comes from the view's batched profile map. The
-                           old `|lookuptagline` filter ran two queries per row. #}
+                        {% comment %}
+                        player.tagline comes from the view's batched profile map.
+                        The old `|lookuptagline` filter ran two queries per row.
+                        {% endcomment %}
                         <p class="text-sm text-text-secondary-light dark:text-text-secondary truncate">{{ player.tagline|default:"League Member" }}</p>
                     </div>
 
@@ -252,29 +254,34 @@
 	                             class="w-9 h-9 rounded-full border border-border-light dark:border-border-subtle hover:scale-105 transition-transform">
                     </a>
 	                    {% endwith %}
-	                    <div class="flex-1 min-w-0">
-	                        <div class="flex items-center gap-2 flex-wrap">
-	                            <h5 class="text-sm font-bold text-text-dark dark:text-white uppercase"><a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="hover:text-primary transition-colors">{{ username }}</a></h5>
-	                            {% if player.favorite_team and player.favorite_team.teamLogo %}
-	                            <span class="inline-flex items-center gap-1 rounded-full bg-bg-light dark:bg-surface px-1.5 py-0.5 border border-border-light dark:border-border-subtle" title="Favorite team: {{ player.favorite_team.teamNameName }}">
-	                                <img src="{{ player.favorite_team.teamLogo }}" alt="{{ player.favorite_team.teamNameName }} logo" class="w-3.5 h-3.5 object-contain">
-	                                <span class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">{{ player.favorite_team.teamNameName }}</span>
-	                            </span>
-	                            {% endif %}
-	                        </div>
-                        <p class="text-sm text-text-secondary-light dark:text-text-secondary">
-                            Total: <strong class="text-text-dark dark:text-white">{{ player.total_points|default:0 }} points</strong>
-                        </p>
-                        {% if player.tagline %}
-                        <p class="text-xs italic text-text-secondary-light dark:text-text-secondary truncate" title="{{ player.tagline }}">&ldquo;{{ player.tagline }}&rdquo;</p>
-                        {% endif %}
-                        {% if player.prev_champion or player.weeks_won or player.perfect_weeks or player.seasons_won %}
-                        <!-- Badges (same meaning as the lobby standings + leaderboard rows) -->
-                        <div class="mt-1 flex flex-wrap items-center gap-1">
-                            {% if player.prev_champion %}<span class="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300" title="Won last season"><i class="fas fa-crown"></i>Champ</span>{% endif %}
-                            {% if player.seasons_won %}<span class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300" title="Season champion {{ player.seasons_won }} time{{ player.seasons_won|pluralize }}"><i class="fas fa-medal"></i>{{ player.seasons_won }} Season{{ player.seasons_won|pluralize }}</span>{% endif %}
-                            {% if player.weeks_won %}<span class="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-700 dark:text-sky-300" title="Weekly winner {{ player.weeks_won }} time{{ player.weeks_won|pluralize }}"><i class="fas fa-trophy"></i>{{ player.weeks_won }}W</span>{% endif %}
-                            {% if player.perfect_weeks %}<span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300" title="Perfect week{{ player.perfect_weeks|pluralize }}"><i class="fas fa-star"></i>{% if player.perfect_weeks > 1 %}{{ player.perfect_weeks }} {% endif %}Perfect</span>{% endif %}
+                    <div class="flex-1 min-w-0">
+                        <!-- Row 1: identity on the left, points on the right -->
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <h5 class="text-sm font-bold text-text-dark dark:text-white uppercase truncate"><a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}" class="hover:text-primary transition-colors">{{ username }}</a></h5>
+                                {% if player.favorite_team and player.favorite_team.teamLogo %}
+                                <span class="inline-flex items-center gap-1 rounded-full bg-bg-light dark:bg-surface px-1.5 py-0.5 border border-border-light dark:border-border-subtle flex-shrink-0" title="Favorite team: {{ player.favorite_team.teamNameName }}">
+                                    <img src="{{ player.favorite_team.teamLogo }}" alt="{{ player.favorite_team.teamNameName }} logo" class="w-3.5 h-3.5 object-contain">
+                                    <span class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary hidden sm:inline">{{ player.favorite_team.teamNameName }}</span>
+                                </span>
+                                {% endif %}
+                            </div>
+                            <p class="text-sm text-text-secondary-light dark:text-text-secondary flex-shrink-0 whitespace-nowrap">
+                                Total: <strong class="text-text-dark dark:text-white">{{ player.total_points|default:0 }} points</strong>
+                            </p>
+                        </div>
+                        <!-- Row 2: badges on the left, tagline on the right -->
+                        {% if player.prev_champion or player.weeks_won or player.perfect_weeks or player.seasons_won or player.tagline %}
+                        <div class="mt-1.5 flex items-center justify-between gap-3">
+                            <div class="flex flex-wrap items-center gap-1 min-w-0">
+                                {% if player.prev_champion %}<span class="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300" title="Won last season"><i class="fas fa-crown"></i>Champ</span>{% endif %}
+                                {% if player.seasons_won %}<span class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300" title="Season champion {{ player.seasons_won }} time{{ player.seasons_won|pluralize }}"><i class="fas fa-medal"></i>{{ player.seasons_won }} Season{{ player.seasons_won|pluralize }}</span>{% endif %}
+                                {% if player.weeks_won %}<span class="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-700 dark:text-sky-300" title="Weekly winner {{ player.weeks_won }} time{{ player.weeks_won|pluralize }}"><i class="fas fa-trophy"></i>{{ player.weeks_won }}W</span>{% endif %}
+                                {% if player.perfect_weeks %}<span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300" title="Perfect week{{ player.perfect_weeks|pluralize }}"><i class="fas fa-star"></i>{% if player.perfect_weeks > 1 %}{{ player.perfect_weeks }} {% endif %}Perfect</span>{% endif %}
+                            </div>
+                            {% if player.tagline %}
+                            <p class="text-xs italic text-text-secondary-light dark:text-text-secondary truncate text-right min-w-0" title="{{ player.tagline }}">&ldquo;{{ player.tagline }}&rdquo;</p>
+                            {% endif %}
                         </div>
                         {% endif %}
                     </div>
@@ -284,8 +291,7 @@
                 <!-- Stat ribbon: form and volume. Trophy counts (perfect weeks,
                      weeks won, seasons won) live in the badge row above and are
                      deliberately not repeated here. The sparkline takes the
-                     remaining width rather than sitting in a fixed box — on a
-                     wide card that dead space was the whole middle of the row. -->
+                     remaining width rather than sitting in a fixed box. -->
                 <div class="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8 mb-4 pb-4 border-b border-border-light dark:border-border-subtle">
                     <div class="flex items-center gap-6 sm:gap-8 flex-shrink-0">
                         <div>
@@ -302,36 +308,40 @@
                         </div>
                     </div>
                     {% if player.sparkline %}
+                    {% comment %}
+                    The viewBox is a wide 720x56 space and the svg scales
+                    uniformly (no preserveAspectRatio="none"), so the weekly
+                    dots stay round instead of smearing into ellipses.
+                    {% endcomment %}
                     <div class="flex-1 min-w-0 text-primary">
                         <div class="flex items-baseline justify-between mb-1">
                             <span class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">Weekly accuracy</span>
                             <span class="text-[10px] font-semibold text-text-secondary-light dark:text-text-secondary">{{ player.sparkline_range }}</span>
                         </div>
-                        {# viewBox coordinates are the helper's fixed 0-100 space; the svg
-                           stretches to the row's width. vector-effect keeps the stroke an
-                           even weight despite that non-uniform scaling. #}
                         <svg viewBox="0 0 {{ sparkline_width }} {{ sparkline_height }}"
-                             class="w-full h-10 block overflow-visible"
-                             role="img" aria-label="{{ player.sparkline_label }}"
-                             preserveAspectRatio="none">
+                             class="w-full block" role="img"
+                             aria-label="{{ player.sparkline_label }}">
                             <title>{{ player.sparkline_label }}</title>
+                            <line x1="0" y1="{{ sparkline_midline }}" x2="{{ sparkline_width }}" y2="{{ sparkline_midline }}"
+                                  stroke="currentColor" stroke-width="1" stroke-dasharray="4 5" opacity="0.25" />
                             {% if player.sparkline_area %}
-                            <polygon points="{{ player.sparkline_area }}" fill="currentColor" opacity="0.13" />
+                            <polygon points="{{ player.sparkline_area }}" fill="currentColor" opacity="0.12" />
                             {% endif %}
                             <polyline points="{{ player.sparkline }}" fill="none"
-                                      stroke="currentColor" stroke-width="2"
-                                      stroke-linecap="round" stroke-linejoin="round"
-                                      vector-effect="non-scaling-stroke" />
-                            {# stroke-dasharray "0 1000" with a round cap draws a dot at the
-                               first vertex only, so a single graded week still shows up. #}
-                            <polyline points="{{ player.sparkline }}" fill="none"
-                                      stroke="currentColor" stroke-width="5"
-                                      stroke-linecap="round" stroke-dasharray="0 1000"
-                                      vector-effect="non-scaling-stroke" />
+                                      stroke="currentColor" stroke-width="2.5"
+                                      stroke-linecap="round" stroke-linejoin="round" />
+                            {% for dot in player.sparkline_dots %}
+                            <circle cx="{{ dot.x }}" cy="{{ dot.y }}" r="{% if dot.is_last %}5{% else %}3.5{% endif %}"
+                                    fill="{% if dot.is_last %}currentColor{% else %}var(--spark-dot-bg){% endif %}"
+                                    stroke="currentColor" stroke-width="2">
+                                <title>Week {{ dot.week }}: {{ dot.accuracy }}% ({{ dot.correct }}/{{ dot.total }})</title>
+                            </circle>
+                            {% endfor %}
                         </svg>
                     </div>
                     {% endif %}
                 </div>
+
 
                 <!-- Weeks Grid -->
                 <div class="grid grid-cols-6 sm:grid-cols-9 lg:grid-cols-[repeat(18,minmax(0,1fr))] gap-1.5">

@@ -66,7 +66,8 @@ from pickem_api.models import (
 )
 from pickem_api.logo_processing import LogoValidationError, process_family_logo
 from pickem_homepage.sparkline import (
-    SPARKLINE_HEIGHT, SPARKLINE_WIDTH, sparkline_area, sparkline_points,
+    SPARKLINE_HEIGHT, SPARKLINE_WIDTH, sparkline_area, sparkline_dots,
+    sparkline_midline, sparkline_points,
 )
 from pickem_homepage.authz import family_member_required
 from pickem_homepage.emailing import (
@@ -4136,6 +4137,7 @@ def render_standings_page(request, *, tenant_context=None):
         entry.total_picks = sum(s['total'] for s in series)
         entry.sparkline = sparkline_points(series)
         entry.sparkline_area = sparkline_area(series)
+        entry.sparkline_dots = sparkline_dots(series)
         if series:
             entry.sparkline_label = (
                 f"Weekly accuracy, week {series[0]['week']} to "
@@ -4191,6 +4193,7 @@ def render_standings_page(request, *, tenant_context=None):
         'is_tenant_page': tenant_context is not None,
         'sparkline_width': SPARKLINE_WIDTH,
         'sparkline_height': SPARKLINE_HEIGHT,
+        'sparkline_midline': sparkline_midline(),
     }
     return render(request, 'pickem/standings.html', context)
 

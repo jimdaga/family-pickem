@@ -5,12 +5,23 @@ line can be tested directly. The sparkline is rendered as inline SVG with no
 JavaScript and no charting library: the standings page pulls GSAP from a CDN
 for its entrance animation, and a reader must never lose data because that
 CDN failed or because they run with reduced motion on.
+
+The coordinate space is deliberately wide (560x56) so the SVG can scale
+*uniformly* to the row's width. An earlier version used a 120x28 box with
+``preserveAspectRatio="none"``, which stretched the drawing ~7x horizontally
+and would have turned any vertex marker into a flat ellipse.
 """
 
-# Matches the ribbon's slot in standings.html. Kept here so the template and
-# the geometry can never disagree about the viewBox.
-SPARKLINE_WIDTH = 120
-SPARKLINE_HEIGHT = 28
+# The drawing's coordinate space. The rendered SVG is `w-full`, so it scales
+# uniformly to whatever width the ribbon gives it and takes its height from
+# this aspect ratio. 10:1 is the compromise that keeps the chart a sensible
+# height on a wide desktop card (~87px) without collapsing to a hairline on a
+# 390px phone (~30px).
+SPARKLINE_WIDTH = 560
+SPARKLINE_HEIGHT = 56
+
+# Padding keeps the end dots and the stroke's round cap inside the viewBox.
+SPARKLINE_PAD = 6
 
 # Correct-pick percentage is a fixed 0-100 quantity, so the axis is fixed too.
 # Auto-scaling to each player's own min/max would make a 61-64% season look as
@@ -20,17 +31,10 @@ _AXIS_MIN = 0.0
 _AXIS_MAX = 100.0
 
 
-def sparkline_points(series, width=SPARKLINE_WIDTH, height=SPARKLINE_HEIGHT, pad=2):
-    """Map a weekly-accuracy series to an SVG polyline ``points`` string.
-
-    ``series`` is the list of ``{'week', 'accuracy', ...}`` dicts produced by
-    ``build_pool_standings_stats``, already ordered by week. Returns "" for an
-    empty series (the caller omits the sparkline entirely); a single-entry
-    series returns one point, which the template renders as a dot rather than
-    a line, since a one-point polyline draws nothing.
-    """
+def _coords(series, width, height, pad):
+    """Shared geometry: one (x, y) per entry, in viewBox coordinates."""
     if not series:
-        return ""
+        return []
 
     usable_width = max(width - 2 * pad, 1)
     usable_height = max(height - 2 * pad, 1)
@@ -45,27 +49,76 @@ def sparkline_points(series, width=SPARKLINE_WIDTH, height=SPARKLINE_HEIGHT, pad
         return pad + (1 - ratio) * usable_height
 
     if len(series) == 1:
-        return f"{pad + usable_width / 2:.1f},{y_for(series[0]['accuracy']):.1f}"
+        return [(pad + usable_width / 2, y_for(series[0]['accuracy']))]
 
     step = usable_width / (len(series) - 1)
-    return " ".join(
-        f"{pad + i * step:.1f},{y_for(entry['accuracy']):.1f}"
+    return [
+        (pad + i * step, y_for(entry['accuracy']))
         for i, entry in enumerate(series)
+    ]
+
+
+def sparkline_points(series, width=SPARKLINE_WIDTH, height=SPARKLINE_HEIGHT,
+                     pad=SPARKLINE_PAD):
+    """Map a weekly-accuracy series to an SVG polyline ``points`` string.
+
+    ``series`` is the list of ``{'week', 'accuracy', ...}`` dicts produced by
+    ``build_pool_standings_stats``, already ordered by week. Returns "" for an
+    empty series (the caller omits the sparkline entirely); a single-entry
+    series returns one point, which the template renders as a lone dot.
+    """
+    return " ".join(
+        f"{x:.1f},{y:.1f}" for x, y in _coords(series, width, height, pad)
     )
 
 
-def sparkline_area(series, width=SPARKLINE_WIDTH, height=SPARKLINE_HEIGHT, pad=2):
+def sparkline_area(series, width=SPARKLINE_WIDTH, height=SPARKLINE_HEIGHT,
+                   pad=SPARKLINE_PAD):
     """The same line closed down to the baseline, for a soft fill under it.
 
     Returns "" whenever there is nothing to fill — an empty series, or a
     single point (one vertical sliver would read as a stray tick, not a
     trend). The fill is decorative: the line itself carries the data.
     """
-    line = sparkline_points(series, width=width, height=height, pad=pad)
-    if not line or len(series) < 2:
+    coords = _coords(series, width, height, pad)
+    if len(coords) < 2:
         return ""
-    points = line.split()
-    first_x = points[0].split(",")[0]
-    last_x = points[-1].split(",")[0]
     baseline = height - pad
-    return f"{first_x},{baseline:.1f} {line} {last_x},{baseline:.1f}"
+    body = " ".join(f"{x:.1f},{y:.1f}" for x, y in coords)
+    return f"{coords[0][0]:.1f},{baseline:.1f} {body} {coords[-1][0]:.1f},{baseline:.1f}"
+
+
+def sparkline_dots(series, width=SPARKLINE_WIDTH, height=SPARKLINE_HEIGHT,
+                   pad=SPARKLINE_PAD):
+    """One marker per graded week, so the reader can count the weeks.
+
+    A bare polyline reads as a smooth shape rather than a series of weekly
+    results; the markers restore "these are 18 discrete weeks". Each entry
+    carries its week and accuracy so the marker can title itself, and
+    ``is_last`` lets the template emphasise the most recent week.
+    """
+    coords = _coords(series, width, height, pad)
+    last_index = len(coords) - 1
+    return [
+        {
+            'x': round(x, 1),
+            'y': round(y, 1),
+            'week': entry['week'],
+            'accuracy': entry['accuracy'],
+            'correct': entry['correct'],
+            'total': entry['total'],
+            'is_last': i == last_index,
+        }
+        for i, (entry, (x, y)) in enumerate(zip(series, coords))
+    ]
+
+
+def sparkline_midline(width=SPARKLINE_WIDTH, height=SPARKLINE_HEIGHT,
+                      pad=SPARKLINE_PAD):
+    """y of the 50% gridline — the reference that makes the line legible.
+
+    Without it a rising line says nothing about whether the player is above
+    or below a coin flip, which is the comparison that actually matters.
+    """
+    usable_height = max(height - 2 * pad, 1)
+    return round(pad + usable_height / 2, 1)

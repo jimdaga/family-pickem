@@ -2901,6 +2901,24 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
             self.assertIsNone(entry.accuracy)
             self.assertEqual(entry.sparkline_label, "No weekly accuracy yet")
 
+    def test_standings_page_leaks_no_raw_template_syntax(self):
+        """Django's {# #} comment is single-line only: a multi-line one is not
+        parsed as a comment and renders to the page as literal text. Three of
+        them shipped that way. Guard the whole response, not just the comments
+        that existed at the time."""
+        self._give_smith_member_a_profile()
+        self.client.force_login(self.smith_member)
+
+        content = self.client.get(
+            self._tenant_url("family_pool_standings")
+        ).content.decode()
+
+        for token in ("{#", "#}", "{%", "%}", "{{", "}}"):
+            self.assertNotIn(
+                token, content,
+                f"unrendered template syntax {token!r} leaked into the page",
+            )
+
     def test_breakdown_renders_identity_and_ribbon(self):
         self._give_smith_member_a_profile()
         self.client.force_login(self.smith_member)
