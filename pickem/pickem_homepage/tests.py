@@ -23,9 +23,10 @@ from django.db.models import F
 from django.db.models.functions import Greatest
 from django.db.utils import InterfaceError, OperationalError
 from django.http import Http404, HttpResponse
+from django.conf import settings
 from django.test import (
-    TestCase, TransactionTestCase, Client, RequestFactory, override_settings,
-    skipUnlessDBFeature,
+    TestCase, TransactionTestCase, SimpleTestCase, Client, RequestFactory,
+    override_settings, skipUnlessDBFeature,
 )
 from django.urls import reverse
 from django.utils import timezone
@@ -12011,6 +12012,60 @@ class SpreadFavoriteFilterTests(TestCase):
 
     def test_missing_spread_has_no_favorite(self):
         self.assertIsNone(self._game(None))
+
+
+class TailwindUtilityCompilationTests(SimpleTestCase):
+    """Tailwind emits no rule at all for an opacity step outside its scale.
+
+    `from-orange-500/12` produced no CSS whatsoever -- no error, no warning,
+    just an element with no gradient, which reads as an inconsistent design
+    rather than a missing class. Any slash-opacity utility a template uses
+    must exist in the built stylesheet.
+
+    Scoped to the slash-opacity shape on purpose: that is where the failure
+    is silent. A misspelt plain utility is usually obvious on sight.
+    """
+
+    UTILITY = re.compile(
+        r'(?<![\w:-])((?:from|via|to|bg|text|border|ring|divide|outline'
+        r'|decoration|fill|stroke|accent|shadow|placeholder|caret)'
+        r'-[a-z]+(?:-\d{2,3})?/\d{1,3})(?![\w.-])'
+    )
+
+    def _stylesheet(self):
+        return (
+            pathlib.Path(settings.BASE_DIR) / 'pickem_homepage' / 'static'
+            / 'css' / 'tailwind.css'
+        ).read_text()
+
+    def _template_files(self):
+        base = pathlib.Path(settings.BASE_DIR)
+        for app in ('pickem_homepage', 'pickem_superadmin'):
+            yield from (base / app / 'templates').rglob('*.html')
+
+    def test_every_opacity_utility_used_in_a_template_is_compiled(self):
+        css = self._stylesheet()
+        used = {}
+        for path in self._template_files():
+            for match in self.UTILITY.finditer(path.read_text()):
+                used.setdefault(match.group(1), set()).add(path.name)
+
+        self.assertTrue(used, "found no utilities to check -- scanner is broken")
+
+        missing = {}
+        for utility in used:
+            # A class selector can be followed by {, :, >, ~, +, comma or space.
+            selector = re.escape('.' + utility.replace('/', '\\/'))
+            if not re.search(selector + r'(?=[{:>~+,\s])', css):
+                missing[utility] = sorted(used[utility])
+
+        self.assertEqual(
+            missing, {},
+            "These utilities render nothing because Tailwind emitted no rule "
+            "for them. Either the opacity step is outside the scale (use a "
+            "supported one) or tailwind.css needs `npm run build:prod`: "
+            f"{missing}",
+        )
 
 
 class SparklineGeometryTests(TestCase):
