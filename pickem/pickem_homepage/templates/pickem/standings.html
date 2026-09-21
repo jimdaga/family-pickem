@@ -240,13 +240,23 @@
         </h3>
 
         <!-- Player Detail Cards -->
-        <div class="space-y-4">
+        <div class="space-y-3">
             {% for player in player_points %}
-            <div class="standings-breakdown-card bg-white/60 dark:bg-bg-dark/30 rounded-lg p-4 sm:p-5 border border-border-light dark:border-border-subtle">
+            <div class="standings-breakdown-card relative overflow-hidden bg-white/60 dark:bg-bg-dark/30 rounded-lg p-3 sm:p-4 border border-border-light dark:border-border-subtle">
+                {% comment %}
+                Rank wash. Kept under 12% opacity and behind the content so it
+                reads as a tinted surface, not a highlight; the podium is the
+                only place colour changes, so it means something.
+                {% endcomment %}
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-r {% if player.accent == 'gold' %}from-amber-400/15 via-amber-300/5{% elif player.accent == 'silver' %}from-slate-400/15 via-slate-300/5{% elif player.accent == 'bronze' %}from-orange-500/15 via-orange-400/5{% else %}from-primary/5 via-primary/0{% endif %} to-transparent"></div>
+                {% if player.accent %}
+                <div class="pointer-events-none absolute inset-y-0 left-0 w-1 {% if player.accent == 'gold' %}bg-amber-400{% elif player.accent == 'silver' %}bg-slate-400{% else %}bg-orange-500{% endif %}"></div>
+                {% endif %}
+                <div class="relative">
                 {% with usernames|lookup:player.userID as username %}
 
                 <!-- Player Header -->
-                <div class="flex items-center gap-3 mb-4 pb-4 border-b border-border-light dark:border-border-subtle">
+                <div class="flex items-center gap-3 mb-3 pb-3 border-b border-border-light dark:border-border-subtle">
                     {% with avatars|lookup:player.userID as avatar %}
                     <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}">
 	                        <img src="{{ avatar }}"
@@ -293,7 +303,7 @@
                      weeks won, seasons won) live in the badge row above and are
                      deliberately not repeated here. The sparkline takes the
                      remaining width rather than sitting in a fixed box. -->
-                <div class="flex flex-col md:flex-row md:items-center gap-4 md:gap-8 mb-4 pb-4 border-b border-border-light dark:border-border-subtle">
+                <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-8 mb-3 pb-3 border-b border-border-light dark:border-border-subtle">
                     <div class="flex items-center gap-6 sm:gap-8 flex-shrink-0">
                         <div>
                             <div class="text-[10px] font-bold uppercase tracking-wide text-text-secondary-light dark:text-text-secondary mb-0.5">Accuracy</div>
@@ -321,7 +331,7 @@
                             <span class="text-[10px] font-semibold text-text-secondary-light dark:text-text-secondary">{{ player.sparkline_range }}</span>
                         </div>
                         <div class="flex items-stretch gap-2">
-                            <div class="relative w-8 flex-shrink-0 h-9" aria-hidden="true">
+                            <div class="relative w-8 flex-shrink-0 h-8" aria-hidden="true">
                                 {% if player.sparkline_avg %}
                                 <span class="absolute right-0 text-[10px] font-black leading-none text-text-secondary-light dark:text-text-secondary"
                                       style="top: {{ player.sparkline_avg.top }}%; transform: translateY(-50%);">{{ player.accuracy }}%</span>
@@ -329,7 +339,7 @@
                             </div>
                             <div class="flex-1 min-w-0 text-primary">
                                 <svg viewBox="0 0 {{ sparkline_width }} {{ sparkline_height }}"
-                                     class="w-full h-9 block" preserveAspectRatio="none"
+                                     class="w-full h-8 block" preserveAspectRatio="none"
                                      role="img" aria-label="{{ player.sparkline_label }}">
                                     <title>{{ player.sparkline_label }}</title>
                                     {% if player.sparkline_avg %}
@@ -363,10 +373,10 @@
 
 
                 <!-- Weeks Grid -->
-                <div class="grid grid-cols-6 sm:grid-cols-9 lg:grid-cols-[repeat(18,minmax(0,1fr))] gap-1.5">
+                <div class="grid grid-cols-6 sm:grid-cols-9 lg:grid-cols-[repeat(18,minmax(0,1fr))] gap-1">
                     {% for week_num in 18|times %}
-                    <div class="flex flex-col items-center justify-center px-1.5 py-2 bg-bg-light dark:bg-surface rounded-md border border-border-light dark:border-border-subtle">
-                        <div class="text-xs text-text-secondary-light dark:text-text-secondary font-semibold mb-1">W{{ week_num }}</div>
+                    <div class="flex flex-col items-center justify-center px-1 py-1.5 bg-bg-light dark:bg-surface rounded-md border border-border-light dark:border-border-subtle">
+                        <div class="text-[10px] text-text-secondary-light dark:text-text-secondary font-semibold mb-0.5">W{{ week_num }}</div>
                         {% with player|get_week_points:week_num as points %}
                         <div class="text-sm font-black text-text-dark dark:text-white flex items-center gap-1">
                             {% if points != None %}
@@ -381,6 +391,7 @@
                         {% endwith %}
                     </div>
                     {% endfor %}
+                </div>
                 </div>
             </div>
             {% empty %}

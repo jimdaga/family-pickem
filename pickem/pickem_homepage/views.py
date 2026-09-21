@@ -4159,6 +4159,13 @@ def render_standings_page(request, *, tenant_context=None):
         entry.best_week_points = best_points
         entry.best_week_number = best_week
 
+        # Podium accent for the breakdown card's background wash. Colour here
+        # carries rank rather than decoration -- everyone else gets a neutral
+        # tint so the top three read as the exception.
+        entry.accent = {1: 'gold', 2: 'silver', 3: 'bronze'}.get(
+            entry.display_rank
+        ) if season_has_started else None
+
         profile = profile_map.get(uid, {})
         entry.tagline = profile.get('tagline')
         entry.favorite_team = profile.get('team')
