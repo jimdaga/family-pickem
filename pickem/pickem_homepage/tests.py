@@ -23,9 +23,10 @@ from django.db.models import F
 from django.db.models.functions import Greatest
 from django.db.utils import InterfaceError, OperationalError
 from django.http import Http404, HttpResponse
+from django.conf import settings
 from django.test import (
-    TestCase, TransactionTestCase, Client, RequestFactory, override_settings,
-    skipUnlessDBFeature,
+    TestCase, TransactionTestCase, SimpleTestCase, Client, RequestFactory,
+    override_settings, skipUnlessDBFeature,
 )
 from django.urls import reverse
 from django.utils import timezone
@@ -2834,6 +2835,168 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         self.assertContains(rules_response, "Locking: Weekly cutoff — Sunday 1PM ET")
         self.assertNotContains(rules_response, "Jones Family")
         self.assertNotContains(rules_response, "Locking: Lock each game at kickoff")
+
+
+    # --- Detailed Breakdown player-detail cards -------------------------------
+
+    def _give_smith_member_a_profile(self):
+        """The class setUp creates no UserProfile, so tests asserting on
+        identity create one explicitly."""
+        UserProfile.objects.update_or_create(
+            user=self.smith_member,
+            defaults={'tagline': "Statistically, I'm due.",
+                      'favorite_team': 'dallas-cowboys'},
+        )
+        Teams.objects.update_or_create(
+            teamNameSlug='dallas-cowboys',
+            defaults={'teamNameName': 'Dallas Cowboys',
+                      'teamLogo': 'http://example.test/dal.png'},
+        )
+        userSeasonPoints.objects.get_or_create(
+            pool=self.smith_pool, userID=str(self.smith_member.id),
+            gameseason=2526,
+            defaults={'userEmail': self.smith_member.email, 'total_points': 3},
+        )
+
+    def _breakdown_entry(self, response, user):
+        return next(
+            e for e in response.context["player_points"]
+            if str(e.userID) == str(user.id)
+        )
+
+    def test_breakdown_entries_carry_identity(self):
+        self._give_smith_member_a_profile()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+
+        entry = self._breakdown_entry(response, self.smith_member)
+        self.assertEqual(entry.tagline, "Statistically, I'm due.")
+        self.assertEqual(entry.favorite_team.teamNameName, "Dallas Cowboys")
+        self.assertIsInstance(entry.seasons_won, int)
+
+    def test_breakdown_best_week_is_the_highest_single_week(self):
+        self.client.force_login(self.smith_member)
+        row, _ = userSeasonPoints.objects.get_or_create(
+            pool=self.smith_pool, userID=str(self.smith_member.id),
+            gameseason=2526,
+            defaults={'userEmail': self.smith_member.email},
+        )
+        row.week_1_points, row.week_2_points, row.week_3_points = 7, 12, 9
+        row.save()
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+
+        entry = self._breakdown_entry(response, self.smith_member)
+        self.assertEqual(entry.best_week_points, 12)
+        self.assertEqual(entry.best_week_number, 2)
+
+    def test_breakdown_player_with_no_graded_picks_has_no_sparkline(self):
+        GamePicks.objects.filter(pool=self.smith_pool).delete()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+
+        for entry in response.context["player_points"]:
+            self.assertEqual(entry.sparkline, "")
+            self.assertIsNone(entry.accuracy)
+            self.assertEqual(entry.sparkline_label, "No weekly accuracy yet")
+
+    def test_standings_page_leaks_no_raw_template_syntax(self):
+        """Django's {# #} comment is single-line only: a multi-line one is not
+        parsed as a comment and renders to the page as literal text. Three of
+        them shipped that way. Guard the whole response, not just the comments
+        that existed at the time."""
+        self._give_smith_member_a_profile()
+        self.client.force_login(self.smith_member)
+
+        content = self.client.get(
+            self._tenant_url("family_pool_standings")
+        ).content.decode()
+
+        for token in ("{#", "#}", "{%", "%}", "{{", "}}"):
+            self.assertNotIn(
+                token, content,
+                f"unrendered template syntax {token!r} leaked into the page",
+            )
+
+    def test_breakdown_avatar_rank_pip_waits_for_the_season_to_start(self):
+        """Rank is the number the tile was missing; it rides the avatar. But
+        before any game is scored everyone is level, so the page hides numbered
+        positions -- the pip must follow that rule, not invent a rank."""
+        # Gives the member a standings row (and a profile) so they appear in
+        # the breakdown at all.
+        self._give_smith_member_a_profile()
+        self.client.force_login(self.smith_member)
+        url = self._tenant_url("family_pool_standings")
+
+        # Nothing scored yet -> no ranks shown anywhere, pip included.
+        response = self.client.get(url)
+        self.assertFalse(response.context["season_has_started"])
+        self.assertNotIn('title="Rank', response.content.decode())
+
+        # Score a game and the pip appears with the member's stored rank.
+        self.week_one_game.statusType = "finished"
+        self.week_one_game.gameWinner = self.week_one_game.homeTeamSlug
+        self.week_one_game.gameScored = True
+        self.week_one_game.save()
+
+        response = self.client.get(url)
+        self.assertTrue(response.context["season_has_started"])
+        entry = next(
+            e for e in response.context["player_points"]
+            if str(e.userID) == str(self.smith_member.id)
+        )
+        self.assertIsNotNone(entry.display_rank)
+        self.assertIn(f'title="Rank {entry.display_rank}"',
+                      response.content.decode())
+
+    def test_breakdown_renders_identity_and_ribbon(self):
+        self._give_smith_member_a_profile()
+        self.client.force_login(self.smith_member)
+
+        response = self.client.get(self._tenant_url("family_pool_standings"))
+
+        self.assertContains(response, "Statistically, I&#x27;m due.")
+        self.assertContains(response, "Dallas Cowboys logo")
+        self.assertContains(response, "Best Week")
+        self.assertContains(response, "Accuracy")
+
+    def test_breakdown_query_count_does_not_grow_with_player_count(self):
+        """Profile/team lookups are batched and the sparkline reuses the
+        per-week pass, so more players must not mean more queries."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        self._give_smith_member_a_profile()
+        self.client.force_login(self.smith_member)
+        url = self._tenant_url("family_pool_standings")
+        self.client.get(url)  # warm any lazily-populated caches
+
+        with CaptureQueriesContext(connection) as baseline:
+            self.client.get(url)
+
+        for i in range(5):
+            extra = User.objects.create_user(
+                f"extra-bd-{i}", email=f"extra-bd-{i}@example.com", password="pass"
+            )
+            self._active_membership(extra, self.smith_family)
+            UserProfile.objects.update_or_create(
+                user=extra,
+                defaults={'tagline': f'tag {i}', 'favorite_team': 'dallas-cowboys'},
+            )
+            userSeasonPoints.objects.create(
+                pool=self.smith_pool, userID=str(extra.id),
+                userEmail=extra.email, gameseason=2526, total_points=i,
+            )
+
+        with CaptureQueriesContext(connection) as grown:
+            self.client.get(url)
+
+        self.assertEqual(
+            len(grown.captured_queries), len(baseline.captured_queries),
+            "query count grew with player count -- a per-row lookup slipped in",
+        )
 
 
 class Phase4SharedContextScopeTests(TestCase):
@@ -11880,3 +12043,238 @@ class SpreadFavoriteFilterTests(TestCase):
 
     def test_missing_spread_has_no_favorite(self):
         self.assertIsNone(self._game(None))
+
+
+class TailwindUtilityCompilationTests(SimpleTestCase):
+    """Tailwind emits no rule at all for an opacity step outside its scale.
+
+    `from-orange-500/12` produced no CSS whatsoever -- no error, no warning,
+    just an element with no gradient, which reads as an inconsistent design
+    rather than a missing class. Any slash-opacity utility a template uses
+    must exist in the built stylesheet.
+
+    Scoped to the slash-opacity shape on purpose: that is where the failure
+    is silent. A misspelt plain utility is usually obvious on sight.
+    """
+
+    UTILITY = re.compile(
+        r'(?<![\w:-])((?:from|via|to|bg|text|border|ring|divide|outline'
+        r'|decoration|fill|stroke|accent|shadow|placeholder|caret)'
+        r'-[a-z]+(?:-\d{2,3})?/\d{1,3})(?![\w.-])'
+    )
+
+    def _stylesheet(self):
+        return (
+            pathlib.Path(settings.BASE_DIR) / 'pickem_homepage' / 'static'
+            / 'css' / 'tailwind.css'
+        ).read_text()
+
+    def _template_files(self):
+        base = pathlib.Path(settings.BASE_DIR)
+        for app in ('pickem_homepage', 'pickem_superadmin'):
+            yield from (base / app / 'templates').rglob('*.html')
+
+    def test_every_opacity_utility_used_in_a_template_is_compiled(self):
+        css = self._stylesheet()
+        used = {}
+        for path in self._template_files():
+            for match in self.UTILITY.finditer(path.read_text()):
+                used.setdefault(match.group(1), set()).add(path.name)
+
+        self.assertTrue(used, "found no utilities to check -- scanner is broken")
+
+        missing = {}
+        for utility in used:
+            # A class selector can be followed by {, :, >, ~, +, comma or space.
+            selector = re.escape('.' + utility.replace('/', '\\/'))
+            if not re.search(selector + r'(?=[{:>~+,\s])', css):
+                missing[utility] = sorted(used[utility])
+
+        self.assertEqual(
+            missing, {},
+            "These utilities render nothing because Tailwind emitted no rule "
+            "for them. Either the opacity step is outside the scale (use a "
+            "supported one) or tailwind.css needs `npm run build:prod`: "
+            f"{missing}",
+        )
+
+
+class SparklineGeometryTests(TestCase):
+    """The sparkline's y-axis is deliberately pinned to 0-100 rather than
+    auto-scaled to each player's own range: auto-scaling would make a member
+    who ranged 61-64% look as volatile as one who ranged 20-90%, and would
+    make two cards on the same page mutually incomparable."""
+
+    def _series(self, *accuracies):
+        return [
+            {'week': i, 'accuracy': a, 'correct': 0, 'total': 0}
+            for i, a in enumerate(accuracies, 1)
+        ]
+
+    def test_empty_series_has_no_points(self):
+        from pickem_homepage.sparkline import sparkline_points
+        self.assertEqual(sparkline_points([]), "")
+
+    def test_single_point_is_centered_horizontally(self):
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(50), width=100, height=20, pad=2)
+        self.assertEqual(len(points.split()), 1)
+        x, y = points.split(',')
+        self.assertAlmostEqual(float(x), 50.0, places=1)
+
+    def test_zero_and_hundred_map_to_the_full_vertical_range(self):
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(0, 100), width=100, height=20, pad=2)
+        first, last = points.split()
+        # y is inverted: 0% sits at the bottom, 100% at the top.
+        self.assertAlmostEqual(float(first.split(',')[1]), 18.0, places=1)
+        self.assertAlmostEqual(float(last.split(',')[1]), 2.0, places=1)
+
+    def test_flat_series_is_a_horizontal_line(self):
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(60, 60, 60), width=100, height=20, pad=2)
+        ys = {p.split(',')[1] for p in points.split()}
+        self.assertEqual(len(ys), 1)
+
+    def test_axis_is_fixed_not_autoscaled(self):
+        # A narrow band must NOT be stretched to fill the box. If it were
+        # autoscaled, 61 and 64 would land on the extreme top and bottom.
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(61, 64), width=100, height=20, pad=2)
+        ys = [float(p.split(',')[1]) for p in points.split()]
+        self.assertNotAlmostEqual(ys[0], 18.0, places=1)
+        self.assertNotAlmostEqual(ys[1], 2.0, places=1)
+
+    def test_points_are_evenly_spaced_across_the_width(self):
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(10, 20, 30), width=100, height=20, pad=2)
+        xs = [float(p.split(',')[0]) for p in points.split()]
+        self.assertAlmostEqual(xs[0], 2.0, places=1)
+        self.assertAlmostEqual(xs[-1], 98.0, places=1)
+        self.assertAlmostEqual(xs[1], 50.0, places=1)
+
+    def test_out_of_range_accuracy_is_clamped_inside_the_viewbox(self):
+        from pickem_homepage.sparkline import sparkline_points
+        points = sparkline_points(self._series(-20, 140), width=100, height=20, pad=2)
+        ys = [float(p.split(',')[1]) for p in points.split()]
+        self.assertTrue(all(2.0 <= y <= 18.0 for y in ys), points)
+
+    def test_area_closes_the_line_down_to_the_baseline(self):
+        from pickem_homepage.sparkline import sparkline_area, sparkline_points
+        line = sparkline_points(self._series(10, 90), width=100, height=20, pad=2)
+        area = sparkline_area(self._series(10, 90), width=100, height=20, pad=2)
+        # The fill is the line plus a baseline corner at each end.
+        self.assertIn(line, area)
+        self.assertEqual(len(area.split()), len(line.split()) + 2)
+        first, last = area.split()[0], area.split()[-1]
+        self.assertEqual(first.split(',')[1], '18.0')
+        self.assertEqual(last.split(',')[1], '18.0')
+
+    def test_area_is_empty_for_empty_and_single_point_series(self):
+        from pickem_homepage.sparkline import sparkline_area
+        self.assertEqual(sparkline_area([]), "")
+        # One point would fill a vertical sliver that reads as a stray tick.
+        self.assertEqual(sparkline_area(self._series(50)), "")
+
+    def test_end_point_is_the_latest_week(self):
+        from pickem_homepage.sparkline import sparkline_end_point, sparkline_points
+        series = self._series(10, 50, 90)
+        line = sparkline_points(series, width=100, height=20, pad=2)
+        self.assertEqual(sparkline_end_point(series, width=100, height=20, pad=2),
+                         line.split()[-1])
+        self.assertEqual(sparkline_end_point([]), "")
+
+    def test_ticks_always_include_first_and_last_week(self):
+        from pickem_homepage.sparkline import sparkline_ticks
+        series = [{'week': w, 'accuracy': 60, 'correct': 1, 'total': 2}
+                  for w in range(1, 19)]
+        ticks = sparkline_ticks(series, max_ticks=5, width=100, pad=2)
+        self.assertEqual(ticks[0]['week'], 1)
+        self.assertEqual(ticks[-1]['week'], 18)
+        self.assertLessEqual(len(ticks), 5)
+
+    def test_ticks_span_the_full_width_so_labels_sit_under_their_points(self):
+        from pickem_homepage.sparkline import sparkline_ticks
+        series = [{'week': w, 'accuracy': 60, 'correct': 1, 'total': 2}
+                  for w in range(1, 19)]
+        ticks = sparkline_ticks(series, max_ticks=5, width=100, pad=2)
+        # pad=2 of width=100 -> first point at 2%, last at 98%.
+        self.assertAlmostEqual(ticks[0]['left'], 2.0, places=1)
+        self.assertAlmostEqual(ticks[-1]['left'], 98.0, places=1)
+
+    def test_ticks_do_not_duplicate_when_series_is_short(self):
+        from pickem_homepage.sparkline import sparkline_ticks
+        series = self._series(60, 70)
+        ticks = sparkline_ticks(series, max_ticks=5, width=100, pad=2)
+        self.assertEqual([t['week'] for t in ticks], [1, 2])
+
+    def test_ticks_empty_for_empty_series(self):
+        from pickem_homepage.sparkline import sparkline_ticks
+        self.assertEqual(sparkline_ticks([]), [])
+
+    def test_average_line_sits_at_the_accuracy_level(self):
+        from pickem_homepage.sparkline import sparkline_average
+        # 100% pins to the top of the usable band, 0% to the bottom.
+        top = sparkline_average(100, height=20, pad=2)
+        bottom = sparkline_average(0, height=20, pad=2)
+        self.assertAlmostEqual(top['y'], 2.0, places=1)
+        self.assertAlmostEqual(bottom['y'], 18.0, places=1)
+        # `top` is the same level as a percentage, for the HTML label.
+        self.assertAlmostEqual(top['top'], 10.0, places=1)
+        self.assertAlmostEqual(bottom['top'], 90.0, places=1)
+
+    def test_average_is_none_without_an_accuracy(self):
+        from pickem_homepage.sparkline import sparkline_average
+        self.assertIsNone(sparkline_average(None))
+
+
+class BuildUserProfileMapTests(TestCase):
+    """The standings breakdown renders one entry per player, so this lookup
+    must stay batched — a per-row `lookuplogo` would be an N+1."""
+
+    def setUp(self):
+        self.with_team = User.objects.create_user('withteam', 'wt@example.com', 'pw')
+        self.no_profile = User.objects.create_user('noprofile', 'np@example.com', 'pw')
+        self.bad_slug = User.objects.create_user('badslug', 'bs@example.com', 'pw')
+        UserProfile.objects.update_or_create(
+            user=self.with_team,
+            defaults={'tagline': "Statistically, I'm due.",
+                      'favorite_team': 'dallas-cowboys'},
+        )
+        UserProfile.objects.update_or_create(
+            user=self.bad_slug,
+            defaults={'tagline': None, 'favorite_team': 'not-a-real-team'},
+        )
+        UserProfile.objects.filter(user=self.no_profile).delete()
+        Teams.objects.update_or_create(
+            teamNameSlug='dallas-cowboys',
+            defaults={'teamNameName': 'Dallas Cowboys', 'teamLogo': 'http://x/dal.png'},
+        )
+
+    def test_returns_tagline_and_resolved_team(self):
+        from pickem_homepage.views import build_user_profile_map
+        entry = build_user_profile_map([self.with_team.id])[str(self.with_team.id)]
+        self.assertEqual(entry['tagline'], "Statistically, I'm due.")
+        self.assertEqual(entry['team'].teamNameName, 'Dallas Cowboys')
+
+    def test_user_without_a_profile_gets_empty_entry(self):
+        from pickem_homepage.views import build_user_profile_map
+        result = build_user_profile_map([self.no_profile.id])
+        self.assertEqual(result[str(self.no_profile.id)],
+                         {'tagline': None, 'team': None})
+
+    def test_unknown_team_slug_resolves_to_none(self):
+        from pickem_homepage.views import build_user_profile_map
+        result = build_user_profile_map([self.bad_slug.id])
+        self.assertIsNone(result[str(self.bad_slug.id)]['team'])
+
+    def test_lookup_is_batched_regardless_of_user_count(self):
+        from pickem_homepage.views import build_user_profile_map
+        ids = [self.with_team.id, self.no_profile.id, self.bad_slug.id]
+        with self.assertNumQueries(2):
+            build_user_profile_map(ids)
+
+    def test_empty_input_makes_no_queries(self):
+        from pickem_homepage.views import build_user_profile_map
+        with self.assertNumQueries(0):
+            self.assertEqual(build_user_profile_map([]), {})

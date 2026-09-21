@@ -726,9 +726,13 @@
   /* Primary color: NFL navy in light mode, bright blue in dark mode */
   :root {
     --color-primary: 11 61 145; /* #0B3D91 */
+    /* Fill for the standings sparkline's weekly dots. Matches the breakdown
+       card behind them so each marker reads as a ring on the trend line. */
+    --spark-dot-bg: #ffffff;
   }
   html.dark {
     --color-primary: 59 130 246; /* #3B82F6 */
+    --spark-dot-bg: #0B0E13;
   }
 
   /* Dark mode by default */
