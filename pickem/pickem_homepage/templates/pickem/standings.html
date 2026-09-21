@@ -256,7 +256,7 @@
                 {% with usernames|lookup:player.userID as username %}
 
                 <!-- Player Header -->
-                <div class="flex items-center gap-3 mb-3 pb-3 border-b border-border-light dark:border-border-subtle">
+                <div class="flex items-center gap-3 mb-3">
                     {% with avatars|lookup:player.userID as avatar %}
                     <a href="{% if family and pool %}{% url 'family_pool_user_profile' family.slug pool.slug player.userID %}{% else %}{% url 'user_profile' player.userID %}{% endif %}">
 	                        <img src="{{ avatar }}"
