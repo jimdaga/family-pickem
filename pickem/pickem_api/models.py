@@ -1127,6 +1127,20 @@ class Notification(models.Model):
         help_text="Already-resolved path this notification links to",
     )
 
+    # Producers run from the update pipeline, which ticks every minute and
+    # back-fills missed weeks -- so "create this notification exactly once" has
+    # to be enforced somewhere. A unique key is that somewhere: the database
+    # rejects the duplicate rather than every producer remembering to check
+    # first, which would be a read-then-write race anyway.
+    #
+    # NULL for ad-hoc notifications that have no natural identity. Postgres and
+    # SQLite both allow unlimited NULLs under a unique constraint, so unkeyed
+    # rows never collide with each other.
+    dedupe_key = models.CharField(
+        max_length=200, null=True, blank=True, default=None, unique=True,
+        help_text="Producer-set idempotency key; NULL when the row has no natural identity",
+    )
+
     # Nullable: account-level notifications (invites, announcements) belong to
     # no pool. SET_NULL so deleting a pool never deletes someone's history.
     family = models.ForeignKey(

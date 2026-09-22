@@ -12,6 +12,7 @@ from django.core.management.base import BaseCommand
 
 from pickem.utils import get_season
 from pickem_api.models import Family, Pool
+from pickem_api.notifications import publish_week_winner_digest
 from pickem_api.weekly_winners import (
     EspnGameStatsProvider,
     award_weekly_winners,
@@ -92,3 +93,27 @@ class Command(BaseCommand):
                     f"Week {target_week}: awarded winners in {awarded} pool(s)."
                 )
             )
+
+            # Notify after the whole week's pools are processed, not per pool:
+            # a member of several families gets one digest naming all of them
+            # rather than a burst of near-identical rows. Runs even when this
+            # pass awarded nothing, because a previous pass may have awarded
+            # while notifications were failing -- publishing is keyed per
+            # user/season/week, so a repeat is a no-op.
+            try:
+                sent = publish_week_winner_digest(season, target_week, pools)
+            except Exception:
+                # A notification failure must never roll back or mask an award:
+                # the bonus points are the real work and are already committed.
+                logger.exception(
+                    "Week winner notifications failed for season %s week %s",
+                    season, target_week,
+                )
+                self.stderr.write(
+                    f"Week {target_week}: winner notifications failed (see logs)"
+                )
+            else:
+                if sent:
+                    self.stdout.write(
+                        f"Week {target_week}: sent {sent} winner notification(s)."
+                    )
