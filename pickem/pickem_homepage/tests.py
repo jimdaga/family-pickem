@@ -12434,10 +12434,22 @@ class NotificationViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], reverse("index"))
 
+    def test_mark_all_read_bare_word_referer_redirects_instead_of_500ing(self):
+        # Referer is a plain header: a browser only ever sends an absolute URL,
+        # but a scripted request can send anything. A bare word reaches
+        # redirect() as a URL *name* and 500s on reverse(), so an authenticated
+        # caller could crash this endpoint at will. Same failure mode as the
+        # stored-url case above, via a different input.
+        response = self.client.post(
+            reverse("notifications_mark_all_read"), HTTP_REFERER="foo",
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("index"))
+
     def test_mark_all_read_still_honors_absolute_same_host_referer(self):
-        # notifications_mark_all_read must NOT require a leading "/" --
-        # HTTP_REFERER legitimately arrives as an absolute same-host URL in
-        # production (e.g. "https://host/standings/").
+        # notifications_mark_all_read must still accept an absolute same-host
+        # URL -- HTTP_REFERER legitimately arrives that way in production
+        # (e.g. "https://host/standings/"), and it always contains a "/".
         response = self.client.post(
             reverse("notifications_mark_all_read"),
             HTTP_REFERER="http://testserver/standings/",
@@ -12468,9 +12480,13 @@ class NotificationNavbarTests(TestCase):
         # These tests render real pages, which runs footer_stats_context ->
         # _cached_gameseason(). That cache has a 60s TTL and is NOT rolled back
         # with the test transaction, so rendering without a currentSeason row
-        # would leave a fallback season cached for whichever test runs next.
-        # Seed the row and clear the cache, as the other page-rendering classes
-        # in this file do.
+        # left get_season()'s 2024 fallback cached for whichever test ran next --
+        # an intermittent failure in Phase4SharedContextScopeTests.
+        #
+        # Seeding the row is the actual fix: currentSeason's post_save signal
+        # (pickem_api/apps.py) busts that exact key, and it matches what every
+        # other page-rendering class here does. The cache.clear() is belt-and-
+        # braces against any other key this render path may warm.
         cache.clear()
         currentSeason.objects.create(season=2526, display_name="2025-2026")
         self.user = User.objects.create_user(
@@ -12543,7 +12559,7 @@ class NotificationMobileNavTests(TestCase):
 
     def setUp(self):
         # See NotificationNavbarTests.setUp: rendering warms the season cache,
-        # which outlives the test transaction.
+        # which outlives the test transaction. Seeding the row is what fixes it.
         cache.clear()
         currentSeason.objects.create(season=2526, display_name="2025-2026")
         self.user = User.objects.create_user(

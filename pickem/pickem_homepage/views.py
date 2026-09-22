@@ -6306,14 +6306,17 @@ def _safe_internal_redirect(request, url, require_path=False):
     header in one case, a stored producer-written path in the other -- so both
     must be validated or they become open redirects.
 
-    ``url_has_allowed_host_and_scheme`` alone isn't enough for a stored,
-    producer-written value: a bare slug like ``"foo"`` has no netloc or
-    scheme, so it passes that check, but Django's ``redirect()``/``resolve_url``
-    then treats a string with no ``/`` or ``.`` in it as a URL *name* and calls
-    ``reverse("foo")`` -- which 500s with ``NoReverseMatch`` instead of
-    redirecting. Pass ``require_path=True`` at a call site whose ``url`` comes
-    from stored/producer data (not a same-host absolute URL, which always
-    contains a ``/`` anyway) to reject anything that doesn't look like a path.
+    ``url_has_allowed_host_and_scheme`` alone isn't enough: a bare slug like
+    ``"foo"`` has no netloc or scheme, so it passes that check, but Django's
+    ``redirect()``/``resolve_url`` then treats a string with no ``/`` or ``.``
+    in it as a URL *name* and calls ``reverse("foo")`` -- which 500s with
+    ``NoReverseMatch`` instead of redirecting.
+
+    ``require_path=True`` rejects anything that doesn't look like a path, and
+    both call sites need it. The stored ``url`` is producer-written, and the
+    Referer is a plain header: a browser only ever sends an absolute URL (which
+    always contains a ``/``), but a scripted request can send whatever it likes,
+    so without this an authenticated caller could 500 the endpoint at will.
     """
     if (
         url
@@ -6333,7 +6336,11 @@ def _safe_internal_redirect(request, url, require_path=False):
 def notifications_mark_all_read(request):
     """Clear the navbar badge by stamping every unread row for this user."""
     Notification.objects.unread_for(request.user).update(read_at=timezone.now())
-    return redirect(_safe_internal_redirect(request, request.META.get('HTTP_REFERER')))
+    return redirect(
+        _safe_internal_redirect(
+            request, request.META.get('HTTP_REFERER'), require_path=True,
+        )
+    )
 
 
 @login_required
