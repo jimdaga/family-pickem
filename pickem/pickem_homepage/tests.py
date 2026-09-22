@@ -12488,11 +12488,16 @@ class NotificationNavbarTests(TestCase):
     def test_user_dropdown_trigger_no_longer_shows_display_name(self):
         # The name moved into the dropdown body to make room for the bell. It
         # must still appear once (in the dropdown header), just not in the
-        # trigger button.
+        # trigger button. Check the capitalized form the `display_name`
+        # filter actually renders (it applies capfirst to the username), not
+        # the raw lowercase username -- and check for it specifically, not
+        # just any occurrence of the username substring (which would also be
+        # satisfied incidentally by the unchanged `user.email` in the
+        # dropdown body).
         response = self.client.get(reverse("profile"))
         html = response.content.decode()
         trigger_start = html.index('aria-label="User menu"')
         trigger_end = html.index("nav-dropdown", trigger_start)
         trigger_markup = html[trigger_start:trigger_end]
-        self.assertNotIn("notify-nav", trigger_markup)
-        self.assertIn("notify-nav", html[trigger_end:])
+        self.assertNotIn("Notify-nav", trigger_markup)
+        self.assertIn("Notify-nav", html[trigger_end:])
