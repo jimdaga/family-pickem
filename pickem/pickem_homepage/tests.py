@@ -13,6 +13,7 @@ from django.contrib import admin
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
+from django.core.cache import cache
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.storage import FileSystemStorage
@@ -42,6 +43,7 @@ from pickem_api.models import (
     GamePicks,
     GamesAndScores,
     GameWeeks,
+    Notification,
     Pool,
     PoolMemberPayment,
     PoolSettings,
@@ -12278,3 +12280,318 @@ class BuildUserProfileMapTests(TestCase):
         from pickem_homepage.views import build_user_profile_map
         with self.assertNumQueries(0):
             self.assertEqual(build_user_profile_map([]), {})
+
+
+class NotificationsContextProcessorTests(TestCase):
+    """The navbar bell's data must be present on every authenticated render."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = User.objects.create_user(
+            username="notify-ana", email="notify-ana@example.com", password="pw",
+        )
+        self.other = User.objects.create_user(
+            username="notify-bo", email="notify-bo@example.com", password="pw",
+        )
+
+    def _context(self, user):
+        from pickem.context_processors import notifications_context
+
+        request = self.factory.get("/")
+        request.user = user
+        return notifications_context(request)
+
+    def test_anonymous_gets_empty_defaults(self):
+        context = self._context(AnonymousUser())
+        self.assertEqual(context["notification_unread_count"], 0)
+        self.assertEqual(context["notification_items"], [])
+
+    def test_counts_only_unread_for_this_user(self):
+        Notification.objects.create(recipient=self.user, title="unread one")
+        Notification.objects.create(recipient=self.user, title="unread two")
+        Notification.objects.create(
+            recipient=self.user, title="already read", read_at=timezone.now(),
+        )
+        Notification.objects.create(recipient=self.other, title="someone else's")
+
+        context = self._context(self.user)
+
+        self.assertEqual(context["notification_unread_count"], 2)
+        titles = [n.title for n in context["notification_items"]]
+        self.assertNotIn("someone else's", titles)
+        # Read rows still appear in the list -- they just render un-highlighted.
+        self.assertIn("already read", titles)
+
+    def test_items_are_capped_at_ten(self):
+        for index in range(12):
+            Notification.objects.create(recipient=self.user, title=f"n{index}")
+        context = self._context(self.user)
+        self.assertEqual(len(context["notification_items"]), 10)
+
+    def test_database_error_degrades_to_defaults(self):
+        # A context processor that raises breaks every page on the site, so it
+        # must swallow and degrade rather than propagate.
+        with patch(
+            "pickem.context_processors.Notification.objects.unread_for",
+            side_effect=OperationalError("boom"),
+        ):
+            context = self._context(self.user)
+        self.assertEqual(context["notification_unread_count"], 0)
+        self.assertEqual(context["notification_items"], [])
+
+    def test_processor_is_registered_in_settings(self):
+        self.assertIn(
+            "pickem.context_processors.notifications_context",
+            settings.TEMPLATES[0]["OPTIONS"]["context_processors"],
+        )
+
+
+class NotificationViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="notify-view", email="notify-view@example.com", password="pw",
+        )
+        self.other = User.objects.create_user(
+            username="notify-other", email="notify-other@example.com", password="pw",
+        )
+        self.client.force_login(self.user)
+
+    def test_mark_all_read_requires_login(self):
+        self.client.logout()
+        response = self.client.post(reverse("notifications_mark_all_read"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response["Location"])
+
+    def test_mark_all_read_rejects_get(self):
+        response = self.client.get(reverse("notifications_mark_all_read"))
+        self.assertEqual(response.status_code, 405)
+
+    def test_mark_all_read_marks_only_this_users_rows(self):
+        mine = Notification.objects.create(recipient=self.user, title="mine")
+        theirs = Notification.objects.create(recipient=self.other, title="theirs")
+
+        self.client.post(reverse("notifications_mark_all_read"))
+
+        mine.refresh_from_db()
+        theirs.refresh_from_db()
+        self.assertIsNotNone(mine.read_at)
+        self.assertIsNone(theirs.read_at)
+
+    def test_mark_all_read_returns_to_same_host_referer(self):
+        response = self.client.post(
+            reverse("notifications_mark_all_read"), HTTP_REFERER="/standings/",
+        )
+        self.assertEqual(response["Location"], "/standings/")
+
+    def test_mark_all_read_ignores_foreign_referer(self):
+        response = self.client.post(
+            reverse("notifications_mark_all_read"),
+            HTTP_REFERER="https://evil.example.com/steal",
+        )
+        self.assertEqual(response["Location"], reverse("index"))
+
+    def test_open_marks_read_and_redirects_to_url(self):
+        notification = Notification.objects.create(
+            recipient=self.user, title="go here", url="/standings/",
+        )
+        response = self.client.get(
+            reverse("notification_open", args=[notification.id])
+        )
+        notification.refresh_from_db()
+        self.assertIsNotNone(notification.read_at)
+        self.assertEqual(response["Location"], "/standings/")
+
+    def test_open_redirects_to_index_when_url_blank(self):
+        notification = Notification.objects.create(recipient=self.user, title="no url")
+        response = self.client.get(
+            reverse("notification_open", args=[notification.id])
+        )
+        self.assertEqual(response["Location"], reverse("index"))
+
+    def test_open_refuses_foreign_host_url(self):
+        # A bad producer must not be able to turn a notification into an open
+        # redirect off-site.
+        notification = Notification.objects.create(
+            recipient=self.user, title="sketchy", url="https://evil.example.com/",
+        )
+        response = self.client.get(
+            reverse("notification_open", args=[notification.id])
+        )
+        self.assertEqual(response["Location"], reverse("index"))
+
+    def test_open_bare_slug_url_redirects_to_index_instead_of_500ing(self):
+        # A producer that stores a bare slug (no "/" or ".") makes
+        # redirect()/resolve_url() treat it as a URL *name* and call
+        # reverse("foo"), which 500s with NoReverseMatch instead of
+        # redirecting. The stored-url call site must reject this rather than
+        # letting it reach redirect().
+        notification = Notification.objects.create(
+            recipient=self.user, title="bad producer data", url="foo",
+        )
+        response = self.client.get(
+            reverse("notification_open", args=[notification.id])
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("index"))
+
+    def test_mark_all_read_bare_word_referer_redirects_instead_of_500ing(self):
+        # Referer is a plain header: a browser only ever sends an absolute URL,
+        # but a scripted request can send anything. A bare word reaches
+        # redirect() as a URL *name* and 500s on reverse(), so an authenticated
+        # caller could crash this endpoint at will. Same failure mode as the
+        # stored-url case above, via a different input.
+        response = self.client.post(
+            reverse("notifications_mark_all_read"), HTTP_REFERER="foo",
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("index"))
+
+    def test_mark_all_read_still_honors_absolute_same_host_referer(self):
+        # notifications_mark_all_read must still accept an absolute same-host
+        # URL -- HTTP_REFERER legitimately arrives that way in production
+        # (e.g. "https://host/standings/"), and it always contains a "/".
+        response = self.client.post(
+            reverse("notifications_mark_all_read"),
+            HTTP_REFERER="http://testserver/standings/",
+        )
+        self.assertEqual(response["Location"], "http://testserver/standings/")
+
+    def test_open_404s_on_another_users_notification(self):
+        notification = Notification.objects.create(
+            recipient=self.other, title="not yours", url="/standings/",
+        )
+        response = self.client.get(
+            reverse("notification_open", args=[notification.id])
+        )
+        # 404 rather than 403: the endpoint must not confirm the row exists.
+        self.assertEqual(response.status_code, 404)
+
+
+class NotificationNavbarTests(TestCase):
+    """The bell, its badge, and the trimmed user dropdown.
+
+    These render against ``profile`` rather than ``index``: ``index`` always
+    redirects an authenticated user (to onboarding, their pool lobby, or the
+    family picker), so it never returns navbar HTML to assert against.
+    ``profile`` extends base.html and needs no family membership.
+    """
+
+    def setUp(self):
+        # These tests render real pages, which runs footer_stats_context ->
+        # _cached_gameseason(). That cache has a 60s TTL and is NOT rolled back
+        # with the test transaction, so rendering without a currentSeason row
+        # left get_season()'s 2024 fallback cached for whichever test ran next --
+        # an intermittent failure in Phase4SharedContextScopeTests.
+        #
+        # Seeding the row is the actual fix: currentSeason's post_save signal
+        # (pickem_api/apps.py) busts that exact key, and it matches what every
+        # other page-rendering class here does. The cache.clear() is belt-and-
+        # braces against any other key this render path may warm.
+        cache.clear()
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        self.user = User.objects.create_user(
+            username="notify-nav", email="notify-nav@example.com", password="pw",
+        )
+        self.client.force_login(self.user)
+
+    def test_bell_renders_for_authenticated_user(self):
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, 'data-testid="notifications-bell"')
+        self.assertContains(response, 'data-testid="notifications-panel"')
+
+    def test_no_badge_when_nothing_unread(self):
+        Notification.objects.create(
+            recipient=self.user, title="read one", read_at=timezone.now(),
+        )
+        response = self.client.get(reverse("profile"))
+        self.assertNotContains(response, 'data-testid="notifications-badge"')
+
+    def test_badge_shows_unread_count(self):
+        for index in range(3):
+            Notification.objects.create(recipient=self.user, title=f"n{index}")
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, 'data-testid="notifications-badge"')
+        self.assertContains(response, ">3<")
+
+    def test_badge_caps_at_nine_plus(self):
+        for index in range(12):
+            Notification.objects.create(recipient=self.user, title=f"n{index}")
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, "9+")
+
+    def test_panel_lists_notification_titles(self):
+        Notification.objects.create(
+            recipient=self.user, title="You won week 3", body="Nice picks",
+        )
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, "You won week 3")
+        self.assertContains(response, "Nice picks")
+
+    def test_panel_shows_empty_state(self):
+        # The empty-state copy is literal template text, not a template
+        # variable, so Django's autoescaping (which only applies to {{ }}
+        # output) never touches it -- the rendered HTML carries a raw
+        # apostrophe, not the &#x27; entity.
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, "You're all caught up.")
+
+    def test_user_dropdown_trigger_no_longer_shows_display_name(self):
+        # The name moved into the dropdown body to make room for the bell. It
+        # must still appear once (in the dropdown header), just not in the
+        # trigger button. Check the capitalized form the `display_name`
+        # filter actually renders (it applies capfirst to the username), not
+        # the raw lowercase username -- and check for it specifically, not
+        # just any occurrence of the username substring (which would also be
+        # satisfied incidentally by the unchanged `user.email` in the
+        # dropdown body).
+        response = self.client.get(reverse("profile"))
+        html = response.content.decode()
+        trigger_start = html.index('aria-label="User menu"')
+        trigger_end = html.index("nav-dropdown", trigger_start)
+        trigger_markup = html[trigger_start:trigger_end]
+        self.assertNotIn("Notify-nav", trigger_markup)
+        self.assertIn("Notify-nav", html[trigger_end:])
+
+
+class NotificationMobileNavTests(TestCase):
+    """Mobile bell + in-menu section. Renders against ``profile`` for the same
+    reason as NotificationNavbarTests -- ``index`` always redirects."""
+
+    def setUp(self):
+        # See NotificationNavbarTests.setUp: rendering warms the season cache,
+        # which outlives the test transaction. Seeding the row is what fixes it.
+        cache.clear()
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        self.user = User.objects.create_user(
+            username="notify-mobile", email="notify-mobile@example.com", password="pw",
+        )
+        self.client.force_login(self.user)
+
+    def test_mobile_bell_and_section_render(self):
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, 'data-testid="notifications-bell-mobile"')
+        self.assertContains(response, 'data-testid="mobile-notifications-trigger"')
+
+    def test_mobile_section_lists_notifications(self):
+        Notification.objects.create(recipient=self.user, title="Mobile visible item")
+        response = self.client.get(reverse("profile"))
+        # Once in the desktop panel, once in the mobile section.
+        self.assertContains(response, "Mobile visible item", count=2)
+
+    def test_mobile_badge_hidden_when_nothing_unread(self):
+        response = self.client.get(reverse("profile"))
+        self.assertNotContains(response, 'data-testid="notifications-badge-mobile"')
+
+    def test_mobile_list_has_scroll_cap(self):
+        # #mobile-menu is `absolute` inside a `fixed` nav, so an overflowing
+        # descendant with no height cap has nothing to scroll -- the tail of
+        # the list becomes permanently unreachable on a short viewport. The
+        # container must carry both a max-height and overflow-y-auto.
+        response = self.client.get(reverse("profile"))
+        html = response.content.decode()
+        trigger_index = html.index('data-testid="mobile-notifications-trigger"')
+        list_start = html.index("mobile-dropdown-menu", trigger_index)
+        list_tag_end = html.index(">", list_start)
+        list_classes = html[list_start:list_tag_end]
+        self.assertIn("overflow-y-auto", list_classes)
+        self.assertRegex(list_classes, r"max-h-(?:\[[^\]]+\]|\d+)")

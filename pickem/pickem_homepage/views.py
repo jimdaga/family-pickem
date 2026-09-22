@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from django import forms
 from pickem_api.models import GamePicks
-from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile
+from pickem_api.models import GamesAndScores, GameWeeks, Teams, userSeasonPoints, userStats, UserProfile, Notification
 from .forms import (
     ChooseUsernameForm,
     CreateFamilyForm,
@@ -49,6 +49,7 @@ from datetime import date, timedelta
 
 from django.forms import formset_factory
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from pickem.utils import get_season as get_season_from_api
 from pickem_api.authz import (
     ROLE_ORDER,
@@ -6296,3 +6297,59 @@ def submit_manual_pick(request):
 @require_http_methods(["GET"])
 def get_user_picks(request):
     return legacy_commissioner_json_denial(request)
+
+
+def _safe_internal_redirect(request, url, require_path=False):
+    """Return ``url`` when it points back at this site, else the lobby.
+
+    Both notification views redirect to a caller-influenced URL -- a Referer
+    header in one case, a stored producer-written path in the other -- so both
+    must be validated or they become open redirects.
+
+    ``url_has_allowed_host_and_scheme`` alone isn't enough: a bare slug like
+    ``"foo"`` has no netloc or scheme, so it passes that check, but Django's
+    ``redirect()``/``resolve_url`` then treats a string with no ``/`` or ``.``
+    in it as a URL *name* and calls ``reverse("foo")`` -- which 500s with
+    ``NoReverseMatch`` instead of redirecting.
+
+    ``require_path=True`` rejects anything that doesn't look like a path, and
+    both call sites need it. The stored ``url`` is producer-written, and the
+    Referer is a plain header: a browser only ever sends an absolute URL (which
+    always contains a ``/``), but a scripted request can send whatever it likes,
+    so without this an authenticated caller could 500 the endpoint at will.
+    """
+    if (
+        url
+        and (not require_path or '/' in url)
+        and url_has_allowed_host_and_scheme(
+            url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        )
+    ):
+        return url
+    return reverse('index')
+
+
+@login_required
+@require_http_methods(["POST"])
+def notifications_mark_all_read(request):
+    """Clear the navbar badge by stamping every unread row for this user."""
+    Notification.objects.unread_for(request.user).update(read_at=timezone.now())
+    return redirect(
+        _safe_internal_redirect(
+            request, request.META.get('HTTP_REFERER'), require_path=True,
+        )
+    )
+
+
+@login_required
+def notification_open(request, notification_id):
+    """Mark one notification read, then send the user where it points."""
+    notification = get_object_or_404(
+        Notification, pk=notification_id, recipient=request.user,
+    )
+    notification.mark_read()
+    return redirect(
+        _safe_internal_redirect(request, notification.url, require_path=True)
+    )

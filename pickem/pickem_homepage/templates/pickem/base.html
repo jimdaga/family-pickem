@@ -72,12 +72,24 @@
 
                 {% if user.is_authenticated %}
                 <!-- Mobile Toggle Button -->
-                <button id="mobile-menu-btn" class="lg:hidden p-2 text-gray-300 hover:bg-slate-700 rounded-lg transition-colors" type="button"
-                        aria-controls="navbarContent"
-                        aria-expanded="false"
-                        aria-label="Toggle navigation">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
+                <div class="lg:hidden flex items-center gap-1">
+                    <button id="mobile-notifications-btn" type="button"
+                            class="relative p-2 text-gray-300 hover:bg-slate-700 rounded-lg transition-colors"
+                            data-testid="notifications-bell-mobile"
+                            aria-label="Notifications">
+                        <i class="fas fa-bell text-xl"></i>
+                        {% if notification_unread_count %}
+                        <span data-testid="notifications-badge-mobile"
+                              class="absolute top-0.5 right-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-slate-800">{% if notification_unread_count > 9 %}9+{% else %}{{ notification_unread_count }}{% endif %}</span>
+                        {% endif %}
+                    </button>
+                    <button id="mobile-menu-btn" class="p-2 text-gray-300 hover:bg-slate-700 rounded-lg transition-colors" type="button"
+                            aria-controls="navbarContent"
+                            aria-expanded="false"
+                            aria-label="Toggle navigation">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
                 {% endif %}
 
                 <!-- Desktop Navigation -->
@@ -178,6 +190,57 @@
                             </a>
                         </div>
                         {% endif %}
+                        <!-- Notifications -->
+                        <div class="relative dropdown-container">
+                            <button class="dropdown-trigger flex items-center px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors"
+                                    data-testid="notifications-bell"
+                                    aria-label="Notifications" onclick="toggleDropdown(event, this)">
+                                <!-- 8x8 box so this trigger matches the height of the family
+                                     switcher (two stacked text lines) and the user menu (its
+                                     w-8 h-8 avatar); a bare icon renders ~13px shorter. -->
+                                <span class="relative flex h-8 w-8 items-center justify-center">
+                                    <i class="fas fa-bell text-lg text-white"></i>
+                                    {% if notification_unread_count %}
+                                    <!-- Bottom-right of the icon box, which leaves ~6px of the
+                                         button's px-3 padding to its right and ~2px of py-2 below
+                                         it: the badge clears the border without the button having
+                                         to grow. The ring is the navbar's own colour so the pill
+                                         separates cleanly where it grazes the glyph. -->
+                                    <span data-testid="notifications-badge"
+                                          class="absolute -bottom-1 -right-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-slate-800">{% if notification_unread_count > 9 %}9+{% else %}{{ notification_unread_count }}{% endif %}</span>
+                                    {% endif %}
+                                </span>
+                            </button>
+
+                            <div data-testid="notifications-panel"
+                                 class="nav-dropdown absolute right-0 mt-2 w-80 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle hidden z-50 py-2">
+                                <div class="flex items-center justify-between px-4 py-2">
+                                    <span class="font-bold text-text-dark dark:text-white">Notifications</span>
+                                    {% if notification_unread_count %}
+                                    <form method="post" action="{% url 'notifications_mark_all_read' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-xs font-semibold text-primary hover:underline">Mark all read</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                                <div class="border-t border-border-light dark:border-border-subtle"></div>
+                                <div class="max-h-96 overflow-y-auto">
+                                    {% for n in notification_items %}
+                                    <a href="{% url 'notification_open' n.id %}"
+                                       class="flex items-start gap-3 px-4 py-3 hover:bg-border-light dark:hover:bg-surface-hover transition-colors {% if not n.read_at %}border-l-2 border-primary bg-primary/5{% endif %}">
+                                        <i class="fas {{ n.icon }} mt-0.5 text-text-secondary-light dark:text-text-secondary" aria-hidden="true"></i>
+                                        <span class="min-w-0">
+                                            <span class="block text-sm font-semibold text-text-dark dark:text-white">{{ n.title }}</span>
+                                            {% if n.body %}<span class="block text-xs text-text-secondary-light dark:text-text-secondary">{{ n.body }}</span>{% endif %}
+                                            <span class="mt-0.5 block text-[11px] text-text-secondary-light dark:text-text-secondary">{{ n.created_at|timesince }} ago</span>
+                                        </span>
+                                    </a>
+                                    {% empty %}
+                                    <div class="px-4 py-6 text-center text-sm text-text-secondary-light dark:text-text-secondary">You're all caught up.</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
                         <!-- User Profile Dropdown -->
                         <div class="relative dropdown-container">
                             <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border {% if user.is_superuser %}border-yellow-400/60{% else %}border-slate-600{% endif %} hover:bg-slate-700 transition-colors"
@@ -193,9 +256,6 @@
                                     {% endif %}
                                     {% endwith %}
                                 </div>
-                                <span class="text-white font-medium">
-                                    {{ user|display_name }}
-                                </span>
                                 {% if user_current_rank %}
                                 <span data-testid="navbar-rank" class="inline-flex items-center gap-1 rounded-full bg-slate-700/80 px-2 py-0.5 text-xs font-bold text-yellow-400" title="Your current rank in this pool">
                                     <i class="fas fa-trophy text-[10px]" aria-hidden="true"></i>#{{ user_current_rank }}
@@ -241,6 +301,42 @@
             {% if user.is_authenticated %}
             <div id="mobile-menu" class="hidden lg:hidden absolute top-16 left-0 right-0 bg-slate-800 border-b border-slate-700 shadow-lg">
                 <div class="px-4 py-4 space-y-2">
+                    <!-- Mobile Notifications -->
+                    <div class="mobile-dropdown-container">
+                        <button class="w-full flex items-center justify-between px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors mobile-dropdown-trigger"
+                                data-testid="mobile-notifications-trigger"
+                                onclick="toggleMobileDropdown(this)">
+                            <span class="flex items-center">
+                                <i class="fas fa-bell mr-3"></i>Notifications
+                                {% if notification_unread_count %}
+                                <span class="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-4 text-white">{% if notification_unread_count > 9 %}9+{% else %}{{ notification_unread_count }}{% endif %}</span>
+                                {% endif %}
+                            </span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="mobile-dropdown-menu hidden pl-8 pr-4 py-2 space-y-1 max-h-[60vh] overflow-y-auto">
+                            {% if notification_unread_count %}
+                            <form method="post" action="{% url 'notifications_mark_all_read' %}" class="px-2 pb-1">
+                                {% csrf_token %}
+                                <button type="submit" class="text-xs font-semibold text-primary hover:underline">Mark all read</button>
+                            </form>
+                            {% endif %}
+                            {% for n in notification_items %}
+                            <a href="{% url 'notification_open' n.id %}"
+                               class="flex items-start gap-3 px-2 py-2 rounded-lg text-white hover:bg-slate-700 transition-colors {% if not n.read_at %}border-l-2 border-primary{% endif %}">
+                                <i class="fas {{ n.icon }} mt-0.5 text-slate-400" aria-hidden="true"></i>
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-semibold">{{ n.title }}</span>
+                                    {% if n.body %}<span class="block text-xs text-slate-400">{{ n.body }}</span>{% endif %}
+                                    <span class="mt-0.5 block text-[11px] text-slate-400">{{ n.created_at|timesince }} ago</span>
+                                </span>
+                            </a>
+                            {% empty %}
+                            <div class="px-2 py-3 text-sm text-slate-400">You're all caught up.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
                     <!-- Mobile Navigation Links -->
                     {% if current_family and current_pool %}
                     <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_home' current_family.slug current_pool.slug %}{% else %}{% url 'index' %}{% endif %}">
@@ -501,12 +597,36 @@
     document.addEventListener('DOMContentLoaded', function() {
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
         const mobileMenu = document.getElementById('mobile-menu');
+        const mobileNotificationsBtn = document.getElementById('mobile-notifications-btn');
+
+        // Which control opened the menu owns whether the notifications section
+        // is expanded: the bell means "show me notifications", the hamburger
+        // means "show me navigation". Without this the section just keeps
+        // whatever state the last bell tap left it in.
+        function mobileNotificationsSection() {
+            const trigger = document.querySelector('[data-testid="mobile-notifications-trigger"]');
+            const container = trigger ? trigger.closest('.mobile-dropdown-container') : null;
+            return {
+                trigger: trigger,
+                section: container ? container.querySelector('.mobile-dropdown-menu') : null,
+            };
+        }
+
+        function collapseMobileNotifications() {
+            const parts = mobileNotificationsSection();
+            // Go through toggleMobileDropdown rather than adding 'hidden'
+            // directly so the chevron rotation stays in sync.
+            if (parts.trigger && parts.section && !parts.section.classList.contains('hidden')) {
+                toggleMobileDropdown(parts.trigger);
+            }
+        }
 
         if (mobileMenuBtn && mobileMenu) {
             mobileMenuBtn.addEventListener('click', function() {
                 const isHidden = mobileMenu.classList.contains('hidden');
 
                 if (isHidden) {
+                    collapseMobileNotifications();
                     mobileMenu.classList.remove('hidden');
                     mobileMenuBtn.setAttribute('aria-expanded', 'true');
                 } else {
@@ -518,11 +638,44 @@
             // Close mobile menu when clicking outside
             document.addEventListener('click', function(event) {
                 const isClickInsideMenu = mobileMenu.contains(event.target);
-                const isClickOnButton = mobileMenuBtn.contains(event.target);
+                const isClickOnButton = mobileMenuBtn.contains(event.target)
+                    || (mobileNotificationsBtn && mobileNotificationsBtn.contains(event.target));
 
                 if (!isClickInsideMenu && !isClickOnButton && !mobileMenu.classList.contains('hidden')) {
                     mobileMenu.classList.add('hidden');
                     mobileMenuBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        // Mobile bell: open the menu and expand the notifications section in
+        // one tap; a second tap while both are already open closes the menu
+        // again. This is the only new JS in the notifications feature --
+        // everything else reuses toggleDropdown/toggleMobileDropdown.
+        if (mobileNotificationsBtn && mobileMenu) {
+            mobileNotificationsBtn.addEventListener('click', function() {
+                const parts = mobileNotificationsSection();
+                const trigger = parts.trigger;
+                const section = parts.section;
+                const alreadyOpen = !mobileMenu.classList.contains('hidden')
+                    && section && !section.classList.contains('hidden');
+
+                if (alreadyOpen) {
+                    mobileMenu.classList.add('hidden');
+                    if (mobileMenuBtn) {
+                        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+                    }
+                    return;
+                }
+
+                mobileMenu.classList.remove('hidden');
+                if (mobileMenuBtn) {
+                    mobileMenuBtn.setAttribute('aria-expanded', 'true');
+                }
+
+                if (!trigger) { return; }
+                if (section && section.classList.contains('hidden')) {
+                    toggleMobileDropdown(trigger);
                 }
             });
         }
