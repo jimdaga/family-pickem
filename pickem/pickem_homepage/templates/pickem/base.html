@@ -597,6 +597,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
         const mobileMenu = document.getElementById('mobile-menu');
+        const mobileNotificationsBtn = document.getElementById('mobile-notifications-btn');
 
         if (mobileMenuBtn && mobileMenu) {
             mobileMenuBtn.addEventListener('click', function() {
@@ -625,20 +626,32 @@
         }
 
         // Mobile bell: open the menu and expand the notifications section in
-        // one tap. This is the only new JS in the notifications feature --
+        // one tap; a second tap while both are already open closes the menu
+        // again. This is the only new JS in the notifications feature --
         // everything else reuses toggleDropdown/toggleMobileDropdown.
-        const mobileNotificationsBtn = document.getElementById('mobile-notifications-btn');
         if (mobileNotificationsBtn && mobileMenu) {
             mobileNotificationsBtn.addEventListener('click', function() {
+                const trigger = document.querySelector('[data-testid="mobile-notifications-trigger"]');
+                const section = trigger
+                    ? trigger.closest('.mobile-dropdown-container').querySelector('.mobile-dropdown-menu')
+                    : null;
+                const alreadyOpen = !mobileMenu.classList.contains('hidden')
+                    && section && !section.classList.contains('hidden');
+
+                if (alreadyOpen) {
+                    mobileMenu.classList.add('hidden');
+                    if (mobileMenuBtn) {
+                        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+                    }
+                    return;
+                }
+
                 mobileMenu.classList.remove('hidden');
                 if (mobileMenuBtn) {
                     mobileMenuBtn.setAttribute('aria-expanded', 'true');
                 }
 
-                const trigger = document.querySelector('[data-testid="mobile-notifications-trigger"]');
                 if (!trigger) { return; }
-                const section = trigger.closest('.mobile-dropdown-container')
-                    .querySelector('.mobile-dropdown-menu');
                 if (section && section.classList.contains('hidden')) {
                     toggleMobileDropdown(trigger);
                 }
