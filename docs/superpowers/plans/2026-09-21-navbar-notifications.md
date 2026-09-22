@@ -129,8 +129,6 @@ class NotificationModelTests(TestCase):
         self.assertEqual(notification.read_at, first)
 ```
 
-Note: `timezone.timedelta` is available because Django re-exports `timedelta` on `django.utils.timezone`. If the installed Django version has dropped that re-export, import `timedelta` from `datetime` at the top of the file instead.
-
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
@@ -625,7 +623,13 @@ Append to `pickem/pickem_homepage/tests.py`:
 
 ```python
 class NotificationNavbarTests(TestCase):
-    """The bell, its badge, and the trimmed user dropdown."""
+    """The bell, its badge, and the trimmed user dropdown.
+
+    These render against ``profile`` rather than ``index``: ``index`` always
+    redirects an authenticated user (to onboarding, their pool lobby, or the
+    family picker), so it never returns navbar HTML to assert against.
+    ``profile`` extends base.html and needs no family membership.
+    """
 
     def setUp(self):
         self.user = User.objects.create_user(
@@ -634,7 +638,7 @@ class NotificationNavbarTests(TestCase):
         self.client.force_login(self.user)
 
     def test_bell_renders_for_authenticated_user(self):
-        response = self.client.get(reverse("index"))
+        response = self.client.get(reverse("profile"))
         self.assertContains(response, 'data-testid="notifications-bell"')
         self.assertContains(response, 'data-testid="notifications-panel"')
 
@@ -642,39 +646,39 @@ class NotificationNavbarTests(TestCase):
         Notification.objects.create(
             recipient=self.user, title="read one", read_at=timezone.now(),
         )
-        response = self.client.get(reverse("index"))
+        response = self.client.get(reverse("profile"))
         self.assertNotContains(response, 'data-testid="notifications-badge"')
 
     def test_badge_shows_unread_count(self):
         for index in range(3):
             Notification.objects.create(recipient=self.user, title=f"n{index}")
-        response = self.client.get(reverse("index"))
+        response = self.client.get(reverse("profile"))
         self.assertContains(response, 'data-testid="notifications-badge"')
         self.assertContains(response, ">3<")
 
     def test_badge_caps_at_nine_plus(self):
         for index in range(12):
             Notification.objects.create(recipient=self.user, title=f"n{index}")
-        response = self.client.get(reverse("index"))
+        response = self.client.get(reverse("profile"))
         self.assertContains(response, "9+")
 
     def test_panel_lists_notification_titles(self):
         Notification.objects.create(
             recipient=self.user, title="You won week 3", body="Nice picks",
         )
-        response = self.client.get(reverse("index"))
+        response = self.client.get(reverse("profile"))
         self.assertContains(response, "You won week 3")
         self.assertContains(response, "Nice picks")
 
     def test_panel_shows_empty_state(self):
-        response = self.client.get(reverse("index"))
+        response = self.client.get(reverse("profile"))
         self.assertContains(response, "You&#x27;re all caught up.")
 
     def test_user_dropdown_trigger_no_longer_shows_display_name(self):
         # The name moved into the dropdown body to make room for the bell. It
         # must still appear once (in the dropdown header), just not in the
         # trigger button.
-        response = self.client.get(reverse("index"))
+        response = self.client.get(reverse("profile"))
         html = response.content.decode()
         trigger_start = html.index('aria-label="User menu"')
         trigger_end = html.index("nav-dropdown", trigger_start)
@@ -797,6 +801,9 @@ Append to `pickem/pickem_homepage/tests.py`:
 
 ```python
 class NotificationMobileNavTests(TestCase):
+    """Mobile bell + in-menu section. Renders against ``profile`` for the same
+    reason as NotificationNavbarTests -- ``index`` always redirects."""
+
     def setUp(self):
         self.user = User.objects.create_user(
             username="notify-mobile", email="notify-mobile@example.com", password="pw",
@@ -804,18 +811,18 @@ class NotificationMobileNavTests(TestCase):
         self.client.force_login(self.user)
 
     def test_mobile_bell_and_section_render(self):
-        response = self.client.get(reverse("index"))
+        response = self.client.get(reverse("profile"))
         self.assertContains(response, 'data-testid="notifications-bell-mobile"')
         self.assertContains(response, 'data-testid="mobile-notifications-trigger"')
 
     def test_mobile_section_lists_notifications(self):
         Notification.objects.create(recipient=self.user, title="Mobile visible item")
-        response = self.client.get(reverse("index"))
+        response = self.client.get(reverse("profile"))
         # Once in the desktop panel, once in the mobile section.
         self.assertContains(response, "Mobile visible item", count=2)
 
     def test_mobile_badge_hidden_when_nothing_unread(self):
-        response = self.client.get(reverse("index"))
+        response = self.client.get(reverse("profile"))
         self.assertNotContains(response, 'data-testid="notifications-badge-mobile"')
 ```
 
