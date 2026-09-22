@@ -1054,3 +1054,104 @@ class JobRun(models.Model):
 
     def __str__(self):
         return f'{self.job_id} {self.status} @ {self.started_at:%Y-%m-%d %H:%M:%S}'
+
+
+class NotificationQuerySet(models.QuerySet):
+    """Query helpers for the navbar notifications panel."""
+
+    def unread_for(self, user):
+        return self.filter(recipient=user, read_at__isnull=True)
+
+    def recent_for(self, user, limit=10):
+        # select_related('pool') because the panel may label a notification
+        # with its pool; the FK is nullable so this stays a LEFT JOIN.
+        return self.filter(recipient=user).select_related('pool')[:limit]
+
+
+class Notification(models.Model):
+    """An in-app notification shown in the navbar bell.
+
+    Nothing creates these yet -- this is the scaffold. Producers set ``url`` to
+    an already-resolved path rather than a route name, because almost every
+    member-facing route needs (family_slug, pool_slug) and the producer is the
+    only party that reliably holds that tenant context. Keeping the path
+    pre-resolved also means the navbar never risks a NoReverseMatch mid-render.
+    """
+
+    class Kind(models.TextChoices):
+        PICKS_OPEN = 'picks_open', 'Picks open'
+        PICKS_MISSED = 'picks_missed', 'Missed picks'
+        WEEK_WINNER = 'week_winner', 'Week winner'
+        SEASON_WINNER = 'season_winner', 'Season winner'
+        MESSAGE_REPLY = 'message_reply', 'Message reply'
+        FAMILY_INVITE = 'family_invite', 'Family invite'
+        ANNOUNCEMENT = 'announcement', 'Announcement'
+
+    #: Font Awesome class per kind, so the template renders {{ n.icon }}
+    #: instead of carrying an {% if %} ladder that has to grow with the enum.
+    KIND_ICONS = {
+        Kind.PICKS_OPEN: 'fa-clipboard-list',
+        Kind.PICKS_MISSED: 'fa-triangle-exclamation',
+        Kind.WEEK_WINNER: 'fa-trophy',
+        Kind.SEASON_WINNER: 'fa-crown',
+        Kind.MESSAGE_REPLY: 'fa-comment-dots',
+        Kind.FAMILY_INVITE: 'fa-ticket',
+        Kind.ANNOUNCEMENT: 'fa-bullhorn',
+    }
+    DEFAULT_ICON = 'fa-bell'
+
+    recipient = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='notifications',
+    )
+    kind = models.CharField(
+        max_length=32, choices=Kind.choices, default=Kind.ANNOUNCEMENT,
+    )
+    title = models.CharField(max_length=200, help_text="The bold line in the panel")
+    body = models.CharField(
+        max_length=500, blank=True, default='', help_text="Optional supporting line",
+    )
+    url = models.CharField(
+        max_length=500, blank=True, default='',
+        help_text="Already-resolved path this notification links to",
+    )
+
+    # Nullable: account-level notifications (invites, announcements) belong to
+    # no pool. SET_NULL so deleting a pool never deletes someone's history.
+    family = models.ForeignKey(
+        Family, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='notifications',
+    )
+    pool = models.ForeignKey(
+        Pool, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='notifications',
+    )
+
+    # A nullable timestamp rather than an is_read boolean: it answers both
+    # "is it read" and "when was it read" at no extra cost.
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = NotificationQuerySet.as_manager()
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            # Covers both the badge count and the recent-items list.
+            models.Index(
+                fields=['recipient', 'read_at', '-created_at'],
+                name='notification_recipient_idx',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.recipient.username}: {self.title}"
+
+    @property
+    def icon(self):
+        return self.KIND_ICONS.get(self.kind, self.DEFAULT_ICON)
+
+    def mark_read(self, when=None):
+        """Stamp ``read_at`` if still unread. A no-op once read."""
+        if self.read_at is None:
+            self.read_at = when or timezone.now()
+            self.save(update_fields=['read_at'])
