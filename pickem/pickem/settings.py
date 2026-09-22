@@ -162,6 +162,7 @@ TEMPLATES = [
                 'pickem.context_processors.family_switcher_context',
                 'pickem.context_processors.site_banner_context',
                 'pickem.context_processors.footer_stats_context',
+                'pickem.context_processors.notifications_context',
                 'pickem_superadmin.context_processors.chrome',
             ],
         },

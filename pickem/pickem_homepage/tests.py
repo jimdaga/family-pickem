@@ -42,6 +42,7 @@ from pickem_api.models import (
     GamePicks,
     GamesAndScores,
     GameWeeks,
+    Notification,
     Pool,
     PoolMemberPayment,
     PoolSettings,
@@ -12278,3 +12279,67 @@ class BuildUserProfileMapTests(TestCase):
         from pickem_homepage.views import build_user_profile_map
         with self.assertNumQueries(0):
             self.assertEqual(build_user_profile_map([]), {})
+
+
+class NotificationsContextProcessorTests(TestCase):
+    """The navbar bell's data must be present on every authenticated render."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = User.objects.create_user(
+            username="notify-ana", email="notify-ana@example.com", password="pw",
+        )
+        self.other = User.objects.create_user(
+            username="notify-bo", email="notify-bo@example.com", password="pw",
+        )
+
+    def _context(self, user):
+        from pickem.context_processors import notifications_context
+
+        request = self.factory.get("/")
+        request.user = user
+        return notifications_context(request)
+
+    def test_anonymous_gets_empty_defaults(self):
+        context = self._context(AnonymousUser())
+        self.assertEqual(context["notification_unread_count"], 0)
+        self.assertEqual(context["notification_items"], [])
+
+    def test_counts_only_unread_for_this_user(self):
+        Notification.objects.create(recipient=self.user, title="unread one")
+        Notification.objects.create(recipient=self.user, title="unread two")
+        Notification.objects.create(
+            recipient=self.user, title="already read", read_at=timezone.now(),
+        )
+        Notification.objects.create(recipient=self.other, title="someone else's")
+
+        context = self._context(self.user)
+
+        self.assertEqual(context["notification_unread_count"], 2)
+        titles = [n.title for n in context["notification_items"]]
+        self.assertNotIn("someone else's", titles)
+        # Read rows still appear in the list -- they just render un-highlighted.
+        self.assertIn("already read", titles)
+
+    def test_items_are_capped_at_ten(self):
+        for index in range(12):
+            Notification.objects.create(recipient=self.user, title=f"n{index}")
+        context = self._context(self.user)
+        self.assertEqual(len(context["notification_items"]), 10)
+
+    def test_database_error_degrades_to_defaults(self):
+        # A context processor that raises breaks every page on the site, so it
+        # must swallow and degrade rather than propagate.
+        with patch(
+            "pickem.context_processors.Notification.objects.unread_for",
+            side_effect=OperationalError("boom"),
+        ):
+            context = self._context(self.user)
+        self.assertEqual(context["notification_unread_count"], 0)
+        self.assertEqual(context["notification_items"], [])
+
+    def test_processor_is_registered_in_settings(self):
+        self.assertIn(
+            "pickem.context_processors.notifications_context",
+            settings.TEMPLATES[0]["OPTIONS"]["context_processors"],
+        )

@@ -19,7 +19,7 @@ from pickem_api.authz import (
     get_user_family_memberships,
     require_tenant_context,
 )
-from pickem_api.models import UserProfile, GameWeeks, GamesAndScores, GamePicks, userSeasonPoints
+from pickem_api.models import UserProfile, GameWeeks, GamesAndScores, GamePicks, userSeasonPoints, Notification
 from pickem_api.models import Pool
 from pickem_homepage.models import SiteBanner
 from pickem.utils import get_season
@@ -380,3 +380,24 @@ def footer_stats_context(request):
         pass
 
     return context 
+
+
+def notifications_context(request):
+    """Inject the navbar bell's unread count and recent notifications.
+
+    Costs two queries per authenticated render (one count, one list). Wrapped
+    defensively for the same reason as theme_context: a context processor that
+    raises takes down every page, so a DB hiccup must degrade to an empty bell.
+    """
+    empty = {'notification_unread_count': 0, 'notification_items': []}
+
+    if not request.user.is_authenticated:
+        return empty
+
+    try:
+        return {
+            'notification_unread_count': Notification.objects.unread_for(request.user).count(),
+            'notification_items': list(Notification.objects.recent_for(request.user)),
+        }
+    except Exception:
+        return empty
