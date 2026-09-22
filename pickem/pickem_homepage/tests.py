@@ -12418,6 +12418,31 @@ class NotificationViewTests(TestCase):
         )
         self.assertEqual(response["Location"], reverse("index"))
 
+    def test_open_bare_slug_url_redirects_to_index_instead_of_500ing(self):
+        # A producer that stores a bare slug (no "/" or ".") makes
+        # redirect()/resolve_url() treat it as a URL *name* and call
+        # reverse("foo"), which 500s with NoReverseMatch instead of
+        # redirecting. The stored-url call site must reject this rather than
+        # letting it reach redirect().
+        notification = Notification.objects.create(
+            recipient=self.user, title="bad producer data", url="foo",
+        )
+        response = self.client.get(
+            reverse("notification_open", args=[notification.id])
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("index"))
+
+    def test_mark_all_read_still_honors_absolute_same_host_referer(self):
+        # notifications_mark_all_read must NOT require a leading "/" --
+        # HTTP_REFERER legitimately arrives as an absolute same-host URL in
+        # production (e.g. "https://host/standings/").
+        response = self.client.post(
+            reverse("notifications_mark_all_read"),
+            HTTP_REFERER="http://testserver/standings/",
+        )
+        self.assertEqual(response["Location"], "http://testserver/standings/")
+
     def test_open_404s_on_another_users_notification(self):
         notification = Notification.objects.create(
             recipient=self.other, title="not yours", url="/standings/",

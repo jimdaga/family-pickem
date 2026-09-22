@@ -6299,17 +6299,30 @@ def get_user_picks(request):
     return legacy_commissioner_json_denial(request)
 
 
-def _safe_internal_redirect(request, url):
+def _safe_internal_redirect(request, url, require_path=False):
     """Return ``url`` when it points back at this site, else the lobby.
 
     Both notification views redirect to a caller-influenced URL -- a Referer
     header in one case, a stored producer-written path in the other -- so both
     must be validated or they become open redirects.
+
+    ``url_has_allowed_host_and_scheme`` alone isn't enough for a stored,
+    producer-written value: a bare slug like ``"foo"`` has no netloc or
+    scheme, so it passes that check, but Django's ``redirect()``/``resolve_url``
+    then treats a string with no ``/`` or ``.`` in it as a URL *name* and calls
+    ``reverse("foo")`` -- which 500s with ``NoReverseMatch`` instead of
+    redirecting. Pass ``require_path=True`` at a call site whose ``url`` comes
+    from stored/producer data (not a same-host absolute URL, which always
+    contains a ``/`` anyway) to reject anything that doesn't look like a path.
     """
-    if url and url_has_allowed_host_and_scheme(
-        url,
-        allowed_hosts={request.get_host()},
-        require_https=request.is_secure(),
+    if (
+        url
+        and (not require_path or '/' in url)
+        and url_has_allowed_host_and_scheme(
+            url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        )
     ):
         return url
     return reverse('index')
@@ -6330,4 +6343,6 @@ def notification_open(request, notification_id):
         Notification, pk=notification_id, recipient=request.user,
     )
     notification.mark_read()
-    return redirect(_safe_internal_redirect(request, notification.url))
+    return redirect(
+        _safe_internal_redirect(request, notification.url, require_path=True)
+    )
