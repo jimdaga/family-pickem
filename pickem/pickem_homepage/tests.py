@@ -12427,3 +12427,72 @@ class NotificationViewTests(TestCase):
         )
         # 404 rather than 403: the endpoint must not confirm the row exists.
         self.assertEqual(response.status_code, 404)
+
+
+class NotificationNavbarTests(TestCase):
+    """The bell, its badge, and the trimmed user dropdown.
+
+    These render against ``profile`` rather than ``index``: ``index`` always
+    redirects an authenticated user (to onboarding, their pool lobby, or the
+    family picker), so it never returns navbar HTML to assert against.
+    ``profile`` extends base.html and needs no family membership.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="notify-nav", email="notify-nav@example.com", password="pw",
+        )
+        self.client.force_login(self.user)
+
+    def test_bell_renders_for_authenticated_user(self):
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, 'data-testid="notifications-bell"')
+        self.assertContains(response, 'data-testid="notifications-panel"')
+
+    def test_no_badge_when_nothing_unread(self):
+        Notification.objects.create(
+            recipient=self.user, title="read one", read_at=timezone.now(),
+        )
+        response = self.client.get(reverse("profile"))
+        self.assertNotContains(response, 'data-testid="notifications-badge"')
+
+    def test_badge_shows_unread_count(self):
+        for index in range(3):
+            Notification.objects.create(recipient=self.user, title=f"n{index}")
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, 'data-testid="notifications-badge"')
+        self.assertContains(response, ">3<")
+
+    def test_badge_caps_at_nine_plus(self):
+        for index in range(12):
+            Notification.objects.create(recipient=self.user, title=f"n{index}")
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, "9+")
+
+    def test_panel_lists_notification_titles(self):
+        Notification.objects.create(
+            recipient=self.user, title="You won week 3", body="Nice picks",
+        )
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, "You won week 3")
+        self.assertContains(response, "Nice picks")
+
+    def test_panel_shows_empty_state(self):
+        # The empty-state copy is literal template text, not a template
+        # variable, so Django's autoescaping (which only applies to {{ }}
+        # output) never touches it -- the rendered HTML carries a raw
+        # apostrophe, not the &#x27; entity.
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, "You're all caught up.")
+
+    def test_user_dropdown_trigger_no_longer_shows_display_name(self):
+        # The name moved into the dropdown body to make room for the bell. It
+        # must still appear once (in the dropdown header), just not in the
+        # trigger button.
+        response = self.client.get(reverse("profile"))
+        html = response.content.decode()
+        trigger_start = html.index('aria-label="User menu"')
+        trigger_end = html.index("nav-dropdown", trigger_start)
+        trigger_markup = html[trigger_start:trigger_end]
+        self.assertNotIn("notify-nav", trigger_markup)
+        self.assertIn("notify-nav", html[trigger_end:])

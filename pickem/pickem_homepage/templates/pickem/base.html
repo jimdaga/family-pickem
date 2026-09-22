@@ -178,6 +178,47 @@
                             </a>
                         </div>
                         {% endif %}
+                        <!-- Notifications -->
+                        <div class="relative dropdown-container">
+                            <button class="dropdown-trigger relative flex items-center px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors"
+                                    data-testid="notifications-bell"
+                                    aria-label="Notifications" onclick="toggleDropdown(event, this)">
+                                <i class="fas fa-bell text-white"></i>
+                                {% if notification_unread_count %}
+                                <span data-testid="notifications-badge"
+                                      class="absolute -top-1 -right-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-4 text-white">{% if notification_unread_count > 9 %}9+{% else %}{{ notification_unread_count }}{% endif %}</span>
+                                {% endif %}
+                            </button>
+
+                            <div data-testid="notifications-panel"
+                                 class="nav-dropdown absolute right-0 mt-2 w-80 bg-surface-light dark:bg-surface rounded-xl shadow-card border border-border-light dark:border-border-subtle hidden z-50 py-2">
+                                <div class="flex items-center justify-between px-4 py-2">
+                                    <span class="font-bold text-text-dark dark:text-white">Notifications</span>
+                                    {% if notification_unread_count %}
+                                    <form method="post" action="{% url 'notifications_mark_all_read' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-xs font-semibold text-primary hover:underline">Mark all read</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                                <div class="border-t border-border-light dark:border-border-subtle"></div>
+                                <div class="max-h-96 overflow-y-auto">
+                                    {% for n in notification_items %}
+                                    <a href="{% url 'notification_open' n.id %}"
+                                       class="flex items-start gap-3 px-4 py-3 hover:bg-border-light dark:hover:bg-surface-hover transition-colors {% if not n.read_at %}border-l-2 border-primary bg-primary/5{% endif %}">
+                                        <i class="fas {{ n.icon }} mt-0.5 text-text-secondary-light dark:text-text-secondary" aria-hidden="true"></i>
+                                        <span class="min-w-0">
+                                            <span class="block text-sm font-semibold text-text-dark dark:text-white">{{ n.title }}</span>
+                                            {% if n.body %}<span class="block text-xs text-text-secondary-light dark:text-text-secondary">{{ n.body }}</span>{% endif %}
+                                            <span class="mt-0.5 block text-[11px] text-text-secondary-light dark:text-text-secondary">{{ n.created_at|timesince }} ago</span>
+                                        </span>
+                                    </a>
+                                    {% empty %}
+                                    <div class="px-4 py-6 text-center text-sm text-text-secondary-light dark:text-text-secondary">You're all caught up.</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
                         <!-- User Profile Dropdown -->
                         <div class="relative dropdown-container">
                             <button class="dropdown-trigger flex items-center space-x-2 px-3 py-2 rounded-xl border {% if user.is_superuser %}border-yellow-400/60{% else %}border-slate-600{% endif %} hover:bg-slate-700 transition-colors"
@@ -193,9 +234,6 @@
                                     {% endif %}
                                     {% endwith %}
                                 </div>
-                                <span class="text-white font-medium">
-                                    {{ user|display_name }}
-                                </span>
                                 {% if user_current_rank %}
                                 <span data-testid="navbar-rank" class="inline-flex items-center gap-1 rounded-full bg-slate-700/80 px-2 py-0.5 text-xs font-bold text-yellow-400" title="Your current rank in this pool">
                                     <i class="fas fa-trophy text-[10px]" aria-hidden="true"></i>#{{ user_current_rank }}
