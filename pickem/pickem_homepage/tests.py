@@ -12501,3 +12501,29 @@ class NotificationNavbarTests(TestCase):
         trigger_markup = html[trigger_start:trigger_end]
         self.assertNotIn("Notify-nav", trigger_markup)
         self.assertIn("Notify-nav", html[trigger_end:])
+
+
+class NotificationMobileNavTests(TestCase):
+    """Mobile bell + in-menu section. Renders against ``profile`` for the same
+    reason as NotificationNavbarTests -- ``index`` always redirects."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="notify-mobile", email="notify-mobile@example.com", password="pw",
+        )
+        self.client.force_login(self.user)
+
+    def test_mobile_bell_and_section_render(self):
+        response = self.client.get(reverse("profile"))
+        self.assertContains(response, 'data-testid="notifications-bell-mobile"')
+        self.assertContains(response, 'data-testid="mobile-notifications-trigger"')
+
+    def test_mobile_section_lists_notifications(self):
+        Notification.objects.create(recipient=self.user, title="Mobile visible item")
+        response = self.client.get(reverse("profile"))
+        # Once in the desktop panel, once in the mobile section.
+        self.assertContains(response, "Mobile visible item", count=2)
+
+    def test_mobile_badge_hidden_when_nothing_unread(self):
+        response = self.client.get(reverse("profile"))
+        self.assertNotContains(response, 'data-testid="notifications-badge-mobile"')

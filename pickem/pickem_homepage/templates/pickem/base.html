@@ -72,12 +72,24 @@
 
                 {% if user.is_authenticated %}
                 <!-- Mobile Toggle Button -->
-                <button id="mobile-menu-btn" class="lg:hidden p-2 text-gray-300 hover:bg-slate-700 rounded-lg transition-colors" type="button"
-                        aria-controls="navbarContent"
-                        aria-expanded="false"
-                        aria-label="Toggle navigation">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
+                <div class="lg:hidden flex items-center gap-1">
+                    <button id="mobile-notifications-btn" type="button"
+                            class="relative p-2 text-gray-300 hover:bg-slate-700 rounded-lg transition-colors"
+                            data-testid="notifications-bell-mobile"
+                            aria-label="Notifications">
+                        <i class="fas fa-bell text-xl"></i>
+                        {% if notification_unread_count %}
+                        <span data-testid="notifications-badge-mobile"
+                              class="absolute top-0 right-0 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-4 text-white">{% if notification_unread_count > 9 %}9+{% else %}{{ notification_unread_count }}{% endif %}</span>
+                        {% endif %}
+                    </button>
+                    <button id="mobile-menu-btn" class="p-2 text-gray-300 hover:bg-slate-700 rounded-lg transition-colors" type="button"
+                            aria-controls="navbarContent"
+                            aria-expanded="false"
+                            aria-label="Toggle navigation">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
                 {% endif %}
 
                 <!-- Desktop Navigation -->
@@ -279,6 +291,42 @@
             {% if user.is_authenticated %}
             <div id="mobile-menu" class="hidden lg:hidden absolute top-16 left-0 right-0 bg-slate-800 border-b border-slate-700 shadow-lg">
                 <div class="px-4 py-4 space-y-2">
+                    <!-- Mobile Notifications -->
+                    <div class="mobile-dropdown-container">
+                        <button class="w-full flex items-center justify-between px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors mobile-dropdown-trigger"
+                                data-testid="mobile-notifications-trigger"
+                                onclick="toggleMobileDropdown(this)">
+                            <span class="flex items-center">
+                                <i class="fas fa-bell mr-3"></i>Notifications
+                                {% if notification_unread_count %}
+                                <span class="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-4 text-white">{% if notification_unread_count > 9 %}9+{% else %}{{ notification_unread_count }}{% endif %}</span>
+                                {% endif %}
+                            </span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="mobile-dropdown-menu hidden pl-8 pr-4 py-2 space-y-1">
+                            {% if notification_unread_count %}
+                            <form method="post" action="{% url 'notifications_mark_all_read' %}" class="px-2 pb-1">
+                                {% csrf_token %}
+                                <button type="submit" class="text-xs font-semibold text-primary hover:underline">Mark all read</button>
+                            </form>
+                            {% endif %}
+                            {% for n in notification_items %}
+                            <a href="{% url 'notification_open' n.id %}"
+                               class="flex items-start gap-3 px-2 py-2 rounded-lg text-white hover:bg-slate-700 transition-colors {% if not n.read_at %}border-l-2 border-primary{% endif %}">
+                                <i class="fas {{ n.icon }} mt-0.5 text-slate-400" aria-hidden="true"></i>
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-semibold">{{ n.title }}</span>
+                                    {% if n.body %}<span class="block text-xs text-slate-400">{{ n.body }}</span>{% endif %}
+                                    <span class="mt-0.5 block text-[11px] text-slate-400">{{ n.created_at|timesince }} ago</span>
+                                </span>
+                            </a>
+                            {% empty %}
+                            <div class="px-2 py-3 text-sm text-slate-400">You're all caught up.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
                     <!-- Mobile Navigation Links -->
                     {% if current_family and current_pool %}
                     <a class="block px-4 py-3 text-white hover:bg-slate-700 rounded-lg transition-colors" href="{% if current_family and current_pool %}{% url 'family_pool_home' current_family.slug current_pool.slug %}{% else %}{% url 'index' %}{% endif %}">
@@ -561,6 +609,27 @@
                 if (!isClickInsideMenu && !isClickOnButton && !mobileMenu.classList.contains('hidden')) {
                     mobileMenu.classList.add('hidden');
                     mobileMenuBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        // Mobile bell: open the menu and expand the notifications section in
+        // one tap. This is the only new JS in the notifications feature --
+        // everything else reuses toggleDropdown/toggleMobileDropdown.
+        const mobileNotificationsBtn = document.getElementById('mobile-notifications-btn');
+        if (mobileNotificationsBtn && mobileMenu) {
+            mobileNotificationsBtn.addEventListener('click', function() {
+                mobileMenu.classList.remove('hidden');
+                if (mobileMenuBtn) {
+                    mobileMenuBtn.setAttribute('aria-expanded', 'true');
+                }
+
+                const trigger = document.querySelector('[data-testid="mobile-notifications-trigger"]');
+                if (!trigger) { return; }
+                const section = trigger.closest('.mobile-dropdown-container')
+                    .querySelector('.mobile-dropdown-menu');
+                if (section && section.classList.contains('hidden')) {
+                    toggleMobileDropdown(trigger);
                 }
             });
         }
