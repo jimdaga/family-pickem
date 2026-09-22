@@ -82,7 +82,8 @@ class WeekWinnerDigestTests(TestCase):
         self.assertIn("Jones Family", body)
         self.assertIn("you", body)
         self.assertIn("Bo", body)
-        self.assertEqual(notes.first().title, "You won Week 5!")
+        # Won one of two, so the title names which -- see WeekWinnerTitleTests.
+        self.assertEqual(notes.first().title, "You won Week 5 in Smith Family")
 
     def test_digest_links_to_a_pool_the_user_won(self):
         self._row(self.ana, self.jones_pool, 9)
@@ -285,4 +286,86 @@ class WeekWinnerCommandWiringTests(TestCase):
         self.assertTrue(
             userSeasonPoints.objects.get(pool=self.pool, userID=str(self.ana.id))
             .week_1_winner
+        )
+
+
+class WeekWinnerTitleTests(TestCase):
+    """The title has to distinguish winning one pool from sweeping them all.
+
+    The body always carries the per-pool truth, but the title is what a reader
+    sees at a glance in the bell without opening anything.
+    """
+
+    def setUp(self):
+        self.season = 2526
+        self.week = 5
+        self.ana = User.objects.create_user(username="ana", email="ana@example.com")
+        self.rival = User.objects.create_user(username="rival", email="r@example.com")
+
+    def _pools(self, count):
+        pools = []
+        for i in range(count):
+            family = Family.objects.create(name=f"Family {i}", slug=f"fam-{i}")
+            pools.append(Pool.objects.create(
+                family=family, name=f"Pool {i}", slug=f"pool-{i}",
+                season=self.season, status=Pool.Status.ACTIVE,
+            ))
+        return pools
+
+    def _seed(self, pools, ana_wins):
+        for pool, ana_won in zip(pools, ana_wins):
+            for user, points, won in (
+                (self.ana, 14, ana_won), (self.rival, 9, not ana_won),
+            ):
+                userSeasonPoints.objects.create(
+                    pool=pool, userEmail=user.email, userID=str(user.id),
+                    gameseason=self.season, gameyear="2025",
+                    **{
+                        f"week_{self.week}_points": points,
+                        f"week_{self.week}_winner": won,
+                    },
+                )
+
+    def _title_for(self, ana_wins):
+        pools = self._pools(len(ana_wins))
+        self._seed(pools, ana_wins)
+        publish_week_winner_digest(self.season, self.week, pools)
+        return Notification.objects.get(recipient=self.ana).title
+
+    def test_single_pool_win_stays_simple(self):
+        self.assertEqual(self._title_for([True]), "You won Week 5!")
+
+    def test_winning_one_of_several_names_the_pool(self):
+        self.assertEqual(
+            self._title_for([True, False, False]), "You won Week 5 in Family 0",
+        )
+
+    def test_winning_some_of_several_gives_the_ratio(self):
+        self.assertEqual(
+            self._title_for([True, True, False]), "You won Week 5 in 2 of 3 pools",
+        )
+
+    def test_sweeping_every_pool_is_called_out(self):
+        self.assertEqual(
+            self._title_for([True, True, True]), "You swept Week 5 — all 3 pools!",
+        )
+
+    def test_winning_nothing_is_neutral(self):
+        self.assertEqual(self._title_for([False, False, False]), "Week 5 winners")
+
+    def test_title_never_exceeds_the_field_limit(self):
+        # A long family name in the "won one of several" branch is the only
+        # variant that interpolates unbounded text into the title.
+        family = Family.objects.create(name="F" * 400, slug="long")
+        long_pool = Pool.objects.create(
+            family=family, name="Pool", slug="long-pool",
+            season=self.season, status=Pool.Status.ACTIVE,
+        )
+        others = self._pools(2)
+        self._seed([long_pool] + others, [True, False, False])
+
+        publish_week_winner_digest(self.season, self.week, [long_pool] + others)
+
+        self.assertLessEqual(
+            len(Notification.objects.get(recipient=self.ana).title), 200,
         )

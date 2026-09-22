@@ -50,6 +50,25 @@ def _winner_label(winner_ids, viewer_id, names):
     return " & ".join(names.get(w, "a player") for w in winner_ids)
 
 
+def _digest_title(week, won_pools, total_pools):
+    """The one line that has to work at a glance in the bell.
+
+    The body always carries the per-pool truth, but the title is what a reader
+    sees without opening anything -- so it has to distinguish "you won one of
+    your three pools" from "you swept all three", which are very different
+    pieces of news wearing the same words otherwise.
+    """
+    if not won_pools:
+        return f"Week {week} winners"
+    if total_pools == 1:
+        return f"You won Week {week}!"
+    if len(won_pools) == total_pools:
+        return f"You swept Week {week} — all {total_pools} pools!"
+    if len(won_pools) == 1:
+        return f"You won Week {week} in {won_pools[0]}"
+    return f"You won Week {week} in {len(won_pools)} of {total_pools} pools"
+
+
 def publish_week_winner_digest(season, week, pools):
     """Notify every participant of a completed week's winners, once.
 
@@ -118,7 +137,9 @@ def publish_week_winner_digest(season, week, pools):
             continue
 
         entries.sort(key=lambda e: (e['pool'].family.name or '', e['pool'].name or ''))
-        won_somewhere = any(user_id in e['winner_ids'] for e in entries)
+        won_pools = [
+            e['pool'].family.name for e in entries if user_id in e['winner_ids']
+        ]
 
         segments = [
             f"{e['pool'].family.name} — {_winner_label(e['winner_ids'], user_id, names)}"
@@ -141,10 +162,7 @@ def publish_week_winner_digest(season, week, pools):
                 defaults={
                     'recipient': user,
                     'kind': Notification.Kind.WEEK_WINNER,
-                    'title': (
-                        f"You won Week {week}!" if won_somewhere
-                        else f"Week {week} winners"
-                    ),
+                    'title': _digest_title(week, won_pools, len(entries))[:200],
                     'body': body,
                     'url': _pool_standings_url(target['pool']),
                     'family': target['pool'].family,
