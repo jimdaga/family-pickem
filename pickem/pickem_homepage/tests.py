@@ -13,6 +13,7 @@ from django.contrib import admin
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
+from django.core.cache import cache
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.storage import FileSystemStorage
@@ -12464,6 +12465,14 @@ class NotificationNavbarTests(TestCase):
     """
 
     def setUp(self):
+        # These tests render real pages, which runs footer_stats_context ->
+        # _cached_gameseason(). That cache has a 60s TTL and is NOT rolled back
+        # with the test transaction, so rendering without a currentSeason row
+        # would leave a fallback season cached for whichever test runs next.
+        # Seed the row and clear the cache, as the other page-rendering classes
+        # in this file do.
+        cache.clear()
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
         self.user = User.objects.create_user(
             username="notify-nav", email="notify-nav@example.com", password="pw",
         )
@@ -12533,6 +12542,10 @@ class NotificationMobileNavTests(TestCase):
     reason as NotificationNavbarTests -- ``index`` always redirects."""
 
     def setUp(self):
+        # See NotificationNavbarTests.setUp: rendering warms the season cache,
+        # which outlives the test transaction.
+        cache.clear()
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
         self.user = User.objects.create_user(
             username="notify-mobile", email="notify-mobile@example.com", password="pw",
         )
