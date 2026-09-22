@@ -195,7 +195,12 @@
                             <button class="dropdown-trigger relative flex items-center px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors"
                                     data-testid="notifications-bell"
                                     aria-label="Notifications" onclick="toggleDropdown(event, this)">
-                                <i class="fas fa-bell text-white"></i>
+                                <!-- 8x8 box so this trigger matches the height of the family
+                                     switcher (two stacked text lines) and the user menu (its
+                                     w-8 h-8 avatar); a bare icon renders ~13px shorter. -->
+                                <span class="flex h-8 w-8 items-center justify-center">
+                                    <i class="fas fa-bell text-lg text-white"></i>
+                                </span>
                                 {% if notification_unread_count %}
                                 <span data-testid="notifications-badge"
                                       class="absolute -top-1 -right-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-4 text-white">{% if notification_unread_count > 9 %}9+{% else %}{{ notification_unread_count }}{% endif %}</span>
