@@ -767,18 +767,37 @@ cd pickem && uv run python manage.py test pickem_homepage.tests.NotificationNavb
 
 Expected: PASS, 7 tests.
 
-- [ ] **Step 6: Run the full homepage suite to catch collateral damage**
+- [ ] **Step 6: Rebuild Tailwind**
+
+```bash
+npm run build:prod
+```
+
+Run from the repo root. This is **not optional and not deferrable to Task 5**:
+`pickem_homepage/tests.py:12077`
+(`test_every_opacity_utility_used_in_a_template_is_compiled`) scans every
+template for slash-opacity utilities and asserts each one exists in the built
+`tailwind.css`. The panel markup above uses `bg-primary/5`, so Step 7 fails
+until the stylesheet is regenerated.
+
+- [ ] **Step 7: Run the full homepage suite to catch collateral damage**
 
 ```bash
 cd pickem && uv run python manage.py test pickem_homepage --settings=pickem.test_settings
 ```
 
-Expected: PASS. If a pre-existing test asserted the display name in the navbar, update that assertion to look in the dropdown body rather than deleting the test.
+Expected: PASS. Two specific things to watch:
+- If a pre-existing test asserted the display name in the navbar, update that
+  assertion to look in the dropdown body rather than deleting the test.
+- `test_every_opacity_utility_used_in_a_template_is_compiled` must pass. If it
+  fails, Step 6 was skipped or `bg-primary/5` is outside Tailwind's opacity
+  scale — in which case switch to a step that is on the scale (`/5` and `/10`
+  both are) rather than suppressing the test.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add pickem/pickem_homepage/templates/pickem/base.html pickem/pickem_homepage/tests.py
+git add pickem/pickem_homepage/templates/pickem/base.html pickem/pickem_homepage/static/css/tailwind.css pickem/pickem_homepage/tests.py
 git commit -m "feat(notifications): add navbar bell and panel, trim name from user menu"
 ```
 
@@ -946,7 +965,7 @@ Expected: PASS, 3 tests.
 npm run build:prod
 ```
 
-Run from the repo root. This regenerates `pickem/pickem_homepage/static/css/tailwind.css` with the new utilities (`min-w-[1.25rem]`, `text-[10px]`, `text-[11px]`, `max-h-96`, `bg-primary/5`, `-top-1`, `-right-1`). Without it the badge and panel render unstyled in production.
+Run from the repo root. Task 4 already rebuilt for the desktop utilities; this picks up anything the mobile markup adds. Without it the mobile badge and section render unstyled in production, and `test_every_opacity_utility_used_in_a_template_is_compiled` (`tests.py:12077`) fails on any new slash-opacity utility.
 
 - [ ] **Step 8: Run the full suite**
 
