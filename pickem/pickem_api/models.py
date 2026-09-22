@@ -1063,9 +1063,9 @@ class NotificationQuerySet(models.QuerySet):
         return self.filter(recipient=user, read_at__isnull=True)
 
     def recent_for(self, user, limit=10):
-        # select_related('pool') because the panel may label a notification
-        # with its pool; the FK is nullable so this stays a LEFT JOIN.
-        return self.filter(recipient=user).select_related('pool')[:limit]
+        # No consumer reads n.pool today -- re-add select_related('pool') when
+        # one actually labels a notification with its pool.
+        return self.filter(recipient=user).order_by('-created_at')[:limit]
 
 
 class Notification(models.Model):
@@ -1076,6 +1076,14 @@ class Notification(models.Model):
     member-facing route needs (family_slug, pool_slug) and the producer is the
     only party that reliably holds that tenant context. Keeping the path
     pre-resolved also means the navbar never risks a NoReverseMatch mid-render.
+
+    Tradeoff: ``family``/``pool`` slugs are editable (see
+    ``pickem_superadmin/forms.py`` and ``pickem_api/admin.py``), and a rename
+    doesn't touch already-stored ``url`` values, so an old notification can
+    silently 404 after a slug changes. This is bounded and recoverable -- the
+    ``family`` and ``pool`` FKs below are still persisted on the row, so a
+    future repair path can re-derive a fresh path from them rather than the
+    stale stored string.
     """
 
     class Kind(models.TextChoices):
@@ -1102,6 +1110,10 @@ class Notification(models.Model):
 
     recipient = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='notifications',
+        # The auto FK index is redundant: notification_recipient_idx below
+        # already leads with recipient, so a solo index here is pure write
+        # amplification. Drop it while the table is still empty.
+        db_index=False,
     )
     kind = models.CharField(
         max_length=32, choices=Kind.choices, default=Kind.ANNOUNCEMENT,
