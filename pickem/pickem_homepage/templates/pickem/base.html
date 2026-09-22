@@ -314,7 +314,7 @@
                             </span>
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
-                        <div class="mobile-dropdown-menu hidden pl-8 pr-4 py-2 space-y-1">
+                        <div class="mobile-dropdown-menu hidden pl-8 pr-4 py-2 space-y-1 max-h-[60vh] overflow-y-auto">
                             {% if notification_unread_count %}
                             <form method="post" action="{% url 'notifications_mark_all_read' %}" class="px-2 pb-1">
                                 {% csrf_token %}

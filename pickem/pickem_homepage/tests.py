@@ -12552,3 +12552,17 @@ class NotificationMobileNavTests(TestCase):
     def test_mobile_badge_hidden_when_nothing_unread(self):
         response = self.client.get(reverse("profile"))
         self.assertNotContains(response, 'data-testid="notifications-badge-mobile"')
+
+    def test_mobile_list_has_scroll_cap(self):
+        # #mobile-menu is `absolute` inside a `fixed` nav, so an overflowing
+        # descendant with no height cap has nothing to scroll -- the tail of
+        # the list becomes permanently unreachable on a short viewport. The
+        # container must carry both a max-height and overflow-y-auto.
+        response = self.client.get(reverse("profile"))
+        html = response.content.decode()
+        trigger_index = html.index('data-testid="mobile-notifications-trigger"')
+        list_start = html.index("mobile-dropdown-menu", trigger_index)
+        list_tag_end = html.index(">", list_start)
+        list_classes = html[list_start:list_tag_end]
+        self.assertIn("overflow-y-auto", list_classes)
+        self.assertRegex(list_classes, r"max-h-(?:\[[^\]]+\]|\d+)")
