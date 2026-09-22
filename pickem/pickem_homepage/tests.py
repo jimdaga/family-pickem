@@ -12343,3 +12343,87 @@ class NotificationsContextProcessorTests(TestCase):
             "pickem.context_processors.notifications_context",
             settings.TEMPLATES[0]["OPTIONS"]["context_processors"],
         )
+
+
+class NotificationViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="notify-view", email="notify-view@example.com", password="pw",
+        )
+        self.other = User.objects.create_user(
+            username="notify-other", email="notify-other@example.com", password="pw",
+        )
+        self.client.force_login(self.user)
+
+    def test_mark_all_read_requires_login(self):
+        self.client.logout()
+        response = self.client.post(reverse("notifications_mark_all_read"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response["Location"])
+
+    def test_mark_all_read_rejects_get(self):
+        response = self.client.get(reverse("notifications_mark_all_read"))
+        self.assertEqual(response.status_code, 405)
+
+    def test_mark_all_read_marks_only_this_users_rows(self):
+        mine = Notification.objects.create(recipient=self.user, title="mine")
+        theirs = Notification.objects.create(recipient=self.other, title="theirs")
+
+        self.client.post(reverse("notifications_mark_all_read"))
+
+        mine.refresh_from_db()
+        theirs.refresh_from_db()
+        self.assertIsNotNone(mine.read_at)
+        self.assertIsNone(theirs.read_at)
+
+    def test_mark_all_read_returns_to_same_host_referer(self):
+        response = self.client.post(
+            reverse("notifications_mark_all_read"), HTTP_REFERER="/standings/",
+        )
+        self.assertEqual(response["Location"], "/standings/")
+
+    def test_mark_all_read_ignores_foreign_referer(self):
+        response = self.client.post(
+            reverse("notifications_mark_all_read"),
+            HTTP_REFERER="https://evil.example.com/steal",
+        )
+        self.assertEqual(response["Location"], reverse("index"))
+
+    def test_open_marks_read_and_redirects_to_url(self):
+        notification = Notification.objects.create(
+            recipient=self.user, title="go here", url="/standings/",
+        )
+        response = self.client.get(
+            reverse("notification_open", args=[notification.id])
+        )
+        notification.refresh_from_db()
+        self.assertIsNotNone(notification.read_at)
+        self.assertEqual(response["Location"], "/standings/")
+
+    def test_open_redirects_to_index_when_url_blank(self):
+        notification = Notification.objects.create(recipient=self.user, title="no url")
+        response = self.client.get(
+            reverse("notification_open", args=[notification.id])
+        )
+        self.assertEqual(response["Location"], reverse("index"))
+
+    def test_open_refuses_foreign_host_url(self):
+        # A bad producer must not be able to turn a notification into an open
+        # redirect off-site.
+        notification = Notification.objects.create(
+            recipient=self.user, title="sketchy", url="https://evil.example.com/",
+        )
+        response = self.client.get(
+            reverse("notification_open", args=[notification.id])
+        )
+        self.assertEqual(response["Location"], reverse("index"))
+
+    def test_open_404s_on_another_users_notification(self):
+        notification = Notification.objects.create(
+            recipient=self.other, title="not yours", url="/standings/",
+        )
+        response = self.client.get(
+            reverse("notification_open", args=[notification.id])
+        )
+        # 404 rather than 403: the endpoint must not confirm the row exists.
+        self.assertEqual(response.status_code, 404)

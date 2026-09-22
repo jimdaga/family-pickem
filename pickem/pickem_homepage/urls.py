@@ -230,4 +230,8 @@ urlpatterns = [
     path('commissioners/deactivate-banner/', views.deactivate_banner, name='deactivate_banner'),
     path('commissioners/submit-manual-pick/', views.submit_manual_pick, name='submit_manual_pick'),
     path('commissioners/get-user-picks/', views.get_user_picks, name='get_user_picks'),
+
+    # Notification URLs
+    path('notifications/mark-read/', views.notifications_mark_all_read, name='notifications_mark_all_read'),
+    path('notifications/<int:notification_id>/go/', views.notification_open, name='notification_open'),
 ]
