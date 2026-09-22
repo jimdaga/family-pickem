@@ -192,24 +192,24 @@
                         {% endif %}
                         <!-- Notifications -->
                         <div class="relative dropdown-container">
-                            <button class="dropdown-trigger flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors"
+                            <button class="dropdown-trigger flex items-center px-3 py-2 rounded-xl border border-slate-600 hover:bg-slate-700 transition-colors"
                                     data-testid="notifications-bell"
                                     aria-label="Notifications" onclick="toggleDropdown(event, this)">
                                 <!-- 8x8 box so this trigger matches the height of the family
                                      switcher (two stacked text lines) and the user menu (its
                                      w-8 h-8 avatar); a bare icon renders ~13px shorter. -->
-                                <span class="flex h-8 w-8 items-center justify-center">
+                                <span class="relative flex h-8 w-8 items-center justify-center">
                                     <i class="fas fa-bell text-lg text-white"></i>
+                                    {% if notification_unread_count %}
+                                    <!-- Bottom-right of the icon box, which leaves ~6px of the
+                                         button's px-3 padding to its right and ~2px of py-2 below
+                                         it: the badge clears the border without the button having
+                                         to grow. The ring is the navbar's own colour so the pill
+                                         separates cleanly where it grazes the glyph. -->
+                                    <span data-testid="notifications-badge"
+                                          class="absolute -bottom-1 -right-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-slate-800">{% if notification_unread_count > 9 %}9+{% else %}{{ notification_unread_count }}{% endif %}</span>
+                                    {% endif %}
                                 </span>
-                                {% if notification_unread_count %}
-                                <!-- Inline rather than an overlay badge: this trigger is only as
-                                     wide as its icon, so a corner-anchored pill either spills past
-                                     the border or lands on the glyph. Sitting beside the bell it
-                                     can do neither, and it matches the icon+label shape the Join
-                                     button already uses in this same row. -->
-                                <span data-testid="notifications-badge"
-                                      class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold leading-none text-white">{% if notification_unread_count > 9 %}9+{% else %}{{ notification_unread_count }}{% endif %}</span>
-                                {% endif %}
                             </button>
 
                             <div data-testid="notifications-panel"
