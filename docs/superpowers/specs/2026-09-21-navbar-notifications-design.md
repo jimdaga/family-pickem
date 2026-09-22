@@ -147,11 +147,17 @@ breaks. A new regression test pins the removal.
 ## UI — mobile
 
 - A bell button with the same badge sits next to the hamburger toggle in the
-  mobile header, visible only below `lg`. Tapping it opens the mobile menu and
-  scrolls to / expands the notifications section.
+  mobile header, visible only below `lg`, carrying
+  `data-testid="notifications-bell-mobile"`.
 - Inside `#mobile-menu`, a "Notifications" section using the existing
   `mobile-dropdown-container` / `toggleMobileDropdown()` pattern, listing the
   same `notification_items` and offering the same mark-all-read form.
+- Tapping the mobile bell opens `#mobile-menu` and expands that section. This
+  is the one piece of new JavaScript in the change: a click handler that
+  unhides `#mobile-menu` (the same class toggle `#mobile-menu-btn` performs)
+  and then calls the existing `toggleMobileDropdown()` on the notifications
+  trigger when it is still collapsed. Everything else reuses handlers already
+  in `base.html`.
 
 ## Views and URLs
 
