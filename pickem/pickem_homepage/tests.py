@@ -12554,8 +12554,12 @@ class NotificationNavbarTests(TestCase):
 
 
 class NotificationMobileNavTests(TestCase):
-    """Mobile bell + in-menu section. Renders against ``profile`` for the same
-    reason as NotificationNavbarTests -- ``index`` always redirects."""
+    """Mobile bell + its own panel. Renders against ``profile`` for the same
+    reason as NotificationNavbarTests -- ``index`` always redirects.
+
+    The panel is a sibling of ``#mobile-menu``, not a section inside it: the
+    bell and the hamburger open two unrelated surfaces.
+    """
 
     def setUp(self):
         # See NotificationNavbarTests.setUp: rendering warms the season cache,
@@ -12567,15 +12571,36 @@ class NotificationMobileNavTests(TestCase):
         )
         self.client.force_login(self.user)
 
-    def test_mobile_bell_and_section_render(self):
+    def test_mobile_bell_and_panel_render(self):
         response = self.client.get(reverse("profile"))
         self.assertContains(response, 'data-testid="notifications-bell-mobile"')
-        self.assertContains(response, 'data-testid="mobile-notifications-trigger"')
+        self.assertContains(response, 'data-testid="mobile-notifications-panel"')
 
-    def test_mobile_section_lists_notifications(self):
+    def test_mobile_panel_is_not_inside_the_nav_menu(self):
+        # The whole point of this layout: the bell's panel must be a sibling of
+        # #mobile-menu, so opening navigation never renders notifications and
+        # neither control has to know the other's state.
+        html = self.client.get(reverse("profile")).content.decode()
+        panel_index = html.index('id="mobile-notifications-panel"')
+        menu_index = html.index('id="mobile-menu"')
+        self.assertLess(
+            panel_index, menu_index,
+            "notifications panel should precede #mobile-menu as a sibling",
+        )
+        # The panel's own <div> must close before #mobile-menu opens: count
+        # tags from the panel's opening tag up to the menu. Balanced means the
+        # panel is a sibling; one extra open means the menu is nested inside it.
+        panel_tag_start = html.rindex("<div", 0, panel_index)
+        between = html[panel_tag_start:html.rindex("<div", 0, menu_index)]
+        self.assertEqual(
+            between.count("<div"), between.count("</div>"),
+            "notifications panel must close before #mobile-menu begins",
+        )
+
+    def test_mobile_panel_lists_notifications(self):
         Notification.objects.create(recipient=self.user, title="Mobile visible item")
         response = self.client.get(reverse("profile"))
-        # Once in the desktop panel, once in the mobile section.
+        # Once in the desktop panel, once in the mobile panel.
         self.assertContains(response, "Mobile visible item", count=2)
 
     def test_mobile_badge_hidden_when_nothing_unread(self):
@@ -12583,15 +12608,50 @@ class NotificationMobileNavTests(TestCase):
         self.assertNotContains(response, 'data-testid="notifications-badge-mobile"')
 
     def test_mobile_list_has_scroll_cap(self):
-        # #mobile-menu is `absolute` inside a `fixed` nav, so an overflowing
+        # The panel is `absolute` inside a `fixed` nav, so an overflowing
         # descendant with no height cap has nothing to scroll -- the tail of
         # the list becomes permanently unreachable on a short viewport. The
-        # container must carry both a max-height and overflow-y-auto.
+        # scroll container must carry both a max-height and overflow-y-auto.
         response = self.client.get(reverse("profile"))
         html = response.content.decode()
-        trigger_index = html.index('data-testid="mobile-notifications-trigger"')
-        list_start = html.index("mobile-dropdown-menu", trigger_index)
-        list_tag_end = html.index(">", list_start)
-        list_classes = html[list_start:list_tag_end]
+        panel_index = html.index('id="mobile-notifications-panel"')
+        list_start = html.index("overflow-y-auto", panel_index)
+        list_tag_start = html.rindex("<div", panel_index, list_start)
+        list_classes = html[list_tag_start:html.index(">", list_start)]
         self.assertIn("overflow-y-auto", list_classes)
         self.assertRegex(list_classes, r"max-h-(?:\[[^\]]+\]|\d+)")
+
+
+class DevAdminAccessTests(TestCase):
+    """Reaching Django admin locally, where the site login is SSO-only."""
+
+    def test_slashless_admin_reaches_admin_not_site_login(self):
+        # Previously RequireLoginForInternalPagesMiddleware matched only the
+        # "/admin/" prefix, so "/admin" bounced to /accounts/login/ before
+        # CommonMiddleware could append the slash.
+        response = self.client.get("/admin")
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response["Location"], "/admin/")
+
+    def test_slashless_form_does_not_open_protected_lookalikes(self):
+        # Only the exact slashless prefix is public; "/adminx" must still be
+        # login-gated, not smuggled through by the new check.
+        response = self.client.get("/adminx")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response["Location"])
+
+    def test_protected_pages_still_require_login(self):
+        response = self.client.get("/profile/")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response["Location"])
+
+    @override_settings(DEBUG=True)
+    def test_login_page_links_to_admin_in_dev(self):
+        response = self.client.get(reverse("account_login"))
+        self.assertContains(response, 'data-testid="dev-admin-link"')
+        self.assertContains(response, f'href="{reverse("admin:index")}"')
+
+    @override_settings(DEBUG=False)
+    def test_login_page_hides_admin_link_in_production(self):
+        response = self.client.get(reverse("account_login"))
+        self.assertNotContains(response, 'data-testid="dev-admin-link"')

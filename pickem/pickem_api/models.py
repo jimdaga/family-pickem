@@ -1127,6 +1127,20 @@ class Notification(models.Model):
         help_text="Already-resolved path this notification links to",
     )
 
+    # Producers run from the update pipeline, which ticks every minute and
+    # back-fills missed weeks -- so "create this notification exactly once" has
+    # to be enforced somewhere. A unique key is that somewhere: the database
+    # rejects the duplicate rather than every producer remembering to check
+    # first, which would be a read-then-write race anyway.
+    #
+    # NULL for ad-hoc notifications that have no natural identity. Postgres and
+    # SQLite both allow unlimited NULLs under a unique constraint, so unkeyed
+    # rows never collide with each other.
+    dedupe_key = models.CharField(
+        max_length=200, null=True, blank=True, default=None, unique=True,
+        help_text="Producer-set idempotency key; NULL when the row has no natural identity",
+    )
+
     # Nullable: account-level notifications (invites, announcements) belong to
     # no pool. SET_NULL so deleting a pool never deletes someone's history.
     family = models.ForeignKey(
@@ -1167,3 +1181,31 @@ class Notification(models.Model):
         if self.read_at is None:
             self.read_at = when or timezone.now()
             self.save(update_fields=['read_at'])
+
+
+class WeekWinnerAnnouncement(models.Model):
+    """Outbox for week-winner digests: "this week still needs announcing".
+
+    A row is created only when update_weekly_winners itself awards a week, so
+    weeks awarded before the producer shipped never get one and are never
+    announced. Every command tick publishes any row still pending and stamps
+    ``published_at`` once that succeeds -- so a transient failure is retried on
+    the next tick instead of losing the week's digests for good. Publishing is
+    deduplicated per user/season/week, so a retry never doubles anything up.
+    """
+
+    season = models.IntegerField()
+    week = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['season', 'week'], name='unique_week_winner_announcement',
+            ),
+        ]
+
+    def __str__(self):
+        state = 'published' if self.published_at else 'pending'
+        return f"Week {self.week} ({self.season}) announcement: {state}"

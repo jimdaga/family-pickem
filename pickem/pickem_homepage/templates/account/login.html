@@ -82,6 +82,19 @@
                 </a>
             </div>
             {% endcomment %}
+
+            {% if debug_mode %}
+            <!-- Dev only (DEBUG): Google OAuth rarely works against localhost, and
+                 password login is hidden above, so Django admin's own login is the
+                 practical way in locally. Its session is shared with the site, so
+                 signing in there signs you in here too -- for staff accounts only,
+                 since admin rejects non-staff users. Never rendered in prd. -->
+            <a href="{% url 'admin:index' %}"
+               data-testid="dev-admin-link"
+               class="mt-5 block px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-500 text-center hover:opacity-80 transition-opacity">
+                <i class="fas fa-wrench mr-2" aria-hidden="true"></i>Dev mode: sign in via Django admin
+            </a>
+            {% endif %}
         </div>
     </div>
 </div>

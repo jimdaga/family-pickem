@@ -9,9 +9,11 @@ exactly once, shortly after MNF goes final.
 import logging
 
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from pickem.utils import get_season
-from pickem_api.models import Family, Pool
+from pickem_api.models import Family, Pool, WeekWinnerAnnouncement
+from pickem_api.notifications import publish_week_winner_digest
 from pickem_api.weekly_winners import (
     EspnGameStatsProvider,
     award_weekly_winners,
@@ -64,6 +66,7 @@ class Command(BaseCommand):
             season=season,
             family__status=Family.Status.ACTIVE,
         ))
+        awarded_by_week = {}
         for target_week in weeks:
             awarded = 0
             for pool in pools:
@@ -92,3 +95,68 @@ class Command(BaseCommand):
                     f"Week {target_week}: awarded winners in {awarded} pool(s)."
                 )
             )
+            awarded_by_week[target_week] = awarded
+
+        # Queue the newest week that *this pass* awarded for announcement, then
+        # publish every queued week that hasn't gone out yet. The loop above
+        # back-fills every missed award on purpose, but announcing is news, not
+        # bookkeeping:
+        #   - weeks awarded before this producer shipped (Weeks 1-2 of 2627)
+        #     are never awarded again, so never queued: deploying is silent;
+        #   - an outage that awards several weeks in one pass queues only the
+        #     newest of them, not a digest per stale week;
+        #   - a week awarded late on its own (a postponed game, or a tie held
+        #     back for missing tiebreaker stats) is queued when it lands, even
+        #     though a later week was announced first.
+        # The queue is what makes a failed publish retryable: the award has
+        # already committed, so without it the next tick would see nothing new
+        # and the week's digests would be lost for good.
+        awarded_weeks = [w for w in weeks if awarded_by_week.get(w)]  # ascending
+
+        if options["force"]:
+            # --force re-awards are corrections: rewrite digests that already
+            # exist (so a changed winner is reflected), but never create or
+            # queue new ones, so forcing an old week doesn't announce it.
+            if awarded_weeks:
+                self._publish(season, awarded_weeks[-1], pools, create_missing=False)
+            return
+
+        if awarded_weeks:
+            WeekWinnerAnnouncement.objects.get_or_create(
+                season=season, week=awarded_weeks[-1],
+            )
+
+        pending = WeekWinnerAnnouncement.objects.filter(
+            season=season, published_at__isnull=True,
+        ).order_by('week')
+        for announcement in pending:
+            if self._publish(season, announcement.week, pools):
+                announcement.published_at = timezone.now()
+                announcement.save(update_fields=['published_at'])
+
+    def _publish(self, season, week, pools, create_missing=True):
+        """Publish one week's digests; True on success, False if it failed.
+
+        One digest per person after the whole week's pools are processed, not
+        one per pool. A failure is logged and reported, never raised: the bonus
+        points are the real work and are already committed.
+        """
+        try:
+            sent = publish_week_winner_digest(
+                season, week, pools, create_missing=create_missing,
+            )
+        except Exception:
+            logger.exception(
+                "Week winner notifications failed for season %s week %s",
+                season, week,
+            )
+            self.stderr.write(
+                f"Week {week}: winner notifications failed (see logs); "
+                f"will retry next run"
+            )
+            return False
+        if sent:
+            self.stdout.write(
+                f"Week {week}: sent or updated {sent} winner notification(s)."
+            )
+        return True
