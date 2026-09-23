@@ -11,7 +11,7 @@ dependencies = [
     "certifi==2024.7.4",
     "cffi==2.0.0",
     "charset-normalizer==2.1.1",
-    "cryptography==48.0.1",
+    "cryptography==50.0.0",
     "defusedxml==0.7.1",
     "django-redis==5.4.0",
     "Django==5.2.16",
