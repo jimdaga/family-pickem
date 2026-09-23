@@ -91,7 +91,13 @@ class RequireLoginForInternalPagesMiddleware:
 
         if path in public_exact_paths:
             return False
-        return not path.startswith(tuple(public_prefixes))
+        # Also treat the slashless form of a public prefix as public ("/admin"
+        # for "/admin/"). CommonMiddleware only appends the slash when the
+        # request would otherwise 404, and this middleware runs first -- so
+        # without this, typing /admin bounced to the site login page instead
+        # of reaching Django's redirect to /admin/.
+        slashed = path if path.endswith("/") else path + "/"
+        return not slashed.startswith(tuple(public_prefixes))
 
     @staticmethod
     def _expects_json(request):

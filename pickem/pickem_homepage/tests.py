@@ -12615,3 +12615,38 @@ class NotificationMobileNavTests(TestCase):
         list_classes = html[list_tag_start:html.index(">", list_start)]
         self.assertIn("overflow-y-auto", list_classes)
         self.assertRegex(list_classes, r"max-h-(?:\[[^\]]+\]|\d+)")
+
+
+class DevAdminAccessTests(TestCase):
+    """Reaching Django admin locally, where the site login is SSO-only."""
+
+    def test_slashless_admin_reaches_admin_not_site_login(self):
+        # Previously RequireLoginForInternalPagesMiddleware matched only the
+        # "/admin/" prefix, so "/admin" bounced to /accounts/login/ before
+        # CommonMiddleware could append the slash.
+        response = self.client.get("/admin")
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response["Location"], "/admin/")
+
+    def test_slashless_form_does_not_open_protected_lookalikes(self):
+        # Only the exact slashless prefix is public; "/adminx" must still be
+        # login-gated, not smuggled through by the new check.
+        response = self.client.get("/adminx")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response["Location"])
+
+    def test_protected_pages_still_require_login(self):
+        response = self.client.get("/profile/")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response["Location"])
+
+    @override_settings(DEBUG=True)
+    def test_login_page_links_to_admin_in_dev(self):
+        response = self.client.get(reverse("account_login"))
+        self.assertContains(response, 'data-testid="dev-admin-link"')
+        self.assertContains(response, f'href="{reverse("admin:index")}"')
+
+    @override_settings(DEBUG=False)
+    def test_login_page_hides_admin_link_in_production(self):
+        response = self.client.get(reverse("account_login"))
+        self.assertNotContains(response, 'data-testid="dev-admin-link"')
