@@ -96,26 +96,35 @@ class Command(BaseCommand):
             )
             awarded_by_week[target_week] = awarded
 
-        # Announce a week only when *this pass* awarded it, and only the latest
-        # week. The loop above back-fills every missed award on purpose, but
-        # announcing is news, not bookkeeping:
+        # Announce the newest week that *this pass* awarded. The loop above
+        # back-fills every missed award on purpose, but announcing is news, not
+        # bookkeeping:
         #   - weeks awarded before this producer shipped (Weeks 1-2 of 2627)
-        #     are never announced, so deploying mid-season is silent;
-        #   - after a scheduler outage that awards several weeks in one pass,
-        #     only the newest gets a digest, not one per stale week.
-        # weeks is ascending (complete_weeks sorts it), so [-1] is the newest.
+        #     are never awarded again, so deploying mid-season is silent;
+        #   - an outage that awards several weeks in one pass announces only
+        #     the newest of them, not a digest per stale week;
+        #   - a week awarded late on its own (a postponed game, or a tie held
+        #     back for missing tiebreaker stats) is still announced when it
+        #     lands, even though a later week was announced first.
+        #
+        # --force re-awards are corrections: they rewrite digests that already
+        # exist (so a changed winner is reflected) but never create new ones,
+        # so forcing an old week doesn't announce it.
         #
         # Trade-off: if an award commits but publishing then fails, the next
         # tick sees the week as already awarded and does not retry, so that
         # week's digest is lost. The award itself is never affected.
-        notify_week = weeks[-1]
-        if not awarded_by_week.get(notify_week):
+        awarded_weeks = [w for w in weeks if awarded_by_week.get(w)]
+        if not awarded_weeks:
             return
+        notify_week = awarded_weeks[-1]  # weeks is ascending
 
         # One digest after the whole week's pools are processed, not one per
         # pool: a member of several families gets a single row naming them all.
         try:
-            sent = publish_week_winner_digest(season, notify_week, pools)
+            sent = publish_week_winner_digest(
+                season, notify_week, pools, create_missing=not options["force"],
+            )
         except Exception:
             # A notification failure must never roll back or mask an award: the
             # bonus points are the real work and are already committed.
@@ -129,5 +138,5 @@ class Command(BaseCommand):
         else:
             if sent:
                 self.stdout.write(
-                    f"Week {notify_week}: sent {sent} winner notification(s)."
+                    f"Week {notify_week}: sent or updated {sent} winner notification(s)."
                 )

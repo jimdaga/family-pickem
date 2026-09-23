@@ -18,7 +18,7 @@ from pickem_api.demo_weekend import (
 )
 from pickem_api.models import (
     Family, FamilyAuditLog, FamilyMembership, GamePicks, GamesAndScores,
-    GameWeeks, Pool, PoolSettings, Teams, currentSeason, userPoints,
+    GameWeeks, Notification, Pool, PoolSettings, Teams, currentSeason, userPoints,
     userSeasonPoints, userStats,
 )
 
@@ -162,6 +162,11 @@ class Command(BaseCommand):
 
     def _wipe(self):
         family = Family.objects.filter(slug=DEMO_SLUG).first()
+        # Week-winner digests are keyed on season; leaving them would make the
+        # next live-sim run's digests collide with (and silently update)
+        # these, and park stale rows in the dev user's bell.
+        Notification.objects.filter(
+            dedupe_key__startswith=f"week_winners:{DEMO_SEASON}:").delete()
         GamePicks.objects.filter(gameseason=DEMO_SEASON).delete()
         userSeasonPoints.objects.filter(gameseason=DEMO_SEASON).delete()
         GamesAndScores.objects.filter(gameseason=DEMO_SEASON).delete()

@@ -12587,10 +12587,15 @@ class NotificationMobileNavTests(TestCase):
             panel_index, menu_index,
             "notifications panel should precede #mobile-menu as a sibling",
         )
-        # Nothing between the panel's start and #mobile-menu may close the
-        # panel's div and reopen inside the menu -- assert the panel's own
-        # closing structure lands before the menu begins.
-        self.assertNotIn('id="mobile-notifications-panel"', html[menu_index:])
+        # The panel's own <div> must close before #mobile-menu opens: count
+        # tags from the panel's opening tag up to the menu. Balanced means the
+        # panel is a sibling; one extra open means the menu is nested inside it.
+        panel_tag_start = html.rindex("<div", 0, panel_index)
+        between = html[panel_tag_start:html.rindex("<div", 0, menu_index)]
+        self.assertEqual(
+            between.count("<div"), between.count("</div>"),
+            "notifications panel must close before #mobile-menu begins",
+        )
 
     def test_mobile_panel_lists_notifications(self):
         Notification.objects.create(recipient=self.user, title="Mobile visible item")

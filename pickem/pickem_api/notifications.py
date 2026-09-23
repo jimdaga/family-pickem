@@ -15,7 +15,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.urls import reverse
 
-from pickem_api.models import Notification, userSeasonPoints
+from pickem_api.models import FamilyMembership, Notification, userSeasonPoints
 
 logger = logging.getLogger(__name__)
 
@@ -69,18 +69,36 @@ def _digest_title(week, won_pools, total_pools):
     return f"You won Week {week} in {len(won_pools)} of {total_pools} pools"
 
 
-def publish_week_winner_digest(season, week, pools):
-    """Notify every participant of a completed week's winners, once.
+def _pool_label(entry, entries):
+    """Family name, plus the pool name when this reader has several pools in it.
+
+    Families can run more than one pool a season, and "Smith: you · Smith: Bob"
+    would leave the reader guessing which Smith pool is which.
+    """
+    family = entry['pool'].family
+    same_family = sum(1 for e in entries if e['pool'].family_id == family.pk)
+    return f"{family.name} ({entry['pool'].name})" if same_family > 1 else family.name
+
+
+def publish_week_winner_digest(season, week, pools, *, create_missing=True):
+    """Notify every current member of a week's winners: one digest per person.
 
     One notification per user rather than one per pool: a member of several
     families would otherwise get a burst of near-identical rows for a single
-    event. The digest names each of *their* pools and who won it, and the title
-    leads with their own win when they have one.
+    event. The digest names each of *their* awarded pools and who won it, and
+    the title leads with their own win when they have one.
 
-    Only pools with an awarded winner are included -- a pool whose week has not
-    been awarded yet simply doesn't appear, and a later run that awards it will
-    not retroactively edit anyone's existing digest (the dedupe key is per
-    user/season/week). Returns the number of notifications created.
+    Safe to call repeatedly. The digest is keyed per user/season/week, and a
+    repeat call with unchanged results is a no-op. When results *have* changed
+    since the digest was written -- a pool awarded on a later tick, or a
+    --force re-award that changed the winner -- the existing row is rewritten
+    and marked unread again, so nobody is left holding a digest that says they
+    didn't win a pool they did.
+
+    ``create_missing=False`` only corrects digests that already exist; used by
+    --force re-awards, which are corrections and must not announce old weeks.
+
+    Returns the number of notifications created or updated.
     """
     winner_field = f'week_{week}_winner'
     points_field = f'week_{week}_points'
@@ -115,6 +133,19 @@ def publish_week_winner_digest(season, week, pools):
     if not awarded:
         return 0
 
+    # Only people who still belong to the family hear about its pool. A
+    # userSeasonPoints row outlives a membership, and the digest links to a
+    # standings page a former member can no longer open. (Winners are still
+    # *named* either way -- the result is the result.)
+    current_members = set(
+        FamilyMembership.objects
+        .filter(
+            status=FamilyMembership.Status.ACTIVE,
+            family_id__in={e['pool'].family_id for e in awarded.values()},
+        )
+        .values_list('user_id', 'family_id')
+    )
+
     # Resolve every id we might name, in one query.
     referenced = {str(r.userID) for e in awarded.values() for r in e['rows']}
     users = {
@@ -123,13 +154,15 @@ def publish_week_winner_digest(season, week, pools):
     }
     names = {uid: _display_name(u) for uid, u in users.items()}
 
-    # Invert to per-user: which awarded pools is this person in?
+    # Invert to per-user: which awarded pools is this person a member of?
     per_user = {}
     for entry in awarded.values():
         for row in entry['rows']:
-            per_user.setdefault(str(row.userID), []).append(entry)
+            uid = str(row.userID)
+            if uid.isdigit() and (int(uid), entry['pool'].family_id) in current_members:
+                per_user.setdefault(uid, []).append(entry)
 
-    created = 0
+    changed = 0
     for user_id, entries in per_user.items():
         user = users.get(user_id)
         if user is None or not user.is_active:
@@ -138,43 +171,57 @@ def publish_week_winner_digest(season, week, pools):
 
         entries.sort(key=lambda e: (e['pool'].family.name or '', e['pool'].name or ''))
         won_pools = [
-            e['pool'].family.name for e in entries if user_id in e['winner_ids']
+            _pool_label(e, entries) for e in entries if user_id in e['winner_ids']
         ]
 
         segments = [
-            f"{e['pool'].family.name}: {_winner_label(e['winner_ids'], user_id, names)}"
+            f"{_pool_label(e, entries)}: {_winner_label(e['winner_ids'], user_id, names)}"
             f" ({e['points']} pts)"
             for e in entries[:MAX_POOLS_LISTED]
         ]
         remaining = len(entries) - len(segments)
         if remaining > 0:
             segments.append(f"and {remaining} more")
-        body = " · ".join(segments)[:500]
 
         # Link to a pool they won when there is one; otherwise the first listed.
         target = next(
             (e for e in entries if user_id in e['winner_ids']), entries[0],
         )
+        fields = {
+            'title': _digest_title(week, won_pools, len(entries))[:200],
+            'body': " · ".join(segments)[:500],
+            'url': _pool_standings_url(target['pool']),
+            'family': target['pool'].family,
+            'pool': target['pool'],
+        }
+        key = f"week_winners:{season}:{week}:{user_id}"
 
-        try:
-            _, was_created = Notification.objects.get_or_create(
-                dedupe_key=f"week_winners:{season}:{week}:{user_id}",
-                defaults={
-                    'recipient': user,
-                    'kind': Notification.Kind.WEEK_WINNER,
-                    'title': _digest_title(week, won_pools, len(entries))[:200],
-                    'body': body,
-                    'url': _pool_standings_url(target['pool']),
-                    'family': target['pool'].family,
-                    'pool': target['pool'],
-                },
-            )
-        except IntegrityError:
-            # Another tick won the race on the unique key -- that is the
-            # constraint doing its job, not an error worth propagating.
+        existing = Notification.objects.filter(dedupe_key=key).first()
+        if existing is not None:
+            if all(getattr(existing, f) == v for f, v in fields.items()):
+                continue  # unchanged: the common repeat-call case
+            for f, v in fields.items():
+                setattr(existing, f, v)
+            existing.read_at = None  # new information -- surface it again
+            existing.save(update_fields=[*fields, 'read_at'])
+            changed += 1
             continue
 
-        if was_created:
-            created += 1
+        if not create_missing:
+            continue
 
-    return created
+        try:
+            Notification.objects.create(
+                dedupe_key=key, recipient=user,
+                kind=Notification.Kind.WEEK_WINNER, **fields,
+            )
+        except IntegrityError:
+            # A concurrent tick created this exact key first -- the unique
+            # constraint doing its job. Anything else is a real data error and
+            # must be visible, not swallowed.
+            if not Notification.objects.filter(dedupe_key=key).exists():
+                logger.exception("Could not create week-winner digest %s", key)
+            continue
+        changed += 1
+
+    return changed

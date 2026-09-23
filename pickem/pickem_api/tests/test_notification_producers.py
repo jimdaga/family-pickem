@@ -1,8 +1,16 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 
-from pickem_api.models import Family, Notification, Pool, userSeasonPoints
+from pickem_api.models import (
+    Family, FamilyMembership, Notification, Pool, userSeasonPoints,
+)
 from pickem_api.notifications import publish_week_winner_digest
+
+
+def _member(user, pool):
+    """Digests only reach current family members, so fixtures need one."""
+    FamilyMembership.objects.get_or_create(family=pool.family, user=user)
 
 
 class WeekWinnerDigestTests(TestCase):
@@ -28,6 +36,7 @@ class WeekWinnerDigestTests(TestCase):
         self.cy = User.objects.create_user(username="cy", email="cy@example.com")
 
     def _row(self, user, pool, points, winner=False):
+        _member(user, pool)
         return userSeasonPoints.objects.create(
             pool=pool,
             userEmail=user.email,
@@ -224,6 +233,7 @@ class _WeekWinnerCommandFixture:
         self.ana = User.objects.create_user(username="ana", email="ana@example.com")
         self.bo = User.objects.create_user(username="bo", email="bo@example.com")
         for user, points in ((self.ana, 12), (self.bo, 8)):
+            _member(user, self.pool)
             userSeasonPoints.objects.create(
                 pool=self.pool, gameseason=2526, userID=str(user.id),
                 userEmail=user.email, week_1_points=points,
@@ -256,7 +266,7 @@ class WeekWinnerCommandWiringTests(_WeekWinnerCommandFixture, TestCase):
         output = self._run()
 
         self.assertIn("awarded winners in 1 pool(s)", output)
-        self.assertIn("sent 2 winner notification(s)", output)
+        self.assertIn("sent or updated 2 winner notification(s)", output)
 
         ana_note = Notification.objects.get(recipient=self.ana)
         self.assertEqual(ana_note.title, "You won Week 1!")
@@ -327,6 +337,7 @@ class WeekWinnerTitleTests(TestCase):
             for user, points, won in (
                 (self.ana, 14, ana_won), (self.rival, 9, not ana_won),
             ):
+                _member(user, pool)
                 userSeasonPoints.objects.create(
                     pool=pool, userEmail=user.email, userID=str(user.id),
                     gameseason=self.season, gameyear="2025",
@@ -436,7 +447,7 @@ class WeekWinnerLaunchTests(_WeekWinnerCommandFixture, TestCase):
             sorted(Notification.objects.values_list("title", flat=True)),
             ["Week 3 winners", "You won Week 3!"],
         )
-        self.assertIn("Week 3: sent 2 winner notification(s)", output)
+        self.assertIn("Week 3: sent or updated 2 winner notification(s)", output)
 
     def test_outage_backfill_announces_only_the_newest_week(self):
         # Weeks 3 and 4 both finish while the scheduler is down; one pass then
@@ -455,4 +466,144 @@ class WeekWinnerLaunchTests(_WeekWinnerCommandFixture, TestCase):
         # ...while Week 3's award itself still lands.
         self.assertTrue(
             userSeasonPoints.objects.get(userID=str(self.bo.id)).week_3_winner
+        )
+
+
+class WeekWinnerReviewFixTests(WeekWinnerDigestTests):
+    """Regressions for the pre-merge code review of the digest producer.
+
+    Subclasses WeekWinnerDigestTests only for its fixture helpers; the parent's
+    tests are excluded below so they don't run twice.
+    """
+
+    def test_former_family_member_is_not_notified(self):
+        self._row(self.ana, self.smith_pool, 14, winner=True)
+        self._row(self.bo, self.smith_pool, 11)
+        FamilyMembership.objects.filter(user=self.bo, family=self.smith).update(
+            status=FamilyMembership.Status.INACTIVE,
+        )
+
+        publish_week_winner_digest(self.season, self.week, self._pools())
+
+        self.assertFalse(Notification.objects.filter(recipient=self.bo).exists())
+        self.assertTrue(Notification.objects.filter(recipient=self.ana).exists())
+
+    def test_pool_awarded_on_a_later_tick_updates_the_digest(self):
+        # Tick 1: only Jones is awarded (Smith's award is still pending).
+        self._row(self.ana, self.jones_pool, 9)
+        self._row(self.bo, self.jones_pool, 12, winner=True)
+        smith_row = self._row(self.ana, self.smith_pool, 14)  # not yet awarded
+        publish_week_winner_digest(self.season, self.week, self._pools())
+
+        note = Notification.objects.get(recipient=self.ana)
+        self.assertEqual(note.title, "Week 5 winners")
+        note.read_at = timezone.now()
+        note.save(update_fields=["read_at"])
+
+        # Tick 2: Smith is awarded -- and Ana won it.
+        setattr(smith_row, f"week_{self.week}_winner", True)
+        smith_row.save()
+        changed = publish_week_winner_digest(self.season, self.week, self._pools())
+
+        note.refresh_from_db()
+        self.assertEqual(changed, 1)
+        self.assertEqual(note.title, "You won Week 5 in Smith Family")
+        self.assertIn("Smith Family: you", note.body)
+        self.assertIsNone(note.read_at, "new information must resurface as unread")
+        self.assertEqual(Notification.objects.filter(recipient=self.ana).count(), 1)
+
+    def test_changed_winner_rewrites_the_old_digest(self):
+        # A --force re-award flips the winner from Ana to Bo.
+        ana_row = self._row(self.ana, self.smith_pool, 14, winner=True)
+        bo_row = self._row(self.bo, self.smith_pool, 14)
+        publish_week_winner_digest(self.season, self.week, self._pools())
+
+        setattr(ana_row, f"week_{self.week}_winner", False)
+        ana_row.save()
+        setattr(bo_row, f"week_{self.week}_winner", True)
+        bo_row.save()
+        publish_week_winner_digest(
+            self.season, self.week, self._pools(), create_missing=False,
+        )
+
+        self.assertEqual(Notification.objects.get(recipient=self.ana).title, "Week 5 winners")
+        self.assertEqual(Notification.objects.get(recipient=self.bo).title, "You won Week 5!")
+
+    def test_create_missing_false_never_announces_a_new_week(self):
+        self._row(self.ana, self.smith_pool, 14, winner=True)
+        self._row(self.bo, self.smith_pool, 11)
+
+        changed = publish_week_winner_digest(
+            self.season, self.week, self._pools(), create_missing=False,
+        )
+
+        self.assertEqual(changed, 0)
+        self.assertEqual(Notification.objects.count(), 0)
+
+    def test_two_pools_in_one_family_are_told_apart(self):
+        second = Pool.objects.create(
+            family=self.smith, name="Survivor", slug="survivor",
+            season=self.season, status=Pool.Status.ACTIVE,
+        )
+        self._row(self.ana, self.smith_pool, 14, winner=True)
+        self._row(self.ana, second, 9)
+        self._row(self.bo, second, 12, winner=True)
+
+        publish_week_winner_digest(
+            self.season, self.week, [self.smith_pool, second],
+        )
+
+        note = Notification.objects.get(recipient=self.ana)
+        self.assertIn("Smith Family (Smith Pool): you", note.body)
+        self.assertIn("Smith Family (Survivor): Bo", note.body)
+        self.assertEqual(note.title, "You won Week 5 in Smith Family (Smith Pool)")
+
+
+# Keep only the new tests on the subclass; the inherited ones already run on
+# WeekWinnerDigestTests.
+for _name in [n for n in vars(WeekWinnerDigestTests) if n.startswith("test_")]:
+    setattr(WeekWinnerReviewFixTests, _name, None)
+
+
+class WeekWinnerPostponedWeekTests(_WeekWinnerCommandFixture, TestCase):
+    """A week whose award lands late is still announced when it lands."""
+
+    def test_postponed_week_is_announced_after_a_later_week(self):
+        from datetime import timedelta
+
+        from django.utils import timezone as tz
+
+        from pickem_api.models import GamesAndScores
+
+        # Week 1 has a postponed game; Week 2 completes first.
+        GamesAndScores.objects.filter(id=900).update(
+            statusType="postponed", gameScored=False,
+        )
+        GamesAndScores.objects.create(
+            id=902, slug="wk2", competition="nfl", gameWeek="2", gameyear="2025",
+            gameseason=2526, startTimestamp=tz.now() + timedelta(days=7),
+            statusType="finished", statusTitle="Final", gameScored=True,
+            tieBreakerGame=True, homeTeamScore=17, awayTeamScore=10,
+            homeTeamId=5, homeTeamSlug="e", homeTeamName="E",
+            awayTeamId=6, awayTeamSlug="f", awayTeamName="F",
+        )
+        userSeasonPoints.objects.filter(userID=str(self.bo.id)).update(week_2_points=9)
+        userSeasonPoints.objects.filter(userID=str(self.ana.id)).update(week_2_points=4)
+
+        self._run()
+        self.assertEqual(
+            set(Notification.objects.values_list("title", flat=True)),
+            {"Week 2 winners", "You won Week 2!"},
+        )
+
+        # The postponed game is played; Week 1 is awarded on a later tick.
+        GamesAndScores.objects.filter(id=900).update(
+            statusType="finished", gameScored=True,
+        )
+        output = self._run()
+
+        self.assertIn("Week 1: sent or updated 2 winner notification(s)", output)
+        self.assertTrue(
+            Notification.objects.filter(title="You won Week 1!").exists(),
+            "a week awarded late must still be announced",
         )
