@@ -65,6 +65,7 @@ class Command(BaseCommand):
             season=season,
             family__status=Family.Status.ACTIVE,
         ))
+        awarded_by_week = {}
         for target_week in weeks:
             awarded = 0
             for pool in pools:
@@ -93,27 +94,40 @@ class Command(BaseCommand):
                     f"Week {target_week}: awarded winners in {awarded} pool(s)."
                 )
             )
+            awarded_by_week[target_week] = awarded
 
-            # Notify after the whole week's pools are processed, not per pool:
-            # a member of several families gets one digest naming all of them
-            # rather than a burst of near-identical rows. Runs even when this
-            # pass awarded nothing, because a previous pass may have awarded
-            # while notifications were failing -- publishing is keyed per
-            # user/season/week, so a repeat is a no-op.
-            try:
-                sent = publish_week_winner_digest(season, target_week, pools)
-            except Exception:
-                # A notification failure must never roll back or mask an award:
-                # the bonus points are the real work and are already committed.
-                logger.exception(
-                    "Week winner notifications failed for season %s week %s",
-                    season, target_week,
+        # Announce a week only when *this pass* awarded it, and only the latest
+        # week. The loop above back-fills every missed award on purpose, but
+        # announcing is news, not bookkeeping:
+        #   - weeks awarded before this producer shipped (Weeks 1-2 of 2627)
+        #     are never announced, so deploying mid-season is silent;
+        #   - after a scheduler outage that awards several weeks in one pass,
+        #     only the newest gets a digest, not one per stale week.
+        # weeks is ascending (complete_weeks sorts it), so [-1] is the newest.
+        #
+        # Trade-off: if an award commits but publishing then fails, the next
+        # tick sees the week as already awarded and does not retry, so that
+        # week's digest is lost. The award itself is never affected.
+        notify_week = weeks[-1]
+        if not awarded_by_week.get(notify_week):
+            return
+
+        # One digest after the whole week's pools are processed, not one per
+        # pool: a member of several families gets a single row naming them all.
+        try:
+            sent = publish_week_winner_digest(season, notify_week, pools)
+        except Exception:
+            # A notification failure must never roll back or mask an award: the
+            # bonus points are the real work and are already committed.
+            logger.exception(
+                "Week winner notifications failed for season %s week %s",
+                season, notify_week,
+            )
+            self.stderr.write(
+                f"Week {notify_week}: winner notifications failed (see logs)"
+            )
+        else:
+            if sent:
+                self.stdout.write(
+                    f"Week {notify_week}: sent {sent} winner notification(s)."
                 )
-                self.stderr.write(
-                    f"Week {target_week}: winner notifications failed (see logs)"
-                )
-            else:
-                if sent:
-                    self.stdout.write(
-                        f"Week {target_week}: sent {sent} winner notification(s)."
-                    )

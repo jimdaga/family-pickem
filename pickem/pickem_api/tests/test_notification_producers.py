@@ -180,13 +180,11 @@ class WeekWinnerDigestTests(TestCase):
         self.assertEqual(publish_week_winner_digest(self.season, self.week, []), 0)
 
 
-class WeekWinnerCommandWiringTests(TestCase):
-    """The producer must actually run from ``update_weekly_winners``.
+class _WeekWinnerCommandFixture:
+    """Week-1 games plus two real players, and a way to run the real command.
 
-    The unit tests above call publish_week_winner_digest directly; this one
-    drives the real management command, so a broken import or a hook in the
-    wrong place fails here rather than silently shipping a producer nothing
-    ever calls.
+    A mixin rather than a TestCase so the classes that share it don't also
+    inherit -- and re-run against a different fixture -- each other's tests.
     """
 
     class StubStats:
@@ -244,6 +242,15 @@ class WeekWinnerCommandWiringTests(TestCase):
             provider.return_value = self.StubStats()
             call_command("update_weekly_winners", season=2526, stdout=out, stderr=out)
         return out.getvalue()
+
+
+class WeekWinnerCommandWiringTests(_WeekWinnerCommandFixture, TestCase):
+    """The producer must actually run from ``update_weekly_winners``.
+
+    The unit tests above call publish_week_winner_digest directly; these drive
+    the real management command, so a broken import or a hook in the wrong
+    place fails here rather than silently shipping a producer nothing calls.
+    """
 
     def test_command_awards_and_notifies(self):
         output = self._run()
@@ -371,4 +378,81 @@ class WeekWinnerTitleTests(TestCase):
 
         self.assertLessEqual(
             len(Notification.objects.get(recipient=self.ana).title), 200,
+        )
+
+
+class WeekWinnerLaunchTests(_WeekWinnerCommandFixture, TestCase):
+    """Deploying mid-season must be silent; the first digest is the next award.
+
+    Mirrors production at ship time: Weeks 1 and 2 were awarded before this
+    producer existed. Those must never be announced -- only a week the command
+    itself awards from here on.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # Weeks 1 and 2 already awarded, as in prd on deploy day.
+        self._add_week(2, game_id=902)
+        userSeasonPoints.objects.filter(userID=str(self.ana.id)).update(
+            week_1_winner=True, week_2_points=11, week_2_winner=True,
+        )
+        userSeasonPoints.objects.filter(userID=str(self.bo.id)).update(
+            week_2_points=6,
+        )
+
+    def _add_week(self, week, game_id):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from pickem_api.models import GamesAndScores
+
+        GamesAndScores.objects.create(
+            id=game_id, slug=f"wk{week}", competition="nfl", gameWeek=str(week),
+            gameyear="2025", gameseason=2526,
+            startTimestamp=timezone.now() + timedelta(days=7 * week),
+            statusType="finished", statusTitle="Final", gameScored=True,
+            tieBreakerGame=True, homeTeamScore=17, awayTeamScore=10,
+            homeTeamId=5, homeTeamSlug="e", homeTeamName="E",
+            awayTeamId=6, awayTeamSlug="f", awayTeamName="F",
+        )
+
+    def test_deploy_with_weeks_already_awarded_sends_nothing(self):
+        output = self._run()
+
+        self.assertEqual(Notification.objects.count(), 0)
+        self.assertNotIn("winner notification", output)
+
+    def test_next_awarded_week_is_announced(self):
+        self._run()  # deploy tick: silent
+
+        # Week 3 finishes after deploy; the command awards it and announces it.
+        self._add_week(3, game_id=903)
+        userSeasonPoints.objects.filter(userID=str(self.ana.id)).update(week_3_points=5)
+        userSeasonPoints.objects.filter(userID=str(self.bo.id)).update(week_3_points=9)
+        output = self._run()
+
+        self.assertEqual(
+            sorted(Notification.objects.values_list("title", flat=True)),
+            ["Week 3 winners", "You won Week 3!"],
+        )
+        self.assertIn("Week 3: sent 2 winner notification(s)", output)
+
+    def test_outage_backfill_announces_only_the_newest_week(self):
+        # Weeks 3 and 4 both finish while the scheduler is down; one pass then
+        # awards both. Only Week 4 should reach anyone's bell.
+        for week, gid in ((3, 903), (4, 904)):
+            self._add_week(week, game_id=gid)
+            userSeasonPoints.objects.filter(userID=str(self.ana.id)).update(
+                **{f"week_{week}_points": 5})
+            userSeasonPoints.objects.filter(userID=str(self.bo.id)).update(
+                **{f"week_{week}_points": 9})
+
+        self._run()
+
+        titles = set(Notification.objects.values_list("title", flat=True))
+        self.assertEqual(titles, {"Week 4 winners", "You won Week 4!"})
+        # ...while Week 3's award itself still lands.
+        self.assertTrue(
+            userSeasonPoints.objects.get(userID=str(self.bo.id)).week_3_winner
         )
