@@ -63,7 +63,7 @@ def _digest_title(week, won_pools, total_pools):
     if total_pools == 1:
         return f"You won Week {week}!"
     if len(won_pools) == total_pools:
-        return f"You swept Week {week} — all {total_pools} pools!"
+        return f"You swept Week {week}: all {total_pools} pools!"
     if len(won_pools) == 1:
         return f"You won Week {week} in {won_pools[0]}"
     return f"You won Week {week} in {len(won_pools)} of {total_pools} pools"
@@ -142,7 +142,7 @@ def publish_week_winner_digest(season, week, pools):
         ]
 
         segments = [
-            f"{e['pool'].family.name} — {_winner_label(e['winner_ids'], user_id, names)}"
+            f"{e['pool'].family.name}: {_winner_label(e['winner_ids'], user_id, names)}"
             f" ({e['points']} pts)"
             for e in entries[:MAX_POOLS_LISTED]
         ]

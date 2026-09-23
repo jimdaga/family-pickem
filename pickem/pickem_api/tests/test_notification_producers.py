@@ -52,6 +52,9 @@ class WeekWinnerDigestTests(TestCase):
         self.assertEqual(created, 2)
         ana_note = Notification.objects.get(recipient=self.ana)
         self.assertEqual(ana_note.title, "You won Week 5!")
+        # Exact format: "<family>: <winner> (<pts> pts)". A colon, not an em
+        # dash -- the dash read badly in the panel.
+        self.assertEqual(ana_note.body, "Smith Family: you (14 pts)")
         self.assertIn("Smith Family", ana_note.body)
         self.assertIn("you", ana_note.body)
         self.assertIn("14 pts", ana_note.body)
@@ -347,7 +350,7 @@ class WeekWinnerTitleTests(TestCase):
 
     def test_sweeping_every_pool_is_called_out(self):
         self.assertEqual(
-            self._title_for([True, True, True]), "You swept Week 5 — all 3 pools!",
+            self._title_for([True, True, True]), "You swept Week 5: all 3 pools!",
         )
 
     def test_winning_nothing_is_neutral(self):
