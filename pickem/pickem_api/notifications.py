@@ -12,7 +12,7 @@ cannot slip one through.
 import logging
 
 from django.contrib.auth.models import User
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 
 from pickem_api.models import FamilyMembership, Notification, userSeasonPoints
@@ -78,6 +78,22 @@ def _pool_label(entry, entries):
     family = entry['pool'].family
     same_family = sum(1 for e in entries if e['pool'].family_id == family.pk)
     return f"{family.name} ({entry['pool'].name})" if same_family > 1 else family.name
+
+
+def _refresh_digest(existing, fields):
+    """Bring an existing digest up to date; True if anything changed.
+
+    New information (a pool awarded since, or a corrected winner) resurfaces the
+    row as unread. Identical content is left alone, which is the common case on
+    every repeat tick.
+    """
+    if all(getattr(existing, f) == v for f, v in fields.items()):
+        return False
+    for f, v in fields.items():
+        setattr(existing, f, v)
+    existing.read_at = None
+    existing.save(update_fields=[*fields, 'read_at'])
+    return True
 
 
 def publish_week_winner_digest(season, week, pools, *, create_missing=True):
@@ -197,31 +213,32 @@ def publish_week_winner_digest(season, week, pools, *, create_missing=True):
         key = f"week_winners:{season}:{week}:{user_id}"
 
         existing = Notification.objects.filter(dedupe_key=key).first()
-        if existing is not None:
-            if all(getattr(existing, f) == v for f, v in fields.items()):
-                continue  # unchanged: the common repeat-call case
-            for f, v in fields.items():
-                setattr(existing, f, v)
-            existing.read_at = None  # new information -- surface it again
-            existing.save(update_fields=[*fields, 'read_at'])
+        if existing is None:
+            if not create_missing:
+                continue
+            try:
+                # Savepoint, so a lost race doesn't poison an outer transaction
+                # and the re-query below still works.
+                with transaction.atomic():
+                    Notification.objects.create(
+                        dedupe_key=key, recipient=user,
+                        kind=Notification.Kind.WEEK_WINNER, **fields,
+                    )
+            except IntegrityError:
+                existing = Notification.objects.filter(dedupe_key=key).first()
+                if existing is None:
+                    # Not a duplicate-key race -- a real data error. Make it
+                    # visible rather than silently dropping this person's digest.
+                    logger.exception("Could not create week-winner digest %s", key)
+                    continue
+                # A concurrent call won the race, possibly with an older snapshot
+                # (fewer pools awarded). Fall through and bring it up to date
+                # rather than discarding our richer fields.
+            else:
+                changed += 1
+                continue
+
+        if _refresh_digest(existing, fields):
             changed += 1
-            continue
-
-        if not create_missing:
-            continue
-
-        try:
-            Notification.objects.create(
-                dedupe_key=key, recipient=user,
-                kind=Notification.Kind.WEEK_WINNER, **fields,
-            )
-        except IntegrityError:
-            # A concurrent tick created this exact key first -- the unique
-            # constraint doing its job. Anything else is a real data error and
-            # must be visible, not swallowed.
-            if not Notification.objects.filter(dedupe_key=key).exists():
-                logger.exception("Could not create week-winner digest %s", key)
-            continue
-        changed += 1
 
     return changed

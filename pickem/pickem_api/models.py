@@ -1181,3 +1181,31 @@ class Notification(models.Model):
         if self.read_at is None:
             self.read_at = when or timezone.now()
             self.save(update_fields=['read_at'])
+
+
+class WeekWinnerAnnouncement(models.Model):
+    """Outbox for week-winner digests: "this week still needs announcing".
+
+    A row is created only when update_weekly_winners itself awards a week, so
+    weeks awarded before the producer shipped never get one and are never
+    announced. Every command tick publishes any row still pending and stamps
+    ``published_at`` once that succeeds -- so a transient failure is retried on
+    the next tick instead of losing the week's digests for good. Publishing is
+    deduplicated per user/season/week, so a retry never doubles anything up.
+    """
+
+    season = models.IntegerField()
+    week = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['season', 'week'], name='unique_week_winner_announcement',
+            ),
+        ]
+
+    def __str__(self):
+        state = 'published' if self.published_at else 'pending'
+        return f"Week {self.week} ({self.season}) announcement: {state}"

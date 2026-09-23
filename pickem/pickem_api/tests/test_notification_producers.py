@@ -607,3 +607,116 @@ class WeekWinnerPostponedWeekTests(_WeekWinnerCommandFixture, TestCase):
             Notification.objects.filter(title="You won Week 1!").exists(),
             "a week awarded late must still be announced",
         )
+
+
+class WeekWinnerOutboxTests(_WeekWinnerCommandFixture, TestCase):
+    """A failed publish is retried on the next tick, not lost (CodeRabbit #198)."""
+
+    def test_failed_publish_is_retried_next_run(self):
+        from unittest.mock import patch
+
+        from pickem_api.models import WeekWinnerAnnouncement
+
+        with patch(
+            "pickem_api.management.commands.update_weekly_winners."
+            "publish_week_winner_digest",
+            side_effect=RuntimeError("db blip"),
+        ), self.assertLogs(
+            "pickem_api.management.commands.update_weekly_winners", level="ERROR",
+        ):
+            self._run()
+
+        # The award committed; the announcement is still pending.
+        self.assertEqual(Notification.objects.count(), 0)
+        self.assertIsNone(WeekWinnerAnnouncement.objects.get(week=1).published_at)
+
+        # Next tick: nothing new is awarded, but the pending week goes out.
+        output = self._run()
+        self.assertIn("Week 1: sent or updated 2 winner notification(s)", output)
+        self.assertIsNotNone(WeekWinnerAnnouncement.objects.get(week=1).published_at)
+
+    def test_published_week_is_not_republished(self):
+        from pickem_api.models import WeekWinnerAnnouncement
+
+        self._run()
+        self._run()
+        self.assertEqual(WeekWinnerAnnouncement.objects.count(), 1)
+        self.assertEqual(Notification.objects.count(), 2)
+
+    def test_force_on_an_unannounced_week_stays_silent(self):
+        from io import StringIO
+        from unittest.mock import patch
+
+        from django.core.management import call_command
+
+        from pickem_api.models import WeekWinnerAnnouncement
+
+        # Week 1 awarded before the producer existed (as in prd).
+        userSeasonPoints.objects.filter(userID=str(self.ana.id)).update(week_1_winner=True)
+        with patch(
+            "pickem_api.management.commands.update_weekly_winners.EspnGameStatsProvider"
+        ) as provider:
+            provider.return_value = self.StubStats()
+            call_command(
+                "update_weekly_winners", season=2526, week=1, force=True,
+                stdout=StringIO(), stderr=StringIO(),
+            )
+
+        self.assertEqual(Notification.objects.count(), 0)
+        self.assertFalse(WeekWinnerAnnouncement.objects.exists())
+
+
+class WeekWinnerInsertRaceTests(WeekWinnerDigestTests):
+    """Losing an insert race must still leave the digest current (CodeRabbit #198)."""
+
+    def _lose_the_race_to(self, stale_title):
+        """Make the first existence check miss a row that a concurrent call
+        created, so our insert hits the unique key."""
+        from unittest.mock import patch
+
+        from django.db.models.query import QuerySet
+
+        real_first = QuerySet.first
+        state = {"hidden": False}
+
+        def first(qs):
+            row = real_first(qs)
+            if row is not None and not state["hidden"] and row.title == stale_title:
+                state["hidden"] = True
+                return None
+            return row
+
+        return patch.object(QuerySet, "first", first)
+
+    def test_stale_winner_of_the_race_is_brought_up_to_date(self):
+        self._row(self.ana, self.smith_pool, 14, winner=True)
+        # A concurrent call wrote a narrower digest first.
+        Notification.objects.create(
+            recipient=self.ana, kind=Notification.Kind.WEEK_WINNER,
+            title="Week 5 winners", body="stale",
+            dedupe_key=f"week_winners:{self.season}:{self.week}:{self.ana.id}",
+        )
+
+        with self._lose_the_race_to("Week 5 winners"):
+            publish_week_winner_digest(self.season, self.week, self._pools())
+
+        note = Notification.objects.get(recipient=self.ana)
+        self.assertEqual(note.title, "You won Week 5!")
+        self.assertEqual(note.body, "Smith Family: you (14 pts)")
+
+    def test_integrity_error_that_is_not_a_race_is_logged(self):
+        from unittest.mock import patch
+
+        from django.db import IntegrityError
+
+        self._row(self.ana, self.smith_pool, 14, winner=True)
+        with patch.object(
+            Notification.objects, "create", side_effect=IntegrityError("fk"),
+        ), self.assertLogs("pickem_api.notifications", level="ERROR") as logs:
+            publish_week_winner_digest(self.season, self.week, self._pools())
+
+        self.assertTrue(any("Could not create" in m for m in logs.output))
+
+
+for _name in [n for n in vars(WeekWinnerDigestTests) if n.startswith("test_")]:
+    setattr(WeekWinnerInsertRaceTests, _name, None)
