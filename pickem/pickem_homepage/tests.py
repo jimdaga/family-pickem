@@ -9411,8 +9411,9 @@ class PicksPageLockFilterTests(TestCase):
         # Guard against regressing to statusType-only gating.
         import pathlib
         tpl = pathlib.Path('pickem_homepage/templates/pickem/picks.html').read_text()
-        # The interactive pick options must gate on the pool-aware filter.
-        self.assertIn('is_game_locked_for_pool:pool', tpl)
+        # The interactive pick options must gate on the pool-aware lock map
+        # (built in the view via is_pick_locked_for_pool).
+        self.assertIn('game_locked|lookup:game.id', tpl)
         # The old kickoff-only gate must be gone from the team-option cards.
         self.assertNotIn("game.statusType != 'notstarted' or auth_required", tpl)
 
@@ -12655,3 +12656,176 @@ class DevAdminAccessTests(TestCase):
     def test_login_page_hides_admin_link_in_production(self):
         response = self.client.get(reverse("account_login"))
         self.assertNotContains(response, 'data-testid="dev-admin-link"')
+
+
+class SaveServerDerivedPickRaceTests(TestCase):
+    """Two concurrent saves of the same pick (PYTHON-DJANGO-G / -Z).
+
+    The tiebreaker card fires one save from the input's change event and a
+    second from the team tap, so both requests can miss the existence check
+    before either has written. The loser must update the winner's row rather
+    than 500 on the pk or on a NULL pickadded.
+    """
+
+    def setUp(self):
+        from pickem_homepage.views import build_pick_id
+        self.user = User.objects.create_user("racer", email="racer@example.com")
+        family = Family.objects.create(name="Race Family", slug="race-family")
+        self.pool = Pool.objects.create(
+            family=family, name="Main", slug="main", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        self.game = GamesAndScores.objects.create(
+            id=3001, slug="chi-phi", competition="nfl", gameWeek="3",
+            gameyear="2025", gameseason=2526,
+            startTimestamp=timezone.now() + timedelta(days=1),
+            statusType="notstarted", statusTitle="Scheduled",
+            homeTeamId=1, homeTeamSlug="phi", homeTeamName="Philadelphia Eagles",
+            awayTeamId=2, awayTeamSlug="chi", awayTeamName="Chicago Bears",
+        )
+        # The race winner's row, already committed.
+        self.winner = GamePicks.objects.create(
+            id=build_pick_id(self.pool, self.user, self.game),
+            pool=self.pool, userID=str(self.user.id), pick_game_id=self.game.id,
+            pick="chi", gameWeek="3", gameseason=2526,
+        )
+
+    def _save_as_race_loser(self):
+        """Save while the first lookup still reports the pick as missing."""
+        from django.db.models.query import QuerySet
+        from pickem_homepage.views import save_server_derived_pick
+
+        real_get = QuerySet.get
+        calls = {"n": 0}
+
+        def stale_first_get(qs, *args, **kwargs):
+            if qs.model is GamePicks:
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    raise GamePicks.DoesNotExist
+            return real_get(qs, *args, **kwargs)
+
+        with patch.object(QuerySet, "get", stale_first_get), \
+                patch.object(QuerySet, "first", lambda qs: None):
+            return save_server_derived_pick(
+                user=self.user, pool=self.pool, game=self.game,
+                selected_pick="phi", tiebreaker_score=45, tiebreaker_yards=750,
+            )
+
+    def test_race_loser_updates_winner_row_instead_of_crashing(self):
+        pick = self._save_as_race_loser()
+
+        self.assertEqual(pick.id, self.winner.id)
+        self.assertEqual(GamePicks.objects.count(), 1)
+        row = GamePicks.objects.get(id=self.winner.id)
+        self.assertEqual(row.pick, "phi")
+        self.assertEqual(row.tieBreakerScore, 45)
+        self.assertEqual(row.tieBreakerYards, 750)
+        self.assertEqual(row.pickAdded, self.winner.pickAdded)
+
+    def test_repeat_save_updates_in_place(self):
+        from pickem_homepage.views import save_server_derived_pick
+
+        pick = save_server_derived_pick(
+            user=self.user, pool=self.pool, game=self.game, selected_pick="phi",
+        )
+
+        self.assertEqual(pick.id, self.winner.id)
+        self.assertEqual(GamePicks.objects.count(), 1)
+        self.assertEqual(GamePicks.objects.get(id=self.winner.id).pick, "phi")
+
+    def test_first_save_creates_with_deterministic_id(self):
+        from pickem_homepage.views import build_pick_id, save_server_derived_pick
+        self.winner.delete()
+
+        pick = save_server_derived_pick(
+            user=self.user, pool=self.pool, game=self.game, selected_pick="phi",
+        )
+
+        self.assertEqual(pick.id, build_pick_id(self.pool, self.user, self.game))
+        self.assertIsNotNone(GamePicks.objects.get(id=pick.id).pickAdded)
+
+
+@override_settings(TEAMS_LOOKUP_TTL_SECONDS=60)
+class PicksPageQueryCountTests(TestCase):
+    """The picks page must not issue per-game queries (PYTHON-DJANGO-P)."""
+
+    def setUp(self):
+        from pickem_homepage.templatetags import pickem_homepage_extras
+        pickem_homepage_extras._teams_by_slug_memo["expires"] = 0.0
+        Site.objects.get_or_create(id=1, defaults={"domain": "testserver", "name": "testserver"})
+        currentSeason.objects.create(season=2526, display_name="2025-2026")
+        GameWeeks.objects.create(
+            weekNumber=1, competition="nfl", date=timezone.localdate(), season=2526,
+        )
+        self.user = User.objects.create_user("counter", email="counter@example.com", password="pass")
+        self.family = Family.objects.create(name="Count Family", slug="count-family")
+        self.pool = Pool.objects.create(
+            family=self.family, name="Main", slug="main", season=2526,
+            competition="nfl", status=Pool.Status.ACTIVE, is_default=True,
+        )
+        # Every prd pool has a settings row; without one the lock helper
+        # falls back to a per-call PoolSettings lookup.
+        PoolSettings.objects.create(pool=self.pool)
+        FamilyMembership.objects.create(
+            family=self.family, user=self.user,
+            role=FamilyMembership.Role.MEMBER, status=FamilyMembership.Status.ACTIVE,
+        )
+        self.client.force_login(self.user)
+        self.url = reverse(
+            "family_pool_game_picks",
+            kwargs={"family_slug": self.family.slug, "pool_slug": self.pool.slug},
+        )
+        self.next_team_id = 1
+
+    def _add_game(self, game_id):
+        slugs = []
+        for _ in range(2):
+            team_id = self.next_team_id
+            self.next_team_id += 1
+            slug = f"team-{team_id}"
+            Teams.objects.create(
+                id=team_id, gameseason=2526, teamNameSlug=slug,
+                teamNameName=f"Team {team_id}", color="333333", alternateColor="666666",
+            )
+            slugs.append((team_id, slug))
+        (away_id, away), (home_id, home) = slugs
+        GamesAndScores.objects.create(
+            id=game_id, slug=f"{away}-{home}", competition="nfl", gameWeek="1",
+            gameyear="2025", gameseason=2526,
+            startTimestamp=timezone.now() + timedelta(days=1),
+            statusType="notstarted", statusTitle="Scheduled",
+            homeTeamId=home_id, homeTeamSlug=home, homeTeamName=home,
+            awayTeamId=away_id, awayTeamSlug=away, awayTeamName=away,
+        )
+
+    def _query_count(self):
+        from django.test.utils import CaptureQueriesContext
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        return len(ctx.captured_queries)
+
+    def test_query_count_does_not_grow_with_games(self):
+        self._add_game(4001)
+        self._query_count()  # warm per-process caches (site, social app, ...)
+        one_game = self._query_count()
+        for game_id in (4002, 4003, 4004):
+            self._add_game(game_id)
+        self._query_count()  # the new Teams rows invalidated the logo memo
+        four_games = self._query_count()
+
+        self.assertEqual(four_games, one_game)
+
+    def test_locked_game_shows_its_lock_reason(self):
+        self._add_game(4001)
+        GamesAndScores.objects.filter(id=4001).update(statusType="inprogress")
+        GamePicks.objects.create(
+            id=f"{self.pool.id}-{self.user.id}-4001", pool=self.pool,
+            userID=str(self.user.id), pick_game_id=4001, slug="team-1-team-2",
+            pick="team-1", gameWeek="1", gameseason=2526, competition="nfl",
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Pick Locked - Game has already started")

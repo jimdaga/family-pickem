@@ -59,7 +59,9 @@ class Command(BaseCommand):
                 logger.warning(
                     "Game %s finished without a winner; leaving unscored.", game.slug
                 )
-                self.stderr.write(f" - {game.slug}: finished but no winner yet")
+                # stdout, not stderr: stderr is forwarded at ERROR (Sentry),
+                # and a result ESPN has not posted yet is expected (PYTHON-DJANGO-R).
+                self.stdout.write(f" - {game.slug}: finished but no winner yet")
                 continue
 
             correct = GamePicks.objects.filter(

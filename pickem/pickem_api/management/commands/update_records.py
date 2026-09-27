@@ -116,8 +116,11 @@ class Command(BaseCommand):
                 # Per-team failures skip rather than retry: one bad team keeps
                 # its prior record until the next tick, which is acceptable
                 # degradation vs. aborting the entire command.
+                # stdout, not stderr: call_command_logged forwards stderr at
+                # ERROR, which paged Sentry with a new issue per team for a
+                # transient ESPN 5xx/timeout (PYTHON-DJANGO-E..Y).
                 logger.warning("Skipping %s: record fetch failed: %s", slug, exc)
-                self.stderr.write(f" - {slug}: record fetch failed ({exc})")
+                self.stdout.write(f" - {slug}: record fetch failed ({exc})")
                 continue
 
             logo = ""

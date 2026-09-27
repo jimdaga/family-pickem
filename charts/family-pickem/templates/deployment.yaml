@@ -46,6 +46,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
+          - name: APP_ENVIRONMENT
+            value: {{ .Values.environment | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       containers:
@@ -66,6 +68,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
+          - name: APP_ENVIRONMENT
+            value: {{ .Values.environment | quote }}
           - name: APP_RELEASE
             value: "{{ .Values.image.tag | default .Chart.AppVersion }}"
           {{- if .Values.redis.enabled }}

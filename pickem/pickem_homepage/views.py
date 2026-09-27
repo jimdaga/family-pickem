@@ -734,28 +734,32 @@ def pool_allows_tiebreaker(pool):
 
 
 def save_server_derived_pick(*, user, pool, game, selected_pick, tiebreaker_score=None, tiebreaker_yards=None):
-    existing_pick = GamePicks.objects.filter(
+    # update_or_create (row lock + IntegrityError retry) rather than
+    # filter().first() then save(): two saves of the same pick can land
+    # milliseconds apart (the tiebreaker card saves on both input change and
+    # team tap), and a check-then-save let the loser 500 on the pk or on a
+    # NULL pickadded. The loser now just updates the winner's row.
+    fields = {
+        'userEmail': user.email,
+        'uid': user.id,
+        'slug': game.slug,
+        'competition': game.competition,
+        'gameWeek': game.gameWeek,
+        'gameyear': game.gameyear,
+        'gameseason': game.gameseason,
+        'pick': selected_pick,
+        'tieBreakerScore': tiebreaker_score,
+        'tieBreakerYards': tiebreaker_yards,
+        'pick_correct': False,
+    }
+    # create_defaults replaces (not extends) defaults on insert.
+    pick, _ = GamePicks.objects.update_or_create(
         pool=pool,
         userID=str(user.id),
         pick_game_id=game.id,
-    ).first()
-    pick = existing_pick or GamePicks(id=build_pick_id(pool, user, game))
-
-    pick.pool = pool
-    pick.userEmail = user.email
-    pick.userID = str(user.id)
-    pick.uid = user.id
-    pick.slug = game.slug
-    pick.competition = game.competition
-    pick.gameWeek = game.gameWeek
-    pick.gameyear = game.gameyear
-    pick.gameseason = game.gameseason
-    pick.pick_game_id = game.id
-    pick.pick = selected_pick
-    pick.tieBreakerScore = tiebreaker_score
-    pick.tieBreakerYards = tiebreaker_yards
-    pick.pick_correct = False
-    pick.save()
+        defaults=fields,
+        create_defaults={**fields, 'id': build_pick_id(pool, user, game)},
+    )
     return pick
 
 
@@ -4720,7 +4724,19 @@ def render_pick_page(request, *, tenant_context=None):
         pick_slugs = []
         pick_ids = []
 
-    wins_losses = Teams.objects.filter(gameseason=gameseason)
+    wins_losses = list(Teams.objects.filter(gameseason=gameseason))
+    # Resolved once here, not per game in the template: the lock filters
+    # re-queried the whole week for every game (PYTHON-DJANGO-P).
+    from pickem.utils import is_pick_locked_for_pool
+
+    game_list = list(game_list)
+    lock_pool = tenant_context.pool if tenant_context else None
+    game_locked = {}
+    game_lock_reasons = {}
+    for game in game_list:
+        is_locked, lock_reason = is_pick_locked_for_pool(game, lock_pool, week_games=game_list)
+        game_locked[game.id] = is_locked
+        game_lock_reasons[game.id] = lock_reason if is_locked else 'Available'
     multi_family_pick_targets = []
     pool_lock_map = {}
     if tenant_context and request.user.is_authenticated:
@@ -4738,6 +4754,8 @@ def render_pick_page(request, *, tenant_context=None):
         'game_days': game_days,
         'competition': game_competition,
         'wins_losses': wins_losses,
+        'game_locked': game_locked,
+        'game_lock_reasons': game_lock_reasons,
         'gameseason': gameseason,
         'week': game_week,
         'picks': picks,

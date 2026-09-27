@@ -45,6 +45,10 @@ PASSWORD_HASHERS = [
 # Disable logging noise during tests
 LOGGING = {}
 
+# TestCase rollbacks fire no Teams signals, so the in-process team lookup memo
+# would leak rows across tests. Tests that measure it opt back in.
+TEAMS_LOOKUP_TTL_SECONDS = 0
+
 # Ensure django.contrib.sites is available (needed by allauth and Site model in tests)
 if 'django.contrib.sites' not in INSTALLED_APPS:
     INSTALLED_APPS = list(INSTALLED_APPS) + ['django.contrib.sites']

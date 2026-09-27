@@ -2,6 +2,7 @@
 # Used by ArgoCD Application: pickem-dev
 
 fullnameOverride: "family-pickem-dev"
+environment: dev
 replicaCount: 1
 
 image:

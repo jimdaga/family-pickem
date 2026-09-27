@@ -10,6 +10,11 @@ from django.utils.html import conditional_escape
 from django.utils.safestring import mark_safe
 import requests
 import re
+from time import monotonic
+
+from django.conf import settings
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 from pickem.utils import get_season
 
 register = template.Library()
@@ -167,30 +172,41 @@ def spread_favorite(game):
     return {"slug": slug, "name": name, "magnitude": abs(spread)}
 
 
+_teams_by_slug_memo = {"expires": 0.0, "teams": {}}
+
+
+@receiver([post_save, post_delete], sender=Teams)
+def _invalidate_teams_by_slug(**kwargs):
+    _teams_by_slug_memo["expires"] = 0.0
+
+
+def _teams_by_slug():
+    """All Teams keyed by slug, memoized in-process for a minute.
+
+    lookuplogo/get_team_names run once or twice per game on the picks, lobby
+    and scores pages; querying per call was their N+1 (PYTHON-DJANGO-P/S/V).
+    The table is ~32 rows and changes rarely; a Teams save/delete in this
+    process drops the memo, and the TTL bounds staleness from other pods and
+    from queryset.update() writes. TEAMS_LOOKUP_TTL_SECONDS=0 disables it.
+    """
+    now = monotonic()
+    if now >= _teams_by_slug_memo["expires"]:
+        _teams_by_slug_memo["teams"] = {
+            team.teamNameSlug: team for team in Teams.objects.all()
+        }
+        _teams_by_slug_memo["expires"] = now + getattr(
+            settings, "TEAMS_LOOKUP_TTL_SECONDS", 60
+        )
+    return _teams_by_slug_memo["teams"]
+
+
 @register.filter
 def lookuplogo(slug):
-    if slug != None:
-        # Handle comma-separated team names (ties) by taking the first team
-        if ',' in slug:
-            first_team_slug = slug.split(',')[0].strip()
-            try:
-                logo = Teams.objects.get(teamNameSlug=first_team_slug)
-            except Teams.DoesNotExist:
-                logo = {
-                    'teamLogo': None
-                }
-        else:
-            try:
-                logo = Teams.objects.get(teamNameSlug=slug)
-            except Teams.DoesNotExist:
-                logo = {
-                    'teamLogo': None
-                }
-    else:
-        logo = {
-            'teamLogo': None
-        }
-    return logo
+    if slug is None:
+        return {'teamLogo': None}
+    # Handle comma-separated team names (ties) by taking the first team
+    slug = str(slug).split(',')[0].strip()
+    return _teams_by_slug().get(slug) or {'teamLogo': None}
 
 
 def _team_brand_value(team, key, default=None):
@@ -268,25 +284,16 @@ def get_team_names(team_string):
     if not team_string:
         return ""
     
+    teams = _teams_by_slug()
     team_slugs = [team.strip() for team in str(team_string).split(',') if team.strip()]
     if len(team_slugs) <= 1:
-        # Single team - look up the name
-        try:
-            team = Teams.objects.get(teamNameSlug=str(team_string).strip())
-            return team.teamNameName
-        except Teams.DoesNotExist:
-            return str(team_string)
-    
-    # Multiple teams - look up all names
-    team_names = []
-    for slug in team_slugs:
-        try:
-            team = Teams.objects.get(teamNameSlug=slug)
-            team_names.append(team.teamNameName)
-        except Teams.DoesNotExist:
-            team_names.append(slug)  # Fallback to slug if not found
-    
-    return ", ".join(team_names)
+        team = teams.get(str(team_string).strip())
+        return team.teamNameName if team else str(team_string)
+
+    return ", ".join(
+        teams[slug].teamNameName if slug in teams else slug
+        for slug in team_slugs
+    )
 
 @register.filter
 def lookuppick(id):
