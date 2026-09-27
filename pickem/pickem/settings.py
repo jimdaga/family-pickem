@@ -34,6 +34,9 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 # Disabled unless SENTRY_DSN is set, so local dev/tests never enable it. The
 # DSN comes from AWS Secrets Manager -> ESO -> K8s Secret, same as every
 # other deployment secret in this app -- never hardcode it here.
+# Deployment environment (set per env by the Helm chart's `environment` value).
+APP_ENVIRONMENT = os.environ.get('APP_ENVIRONMENT', 'production').strip() or 'production'
+
 SENTRY_DSN = os.environ.get('SENTRY_DSN', '').strip()
 if SENTRY_DSN:
     import sentry_sdk
@@ -56,6 +59,7 @@ if SENTRY_DSN:
         # set in the Helm chart's deployment template) so an error spike can
         # be traced back to the release that introduced it.
         release=os.environ.get('APP_RELEASE', ''),
+        environment=APP_ENVIRONMENT,
     )
 
 # Allowed Host(s). Dev-only hosts (ngrok tunnel) are gated behind DEBUG so
@@ -410,7 +414,17 @@ if 'AWS_STORAGE_BUCKET_NAME' in os.environ:
     # defaults apply (local/dev).
     STORAGES = {
         'default': {'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage'},
-        'staticfiles': {'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage'},
+        'staticfiles': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+            # dev and prd share one bucket. Unprefixed, every dev deploy's
+            # collectstatic overwrote prd's CSS/JS with main's, and two
+            # overlapping runs 404'd mid-copy (PYTHON-DJANGO-4) because
+            # collectstatic deletes a stale file before re-uploading it.
+            # prd keeps the bucket root so its existing URLs are unchanged.
+            'OPTIONS': {
+                'location': '' if APP_ENVIRONMENT == 'production' else APP_ENVIRONMENT,
+            },
+        },
     }
 
     AWS_STORAGE_BUCKET_NAME = os.environ['AWS_STORAGE_BUCKET_NAME']

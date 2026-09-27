@@ -116,7 +116,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {% for game in game_list %}
                      {% if game.slug not in pick_slugs %}
-                        {% with locked=game|is_game_locked_for_pool:pool %}
+                        {% with locked=game_locked|lookup:game.id %}
                         {% with pool.id|addstr:"-"|addstr:user.id|addstr:"-"|addstr:game.id as template %}
                             {% if template not in pick_ids %}
                                 <div class="picks-game-card game-card flex flex-col bg-surface-light dark:bg-slate-700 rounded-xl overflow-hidden border border-border-light dark:border-slate-600 hover:border-primary/30 dark:hover:border-primary/30 transition-all duration-200 {% if auth_required %}opacity-50 pointer-events-none{% endif %}" data-game-id="{{ game.id }}">
@@ -395,7 +395,7 @@
                     {% if pick_slugs and not auth_required %}
                         {% for game in game_list %}
                         {% if game.slug in pick_slugs %}
-                        {% with locked=game|is_game_locked_for_pool:pool %}
+                        {% with locked=game_locked|lookup:game.id %}
                             {% with pool.id|addstr:"-"|addstr:user.id|addstr:"-"|addstr:game.id as template %}
                                 {% if template in pick_ids %}
                                 <div data-submitted-game="{{ game.id }}" class="bg-surface-light dark:bg-surface rounded-xl p-5 border border-border-light dark:border-border-subtle hover:border-primary/50 transition-all duration-200 space-y-4">
@@ -557,7 +557,7 @@
                                         {% else %}
                                         <div class="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 dark:bg-red-600/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-semibold">
                                             <i class="fas fa-lock"></i>
-                                            <span>Pick Locked - {{ game|game_lock_reason_for_pool:pool }}</span>
+                                            <span>Pick Locked - {{ game_lock_reasons|lookup:game.id }}</span>
                                         </div>
                                         {% endif %}
                                     </div>
@@ -1006,6 +1006,10 @@
         function animatePickSaved(form) {
             const card = form.closest('.picks-game-card');
             if (!card) { window.location.reload(); return; }
+            // A queued resend (see savePick) can succeed after the first save
+            // already started moving this card out; animate it only once.
+            if (card.dataset.animatingOut || !card.parentElement) return;
+            card.dataset.animatingOut = '1';
             const gameId = card.dataset.gameId;
             const grid = card.parentElement;
 
@@ -1117,6 +1121,15 @@
                 }
             }
             
+            // One save in flight per card. On a tiebreaker card, leaving an
+            // input (change) and tapping a team (click) fire back-to-back;
+            // queue the latest team and resend once the first save settles.
+            if (gameCard.dataset.saving === '1') {
+                gameCard.dataset.pendingTeam = selectedTeam;
+                return;
+            }
+            gameCard.dataset.saving = '1';
+
             // Update form data
             const pickInput = form.querySelector('input[name="pick"]');
             console.log('Pick input found:', pickInput);
@@ -1209,6 +1222,14 @@
                 }, 3000);
                 
                 console.error('Error saving pick:', error);
+            })
+            .finally(() => {
+                delete gameCard.dataset.saving;
+                const pendingTeam = gameCard.dataset.pendingTeam;
+                if (pendingTeam) {
+                    delete gameCard.dataset.pendingTeam;
+                    savePick(gameCard, pendingTeam);
+                }
             });
         }
 
