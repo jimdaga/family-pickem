@@ -10,9 +10,11 @@ from django.utils.html import conditional_escape
 from django.utils.safestring import mark_safe
 import requests
 import re
+import threading
 from time import monotonic
 
 from django.conf import settings
+from django.db import transaction
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from pickem.utils import get_season
@@ -172,12 +174,23 @@ def spread_favorite(game):
     return {"slug": slug, "name": name, "magnitude": abs(spread)}
 
 
-_teams_by_slug_memo = {"expires": 0.0, "teams": {}}
+_teams_by_slug_lock = threading.Lock()
+# `generation` bumps on every invalidation so a refresh that read Teams before
+# a write can't publish those stale rows over the newer invalidation.
+_teams_by_slug_memo = {"generation": 0, "expires": 0.0, "teams": {}}
+
+
+def _expire_teams_by_slug():
+    with _teams_by_slug_lock:
+        _teams_by_slug_memo["generation"] += 1
+        _teams_by_slug_memo["expires"] = 0.0
 
 
 @receiver([post_save, post_delete], sender=Teams)
 def _invalidate_teams_by_slug(**kwargs):
-    _teams_by_slug_memo["expires"] = 0.0
+    # After commit: expiring inside the write's transaction would let a
+    # concurrent refresh re-cache the pre-write rows before they're visible.
+    transaction.on_commit(_expire_teams_by_slug)
 
 
 def _teams_by_slug():
@@ -185,19 +198,24 @@ def _teams_by_slug():
 
     lookuplogo/get_team_names run once or twice per game on the picks, lobby
     and scores pages; querying per call was their N+1 (PYTHON-DJANGO-P/S/V).
-    The table is ~32 rows and changes rarely; a Teams save/delete in this
-    process drops the memo, and the TTL bounds staleness from other pods and
-    from queryset.update() writes. TEAMS_LOOKUP_TTL_SECONDS=0 disables it.
+    The table is ~32 rows and changes rarely; a committed Teams save/delete in
+    this process drops the memo, and the TTL bounds staleness from other pods
+    and from queryset.update() writes. TEAMS_LOOKUP_TTL_SECONDS=0 disables it.
     """
     now = monotonic()
-    if now >= _teams_by_slug_memo["expires"]:
-        _teams_by_slug_memo["teams"] = {
-            team.teamNameSlug: team for team in Teams.objects.all()
-        }
-        _teams_by_slug_memo["expires"] = now + getattr(
-            settings, "TEAMS_LOOKUP_TTL_SECONDS", 60
-        )
-    return _teams_by_slug_memo["teams"]
+    with _teams_by_slug_lock:
+        if now < _teams_by_slug_memo["expires"]:
+            return _teams_by_slug_memo["teams"]
+        generation = _teams_by_slug_memo["generation"]
+
+    teams = {team.teamNameSlug: team for team in Teams.objects.all()}
+    with _teams_by_slug_lock:
+        if _teams_by_slug_memo["generation"] == generation:
+            _teams_by_slug_memo["teams"] = teams
+            _teams_by_slug_memo["expires"] = now + getattr(
+                settings, "TEAMS_LOOKUP_TTL_SECONDS", 60
+            )
+    return teams
 
 
 @register.filter

@@ -12820,7 +12820,11 @@ class PicksPageQueryCountTests(TestCase):
         one_game = self._query_count()
         for game_id in (4002, 4003, 4004):
             self._add_game(game_id)
-        self._query_count()  # the new Teams rows invalidated the logo memo
+        # TestCase never commits, so the Teams post_save invalidation can't
+        # fire here; expire the memo by hand, then re-warm it.
+        from pickem_homepage.templatetags import pickem_homepage_extras
+        pickem_homepage_extras._teams_by_slug_memo["expires"] = 0.0
+        self._query_count()
         four_games = self._query_count()
 
         self.assertEqual(four_games, one_game)
@@ -12867,11 +12871,36 @@ class TeamLookupFilterTests(TestCase):
     def test_save_and_delete_invalidate_the_memo(self):
         self.extras.lookuplogo("phi")  # warm
         self.team.teamLogo = "https://example.com/new.png"
-        self.team.save()
+        with self.captureOnCommitCallbacks(execute=True):
+            self.team.save()
         self.assertEqual(self.extras.lookuplogo("phi").teamLogo, "https://example.com/new.png")
 
-        self.team.delete()
+        with self.captureOnCommitCallbacks(execute=True):
+            self.team.delete()
         self.assertEqual(self.extras.lookuplogo("phi"), {"teamLogo": None})
+
+    def test_invalidation_waits_for_commit(self):
+        self.extras.lookuplogo("phi")  # warm
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            Teams.objects.filter(id=901).update(teamLogo="https://example.com/new.png")
+            self.team.refresh_from_db()
+            self.team.save()
+            # Not yet committed: the memo still serves the old logo.
+            self.assertEqual(self.extras.lookuplogo("phi").teamLogo, "https://example.com/phi.png")
+        self.assertEqual(len(callbacks), 1)
+
+    def test_refresh_does_not_overwrite_a_newer_invalidation(self):
+        real_all = Teams.objects.all
+
+        def all_then_invalidate():
+            rows = list(real_all())  # the refresh reads the old rows...
+            self.extras._expire_teams_by_slug()  # ...then a write commits
+            return rows
+
+        with patch.object(Teams.objects, "all", side_effect=all_then_invalidate):
+            self.extras.lookuplogo("phi")
+
+        self.assertEqual(self.extras._teams_by_slug_memo["expires"], 0.0)
 
 
 class PipelineExpectedConditionsStayOffStderrTests(TestCase):
