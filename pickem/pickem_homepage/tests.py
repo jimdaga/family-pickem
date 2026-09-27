@@ -12705,12 +12705,17 @@ class SaveServerDerivedPickRaceTests(TestCase):
                     raise GamePicks.DoesNotExist
             return real_get(qs, *args, **kwargs)
 
+        # The `first` patch is inert against update_or_create; it replays the
+        # old check-then-save's stale read so this test fails on that code.
         with patch.object(QuerySet, "get", stale_first_get), \
                 patch.object(QuerySet, "first", lambda qs: None):
-            return save_server_derived_pick(
+            pick = save_server_derived_pick(
                 user=self.user, pool=self.pool, game=self.game,
                 selected_pick="phi", tiebreaker_score=45, tiebreaker_yards=750,
             )
+        # Stale miss, then the post-IntegrityError re-get: the retry path ran.
+        self.assertEqual(calls["n"], 2)
+        return pick
 
     def test_race_loser_updates_winner_row_instead_of_crashing(self):
         pick = self._save_as_race_loser()
@@ -12752,7 +12757,10 @@ class PicksPageQueryCountTests(TestCase):
 
     def setUp(self):
         from pickem_homepage.templatetags import pickem_homepage_extras
-        pickem_homepage_extras._teams_by_slug_memo["expires"] = 0.0
+        memo = pickem_homepage_extras._teams_by_slug_memo
+        memo["expires"] = 0.0
+        # Rollback fires no Teams signals; don't leak this class's rows.
+        self.addCleanup(memo.__setitem__, "expires", 0.0)
         Site.objects.get_or_create(id=1, defaults={"domain": "testserver", "name": "testserver"})
         currentSeason.objects.create(season=2526, display_name="2025-2026")
         GameWeeks.objects.create(
@@ -12829,3 +12837,69 @@ class PicksPageQueryCountTests(TestCase):
         response = self.client.get(self.url)
 
         self.assertContains(response, "Pick Locked - Game has already started")
+
+
+@override_settings(TEAMS_LOOKUP_TTL_SECONDS=60)
+class TeamLookupFilterTests(TestCase):
+    def setUp(self):
+        from pickem_homepage.templatetags import pickem_homepage_extras as extras
+        self.extras = extras
+        extras._teams_by_slug_memo["expires"] = 0.0
+        self.addCleanup(extras._teams_by_slug_memo.__setitem__, "expires", 0.0)
+        self.team = Teams.objects.create(
+            id=901, gameseason=2526, teamNameSlug="phi", teamNameName="Philadelphia Eagles",
+            teamLogo="https://example.com/phi.png", color="004C54", alternateColor="A5ACAF",
+        )
+
+    def test_lookuplogo_edges(self):
+        self.assertEqual(self.extras.lookuplogo(None), {"teamLogo": None})
+        self.assertEqual(self.extras.lookuplogo("nope"), {"teamLogo": None})
+        self.assertEqual(self.extras.lookuplogo("phi").teamLogo, "https://example.com/phi.png")
+        # Ties are stored comma-separated; the first team's logo is shown.
+        self.assertEqual(self.extras.lookuplogo("phi, nope").teamLogo, "https://example.com/phi.png")
+
+    def test_get_team_names_edges(self):
+        self.assertEqual(self.extras.get_team_names(""), "")
+        self.assertEqual(self.extras.get_team_names(" phi "), "Philadelphia Eagles")
+        self.assertEqual(self.extras.get_team_names("nope"), "nope")
+        self.assertEqual(self.extras.get_team_names("phi, nope"), "Philadelphia Eagles, nope")
+
+    def test_save_and_delete_invalidate_the_memo(self):
+        self.extras.lookuplogo("phi")  # warm
+        self.team.teamLogo = "https://example.com/new.png"
+        self.team.save()
+        self.assertEqual(self.extras.lookuplogo("phi").teamLogo, "https://example.com/new.png")
+
+        self.team.delete()
+        self.assertEqual(self.extras.lookuplogo("phi"), {"teamLogo": None})
+
+
+class PipelineExpectedConditionsStayOffStderrTests(TestCase):
+    """call_command_logged forwards stderr at ERROR (-> Sentry); expected,
+    self-healing conditions must not be written there."""
+
+    def test_update_records_team_fetch_failure(self):
+        import requests
+        from pickem_api.management.commands import update_records
+
+        err = StringIO()
+        with patch.object(update_records, "fetch_team_list", return_value=[{"id": 1, "slug": "phi"}]), \
+                patch.object(update_records, "fetch_team_record",
+                             side_effect=requests.exceptions.ConnectionError("boom")):
+            call_command("update_records", season=2526, stdout=StringIO(), stderr=err)
+
+        self.assertEqual(err.getvalue(), "")
+
+    def test_update_picks_finished_game_without_winner(self):
+        GamesAndScores.objects.create(
+            id=5001, slug="a-b", competition="nfl", gameWeek="1", gameyear="2025",
+            gameseason=2526, startTimestamp=timezone.now() - timedelta(hours=4),
+            statusType="finished", statusTitle="Final", gameWinner="",
+            homeTeamId=1, homeTeamSlug="b", homeTeamName="B",
+            awayTeamId=2, awayTeamSlug="a", awayTeamName="A",
+            homeTeamScore=None, awayTeamScore=None,
+        )
+        err = StringIO()
+        call_command("update_picks", season=2526, stdout=StringIO(), stderr=err)
+
+        self.assertEqual(err.getvalue(), "")
