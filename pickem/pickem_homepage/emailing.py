@@ -209,16 +209,15 @@ def _default_active_pool_for_family(family, *, season=None, competition=None):
     )
 
 
-def _pick_link_membership(user, *, season=None, competition=None):
-    memberships = list(
-        FamilyMembership.objects.select_related('family')
-        .filter(
-            user=user,
-            status=FamilyMembership.Status.ACTIVE,
-            family__status='active',
-        )
-        .order_by('created_at', 'id')
+def _pick_link_membership(user, *, season=None, competition=None, exclude_idle=False):
+    memberships = FamilyMembership.objects.select_related('family').filter(
+        user=user,
+        status=FamilyMembership.Status.ACTIVE,
+        family__status='active',
     )
+    if exclude_idle:
+        memberships = memberships.filter(family__is_idle=False)
+    memberships = list(memberships.order_by('created_at', 'id'))
 
     ordered_memberships = sorted(
         memberships,
@@ -240,11 +239,12 @@ def _pick_link_membership(user, *, season=None, competition=None):
     return None, None
 
 
-def _build_picks_link(user, *, season=None, competition=None):
+def _build_picks_link(user, *, season=None, competition=None, exclude_idle=False):
     membership, pool = _pick_link_membership(
         user,
         season=season,
         competition=competition,
+        exclude_idle=exclude_idle,
     )
     if membership is None or pool is None:
         return '', None, None
@@ -371,7 +371,11 @@ def _eligible_campaign_users(campaign):
 def _eligible_weekly_picks_users(campaign):
     users = []
     for user in _eligible_campaign_users(campaign):
-        link, family, pool = _build_picks_link(user)
+        # Idle families (Family.is_idle, see update_family_activity) don't get
+        # the "picks are ready" mail; a member of an idle family and an active
+        # one is linked to the active one, and someone in only idle families
+        # is skipped.
+        link, family, pool = _build_picks_link(user, exclude_idle=True)
         if not link:
             continue
         user._weekly_picks_link = link

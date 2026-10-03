@@ -342,7 +342,7 @@
             {% regroup game_list by startTimestamp as games_by_time %}
             {% for time_group in games_by_time %}
             {% with time_group.list|block_is_stale_final:time_group.grouper as block_collapsed %}
-            <div class="scores-time-group scores-kickoff-group mb-7 relative" x-data="{ open: {% if block_collapsed %}false{% else %}true{% endif %} }">
+            <div class="scores-time-group scores-kickoff-group mb-7 relative" x-data="{ open: {% if block_collapsed and not week_all_final %}false{% else %}true{% endif %} }">
                 <button @click="open = !open"
                         class="w-full flex items-center justify-between gap-3 border-b border-border-light dark:border-border-subtle px-1 pb-2 text-left transition-colors hover:border-primary/40"
                         type="button">

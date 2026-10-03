@@ -704,6 +704,34 @@ class WeeklyPicksCampaignTests(TestCase):
 
         self.assertEqual(UserProfile.objects.count(), before)
 
+    @override_settings(EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY=False)
+    def test_idle_family_members_are_skipped_by_weekly_picks(self):
+        self.assertIn(self.allowed_user.id, {u.id for u in _eligible_weekly_picks_users(self.campaign)})
+        Family.objects.filter(pk=self.pool.family_id).update(is_idle=True)
+
+        weekly = _eligible_weekly_picks_users(self.campaign)
+
+        self.assertNotIn(self.allowed_user.id, {u.id for u in weekly})
+        self.assertNotIn(self.other_user.id, {u.id for u in weekly})
+
+    @override_settings(EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY=False)
+    def test_member_of_idle_and_active_family_is_linked_to_the_active_one(self):
+        Family.objects.filter(pk=self.pool.family_id).update(is_idle=True)
+        active_family = Family.objects.create(name='Active Fam', slug='active-fam')
+        Pool.objects.create(
+            family=active_family, name='Active Pool', slug='active-pool',
+            season=2627, is_default=True,
+        )
+        FamilyMembership.objects.create(
+            family=active_family, user=self.allowed_user,
+            role=FamilyMembership.Role.MEMBER,
+        )
+
+        weekly = {u.id: u for u in _eligible_weekly_picks_users(self.campaign)}
+
+        self.assertIn(self.allowed_user.id, weekly)
+        self.assertEqual(weekly[self.allowed_user.id]._weekly_picks_family, active_family)
+
     def test_eligible_campaign_users_applies_same_filters_as_weekly_helper(self):
         from pickem_homepage.emailing import _eligible_campaign_users
 

@@ -238,7 +238,12 @@ def overview(request):
 
     counts = {
         'families': Family.objects.count(),
-        'families_inactive': Family.objects.filter(status=Family.Status.INACTIVE).count(),
+        # "Inactive" = idle (no picks in the last two completed weeks, see
+        # update_family_activity). Soft-deleted families are counted apart.
+        'families_inactive': Family.objects.filter(
+            status=Family.Status.ACTIVE, is_idle=True
+        ).count(),
+        'families_deactivated': Family.objects.filter(status=Family.Status.INACTIVE).count(),
         'pools': Pool.objects.count(),
         'users': User.objects.count(),
         'users_blocked': User.objects.filter(is_active=False).count(),

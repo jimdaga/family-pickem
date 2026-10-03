@@ -17,6 +17,7 @@ Order matters:
   10. generate_weekly_summaries - AI recap drafts (after winners are final,
      so a week-18 recap can reference the just-crowned champion)
   11. update_stats           - recompute per-user userStats (replaces pickemctl)
+  12. update_family_activity - flag idle families / clear the flag on return
 """
 
 import logging
@@ -38,6 +39,7 @@ PIPELINE = [
     "update_season_winners",
     "generate_weekly_summaries",
     "update_stats",
+    "update_family_activity",
 ]
 
 

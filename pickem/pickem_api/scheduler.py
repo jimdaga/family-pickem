@@ -116,6 +116,7 @@ PIPELINE = [
     ('update_season_winners', 'Season winners', UPDATE_INTERVAL_MINUTES),
     ('generate_weekly_summaries', 'AI weekly recaps', UPDATE_INTERVAL_MINUTES),
     ('update_stats', 'User stats', 5),
+    ('update_family_activity', 'Family activity', 15),
 ]
 
 # Standalone evaluators with no pipeline dependency; run after the pipeline in

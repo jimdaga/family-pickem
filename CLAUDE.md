@@ -125,6 +125,10 @@ Data updates run as ORM-direct Django management commands (`pickem/pickem_api/ma
 9. `update_season_winners` - flag the season champion once the season ends
 10. `generate_weekly_summaries` - AI recap drafts
 11. `update_stats` - recompute per-user `userStats`
+12. `update_family_activity` - flag a family `is_idle` when no member made a
+    manual pick in the last 2 completed weeks (clears on return; idle families
+    skip the weekly "picks are ready" email). Separate from `Family.status`,
+    where INACTIVE is the commissioner soft-delete.
 
 In production this pipeline runs on a tick via the in-process APScheduler
 (`pickem_api/scheduler.py`, enabled by `RUN_SCHEDULER=true` on a single web

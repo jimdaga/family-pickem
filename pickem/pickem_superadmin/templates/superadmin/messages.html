@@ -1,0 +1,69 @@
+{% extends 'superadmin/base.html' %}
+{% load sa_extras %}
+{% block title %}messages{% endblock %}
+{% block eyebrow %}feedback{% endblock %}
+{% block heading %}Message boards <span class="sa-count">· {{ items.paginator.count }}</span>{% endblock %}
+{% block actions %}
+  <form method="get" class="flex flex-wrap gap-2">
+    <select name="family" class="sa-select w-48">
+      <option value="">all families</option>
+      {% for family in families %}
+        <option value="{{ family.slug }}" {% if family_filter == family.slug %}selected{% endif %}>{{ family.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="kind" class="sa-select w-32">
+      <option value="">posts + comments</option>
+      <option value="post" {% if kind_filter == 'post' %}selected{% endif %}>posts</option>
+      <option value="comment" {% if kind_filter == 'comment' %}selected{% endif %}>comments</option>
+    </select>
+    <input type="search" name="q" value="{{ query }}" placeholder="search text or author" class="sa-input w-52">
+    <label class="flex items-center gap-1 text-[13px] text-[#667085]">
+      <input type="checkbox" name="hidden" value="1" {% if show_hidden %}checked{% endif %}> include hidden
+    </label>
+    <button type="submit" class="sa-btn sa-btn-default">Filter</button>
+  </form>
+{% endblock %}
+{% block content %}
+  <div class="sa-table-wrap sa-table-scroll">
+    <table class="sa-table sa-table-stack">
+      <thead>
+        <tr>
+          <th>when</th>
+          <th>family</th>
+          <th>author</th>
+          <th>type</th>
+          <th>message</th>
+          <th class="sa-num">votes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr{% if not item.obj.is_active %} class="sa-locked"{% endif %}>
+            <td class="sa-mono text-[#667085] whitespace-nowrap">{{ item.created_at|date:"Y-m-d H:i" }}</td>
+            <td class="sa-mono">
+              {% if item.board_url %}
+                <a href="{{ item.board_url }}" target="_blank" rel="noopener" class="sa-link" title="Open {{ item.obj.family.name }} message board in a new tab">{{ item.obj.family.slug }}</a>
+              {% else %}{{ item.obj.family.slug|default:"—" }}{% endif %}
+            </td>
+            <td class="sa-mono">{{ item.obj.user.username }}</td>
+            <td>
+              <span class="sa-pill sa-pill-muted">{{ item.kind }}</span>
+              {% if not item.obj.is_active %}<span class="sa-pill sa-pill-warn">hidden</span>{% endif %}
+            </td>
+            <td class="text-[#1b212b]">
+              <div class="text-[12px] font-semibold text-[#667085]">{% if item.kind == 'comment' %}re: {% endif %}{{ item.title }}</div>
+              <div class="whitespace-pre-line">{{ item.obj.content|truncatechars:600 }}</div>
+            </td>
+            <td class="sa-num sa-mono whitespace-nowrap">
+              <span class="text-emerald-700">▲{{ item.obj.upvotes }}</span>
+              <span class="{% if item.obj.downvotes %}text-red-700{% else %}text-[#98a2b3]{% endif %}">▼{{ item.obj.downvotes }}</span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="sa-empty">No messages match.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'superadmin/_pagination.html' with page_obj=items %}
+{% endblock %}

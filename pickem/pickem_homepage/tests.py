@@ -2484,6 +2484,10 @@ class TenantScoresStandingsRulesIsolationTests(TestCase):
         winners = [p for p in ctx2["user_points"] if p["is_winner"]]
         self.assertEqual(len(winners), 1)
         self.assertEqual(str(winners[0]["uid"]), str(self.smith_member.id))
+        # The crowned winner takes tile one even though the tie's uid
+        # tie-break (desc) would otherwise put the other member first.
+        self.assertEqual(str(ctx2["user_points"][0]["uid"]), str(self.smith_member.id))
+        self.assertEqual([p["rank"] for p in ctx2["user_points"]], [1, 2])
 
     def test_tenant_scores_page_includes_gsap_polish_hooks(self):
         self._seed_private_pool_data()
@@ -8151,6 +8155,30 @@ class FamilyLogoUploadFoundationTests(FamilyAdminExperienceTests):
         self.assertNotContains(response, 'logo_url')
         self.assertNotContains(response, 'blob:')
 
+    def test_superadmin_picker_shows_stats_and_splits_idle_families(self):
+        superuser = User.objects.create_user(
+            'stats-superuser', email='statssre@example.com', password='pass', is_superuser=True,
+        )
+        Family.objects.filter(pk=self.family.pk).update(is_idle=True)
+        Family.objects.create(name='Busy Family', slug='busy-family')
+        self.client.force_login(superuser)
+
+        response = self.client.get(reverse('family_picker'))
+
+        self.assertEqual(response.status_code, 200)
+        active = response.context['superadmin_active_choices']
+        idle = response.context['superadmin_idle_choices']
+        self.assertEqual([c['family'].slug for c in idle], [self.family.slug])
+        self.assertIn('busy-family', [c['family'].slug for c in active])
+        players = FamilyMembership.objects.filter(
+            family=self.family, status=FamilyMembership.Status.ACTIVE,
+            user__is_active=True,
+        ).count()
+        self.assertEqual(idle[0]['player_count'], players)
+        self.assertEqual(idle[0]['pick_count'], 0)
+        self.assertContains(response, 'Inactive families')
+        self.assertContains(response, 'data-testid="superadmin-idle-family"', count=1)
+
     def test_family_home_uses_canonical_or_default_decorative_compact_mark(self):
         self.client.force_login(self.admin_user)
         lobby_url = reverse(
@@ -10379,6 +10407,28 @@ class BuildWeekPointsSummaryTests(TestCase):
         ordered_ids = [row['points'].userID for row in summary]
         self.assertEqual(ordered_ids, ["2", "10"])  # numeric, not lexicographic
 
+    def test_crowned_winner_leads_a_points_tie_and_ranks_alone(self):
+        # Only one tied leader wins the tiebreaker; they must take tile one
+        # even when a lower user id would otherwise sort first, and hold rank
+        # 1 alone (the rest of the tie shares 2), matching the scores page.
+        from pickem_homepage.views import build_week_points_summary
+        first = self._member("first", 10)
+        second = self._member("second", 10)
+        winner = self._member("winner", 10)
+        self._member("trailing", 4)
+        userSeasonPoints.objects.filter(userID=str(winner.id)).update(week_1_winner=True)
+
+        summary = build_week_points_summary(
+            self.pool, self.season, "1", week_has_completed_game=True
+        )
+
+        self.assertEqual(
+            [row['user'].id for row in summary][:3], [winner.id, first.id, second.id]
+        )
+        self.assertEqual([row['rank'] for row in summary], [1, 2, 2, 4])
+        self.assertTrue(summary[0]['is_winner'])
+        self.assertFalse(summary[1]['is_winner'])
+
 
 class CommissionerSetupCardTests(TestCase):
     """The pre-season commissioner getting-started card on the lobby."""
@@ -11853,6 +11903,61 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         ))
         self.assertEqual(resp.status_code, 200)
         self.assertIn(pub.pk, [p.pk for p in resp.context["publications"]])
+
+    # ---- Lobby week-winner spotlight -------------------------------------
+    def _crowned_winner(self, pool, family, username):
+        winner = self._member(username, family)
+        g1 = self._game(game_id=6001 + pool.id * 10, winner="atl", scored=True)
+        self._pick(user=winner, pool=pool, game=g1, pick="atl")
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=winner.email, userID=str(winner.id),
+            gameseason=self.season, gameyear="2025",
+            week_1_points=10, week_1_bonus=3, week_1_winner=True, total_points=13,
+        )
+        return winner
+
+    def _lobby(self, family, pool):
+        return self.client.get(reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+
+    def test_lobby_shows_week_winner_before_next_week_kicks_off(self):
+        family, pool = self._family_pool("Spot Fam", "spot-fam", win_points=10)
+        winner = self._crowned_winner(pool, family, "spotwinner")
+        self._week2_game(game_id=6101, kickoff=timezone.now() + timedelta(days=3))
+        self.client.force_login(winner)
+        resp = self._lobby(family, pool)
+        self.assertEqual(resp.status_code, 200)
+        spotlight = resp.context["week_winner_spotlight"]
+        self.assertEqual(spotlight["week"], 1)
+        self.assertEqual([w["user"].id for w in spotlight["winners"]], [winner.id])
+        self.assertEqual(spotlight["winners"][0]["points"], 13)  # 10 + 3 bonus
+        self.assertEqual(spotlight["winners"][0]["correct"], 1)
+        self.assertContains(resp, 'data-testid="lobby-week-winner"')
+        self.assertContains(resp, "Week 1 Winner")
+
+    def test_lobby_hides_week_winner_once_next_week_kicks_off(self):
+        family, pool = self._family_pool("Spot Fam2", "spot-fam2")
+        winner = self._crowned_winner(pool, family, "spotwinner2")
+        self._week2_game(game_id=6111, kickoff=timezone.now() - timedelta(hours=1))
+        self.client.force_login(winner)
+        resp = self._lobby(family, pool)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.context["week_winner_spotlight"])
+        self.assertNotContains(resp, 'data-testid="lobby-week-winner"')
+
+    def test_scores_winner_card_points_include_winner_bonus(self):
+        family, pool = self._family_pool("Bonus Card", "bonus-card")
+        winner = self._crowned_winner(pool, family, "bonuscard")
+        self.client.force_login(winner)
+        resp = self.client.get(
+            f"/families/{family.slug}/pools/{pool.slug}/scores/competition/1/season/{self.season}/week/1"
+        )
+        self.assertEqual(resp.status_code, 200)
+        card = list(resp.context["week_winner"])[0]
+        self.assertEqual(card.week_points_value, 13)  # pick points + bonus
+        self.assertEqual(card.correct_count, 1)
 
     # ---- Global leaderboard ----------------------------------------------
     def _google(self, user):

@@ -24,3 +24,23 @@ class SaStaticVTests(TestCase):
             result,
         )
         self.assertEqual(result.count('?'), 0 if '?' not in result else 1)
+
+
+class PoolLobbyLinkTests(TestCase):
+    def test_links_to_family_lobby_in_new_tab(self):
+        from django.urls import reverse
+
+        from pickem_api.models import Family, Pool
+        from pickem_superadmin.templatetags.sa_extras import pool_lobby_link
+
+        family = Family.objects.create(name='Link <Fam>', slug='link-fam')
+        pool = Pool.objects.create(family=family, name='P', slug='link-pool', season=2627)
+
+        html = pool_lobby_link(pool)
+
+        lobby = reverse('family_pool_home', kwargs={'family_slug': 'link-fam', 'pool_slug': 'link-pool'})
+        self.assertIn(f'href="{lobby}"', html)
+        self.assertIn('target="_blank"', html)
+        self.assertIn('rel="noopener"', html)
+        self.assertIn('>link-fam/link-pool</a>', html)
+        self.assertIn('Link &lt;Fam&gt;', html)  # escaped

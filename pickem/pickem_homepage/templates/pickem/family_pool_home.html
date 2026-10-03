@@ -254,6 +254,47 @@
     </div>
     {% endif %}
 
+    <!-- ═══════════════════════════ LAST WEEK'S WINNER ═══════════════════════════ -->
+    {# Up from the moment a winner is crowned until next week's first kickoff (same window as the AI recap). #}
+    {% if week_winner_spotlight %}
+    {% for row in week_winner_spotlight.winners %}
+    <div class="lobby-section relative overflow-hidden rounded-xl border border-yellow-500/40 bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent px-4 py-3 mb-6" data-testid="lobby-week-winner">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="group flex-shrink-0">{% endif %}
+                    <img src="{{ row.avatar|default:'https://www.gravatar.com/avatar/?d=identicon&s=96' }}" alt=""
+                         class="w-12 h-12 rounded-full border-2 border-yellow-500 object-cover{% if row.user %} group-hover:scale-105 transition-transform{% endif %}"
+                         onerror="this.src='https://www.gravatar.com/avatar/?d=identicon&s=96'">
+                {% if row.user %}</a>{% endif %}
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <i class="fas fa-crown text-xs text-yellow-500"></i>
+                        <span class="text-[11px] font-black uppercase tracking-wide text-yellow-700 dark:text-yellow-300">Week {{ week_winner_spotlight.week }} Winner</span>
+                    </div>
+                    <h3 class="truncate text-lg font-black text-text-dark dark:text-white leading-tight">
+                        {% if row.user %}<a href="{% url 'family_pool_user_profile' family.slug pool.slug row.user.id %}" class="hover:text-primary transition-colors" title="{{ row.user|real_first_name }}">{{ row.user|display_name }}</a>{% else %}Player {{ row.winner.userID }}{% endif %}
+                    </h3>
+                    {% if row.is_perfect %}
+                    <span class="mt-0.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300"><i class="fas fa-star"></i>Perfect Week</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex items-center gap-4 flex-shrink-0">
+                <div class="text-center">
+                    <div class="text-xl font-black leading-none tabular-nums text-text-dark dark:text-white">{{ row.points }}</div>
+                    <div class="text-[9px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">pts</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xl font-black leading-none tabular-nums text-text-dark dark:text-white">{{ row.correct }}</div>
+                    <div class="text-[9px] font-black uppercase tracking-wide text-text-secondary-light dark:text-text-secondary">correct</div>
+                </div>
+                <i class="fas fa-trophy text-2xl text-yellow-500"></i>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
     <!-- ═══════════════════════ COMMISSIONER NOTES + AI RECAPS ════════════════════ -->
     {% if publications %}
         {% for publication in publications %}

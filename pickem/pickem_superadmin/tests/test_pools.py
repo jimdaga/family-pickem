@@ -18,6 +18,15 @@ class PoolsMatrixTests(TestCase):
         self.settings = PoolSettings.objects.create(pool=self.pool)
         self.client.force_login(self.root)
 
+    def test_pool_name_opens_family_lobby_in_new_tab_and_keeps_repair_link(self):
+        response = self.client.get(reverse('superadmin:pools'))
+        lobby = reverse(
+            'family_pool_home',
+            kwargs={'family_slug': self.family.slug, 'pool_slug': self.pool.slug},
+        )
+        self.assertContains(response, f'href="{lobby}" target="_blank" rel="noopener"')
+        self.assertContains(response, reverse('superadmin:pool_detail', args=[self.pool.id]))
+
     def _row(self, **overrides):
         """A full matrix row post payload for self.pool.
 

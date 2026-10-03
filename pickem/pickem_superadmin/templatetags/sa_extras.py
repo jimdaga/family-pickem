@@ -64,3 +64,25 @@ def sa_qs(context, **kwargs):
         else:
             params[key] = value
     return params.urlencode()
+
+
+@register.simple_tag
+def pool_lobby_link(pool, label=None, css_class='sa-link sa-mono'):
+    """``family/pool`` as a link that opens the pool's lobby in a new tab.
+
+    The console is a separate tab from the site, so jumping into a family keeps
+    the operator's place here.
+    """
+    from django.urls import reverse
+    from django.utils.html import format_html
+
+    url = reverse(
+        'family_pool_home',
+        kwargs={'family_slug': pool.family.slug, 'pool_slug': pool.slug},
+    )
+    return format_html(
+        '<a href="{}" target="_blank" rel="noopener" class="{}" '
+        'title="Open {} lobby in a new tab">{}</a>',
+        url, css_class, pool.family.name,
+        label or f'{pool.family.slug}/{pool.slug}',
+    )

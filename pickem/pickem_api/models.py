@@ -87,6 +87,15 @@ class Family(models.Model):
         default=Status.ACTIVE,
         help_text="Family lifecycle status",
     )
+    # Engagement, not lifecycle: an idle family still resolves and can play
+    # (status=INACTIVE is the commissioner soft-delete that 404s every page).
+    # Maintained by the update_family_activity command; idle families are
+    # skipped by the weekly "picks are ready" email.
+    is_idle = models.BooleanField(
+        default=False,
+        help_text="No member made a pick in the last two completed weeks",
+    )
+    idle_since = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

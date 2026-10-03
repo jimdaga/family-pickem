@@ -29,6 +29,7 @@ urlpatterns = [
     path('banners/<int:banner_id>/deactivate/', views.banner_deactivate, name='banner_deactivate'),
     path('audit/', views.audit, name='audit'),
     path('logs/', views.logs, name='logs'),
+    path('messages/', views.message_board, name='messages'),
     path('pools/<int:pool_id>/detail/', views.pool_detail, name='pool_detail'),
     path('pools/<int:pool_id>/recompute/', views.pool_recompute, name='pool_recompute'),
     path('pools/<int:pool_id>/rescore-week/', views.pool_rescore_week, name='pool_rescore_week'),
