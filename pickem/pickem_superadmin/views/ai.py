@@ -25,6 +25,9 @@ def _settings_snapshot(settings_obj):
         'timeout_seconds': settings_obj.timeout_seconds,
         'retries': settings_obj.retries,
         'max_runs_per_pool_week': settings_obj.max_runs_per_pool_week,
+        'reasoning_effort': settings_obj.reasoning_effort,
+        'review_enabled': settings_obj.review_enabled,
+        'review_reasoning_effort': settings_obj.review_reasoning_effort,
         'has_api_key': settings_obj.has_api_key,
     }
 

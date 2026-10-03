@@ -11869,7 +11869,7 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
         pub = FamilyPublication.objects.create(
             family=pool.family, pool=pool, title=f"Week {week} recap", body="recap",
-            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
+            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY, season=self.season, week=week,
             is_published=True, published_at=timezone.now(), generation_reference="1",
         )
         AIWeeklySummaryRun.objects.create(
@@ -11903,6 +11903,36 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         ))
         self.assertEqual(resp.status_code, 200)
         self.assertIn(pub.pk, [p.pk for p in resp.context["publications"]])
+
+    def test_lobby_shows_only_the_newest_of_several_kept_recaps(self):
+        family, pool = self._family_pool("Recap Fam3", "recap-fam3")
+        viewer = self._member("recapviewer3", family)
+        self._ai_recap(pool, week=1)
+        newest = self._ai_recap(pool, week=2)
+        self.client.force_login(viewer)
+        resp = self.client.get(reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual([p.pk for p in resp.context["publications"]], [newest.pk])
+
+    def test_scores_page_shows_each_weeks_own_recap(self):
+        family, pool = self._family_pool("Recap Fam4", "recap-fam4")
+        viewer = self._member("recapviewer4", family)
+        week1 = self._ai_recap(pool, week=1)
+        week2 = self._ai_recap(pool, week=2)
+        self.client.force_login(viewer)
+        for week, expected in ((1, week1), (2, week2)):
+            resp = self.client.get(reverse(
+                "family_pool_scores_long",
+                kwargs={
+                    "family_slug": family.slug, "pool_slug": pool.slug,
+                    "competition": 1, "gameseason": self.season, "week": week,
+                },
+            ))
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.context["week_recap"].pk, expected.pk)
 
     # ---- Lobby week-winner spotlight -------------------------------------
     def _crowned_winner(self, pool, family, username):
