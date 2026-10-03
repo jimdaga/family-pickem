@@ -1,0 +1,53 @@
+{% load static %}
+{# One superuser-oversight family card on the family picker. `idle` greys it out. #}
+<div class="{% if idle %}bg-gray-100 dark:bg-gray-800/40 border-gray-300 dark:border-gray-700 opacity-80{% else %}bg-surface-light dark:bg-surface border-border-light dark:border-border-subtle{% endif %} border rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"{% if idle %} data-testid="superadmin-idle-family"{% endif %}>
+    <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+            {% if choice.family.logo %}
+            <img src="{{ choice.family.logo.url }}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain{% if idle %} grayscale{% endif %}">
+            {% else %}
+            <img src="{% static 'images/logo.png' %}" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain{% if idle %} grayscale{% endif %}">
+            {% endif %}
+            <div class="min-w-0">
+                <h2 class="text-xl font-bold {% if idle %}text-gray-500 dark:text-gray-400{% else %}text-text-dark dark:text-white{% endif %}">{{ choice.family.name }}</h2>
+                {% if choice.pool %}
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                    {{ choice.pool.name }} - {{ choice.pool.display_season }}
+                </p>
+                {% else %}
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary">
+                    This family needs an active pool before play can begin.
+                </p>
+                {% endif %}
+                <p class="mt-1 flex flex-wrap gap-x-3 text-xs font-semibold text-text-secondary-light dark:text-text-secondary">
+                    <span><i class="fas fa-users mr-1 text-[10px]"></i>{{ choice.player_count }} player{{ choice.player_count|pluralize }}</span>
+                    <span><i class="fas fa-check-double mr-1 text-[10px]"></i>{{ choice.pick_count }} pick{{ choice.pick_count|pluralize }}</span>
+                    {% if idle and choice.family.idle_since %}<span><i class="fas fa-moon mr-1 text-[10px]"></i>Inactive since {{ choice.family.idle_since|date:"M j" }}</span>{% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 flex-none">
+        {% if idle %}
+        <span class="inline-flex items-center gap-1 rounded-full border border-gray-400/40 bg-gray-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <i class="fas fa-moon text-[10px]"></i>
+            Inactive
+        </span>
+        {% else %}
+        <span class="inline-flex items-center gap-1 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-yellow-700 dark:text-yellow-300">
+            <i class="fas fa-bolt text-[10px]"></i>
+            Superuser
+        </span>
+        {% endif %}
+        {% if choice.url %}
+        <a href="{{ choice.url }}" class="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-lg border {% if idle %}border-gray-400/40 bg-gray-400/10 text-gray-600 dark:text-gray-300 hover:bg-gray-400/15{% else %}border-yellow-400/40 bg-yellow-400/10 text-yellow-700 dark:text-yellow-200 hover:bg-yellow-400/15{% endif %} font-semibold transition-colors">
+            <span>Open family</span>
+            <i class="fas fa-arrow-right"></i>
+        </a>
+        {% else %}
+        <span class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-border-light dark:bg-surface-hover text-text-secondary-light dark:text-text-secondary font-semibold">
+            Pool setup needed
+        </span>
+        {% endif %}
+    </div>
+</div>

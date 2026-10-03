@@ -1,4 +1,5 @@
 {% extends 'superadmin/base.html' %}
+{% load sa_extras %}
 {% block title %}overview{% endblock %}
 {% block eyebrow %}system{% endblock %}
 {% block heading %}Overview{% endblock %}
@@ -22,7 +23,7 @@
 
   <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
     <div class="sa-stat"><div class="sa-stat-value">{{ counts.families }}</div><div class="sa-stat-label">families</div></div>
-    <div class="sa-stat"><div class="sa-stat-value">{{ counts.families_inactive }}</div><div class="sa-stat-label">inactive</div></div>
+    <div class="sa-stat" title="Idle: no member made a manual pick in the last two completed weeks"><div class="sa-stat-value">{{ counts.families_idle }}</div><div class="sa-stat-label">inactive{% if counts.families_deactivated %} · {{ counts.families_deactivated }} deactivated{% endif %}</div></div>
     <div class="sa-stat"><div class="sa-stat-value">{{ counts.pools }}</div><div class="sa-stat-label">pools</div></div>
     <div class="sa-stat"><div class="sa-stat-value">{{ counts.users }}</div><div class="sa-stat-label">users</div></div>
     <div class="sa-stat"><div class="sa-stat-value">{{ counts.users_blocked }}</div><div class="sa-stat-label">blocked</div></div>
@@ -91,7 +92,7 @@
       {% for pool in anomalies.pools_without_settings %}
         <form method="post" action="{% url 'superadmin:pool_settings_backfill' pool.id %}" class="flex items-center gap-2 py-0.5 text-[13px]">
           {% csrf_token %}
-          <span class="sa-mono flex-1">{{ pool.family.slug }}/{{ pool.slug }}</span>
+          <span class="flex-1">{% pool_lobby_link pool %}</span>
           <button type="submit" class="sa-btn sa-btn-default sa-btn-sm">Backfill</button>
         </form>
       {% empty %}<div class="text-[12px] text-[#98a2b3]">All pools have settings.</div>{% endfor %}
@@ -125,7 +126,7 @@
       <div class="mb-2 text-[12px] text-[#98a2b3]">Current-season pool, no picks this season, older than {{ pool_health.abandoned_after_days }} days.</div>
       {% for row in pool_health.abandoned %}
         <div class="flex items-baseline justify-between py-0.5 text-[13px]">
-          <span class="sa-mono">{{ row.pool.family.slug }}/{{ row.pool.slug }}</span>
+          <span>{% pool_lobby_link row.pool %}</span>
           <span class="text-[#98a2b3]">{{ row.age_days }}d &middot; {{ row.members }} member{{ row.members|pluralize }}</span>
         </div>
       {% empty %}<div class="text-[12px] text-[#98a2b3]">No abandoned pools.</div>{% endfor %}
@@ -139,7 +140,7 @@
       <div class="mb-2 text-[12px] text-[#98a2b3]">Have picked this season, but nothing for week {{ pool_health.current_week|default:"-" }} since it kicked off.</div>
       {% for row in pool_health.quiet %}
         <div class="flex items-baseline justify-between py-0.5 text-[13px]">
-          <span class="sa-mono">{{ row.pool.family.slug }}/{{ row.pool.slug }}</span>
+          <span>{% pool_lobby_link row.pool %}</span>
           <span class="text-[#98a2b3]">{{ row.picks }} pick{{ row.picks|pluralize }} this season</span>
         </div>
       {% empty %}
@@ -159,7 +160,7 @@
       <div class="mb-2 text-[12px] text-[#98a2b3]">Created in the last {{ pool_health.new_window_days }} days.</div>
       {% for row in pool_health.new_pools %}
         <div class="flex items-baseline justify-between py-0.5 text-[13px]">
-          <span class="sa-mono">{{ row.pool.family.slug }}/{{ row.pool.slug }}</span>
+          <span>{% pool_lobby_link row.pool %}</span>
           <span class="text-[#98a2b3]">
             {{ row.pool.created_at|date:"M j" }} &middot; {{ row.members }} member{{ row.members|pluralize }} &middot;
             {% if row.picks %}{{ row.picks }} pick{{ row.picks|pluralize }}{% else %}<span class="text-amber-600">no picks yet</span>{% endif %}

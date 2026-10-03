@@ -46,6 +46,17 @@ class OverviewTests(TestCase):
         self.assertGreaterEqual(families_count, 1)
         self.assertGreaterEqual(pools_count, 1)
 
+    def test_overview_inactive_counts_idle_families_not_soft_deleted(self):
+        Family.objects.filter(pk=self.family.pk).update(is_idle=True)
+        Family.objects.create(name='Gone', slug='gone', status=Family.Status.INACTIVE)
+        Family.objects.create(name='Busy', slug='busy')
+
+        response = self.client.get(reverse('superadmin:overview'))
+
+        self.assertEqual(response.context['counts']['families_idle'], 1)
+        self.assertEqual(response.context['counts']['families_deactivated'], 1)
+        self.assertContains(response, '1 deactivated')
+
     def test_overview_flags_a_pool_with_no_settings_row(self):
         response = self.client.get(reverse('superadmin:overview'))
         self.assertIn(self.pool, response.context['anomalies']['pools_without_settings'])

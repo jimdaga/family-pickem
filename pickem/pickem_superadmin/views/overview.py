@@ -238,7 +238,12 @@ def overview(request):
 
     counts = {
         'families': Family.objects.count(),
-        'families_inactive': Family.objects.filter(status=Family.Status.INACTIVE).count(),
+        # Shown as "inactive" on the overview; soft-deleted families
+        # (status=INACTIVE) are counted apart as deactivated.
+        'families_idle': Family.objects.filter(
+            status=Family.Status.ACTIVE, is_idle=True
+        ).count(),
+        'families_deactivated': Family.objects.filter(status=Family.Status.INACTIVE).count(),
         'pools': Pool.objects.count(),
         'users': User.objects.count(),
         'users_blocked': User.objects.filter(is_active=False).count(),

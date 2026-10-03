@@ -30,6 +30,7 @@ QUEUEABLE_COMMANDS = (
     'update_season_winners',
     'update_missed_picks',
     'update_rankings',
+    'update_family_activity',
     'prune_superadmin_logs',
 )
 

@@ -597,6 +597,82 @@ def get_current_week_context(gameseason):
         return '1', 'nfl'
 
 
+def next_week_has_kicked_off(gameseason, competition, week):
+    """True once week ``week + 1``'s first game has kicked off.
+
+    Closes the lobby's "last week" window: the AI recap and the week-winner
+    spotlight both stay up from the moment they exist until the next week's
+    first kickoff (usually Thursday night). With no next-week game on file the
+    window stays open -- deliberately including week 18, which has no week 19,
+    so the season's last recap and winner stay up through the offseason.
+    """
+    next_kickoff = (
+        GamesAndScores.objects.filter(
+            gameseason=gameseason,
+            competition=competition,
+            gameWeek=str(int(week) + 1),
+        )
+        .order_by('startTimestamp')
+        .values_list('startTimestamp', flat=True)
+        .first()
+    )
+    return bool(next_kickoff) and timezone.now() >= next_kickoff
+
+
+def build_week_winner_spotlight(pool, gameseason, week):
+    """Lobby card data for ``week``'s crowned winner(s) in ``pool``.
+
+    Returns ``None`` when nobody is crowned or the window has closed (see
+    next_week_has_kicked_off). ``points`` is pick points plus the pool's winner
+    bonus, matching the scores page's winner card. Co-winners (a tiebreaker
+    chain that ends level) are all listed.
+    """
+    if next_week_has_kicked_off(gameseason, pool.competition, week):
+        return None
+    # userID is a string; order numerically ("2" before "10") like the Week
+    # Points list.
+    rows = sorted(
+        userSeasonPoints.objects.filter(
+            pool=pool, gameseason=gameseason, **{f'week_{week}_winner': True}
+        ),
+        key=lambda row: (0, int(row.userID), '') if str(row.userID).isdigit()
+        else (1, 0, str(row.userID)),
+    )
+    if not rows:
+        return None
+    from pickem_api.weekly_winners import week_is_complete
+    week_complete = week_is_complete(gameseason, str(week), pool.competition)
+    scored_count = GamesAndScores.objects.filter(
+        gameseason=gameseason, competition=pool.competition,
+        gameWeek=str(week), gameScored=True,
+    ).count()
+    uids = [str(row.userID) for row in rows]
+    avatars = build_user_display_maps(uids)[1]
+    users = User.objects.in_bulk([int(uid) for uid in uids if uid.isdigit()])
+    winners = []
+    for row in rows:
+        uid = str(row.userID)
+        correct = (
+            GamePicks.objects.filter(
+                pool=pool, gameseason=gameseason, userID=uid,
+                gameWeek=str(week), auto_pick=False, pick_correct=True,
+            )
+            .values('pick_game_id').distinct().count()
+        )
+        winners.append({
+            'winner': row,
+            'user': users.get(int(uid)) if uid.isdigit() else None,
+            'avatar': avatars.get(uid),
+            'points': (
+                (getattr(row, f'week_{week}_points') or 0)
+                + (getattr(row, f'week_{week}_bonus') or 0)
+            ),
+            'correct': correct,
+            'is_perfect': week_complete and bool(scored_count) and correct == scored_count,
+        })
+    return {'week': week, 'winners': winners}
+
+
 def build_week_points_summary(pool, gameseason, current_week, week_has_completed_game):
     """Ordered week-points rows for every member of ``pool`` this season.
 
@@ -605,7 +681,8 @@ def build_week_points_summary(pool, gameseason, current_week, week_has_completed
     the scores page, which lists ``notstarted`` games at 0-0. Rendering every
     member also keeps their ``data-user-id`` rows on the lobby so the live SSE
     update (Phase 3c) can patch points in place from kickoff; the template
-    paginates the list client-side. Ordered by week points desc, then userID.
+    paginates the list client-side. Ordered by week points desc, then the
+    crowned week winner (so a tiebreaker winner leads a points tie), then userID.
 
     ``rank`` is a number (1..N) only when ``week_has_completed_game`` is True;
     before the week's first game completes everyone is equal, so ``rank`` is
@@ -615,20 +692,31 @@ def build_week_points_summary(pool, gameseason, current_week, week_has_completed
     if not (str(current_week).isdigit() and 1 <= int(current_week) <= 18):
         return []
     week_points_field = f"week_{current_week}_points"
+    week_winner_field = f"week_{current_week}_winner"
     week_points_rows = list(
         userSeasonPoints.objects.filter(pool=pool, gameseason=gameseason)
     )
 
+    def _rank_key(row):
+        # (points, crowned winner): the tiebreaker winner leads their points
+        # tier and ranks above everyone they tied on points, as on the scores
+        # page (co-winners share the rank).
+        return (
+            getattr(row, week_points_field) or 0,
+            1 if getattr(row, week_winner_field) else 0,
+        )
+
     def _sort_key(row):
-        # Week points desc (null == 0), then userID ascending. userID is stored
-        # as str(user.id), so tie-break numerically ("2" before "10") rather than
-        # lexically; non-numeric ids sort after numeric ones. The two id groups
-        # never compare tuple elements of mixed type (the 0/1 tag separates them).
-        week_points = getattr(row, week_points_field) or 0
+        # Rank key desc (null points == 0), then userID ascending. userID is
+        # stored as str(user.id), so tie-break numerically ("2" before "10")
+        # rather than lexically; non-numeric ids sort after numeric ones. The
+        # two id groups never compare tuple elements of mixed type (the 0/1 tag
+        # separates them).
+        week_points, is_winner = _rank_key(row)
         uid = str(row.userID)
         if uid.isdigit():
-            return (-week_points, 0, int(uid))
-        return (-week_points, 1, uid)
+            return (-week_points, -is_winner, 0, int(uid))
+        return (-week_points, -is_winner, 1, uid)
 
     week_points_rows.sort(key=_sort_key)
     week_points_user_ids = [
@@ -642,11 +730,10 @@ def build_week_points_summary(pool, gameseason, current_week, week_has_completed
             'rank': (rank if week_has_completed_game else None),
             'points': points,
             'week_points': getattr(points, week_points_field) or 0,
+            'is_winner': bool(getattr(points, week_winner_field)),
             'user': week_points_users.get(int(points.userID)) if str(points.userID).isdigit() else None,
         }
-        for rank, points in competition_ranks(
-            week_points_rows, lambda row: getattr(row, week_points_field) or 0
-        )
+        for rank, points in competition_ranks(week_points_rows, _rank_key)
     ]
 
 
@@ -1343,6 +1430,30 @@ def family_picker(request):
                 ) if pool else None,
                 'is_superadmin_access': True,
             })
+        # Oversight stats for each card, in two grouped queries rather than
+        # per-family counts.
+        family_ids = [choice['family'].id for choice in superadmin_choices]
+        player_counts = dict(
+            FamilyMembership.objects.filter(
+                family_id__in=family_ids,
+                status=FamilyMembership.Status.ACTIVE,
+                user__is_active=True,
+            )
+            .order_by()
+            .values('family_id')
+            .annotate(n=Count('id'))
+            .values_list('family_id', 'n')
+        )
+        pick_counts = dict(
+            GamePicks.objects.filter(pool__family_id__in=family_ids, auto_pick=False)
+            .order_by()
+            .values('pool__family_id')
+            .annotate(n=Count('id'))
+            .values_list('pool__family_id', 'n')
+        )
+        for choice in superadmin_choices:
+            choice['player_count'] = player_counts.get(choice['family'].id, 0)
+            choice['pick_count'] = pick_counts.get(choice['family'].id, 0)
 
     if not member_choices and not superadmin_choices:
         return redirect('onboarding')
@@ -1351,6 +1462,14 @@ def family_picker(request):
         'family_choices': member_choices,
         'member_family_choices': member_choices,
         'superadmin_family_choices': superadmin_choices,
+        # Idle families (Family.is_idle) get their own greyed section below the
+        # active ones.
+        'superadmin_active_choices': [
+            c for c in superadmin_choices if not c['family'].is_idle
+        ],
+        'superadmin_idle_choices': [
+            c for c in superadmin_choices if c['family'].is_idle
+        ],
         'gameseason': get_season(),
     }
     return render(request, 'pickem/family_picker.html', context)
@@ -1707,19 +1826,16 @@ def family_pool_home(request, family_slug, pool_slug):
             .values_list('week', flat=True)
             .first()
         )
-        if recap_week:
-            next_week_kickoff = (
-                GamesAndScores.objects.filter(
-                    gameseason=gameseason,
-                    competition=pool.competition,
-                    gameWeek=str(recap_week + 1),
-                )
-                .order_by('startTimestamp')
-                .values_list('startTimestamp', flat=True)
-                .first()
-            )
-            if next_week_kickoff and timezone.now() >= next_week_kickoff:
-                publications = [p for p in publications if p is not ai_recap]
+        if recap_week and next_week_has_kicked_off(
+            gameseason, pool.competition, recap_week
+        ):
+            publications = [p for p in publications if p is not ai_recap]
+    # The latest crowned week's winner rides the same window as the recap: up
+    # once the winner is crowned, down at the next week's first kickoff.
+    week_winner_spotlight = (
+        build_week_winner_spotlight(pool, gameseason, recent_winners[-1]['week'])
+        if recent_winners else None
+    )
     recent_message_posts = (
         MessageBoardPost.objects.filter(family=family, is_active=True)
         .select_related('user')
@@ -1821,6 +1937,7 @@ def family_pool_home(request, family_slug, pool_slug):
         'user_pick_status': user_pick_status,
         'active_members': active_members,
         'publications': publications,
+        'week_winner_spotlight': week_winner_spotlight,
         'recent_message_posts': recent_message_posts,
     }
     return render(request, 'pickem/family_pool_home.html', context)
@@ -4417,8 +4534,14 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
         # is_perfect False for an incomplete week rather than comparing to it.
         week_complete = week_is_complete(gameseason, game_week, game_competition)
         scored_count = game_list.filter(gameScored=True).count()
+        week_bonus_field = f"week_{game_week}_bonus"
         for winner in week_winner:
-            winner.week_points_value = getattr(winner, week_points_field, 0) or 0
+            # week_N_points is pick points only; the pool's winner bonus lives
+            # in week_N_bonus, so the card's PTS folds it in.
+            winner.week_points_value = (
+                (getattr(winner, week_points_field, 0) or 0)
+                + (getattr(winner, week_bonus_field, 0) or 0)
+            )
             # Scope to the pool this winner actually won in (winner.pool_id) so
             # the count stays pool-correct even on the public, cross-pool page
             # where week_winner spans one row per pool.
@@ -4514,6 +4637,13 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
         'current_week': game_week,
         'points_total': points_total,
         'show_week_stats_sidebar': picks_total > 0 or bool(players_ids),
+        # Once the whole week is final there's nothing live to focus on, so
+        # every kickoff block opens by default (overrides the per-block
+        # stale-final collapse).
+        'week_all_final': (
+            game_list.exists()
+            and not game_list.exclude(statusType='finished').exists()
+        ),
         'game_weeks': range(1,19),
         'gameseason': gameseason,
         'user_weekly_stats': user_weekly_stats,

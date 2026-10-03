@@ -5,6 +5,7 @@ from pickem_superadmin.views.email import email_settings
 from pickem_superadmin.views.families import families, families_save, family_force_delete
 from pickem_superadmin.views.jobs import jobs_page, jobs_queue, jobs_schedule_save, jobs_status
 from pickem_superadmin.views.logs import logs
+from pickem_superadmin.views.messages import message_board
 from pickem_superadmin.views.overview import (
     banner_deactivate, banner_publish, overview, pool_settings_backfill, season_update,
 )
@@ -25,6 +26,7 @@ __all__ = [
     'season_update', 'pool_settings_backfill', 'banner_publish', 'banner_deactivate',
     'audit',
     'logs',
+    'message_board',
     'pool_detail', 'pool_recompute', 'pool_rescore_week',
     'pick_delete', 'season_row_reset', 'game_fix',
 ]
