@@ -27,7 +27,7 @@ from pickem_superadmin.models import AIProviderSettings
 
 def _make_config(retries=2):
     return SummarySettings(
-        enabled=True, api_key='sk-test', model='gpt-4o-mini',
+        enabled=True, api_key='sk-test', model='gpt-6-luna',
         timeout=30, retries=retries, max_runs=3, mock=False,
     )
 
@@ -940,6 +940,14 @@ class ReviewToggleTests(TestCase):
         post.return_value = ('## Draft', {})
 
         _provider_request(self._config(reasoning_effort='none'), {'week': 1})
+
+        self.assertNotIn('reasoning', post.call_args.args[1])
+
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_reasoning_block_is_omitted_for_non_reasoning_models(self, post):
+        post.return_value = ('## Draft', {})
+
+        _provider_request(self._config(model='gpt-4o-mini', reasoning_effort='high'), {'week': 1})
 
         self.assertNotIn('reasoning', post.call_args.args[1])
 

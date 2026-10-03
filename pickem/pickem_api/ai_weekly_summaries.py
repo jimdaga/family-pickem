@@ -661,7 +661,7 @@ def _provider_request(config, facts, voice=None):
         )
     payload = {
         'model': config.model,
-        **_reasoning(config.reasoning_effort),
+        **_reasoning(config.reasoning_effort, config.model),
         'input': [
             {'role': 'system', 'content': [{'type': 'input_text', 'text': _system_prompt(voice or VOICES[0])}]},
             {'role': 'user', 'content': [{'type': 'input_text', 'text': json.dumps(facts, sort_keys=True, separators=(',', ':'))}]},
@@ -805,7 +805,7 @@ _REVIEWER_PROMPT = (
 def _review_recap(config, facts, draft, flags):
     payload = {
         'model': config.model,
-        **_reasoning(config.review_reasoning_effort),
+        **_reasoning(config.review_reasoning_effort, config.model),
         'input': [
             {'role': 'system', 'content': [{'type': 'input_text', 'text': _REVIEWER_PROMPT}]},
             {'role': 'user', 'content': [{'type': 'input_text', 'text': json.dumps(
@@ -828,7 +828,7 @@ def _review_recap(config, facts, draft, flags):
 def _revise_recap(config, facts, voice, draft, issues):
     payload = {
         'model': config.model,
-        **_reasoning(config.reasoning_effort),
+        **_reasoning(config.reasoning_effort, config.model),
         'input': [
             {'role': 'system', 'content': [{'type': 'input_text', 'text': _system_prompt(voice)}]},
             {'role': 'user', 'content': [{'type': 'input_text', 'text': json.dumps(
@@ -847,9 +847,17 @@ def _revise_recap(config, facts, voice, draft, issues):
     return _post_to_provider(config, payload)
 
 
-def _reasoning(effort):
-    """Responses API `reasoning` block, or {} to leave it out for effort 'none'."""
-    return {} if effort == 'none' else {'reasoning': {'effort': effort}}
+# GPT-4-family models are not reasoning models and reject `reasoning.effort`
+# outright, whatever the configured effort -- e.g. the env-only fallback's
+# old gpt-4o-mini default, or someone picking one in superadmin.
+_NON_REASONING_MODEL_PREFIXES = ('gpt-4',)
+
+
+def _reasoning(effort, model):
+    """Responses API `reasoning` block, or {} when it must be left out."""
+    if effort == 'none' or model.startswith(_NON_REASONING_MODEL_PREFIXES):
+        return {}
+    return {'reasoning': {'effort': effort}}
 
 
 def _add_usage(total, usage):
