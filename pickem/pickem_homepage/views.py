@@ -2386,7 +2386,7 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
         return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)
     elif action == 'generate_ai_summary':
         from django.conf import settings
-        from pickem_api.ai_weekly_summaries import generate_weekly_summary
+        from pickem_api.ai_weekly_summaries import SummarySettings, generate_weekly_summary
         from pickem_api.weekly_winners import latest_complete_week
 
         week = latest_complete_week(pool.season or get_season())
@@ -2402,8 +2402,20 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
             ]
             if available_weeks:
                 week, preview = max(available_weeks), True
+        config = SummarySettings.from_django()
         if week is None:
             messages.error(request, 'There is no fully scored week available to summarize yet.')
+        elif config.active and not (preview or config.mock):
+            # A real recap is a writer call plus fact-check/revision passes --
+            # often over a minute, past Cloudflare's request cutoff -- so hand
+            # it to the scheduler process instead of running it in-request.
+            from pickem_superadmin.jobs import queue_weekly_recap, scheduler_health
+
+            if not scheduler_health()['alive']:
+                messages.error(request, 'The background scheduler is not running, so the recap could not be queued. Please try again later.')
+            else:
+                queue_weekly_recap(pool.id, pool.season or get_season(), week)
+                messages.success(request, f"Week {week} AI recap queued. It will appear here in a minute or two once it's written and fact-checked.")
         else:
             run = generate_weekly_summary(
                 pool, pool.season or get_season(), week, force=True, preview=preview,

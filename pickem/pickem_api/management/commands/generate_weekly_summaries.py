@@ -42,4 +42,7 @@ class Command(BaseCommand):
             return
         for pool in pools:
             run = generate_weekly_summary(pool, season, week, force=options['force'])
-            self.stdout.write(f' - {pool}: {run.status}')
+            detail = f' (review: {run.review_status})' if run.review_status else ''
+            if run.error_code:
+                detail += f' [{run.error_code}]'
+            self.stdout.write(f' - {pool}: {run.status}{detail}')

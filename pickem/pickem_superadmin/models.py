@@ -196,8 +196,8 @@ class AIProviderSettings(models.Model):
     singleton = models.CharField(max_length=20, unique=True, default='default')
     provider = models.CharField(max_length=30, choices=Provider.choices, default=Provider.OPENAI)
     enabled = models.BooleanField(default=False)
-    model = models.CharField(max_length=100, default='gpt-4o-mini')
-    timeout_seconds = models.PositiveIntegerField(default=30)
+    model = models.CharField(max_length=100, default='gpt-6-luna')
+    timeout_seconds = models.PositiveIntegerField(default=120)
     retries = models.PositiveSmallIntegerField(default=2)
     max_runs_per_pool_week = models.PositiveSmallIntegerField(default=3)
     # Reasoning tokens bill as output; higher effort is slower and pricier

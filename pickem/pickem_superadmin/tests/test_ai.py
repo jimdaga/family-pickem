@@ -137,3 +137,34 @@ class AIReasoningAndReviewSettingsTests(TestCase):
         self.assertContains(response, 'Writer reasoning effort')
         self.assertContains(response, 'name="review_enabled"')
         self.assertContains(response, 'name="review_reasoning_effort"')
+
+
+
+class AISettingsMigrationTests(TestCase):
+    def test_legacy_model_moves_to_gpt_6_luna_with_room_for_reasoning(self):
+        from importlib import import_module
+
+        from django.apps import apps
+
+        migration = import_module('pickem_superadmin.migrations.0011_ai_reasoning_and_review')
+        settings_obj = AIProviderSettings.load()
+        AIProviderSettings.objects.filter(pk=settings_obj.pk).update(model='gpt-5.6-luna', timeout_seconds=30)
+
+        migration.move_to_reasoning_model(apps, None)
+
+        settings_obj.refresh_from_db()
+        self.assertEqual((settings_obj.model, settings_obj.timeout_seconds), ('gpt-6-luna', 120))
+
+    def test_a_deliberately_chosen_model_and_longer_timeout_are_kept(self):
+        from importlib import import_module
+
+        from django.apps import apps
+
+        migration = import_module('pickem_superadmin.migrations.0011_ai_reasoning_and_review')
+        settings_obj = AIProviderSettings.load()
+        AIProviderSettings.objects.filter(pk=settings_obj.pk).update(model='gpt-6-sol', timeout_seconds=300)
+
+        migration.move_to_reasoning_model(apps, None)
+
+        settings_obj.refresh_from_db()
+        self.assertEqual((settings_obj.model, settings_obj.timeout_seconds), ('gpt-6-sol', 300))

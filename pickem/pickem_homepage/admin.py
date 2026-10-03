@@ -14,10 +14,10 @@ class FamilyPublicationAdmin(admin.ModelAdmin):
 
 @admin.register(AIWeeklySummaryRun)
 class AIWeeklySummaryRunAdmin(admin.ModelAdmin):
-    list_display = ['id', 'family', 'pool', 'season', 'week', 'status', 'model', 'input_tokens', 'output_tokens', 'created_at']
-    list_filter = ['status', 'season', 'model']
+    list_display = ['id', 'family', 'pool', 'season', 'week', 'status', 'review_status', 'review_issues', 'model', 'input_tokens', 'output_tokens', 'created_at']
+    list_filter = ['status', 'review_status', 'season', 'model']
     search_fields = ['family__name', 'pool__name', 'error_code']
-    readonly_fields = ['family', 'pool', 'season', 'week', 'status', 'model', 'input_tokens', 'output_tokens', 'error_code', 'publication', 'created_at', 'finished_at']
+    readonly_fields = ['family', 'pool', 'season', 'week', 'status', 'model', 'input_tokens', 'output_tokens', 'error_code', 'review_status', 'review_issues', 'publication', 'created_at', 'finished_at']
 
 @admin.register(SiteBanner)
 class SiteBannerAdmin(admin.ModelAdmin):

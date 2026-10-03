@@ -107,13 +107,21 @@ def fetch_espn_game_notes(season, week):
             timeout=ESPN_NOTES_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
-        events = response.json().get('events', [])
+        return _parse_espn_game_notes(response.json())
+    except requests.HTTPError as exc:
+        logger.warning('ESPN game notes unavailable season=%s week=%s: status=%s', season, week, exc.response.status_code)
     except (requests.RequestException, ValueError) as exc:
-        logger.warning('ESPN game notes unavailable for season=%s week=%s: %s', season, week, type(exc).__name__)
-        return {}
+        logger.warning('ESPN game notes unavailable season=%s week=%s: %s', season, week, type(exc).__name__)
+    except (AttributeError, KeyError, TypeError) as exc:
+        # ESPN changed its payload shape. Still optional color, so don't
+        # block the recap -- but say so loudly enough to notice.
+        logger.warning('ESPN game notes unparseable season=%s week=%s: %s', season, week, type(exc).__name__)
+    return {}
 
+
+def _parse_espn_game_notes(payload):
     notes = {}
-    for event in events:
+    for event in payload.get('events', []):
         for competition in event.get('competitions', []):
             try:
                 game_id = int(competition['id'])
@@ -129,7 +137,7 @@ def fetch_espn_game_notes(season, week):
                 if name and leader.get('displayValue'):
                     standouts.append(f"{name} ({category.get('displayName') or category.get('name')}): {leader['displayValue']}")
             if headline or standouts:
-                notes[game_id] = {'headline': headline[:_HEADLINE_MAX_CHARS], 'standouts': standouts}
+                notes[game_id] = {'headline': str(headline)[:_HEADLINE_MAX_CHARS], 'standouts': standouts}
     return notes
 
 
@@ -653,7 +661,7 @@ def _provider_request(config, facts, voice=None):
         )
     payload = {
         'model': config.model,
-        'reasoning': {'effort': config.reasoning_effort},
+        **_reasoning(config.reasoning_effort),
         'input': [
             {'role': 'system', 'content': [{'type': 'input_text', 'text': _system_prompt(voice or VOICES[0])}]},
             {'role': 'user', 'content': [{'type': 'input_text', 'text': json.dumps(facts, sort_keys=True, separators=(',', ':'))}]},
@@ -698,10 +706,18 @@ def _post_to_provider(config, payload):
             last_error = 'provider_request_failed'
             retryable = True
             logger.warning('Weekly summary provider attempt failed: %s', type(exc).__name__)
-        except (requests.RequestException, ValueError, json.JSONDecodeError) as exc:
-            # A 4xx (other than 429) or malformed response will not succeed on retry.
-            last_error = 'provider_request_failed'
-            logger.warning('Weekly summary provider attempt failed: %s', type(exc).__name__)
+        except requests.HTTPError as exc:
+            # A 4xx other than 429 (bad model, unsupported reasoning effort,
+            # rejected schema) is permanent -- don't retry, but keep the status.
+            last_error = f'provider_http_{exc.response.status_code}'
+            logger.warning('Weekly summary provider attempt failed: status=%s', exc.response.status_code)
+            break
+        except (requests.RequestException, ValueError) as exc:
+            # Malformed, empty, or truncated ('incomplete') output won't fix
+            # itself on retry. Our own codes are safe to keep; anything else
+            # (e.g. a JSON decode error) collapses to a generic one.
+            last_error = str(exc) if str(exc).startswith('provider_') else 'provider_bad_response'
+            logger.warning('Weekly summary provider attempt failed: %s', last_error)
             break
         if retryable and attempt < config.retries:
             time.sleep(_RETRY_BACKOFF_SECONDS[min(attempt, len(_RETRY_BACKOFF_SECONDS) - 1)])
@@ -789,7 +805,7 @@ _REVIEWER_PROMPT = (
 def _review_recap(config, facts, draft, flags):
     payload = {
         'model': config.model,
-        'reasoning': {'effort': config.review_reasoning_effort},
+        **_reasoning(config.review_reasoning_effort),
         'input': [
             {'role': 'system', 'content': [{'type': 'input_text', 'text': _REVIEWER_PROMPT}]},
             {'role': 'user', 'content': [{'type': 'input_text', 'text': json.dumps(
@@ -801,7 +817,10 @@ def _review_recap(config, facts, draft, flags):
         'max_output_tokens': REVIEWER_MAX_OUTPUT_TOKENS,
     }
     text, usage = _post_to_provider(config, payload)
-    issues = json.loads(text)['issues']
+    try:
+        issues = json.loads(text)['issues']
+    except (ValueError, KeyError, TypeError) as exc:
+        raise RuntimeError('provider_bad_review') from exc
     return issues, usage
 
 
@@ -809,7 +828,7 @@ def _review_recap(config, facts, draft, flags):
 def _revise_recap(config, facts, voice, draft, issues):
     payload = {
         'model': config.model,
-        'reasoning': {'effort': config.reasoning_effort},
+        **_reasoning(config.reasoning_effort),
         'input': [
             {'role': 'system', 'content': [{'type': 'input_text', 'text': _system_prompt(voice)}]},
             {'role': 'user', 'content': [{'type': 'input_text', 'text': json.dumps(
@@ -828,6 +847,11 @@ def _revise_recap(config, facts, voice, draft, issues):
     return _post_to_provider(config, payload)
 
 
+def _reasoning(effort):
+    """Responses API `reasoning` block, or {} to leave it out for effort 'none'."""
+    return {} if effort == 'none' else {'reasoning': {'effort': effort}}
+
+
 def _add_usage(total, usage):
     for key in ('input_tokens', 'output_tokens'):
         if usage.get(key) is not None:
@@ -835,7 +859,7 @@ def _add_usage(total, usage):
     return total
 
 
-def review_and_revise(config, facts, voice, draft, previous_recap=''):
+def review_and_revise(config, facts, voice, draft, previous_recap='', context=''):
     """Fact-check + freshness review, one revision if needed, then re-check.
 
     Returns (body, review_status, first_issue_count, usage). The recap is
@@ -849,20 +873,35 @@ def review_and_revise(config, facts, voice, draft, previous_recap=''):
     try:
         issues, review_usage = _review_recap(config, facts, draft, code_check_recap(draft, previous_recap))
     except Exception as exc:
-        logger.warning('Weekly summary review unavailable: %s', type(exc).__name__)
+        _log_review_failure('review', exc, context)
         return draft, Review.ERROR, None, usage
     _add_usage(usage, review_usage)
     if not issues:
         return draft, Review.PASSED, 0, usage
     try:
         revised, revise_usage = _revise_recap(config, facts, voice, draft, issues)
-        _add_usage(usage, revise_usage)
-        recheck, recheck_usage = _review_recap(config, facts, revised, code_check_recap(revised, previous_recap))
-        _add_usage(usage, recheck_usage)
     except Exception as exc:
-        logger.warning('Weekly summary revision failed: %s', type(exc).__name__)
+        _log_review_failure('revision', exc, context)
         return draft, Review.FAILED, len(issues), usage
+    _add_usage(usage, revise_usage)
+    try:
+        recheck, recheck_usage = _review_recap(config, facts, revised, code_check_recap(revised, previous_recap))
+    except Exception as exc:
+        # The revision itself succeeded and addressed known issues -- publish
+        # it rather than the draft the reviewer already flagged.
+        _log_review_failure('re-check', exc, context)
+        return revised, Review.ERROR, len(issues), usage
+    _add_usage(usage, recheck_usage)
     return revised, (Review.REVISED if not recheck else Review.FAILED), len(issues), usage
+
+
+def _log_review_failure(stage, exc, context):
+    # Provider outages (RuntimeError from _post_to_provider) are expected now
+    # and then; anything else is a bug in our own code and must reach Sentry.
+    if isinstance(exc, RuntimeError):
+        logger.warning('Weekly summary %s unavailable %s: %s', stage, context, exc)
+    else:
+        logger.exception('Weekly summary %s crashed %s', stage, context)
 
 
 def _previous_recap_body(pool, season, week):
@@ -908,6 +947,7 @@ def generate_weekly_summary(pool, season, week, *, force=False, preview=False):
         if not config.mock and config.review_enabled:
             body, review_status, review_issues, review_usage = review_and_revise(
                 config, facts, voice, body, _previous_recap_body(pool, season, week),
+                context=f'pool_id={pool.id} week={week}',
             )
             _add_usage(usage, review_usage)
         # Real recaps auto-publish so members see them without a manual review
@@ -938,10 +978,13 @@ def generate_weekly_summary(pool, season, week, *, force=False, preview=False):
                 'status', 'publication', 'input_tokens', 'output_tokens', 'review_status', 'review_issues', 'finished_at',
             ])
     except ValueError as exc:
-        run.status, run.error_code, run.finished_at = 'skipped', str(exc), timezone.now()
+        run.status, run.error_code, run.finished_at = 'skipped', str(exc)[:64], timezone.now()
         run.save(update_fields=['status', 'error_code', 'finished_at'])
     except Exception as exc:  # Keep provider details and response bodies out of storage/logs.
-        run.status, run.error_code, run.finished_at = 'error', 'generation_failed', timezone.now()
+        # Our own provider_* codes (status codes, 'incomplete') are safe to
+        # store and tell an operator what to fix; anything else stays generic.
+        code = str(exc) if isinstance(exc, RuntimeError) and str(exc).startswith('provider_') else 'generation_failed'
+        run.status, run.error_code, run.finished_at = 'error', code[:64], timezone.now()
         run.save(update_fields=['status', 'error_code', 'finished_at'])
         logger.error('Weekly summary generation failed pool_id=%s run_id=%s error=%s', pool.id, run.id, type(exc).__name__)
     return run
