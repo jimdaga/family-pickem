@@ -122,6 +122,10 @@ class FamilyPublication(models.Model):
     )
     source = models.CharField(max_length=32, choices=Source.choices, default=Source.COMMISSIONER)
     generation_reference = models.CharField(max_length=255, blank=True)
+    # Set only for AI recaps: each pool/week keeps its own row, so every
+    # week's recap is retained for the season rather than overwritten.
+    season = models.IntegerField(null=True, blank=True)
+    week = models.PositiveSmallIntegerField(null=True, blank=True)
     is_published = models.BooleanField(default=False)
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -139,11 +143,17 @@ class FamilyPublication(models.Model):
                 check=models.Q(source__in=['commissioner', 'ai_weekly_summary']),
                 name='publication_source_valid',
             ),
-            # Each pool has two intentional, separately managed slots: one
-            # commissioner announcement and one AI recap.  A source may be a
-            # draft or published, but never a growing stream of replacements.
+            # One commissioner announcement per pool (a draft or published,
+            # never a growing stream of replacements), and one AI recap per
+            # pool per week -- regenerating a week replaces that week's recap,
+            # but earlier weeks are kept.
             models.UniqueConstraint(
-                fields=['pool', 'source'], name='one_publication_per_pool_source',
+                fields=['pool', 'source'], condition=models.Q(source='commissioner'),
+                name='one_commissioner_publication_per_pool',
+            ),
+            models.UniqueConstraint(
+                fields=['pool', 'source', 'season', 'week'], condition=models.Q(source='ai_weekly_summary'),
+                name='one_ai_recap_per_pool_week',
             ),
         ]
 
@@ -169,6 +179,13 @@ class AIWeeklySummaryRun(models.Model):
         ERROR = 'error', 'Error'
         SKIPPED = 'skipped', 'Skipped'
 
+    class ReviewStatus(models.TextChoices):
+        PASSED = 'passed', 'Passed review'
+        REVISED = 'revised', 'Revised, then passed'
+        FAILED = 'failed', 'Published with open issues'
+        ERROR = 'error', 'Reviewer unavailable'
+        SKIPPED = 'skipped', 'Not reviewed'
+
     family = models.ForeignKey('pickem_api.Family', on_delete=models.PROTECT)
     pool = models.ForeignKey('pickem_api.Pool', on_delete=models.PROTECT)
     season = models.IntegerField()
@@ -178,6 +195,10 @@ class AIWeeklySummaryRun(models.Model):
     input_tokens = models.PositiveIntegerField(null=True, blank=True)
     output_tokens = models.PositiveIntegerField(null=True, blank=True)
     error_code = models.CharField(max_length=64, blank=True)
+    # Outcome of the fact-check/freshness review. Only the verdict and the
+    # first review's issue count are kept -- never the reviewer's text.
+    review_status = models.CharField(max_length=16, choices=ReviewStatus.choices, blank=True)
+    review_issues = models.PositiveSmallIntegerField(null=True, blank=True)
     publication = models.ForeignKey(
         FamilyPublication, null=True, blank=True, on_delete=models.SET_NULL,
         related_name='ai_summary_runs',

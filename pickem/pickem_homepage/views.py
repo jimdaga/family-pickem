@@ -24,11 +24,11 @@ from .forms import (
     PickSubmissionForm,
     QuickCommentForm,
 )
-from .models import AIWeeklySummaryRun, FamilyPublication, MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner
+from .models import FamilyPublication, MessageBoardPost, MessageBoardComment, MessageBoardVote, SiteBanner
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db import IntegrityError, transaction
-from django.db.models import Sum, Count, Q, Avg
+from django.db.models import Sum, Count, F, Q, Avg
 from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
@@ -1805,31 +1805,33 @@ def family_pool_home(request, family_slug, pool_slug):
         .select_related('user')
         .order_by('user__username')[:10]
     )
+    # Every week's AI recap is kept and stays published (the scores page shows
+    # each under its own week), so the lobby takes only the newest one
+    # alongside the commissioner note.
     publications = list(
         FamilyPublication.objects.filter(
-            family=family, pool=pool, is_published=True
-        ).select_related('author')[:5]
+            family=family, pool=pool, is_published=True,
+            source=FamilyPublication.Source.COMMISSIONER,
+        ).select_related('author')[:1]
+    )
+    ai_recap = (
+        FamilyPublication.objects.filter(
+            family=family, pool=pool, is_published=True,
+            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
+        ).select_related('author')
+        .order_by(F('season').desc(nulls_last=True), F('week').desc(nulls_last=True), '-published_at')
+        .first()
     )
     # Drop a stale AI weekly recap from the lobby once the *next* week's games
-    # have kicked off — last week's recap shouldn't hang over this week's live
-    # slate. The recap row is reused per pool (one per pool/source), so we read
-    # its week from the linked run rather than the publication. The scores page
-    # still shows it under its own week, so nothing is lost.
-    ai_recap = next(
-        (p for p in publications if p.source == FamilyPublication.Source.AI_WEEKLY_SUMMARY),
-        None,
-    )
+    # have kicked off -- last week's recap shouldn't hang over this week's live
+    # slate. The scores page still shows it under its own week, so nothing is
+    # lost.
     if ai_recap is not None:
-        recap_week = (
-            AIWeeklySummaryRun.objects.filter(publication=ai_recap)
-            .order_by('-created_at')
-            .values_list('week', flat=True)
-            .first()
-        )
-        if recap_week and next_week_has_kicked_off(
-            gameseason, pool.competition, recap_week
-        ):
-            publications = [p for p in publications if p is not ai_recap]
+        if not (ai_recap.week and next_week_has_kicked_off(
+            gameseason, pool.competition, ai_recap.week
+        )):
+            publications.append(ai_recap)
+            publications.sort(key=lambda p: p.published_at, reverse=True)
     # The latest crowned week's winner rides the same window as the recap: up
     # once the winner is crowned, down at the next week's first kickoff.
     week_winner_spotlight = (
@@ -2294,9 +2296,14 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
         """Publish within the message's source slot without affecting the other."""
         try:
             with transaction.atomic():
-                FamilyPublication.objects.filter(
+                # AI recaps are one per week and every week stays published,
+                # so exclusivity there is only within the message's own week.
+                slot = FamilyPublication.objects.filter(
                     family=family, pool=pool, source=message.source, is_published=True
-                ).exclude(id=message.id).update(is_published=False, published_at=None)
+                )
+                if message.source == FamilyPublication.Source.AI_WEEKLY_SUMMARY:
+                    slot = slot.filter(season=message.season, week=message.week)
+                slot.exclude(id=message.id).update(is_published=False, published_at=None)
                 message.is_published = True
                 message.published_at = timezone.now()
                 if (
@@ -2379,7 +2386,7 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
         return redirect('family_pool_admin_publications', family_slug=family.slug, pool_slug=pool.slug)
     elif action == 'generate_ai_summary':
         from django.conf import settings
-        from pickem_api.ai_weekly_summaries import generate_weekly_summary
+        from pickem_api.ai_weekly_summaries import SummarySettings, generate_weekly_summary
         from pickem_api.weekly_winners import latest_complete_week
 
         week = latest_complete_week(pool.season or get_season())
@@ -2395,8 +2402,20 @@ def family_pool_admin_publications(request, family_slug, pool_slug):
             ]
             if available_weeks:
                 week, preview = max(available_weeks), True
+        config = SummarySettings.from_django()
         if week is None:
             messages.error(request, 'There is no fully scored week available to summarize yet.')
+        elif config.active and not (preview or config.mock):
+            # A real recap is a writer call plus fact-check/revision passes --
+            # often over a minute, past Cloudflare's request cutoff -- so hand
+            # it to the scheduler process instead of running it in-request.
+            from pickem_superadmin.jobs import queue_weekly_recap, scheduler_health
+
+            if not scheduler_health()['alive']:
+                messages.error(request, 'The background scheduler is not running, so the recap could not be queued. Please try again later.')
+            else:
+                queue_weekly_recap(pool.id, pool.season or get_season(), week)
+                messages.success(request, f"Week {week} AI recap queued. It will appear here in a minute or two once it's written and fact-checked.")
         else:
             run = generate_weekly_summary(
                 pool, pool.season or get_season(), week, force=True, preview=preview,
@@ -4599,20 +4618,17 @@ def render_scores_page(request, *, tenant_context=None, competition=None, gamese
     # public (non-tenant) scores view.
     week_recap = None
     if tenant_context and str(game_week).isdigit():
-        recap_run = (
-            AIWeeklySummaryRun.objects.filter(
+        week_recap = (
+            FamilyPublication.objects.filter(
                 pool=tenant_context.pool,
+                source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
                 season=gameseason,
                 week=int(game_week),
-                status=AIWeeklySummaryRun.Status.SUCCESS,
-                publication__isnull=False,
-                publication__is_published=True,
+                is_published=True,
             )
-            .select_related('publication', 'publication__author')
-            .order_by('-created_at')
+            .select_related('author')
             .first()
         )
-        week_recap = recap_run.publication if recap_run else None
 
     template = loader.get_template('pickem/scores.html')
 

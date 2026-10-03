@@ -185,13 +185,29 @@ class AIProviderSettings(models.Model):
     class Provider(models.TextChoices):
         OPENAI = 'openai', 'OpenAI'
 
+    class ReasoningEffort(models.TextChoices):
+        NONE = 'none', 'None'
+        LOW = 'low', 'Low'
+        MEDIUM = 'medium', 'Medium'
+        HIGH = 'high', 'High'
+        XHIGH = 'xhigh', 'Extra high'
+        MAX = 'max', 'Max'
+
     singleton = models.CharField(max_length=20, unique=True, default='default')
     provider = models.CharField(max_length=30, choices=Provider.choices, default=Provider.OPENAI)
     enabled = models.BooleanField(default=False)
-    model = models.CharField(max_length=100, default='gpt-4o-mini')
-    timeout_seconds = models.PositiveIntegerField(default=30)
+    model = models.CharField(max_length=100, default='gpt-6-luna')
+    timeout_seconds = models.PositiveIntegerField(default=120)
     retries = models.PositiveSmallIntegerField(default=2)
     max_runs_per_pool_week = models.PositiveSmallIntegerField(default=3)
+    # Reasoning tokens bill as output; higher effort is slower and pricier
+    # but noticeably more accurate on the pool's numbers.
+    reasoning_effort = models.CharField(max_length=10, choices=ReasoningEffort.choices, default=ReasoningEffort.HIGH)
+    # Second-pass fact-check/freshness review (plus one revision if needed).
+    review_enabled = models.BooleanField(default=True)
+    review_reasoning_effort = models.CharField(
+        max_length=10, choices=ReasoningEffort.choices, default=ReasoningEffort.HIGH,
+    )
     api_key_ciphertext = models.TextField(blank=True, default='', editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

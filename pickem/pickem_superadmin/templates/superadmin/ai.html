@@ -41,6 +41,21 @@
             {{ form.max_runs_per_pool_week }}
           </div>
         </div>
+        <div class="grid gap-4 md:grid-cols-3">
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Writer reasoning effort</label>
+            {{ form.reasoning_effort }}
+          </div>
+          <div class="flex items-center gap-2 pt-7">
+            {{ form.review_enabled }}
+            <label for="{{ form.review_enabled.id_for_label }}" class="text-[13px] font-medium text-[#1b212b]">Fact-check &amp; freshness review</label>
+          </div>
+          <div>
+            <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">Reviewer reasoning effort</label>
+            {{ form.review_reasoning_effort }}
+          </div>
+        </div>
+        <div class="text-[12px] text-[#667085]">Higher reasoning is slower: with review on, one recap can take over a minute, so keep the timeout at ~120s. Reasoning effort must be supported by the model above.</div>
         <div>
           <label class="mb-1 block text-[13px] font-medium text-[#1b212b]">OpenAI API key</label>
           {{ form.api_key }}

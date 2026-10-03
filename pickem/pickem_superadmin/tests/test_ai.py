@@ -43,7 +43,7 @@ class AISettingsViewTests(TestCase):
             'model': 'gpt-4o-mini',
             'timeout_seconds': 30,
             'retries': 2,
-            'max_runs_per_pool_week': 3,
+            'max_runs_per_pool_week': 3, 'reasoning_effort': 'high', 'review_reasoning_effort': 'high',
             'api_key': 'sk-test-do-not-audit',
         }, follow=True)
 
@@ -62,7 +62,7 @@ class AISettingsViewTests(TestCase):
         response = self.client.post(reverse('superadmin:ai_settings'), {
             'provider': AIProviderSettings.Provider.OPENAI,
             'enabled': 'on', 'model': 'gpt-4o-mini', 'timeout_seconds': 30,
-            'retries': 2, 'max_runs_per_pool_week': 3, 'api_key': 'sk-test-invalid',
+            'retries': 2, 'max_runs_per_pool_week': 3, 'reasoning_effort': 'high', 'review_reasoning_effort': 'high', 'api_key': 'sk-test-invalid',
         })
 
         self.assertContains(response, 'OpenAI rejected this API key. Nothing was saved.')
@@ -89,9 +89,82 @@ class AISettingsViewTests(TestCase):
             'model': 'gpt-4o-mini',
             'timeout_seconds': 30,
             'retries': 2,
-            'max_runs_per_pool_week': 3,
+            'max_runs_per_pool_week': 3, 'reasoning_effort': 'high', 'review_reasoning_effort': 'high',
             'api_key': '',
         })
 
         self.assertContains(response, 'An API key is required when AI recaps are enabled.')
         self.assertEqual(SuperAdminAuditLog.objects.count(), 0)
+
+
+class AIReasoningAndReviewSettingsTests(TestCase):
+    def setUp(self):
+        self.root = User.objects.create_superuser('root', 'root@example.com', 'pw')
+        self.client.force_login(self.root)
+        settings_obj = AIProviderSettings.load()
+        settings_obj.set_api_key('sk-test-stored')
+        settings_obj.save()
+
+    def test_reasoning_and_review_settings_save_audit_and_reach_the_generator(self):
+        from pickem_api.ai_weekly_summaries import SummarySettings
+
+        response = self.client.post(reverse('superadmin:ai_settings'), {
+            'provider': AIProviderSettings.Provider.OPENAI, 'enabled': 'on', 'model': 'gpt-6-luna',
+            'timeout_seconds': 120, 'retries': 2, 'max_runs_per_pool_week': 3,
+            'reasoning_effort': 'xhigh', 'review_reasoning_effort': 'medium',
+            # review_enabled checkbox left unticked -> reviewer off
+        }, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        settings_obj = AIProviderSettings.load()
+        self.assertEqual(
+            (settings_obj.reasoning_effort, settings_obj.review_enabled, settings_obj.review_reasoning_effort),
+            ('xhigh', False, 'medium'),
+        )
+        audit = SuperAdminAuditLog.objects.get(action=SuperAdminAuditLog.Action.AI_SETTINGS_UPDATED)
+        self.assertEqual(audit.changes['reasoning_effort'], ['high', 'xhigh'])
+        self.assertEqual(audit.changes['review_enabled'], [True, False])
+
+        config = SummarySettings.from_django()
+        self.assertEqual(
+            (config.model, config.timeout, config.reasoning_effort, config.review_enabled, config.review_reasoning_effort),
+            ('gpt-6-luna', 120, 'xhigh', False, 'medium'),
+        )
+
+    def test_page_renders_the_new_controls(self):
+        response = self.client.get(reverse('superadmin:ai_settings'))
+
+        self.assertContains(response, 'Writer reasoning effort')
+        self.assertContains(response, 'name="review_enabled"')
+        self.assertContains(response, 'name="review_reasoning_effort"')
+
+
+
+class AISettingsMigrationTests(TestCase):
+    def test_legacy_model_moves_to_gpt_6_luna_with_room_for_reasoning(self):
+        from importlib import import_module
+
+        from django.apps import apps
+
+        migration = import_module('pickem_superadmin.migrations.0011_ai_reasoning_and_review')
+        settings_obj = AIProviderSettings.load()
+        AIProviderSettings.objects.filter(pk=settings_obj.pk).update(model='gpt-5.6-luna', timeout_seconds=30)
+
+        migration.move_to_reasoning_model(apps, None)
+
+        settings_obj.refresh_from_db()
+        self.assertEqual((settings_obj.model, settings_obj.timeout_seconds), ('gpt-6-luna', 120))
+
+    def test_a_deliberately_chosen_model_and_longer_timeout_are_kept(self):
+        from importlib import import_module
+
+        from django.apps import apps
+
+        migration = import_module('pickem_superadmin.migrations.0011_ai_reasoning_and_review')
+        settings_obj = AIProviderSettings.load()
+        AIProviderSettings.objects.filter(pk=settings_obj.pk).update(model='gpt-6-sol', timeout_seconds=300)
+
+        migration.move_to_reasoning_model(apps, None)
+
+        settings_obj.refresh_from_db()
+        self.assertEqual((settings_obj.model, settings_obj.timeout_seconds), ('gpt-6-sol', 300))

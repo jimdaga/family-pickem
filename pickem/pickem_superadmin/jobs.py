@@ -65,7 +65,24 @@ def get_scheduler():
     return scheduler_module._scheduler
 
 
-def _add_job_via_fallback_scheduler(command_name, job_id):
+def run_weekly_recap(pool_id, season, week):
+    """APScheduler job target for one pool's recap (writer + review can run
+    well past a web request's lifetime, so the lobby button queues this)."""
+    from django.db import close_old_connections
+
+    from pickem_api.ai_weekly_summaries import generate_weekly_summary
+    from pickem_api.models import Pool
+
+    close_old_connections()
+    try:
+        pool = Pool.objects.filter(id=pool_id).first()
+        if pool is not None:
+            generate_weekly_summary(pool, season, week, force=True)
+    finally:
+        close_old_connections()
+
+
+def _add_job_via_fallback_scheduler(job_kwargs):
     """Persist a one-off job from a plain web worker, with no live in-process
     scheduler to hand it to.
 
@@ -91,7 +108,7 @@ def _add_job_via_fallback_scheduler(command_name, job_id):
     scheduler.add_jobstore(DjangoJobStore(), 'default')
     scheduler.start(paused=True)
     try:
-        scheduler.add_job(**_one_off_job_kwargs(command_name, job_id))
+        scheduler.add_job(**job_kwargs)
     finally:
         scheduler.shutdown(wait=False)
 
@@ -115,16 +132,34 @@ def queue_command(command_name):
         raise ValueError(f'Command not allowed: {command_name}')
 
     job_id = f'manual:{command_name}:{int(time.time())}'
+    _persist_job(_one_off_job_kwargs(command_name, job_id))
+    return job_id
 
+
+def queue_weekly_recap(pool_id, season, week):
+    """Enqueue one pool's recap generation (forced). Returns the job id."""
+    job_id = f'recap:{pool_id}:{season}:{week}:{int(time.time())}'
+    _persist_job(dict(
+        func=run_weekly_recap,
+        trigger='date',
+        run_date=timezone.now(),
+        id=job_id,
+        name=f'Weekly recap: pool {pool_id} week {week}',
+        args=[pool_id, season, week],
+        max_instances=1,
+        replace_existing=True,
+    ))
+    return job_id
+
+
+def _persist_job(job_kwargs):
     live_scheduler = get_scheduler()
     if live_scheduler is not None:
         # This process IS the scheduler process: it's already STATE_RUNNING,
         # so add_job() persists immediately through the normal running path.
-        live_scheduler.add_job(**_one_off_job_kwargs(command_name, job_id))
+        live_scheduler.add_job(**job_kwargs)
     else:
-        _add_job_via_fallback_scheduler(command_name, job_id)
-
-    return job_id
+        _add_job_via_fallback_scheduler(job_kwargs)
 
 
 def _scheduler_is_scheduling():

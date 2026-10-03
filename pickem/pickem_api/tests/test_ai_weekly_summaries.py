@@ -1,3 +1,4 @@
+import json
 from io import StringIO
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -11,7 +12,8 @@ from django.test import TestCase, override_settings
 from pickem_api import scheduler as pickem_scheduler
 from pickem_api import weekly_winners
 from pickem_api.ai_weekly_summaries import (
-    SummarySettings, _output_text_from_response, _provider_request, build_summary_facts, generate_weekly_summary,
+    OVERUSED_PHRASES, VOICES, SummarySettings, _output_text_from_response, _provider_request, _system_prompt,
+    attach_game_notes, build_summary_facts, code_check_recap, review_and_revise, fetch_espn_game_notes, generate_weekly_summary, pick_voice,
 )
 from pickem_api.management.commands import update_season_winners as update_season_winners_cmd
 from pickem_api.management.commands.update_all import PIPELINE as UPDATE_ALL_PIPELINE
@@ -25,7 +27,7 @@ from pickem_superadmin.models import AIProviderSettings
 
 def _make_config(retries=2):
     return SummarySettings(
-        enabled=True, api_key='sk-test', model='gpt-4o-mini',
+        enabled=True, api_key='sk-test', model='gpt-6-luna',
         timeout=30, retries=retries, max_runs=3, mock=False,
     )
 
@@ -95,6 +97,32 @@ class AIWeeklySummaryTests(TestCase):
         )
         self.assertEqual(second.publication_id, first.publication_id)
         self.assertIn('Did NOT tiptoe in', second.publication.body)
+
+    @override_settings(
+        OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
+        OPENAI_WEEKLY_SUMMARIES_MOCK=True,
+        OPENAI_API_KEY='',
+    )
+    def test_each_week_keeps_its_own_recap(self):
+        GamesAndScores.objects.create(
+            id=10002, slug='a-at-h-w2', competition='1', gameWeek='2', gameyear='2026', gameseason=2627,
+            startTimestamp='2026-09-17T17:00:00Z', statusType='finished', statusTitle='Final',
+            homeTeamId=1, homeTeamSlug='home', homeTeamName='Home', homeTeamScore=10,
+            awayTeamId=2, awayTeamSlug='away', awayTeamName='Away', awayTeamScore=13,
+            gameWinner='away', gameScored=True,
+        )
+        week1 = generate_weekly_summary(self.pool, 2627, 1, force=True)
+        week2 = generate_weekly_summary(self.pool, 2627, 2, force=True)
+
+        self.assertNotEqual(week1.publication_id, week2.publication_id)
+        recaps = FamilyPublication.objects.filter(
+            pool=self.pool, source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
+        ).order_by('week')
+        self.assertEqual([(r.season, r.week, r.title) for r in recaps], [
+            (2627, 1, 'Week 1 recap'), (2627, 2, 'Week 2 recap'),
+        ])
+        # Generating week 2 left week 1's recap published, not overwritten.
+        self.assertTrue(all(r.is_published for r in recaps))
 
     @override_settings(
         OPENAI_WEEKLY_SUMMARIES_ENABLED=True,
@@ -457,6 +485,25 @@ class NotablePicksAndStandingsMovementTests(TestCase):
             {'member': 'alice', 'team': 'Kansas City Chiefs', 'spread': 7.0},
         ])
 
+    def test_pool_busts_flag_games_most_of_the_pool_got_wrong(self):
+        facts = build_summary_facts(self.pool, 2627, 2)
+
+        # Jets/Dolphins: alice and bob took Miami, only carol had the Jets.
+        # Raiders/Chiefs: only alice missed, so it isn't a pool-wide bust.
+        self.assertEqual(facts['notable_picks']['pool_busts'], [{
+            'winner': 'New York Jets', 'pool_picked': 'Miami Dolphins',
+            'wrong_pickers': 2, 'total_pickers': 3,
+        }])
+
+    def test_nfl_highlights_pick_out_closest_game_and_blowout(self):
+        facts = build_summary_facts(self.pool, 2627, 2)
+
+        self.assertEqual(facts['nfl_highlights']['closest_game']['home_team'], 'Kansas City Chiefs')
+        self.assertEqual(facts['nfl_highlights']['closest_game']['margin'], 3)
+        self.assertEqual(facts['nfl_highlights']['biggest_blowout']['home_team'], 'New York Jets')
+        self.assertEqual(facts['nfl_highlights']['biggest_blowout']['margin'], 14)
+        self.assertEqual(facts['weeks_remaining'], 16)
+
     def test_small_spread_does_not_produce_upset_signals(self):
         # The jets/dolphins game has a 2.0 spread, below the 3.0 threshold,
         # even though jets (the favorite) won -- no upset either way here,
@@ -666,3 +713,280 @@ class SidelineOptInTests(TestCase):
 
         self.assertEqual([c.args[0].id for c in gen.call_args_list], [self.pool.id])
 
+
+
+class RecapVoiceTests(TestCase):
+    def test_a_pool_never_gets_the_same_voice_two_weeks_running(self):
+        for pool_id in range(1, 10):
+            voices = [pick_voice(pool_id, week)['key'] for week in range(1, 19)]
+            for previous, current in zip(voices, voices[1:]):
+                self.assertNotEqual(previous, current)
+
+    def test_every_voice_gets_used_over_a_season(self):
+        self.assertEqual(
+            {pick_voice(7, week)['key'] for week in range(1, 19)},
+            {voice['key'] for voice in VOICES},
+        )
+
+    def test_system_prompt_carries_the_voice_and_bans_worn_phrases(self):
+        voice = VOICES[2]
+        prompt = _system_prompt(voice)
+
+        self.assertIn(voice['brief'], prompt)
+        for phrase in OVERUSED_PHRASES:
+            self.assertIn(phrase, prompt)
+        # The old prompt handed the model its catchphrases as examples to use.
+        self.assertNotIn('Talk with total, unearned-sounding swagger', prompt)
+
+    @patch('pickem_api.ai_weekly_summaries.requests.post')
+    def test_provider_request_sends_the_chosen_voice(self, post):
+        post.return_value = MagicMock(status_code=200, json=lambda: {'output_text': 'ok'})
+        voice = VOICES[4]
+
+        _provider_request(_make_config(), {'week': 1}, voice=voice)
+
+        system_text = post.call_args.kwargs['json']['input'][0]['content'][0]['text']
+        self.assertIn(voice['brief'], system_text)
+
+
+class ESPNGameNotesTests(TestCase):
+    SCOREBOARD = {'events': [{'competitions': [{
+        'id': '401872949',
+        'headlines': [{'shortLinkText': 'Deshaun Watson sparks a late Browns rally', 'description': 'long quote...'}],
+        'leaders': [
+            {'name': 'passingYards', 'displayName': 'Passing Leader', 'leaders': [
+                {'displayValue': '26/48, 291 YDS, 1 TD', 'athlete': {'displayName': 'Bryce Young'}},
+            ]},
+            {'name': 'rushingYards', 'leaders': []},
+        ],
+    }, {'id': '401872950'}]}]}
+
+    @patch('pickem_api.ai_weekly_summaries.requests.get')
+    def test_parses_headline_and_stat_leaders_keyed_by_game_id(self, get):
+        get.return_value = MagicMock(status_code=200, json=lambda: self.SCOREBOARD)
+
+        notes = fetch_espn_game_notes(2627, 3)
+
+        self.assertEqual(notes, {401872949: {
+            'headline': 'Deshaun Watson sparks a late Browns rally',
+            'standouts': ['Bryce Young (Passing Leader): 26/48, 291 YDS, 1 TD'],
+        }})
+        self.assertEqual(get.call_args.kwargs['params'], {'week': 3, 'dates': 2026})
+
+    @patch('pickem_api.ai_weekly_summaries.requests.get', side_effect=requests.Timeout)
+    def test_espn_outage_returns_no_notes_instead_of_failing(self, _get):
+        self.assertEqual(fetch_espn_game_notes(2627, 3), {})
+
+    def test_attach_merges_notes_into_matching_results_only(self):
+        facts = {'results': [{'game_id': 1, 'home_team': 'A'}, {'game_id': 2, 'home_team': 'B'}]}
+
+        attach_game_notes(facts, {1: {'headline': 'H', 'standouts': ['S']}})
+
+        self.assertEqual(facts['results'], [
+            {'game_id': 1, 'home_team': 'A', 'headline': 'H', 'standouts': ['S']},
+            {'game_id': 2, 'home_team': 'B'},
+        ])
+
+
+
+class RecapReviewTests(TestCase):
+    FACTS = {'week': 3, 'results': [], 'pool': {'standings': []}}
+    VOICE = VOICES[0]
+
+    def test_code_check_flags_banned_phrases_with_curly_apostrophes(self):
+        flags = code_check_recap('That\u2019s a fact. You seeing this? A clean week.')
+
+        self.assertEqual(flags, [
+            'Uses a banned stock phrase: "You seeing this"',
+            'Uses a banned stock phrase: "That\'s a fact"',
+        ])
+
+    def test_code_check_flags_phrases_repeated_from_last_week(self):
+        flags = code_check_recap(
+            'The middle of this pool is a demolition derby again.',
+            previous_recap='Honestly the middle of this pool is a demolition derby.',
+        )
+
+        # One recycled sentence is one flag, not a pile of overlapping fragments.
+        self.assertEqual(flags, ['Repeats a phrase from last week\'s recap: "the middle of this pool is a demolition derby"'])
+
+    def test_code_check_is_quiet_on_a_clean_fresh_draft(self):
+        self.assertEqual(code_check_recap('## Fresh\n\nKaren called Cleveland.', 'Totally different words here.'), [])
+
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_clean_draft_passes_without_revision(self, post):
+        post.return_value = ('{"issues": []}', {'input_tokens': 10, 'output_tokens': 2})
+
+        body, status, issues, usage = review_and_revise(_make_config(), self.FACTS, self.VOICE, 'draft')
+
+        self.assertEqual((body, status, issues), ('draft', AIWeeklySummaryRun.ReviewStatus.PASSED, 0))
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(usage, {'input_tokens': 10, 'output_tokens': 2})
+
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_flagged_draft_is_revised_and_rechecked(self, post):
+        issue = '{"issues": [{"category": "fact", "quote": "karen took Chicago", "problem": "PaPa_Jim did", "fix": "PaPa_Jim"}]}'
+        post.side_effect = [(issue, {}), ('revised draft', {}), ('{"issues": []}', {})]
+
+        body, status, issues, _usage = review_and_revise(_make_config(), self.FACTS, self.VOICE, 'draft')
+
+        self.assertEqual((body, status, issues), ('revised draft', AIWeeklySummaryRun.ReviewStatus.REVISED, 1))
+        revise_payload = post.call_args_list[1].args[1]
+        self.assertIn('karen took Chicago', revise_payload['input'][1]['content'][0]['text'])
+
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_still_flagged_after_revision_publishes_revision_as_failed(self, post):
+        issue = '{"issues": [{"category": "freshness", "quote": "q", "problem": "p", "fix": "f"}]}'
+        post.side_effect = [(issue, {}), ('revised draft', {}), (issue, {})]
+
+        body, status, issues, _usage = review_and_revise(_make_config(), self.FACTS, self.VOICE, 'draft')
+
+        self.assertEqual((body, status, issues), ('revised draft', AIWeeklySummaryRun.ReviewStatus.FAILED, 1))
+
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider', side_effect=RuntimeError('provider_5xx'))
+    def test_reviewer_outage_publishes_the_unreviewed_draft(self, _post):
+        body, status, issues, _usage = review_and_revise(_make_config(), self.FACTS, self.VOICE, 'draft')
+
+        self.assertEqual((body, status, issues), ('draft', AIWeeklySummaryRun.ReviewStatus.ERROR, None))
+
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_reviewer_requests_strict_json_with_high_reasoning(self, post):
+        post.return_value = ('{"issues": []}', {})
+
+        review_and_revise(_make_config(), self.FACTS, self.VOICE, 'draft')
+
+        payload = post.call_args.args[1]
+        self.assertEqual(payload['text']['format']['type'], 'json_schema')
+        self.assertTrue(payload['text']['format']['strict'])
+        self.assertEqual(payload['reasoning'], {'effort': 'high'})  # SummarySettings default
+
+
+
+class ReviewToggleTests(TestCase):
+    """Runs generate_weekly_summary against a real (non-mock) config with the provider stubbed."""
+
+    setUp = AIWeeklySummaryTests.setUp
+
+    def _config(self, **overrides):
+        import dataclasses
+        return dataclasses.replace(_make_config(), **overrides)
+
+    @patch('pickem_api.ai_weekly_summaries.fetch_espn_game_notes', return_value={})
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_review_disabled_publishes_draft_without_reviewer_call(self, post, _notes):
+        post.return_value = ('## Draft', {'input_tokens': 5, 'output_tokens': 7})
+        with patch.object(SummarySettings, 'from_django', return_value=self._config(review_enabled=False)):
+            run = generate_weekly_summary(self.pool, 2627, 1, force=True)
+
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(run.review_status, AIWeeklySummaryRun.ReviewStatus.SKIPPED)
+        self.assertEqual(run.publication.body, '## Draft')
+
+    @patch('pickem_api.ai_weekly_summaries.fetch_espn_game_notes', return_value={})
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_configured_reasoning_efforts_are_sent_and_usage_is_summed(self, post, _notes):
+        post.side_effect = [('## Draft', {'input_tokens': 5, 'output_tokens': 7}), ('{"issues": []}', {'input_tokens': 3, 'output_tokens': 1})]
+        config = self._config(reasoning_effort='xhigh', review_reasoning_effort='low')
+        with patch.object(SummarySettings, 'from_django', return_value=config):
+            run = generate_weekly_summary(self.pool, 2627, 1, force=True)
+
+        self.assertEqual(post.call_args_list[0].args[1]['reasoning'], {'effort': 'xhigh'})
+        self.assertEqual(post.call_args_list[1].args[1]['reasoning'], {'effort': 'low'})
+        self.assertEqual(run.review_status, AIWeeklySummaryRun.ReviewStatus.PASSED)
+        self.assertEqual((run.input_tokens, run.output_tokens), (8, 8))
+
+
+    @patch('pickem_api.ai_weekly_summaries.fetch_espn_game_notes', return_value={})
+    @patch('pickem_api.ai_weekly_summaries.requests.post')
+    def test_truncated_provider_output_is_never_published(self, post, _notes):
+        post.return_value = MagicMock(
+            status_code=200, json=lambda: {'status': 'incomplete', 'output_text': 'Half a sente'},
+        )
+        with patch.object(SummarySettings, 'from_django', return_value=self._config()):
+            run = generate_weekly_summary(self.pool, 2627, 1, force=True)
+
+        self.assertEqual(run.status, AIWeeklySummaryRun.Status.ERROR)
+        self.assertEqual(post.call_count, 1)  # a budget cutoff won't fix itself on retry
+        self.assertFalse(FamilyPublication.objects.filter(
+            pool=self.pool, source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
+        ).exists())
+
+    @patch('pickem_api.ai_weekly_summaries.fetch_espn_game_notes')
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_espn_notes_reach_the_writer_on_the_matching_game(self, post, notes):
+        notes.return_value = {10001: {'headline': 'Home holds on', 'standouts': ['QB: 300 YDS']}}
+        post.return_value = ('## Draft', {})
+        with patch.object(SummarySettings, 'from_django', return_value=self._config(review_enabled=False)):
+            generate_weekly_summary(self.pool, 2627, 1, force=True)
+
+        facts = json.loads(post.call_args_list[0].args[1]['input'][1]['content'][0]['text'])
+        self.assertEqual(facts['results'][0]['headline'], 'Home holds on')
+        self.assertEqual(facts['results'][0]['standouts'], ['QB: 300 YDS'])
+
+
+    @patch('pickem_api.ai_weekly_summaries.fetch_espn_game_notes', return_value={})
+    @patch('pickem_api.ai_weekly_summaries.requests.post')
+    def test_permanent_4xx_records_its_status_code_on_the_run(self, post, _notes):
+        response = MagicMock(status_code=400)
+        response.raise_for_status.side_effect = requests.HTTPError(response=response)
+        post.return_value = response
+        with patch.object(SummarySettings, 'from_django', return_value=self._config()):
+            run = generate_weekly_summary(self.pool, 2627, 1, force=True)
+
+        self.assertEqual((run.status, run.error_code), ('error', 'provider_http_400'))
+
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_reasoning_block_is_omitted_for_effort_none(self, post):
+        post.return_value = ('## Draft', {})
+
+        _provider_request(self._config(reasoning_effort='none'), {'week': 1})
+
+        self.assertNotIn('reasoning', post.call_args.args[1])
+
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_reasoning_block_is_omitted_for_non_reasoning_models(self, post):
+        post.return_value = ('## Draft', {})
+
+        _provider_request(self._config(model='gpt-4o-mini', reasoning_effort='high'), {'week': 1})
+
+        self.assertNotIn('reasoning', post.call_args.args[1])
+
+
+class ReviewFailureModeTests(TestCase):
+    FACTS = {'week': 3, 'results': [], 'pool': {'standings': []}}
+    ISSUE = '{"issues": [{"category": "fact", "quote": "q", "problem": "p", "fix": "f"}]}'
+
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_recheck_outage_publishes_the_revision_not_the_flagged_draft(self, post):
+        post.side_effect = [(self.ISSUE, {}), ('revised draft', {}), RuntimeError('provider_5xx')]
+
+        body, status, issues, _usage = review_and_revise(_make_config(), self.FACTS, VOICES[0], 'draft')
+
+        self.assertEqual((body, status, issues), ('revised draft', AIWeeklySummaryRun.ReviewStatus.ERROR, 1))
+
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider', return_value=('not json', {}))
+    def test_malformed_review_is_a_provider_fault_not_a_crash(self, _post):
+        with self.assertLogs('pickem_api.ai_weekly_summaries', level='WARNING') as logs:
+            body, status, _issues, _usage = review_and_revise(
+                _make_config(), self.FACTS, VOICES[0], 'draft', context='pool_id=1 week=3',
+            )
+
+        self.assertEqual((body, status), ('draft', AIWeeklySummaryRun.ReviewStatus.ERROR))
+        self.assertTrue(all(record.levelname == 'WARNING' for record in logs.records))
+        self.assertIn('provider_bad_review', logs.output[0])
+
+    @patch('pickem_api.ai_weekly_summaries.code_check_recap', side_effect=TypeError('bug'))
+    @patch('pickem_api.ai_weekly_summaries._post_to_provider')
+    def test_a_bug_in_our_review_code_is_logged_as_an_error(self, _post, _check):
+        with self.assertLogs('pickem_api.ai_weekly_summaries', level='ERROR'):
+            _body, status, _issues, _usage = review_and_revise(_make_config(), self.FACTS, VOICES[0], 'draft')
+
+        self.assertEqual(status, AIWeeklySummaryRun.ReviewStatus.ERROR)
+
+
+class ESPNPayloadShapeTests(TestCase):
+    @patch('pickem_api.ai_weekly_summaries.requests.get')
+    def test_unexpected_payload_shape_returns_no_notes(self, get):
+        for payload in ([], {'events': [{'competitions': [{'id': '1', 'headlines': {'oops': 1}}]}]}):
+            get.return_value = MagicMock(status_code=200, json=lambda payload=payload: payload)
+            self.assertEqual(fetch_espn_game_notes(2627, 3), {})

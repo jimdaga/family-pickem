@@ -198,3 +198,30 @@ class ScheduleEditTests(TestCase):
         self._post(cfg, **{f'{cfg.pk}-enabled': ''})
         cfg.refresh_from_db()
         self.assertFalse(cfg.enabled)
+
+
+
+class WeeklyRecapJobTests(TestCase):
+    def test_queue_weekly_recap_persists_a_one_off_job(self):
+        from unittest import mock
+
+        with mock.patch.object(jobs, '_persist_job') as persist:
+            job_id = jobs.queue_weekly_recap(7, 2627, 3)
+
+        kwargs = persist.call_args.args[0]
+        self.assertIs(kwargs['func'], jobs.run_weekly_recap)
+        self.assertEqual(kwargs['args'], [7, 2627, 3])
+        self.assertEqual(kwargs['id'], job_id)
+        self.assertTrue(job_id.startswith('recap:7:2627:3:'))
+
+    def test_run_weekly_recap_forces_generation_for_the_pool(self):
+        from unittest import mock
+        from pickem_api.models import Family, Pool
+
+        family = Family.objects.create(name='Fam', slug='fam')
+        pool = Pool.objects.create(family=family, name='2026', slug='2026', season=2627)
+        with mock.patch('pickem_api.ai_weekly_summaries.generate_weekly_summary') as generate:
+            jobs.run_weekly_recap(pool.id, 2627, 3)
+            jobs.run_weekly_recap(999999, 2627, 3)  # deleted pool: no-op
+
+        generate.assert_called_once_with(pool, 2627, 3, force=True)

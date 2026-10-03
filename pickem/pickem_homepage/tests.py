@@ -9625,13 +9625,10 @@ class FamilyPublicationTests(FamilyAdminExperienceTests):
         self.assertIsNotNone(publication.published_at)
 
     def test_publishing_one_source_does_not_affect_the_other(self):
-        # FamilyPublication now holds exactly one row per (pool, source) — a
-        # fixed slot, not a growing history — so "replacing the active
-        # message" within a source means editing that single row in place.
-        # What's still worth guarding: publish_exclusively only clears
-        # is_published within the message's own source, so publishing the AI
-        # recap slot must not unpublish an already-published commissioner
-        # announcement (or vice versa).
+        # A pool has one commissioner row and one AI recap row per week.
+        # publish_exclusively only clears is_published within the message's
+        # own slot, so publishing an AI recap must not unpublish an
+        # already-published commissioner announcement (or vice versa).
         commissioner_msg = FamilyPublication.objects.create(
             family=self.family, pool=self.pool, author=self.owner,
             title='Commissioner announcement', body='Old',
@@ -9654,6 +9651,55 @@ class FamilyPublicationTests(FamilyAdminExperienceTests):
         self.assertEqual(
             FamilyPublication.objects.filter(pool=self.pool, is_published=True).count(), 2
         )
+
+    def _regenerate(self, *, scheduler_alive):
+        from unittest import mock
+        from pickem_api.ai_weekly_summaries import SummarySettings
+
+        config = SummarySettings(
+            enabled=True, api_key='sk-test', model='gpt-6-luna', timeout=120,
+            retries=0, max_runs=3, mock=False,
+        )
+        self.client.force_login(self.owner)
+        with mock.patch.object(SummarySettings, 'from_django', return_value=config), \
+                mock.patch('pickem_api.weekly_winners.latest_complete_week', return_value=3), \
+                mock.patch('pickem_superadmin.jobs.scheduler_health', return_value={'alive': scheduler_alive}), \
+                mock.patch('pickem_superadmin.jobs.queue_weekly_recap') as queue, \
+                mock.patch('pickem_api.ai_weekly_summaries.generate_weekly_summary') as generate:
+            response = self.client.post(self._publications_url(), {'action': 'generate_ai_summary'}, follow=True)
+        return response, queue, generate
+
+    def test_regenerate_queues_real_recaps_instead_of_running_inline(self):
+        response, queue, generate = self._regenerate(scheduler_alive=True)
+
+        queue.assert_called_once_with(self.pool.id, self.pool.season or get_season(), 3)
+        generate.assert_not_called()
+        self.assertContains(response, 'Week 3 AI recap queued')
+
+    def test_regenerate_refuses_when_scheduler_is_down(self):
+        response, queue, generate = self._regenerate(scheduler_alive=False)
+
+        queue.assert_not_called()
+        generate.assert_not_called()
+        self.assertContains(response, 'background scheduler is not running')
+
+    def test_publishing_one_weeks_ai_recap_keeps_other_weeks_published(self):
+        # Every week's recap stays published so the scores page can show it
+        # under its own week; exclusivity applies only within that week.
+        def recap(week, published):
+            return FamilyPublication.objects.create(
+                family=self.family, pool=self.pool, title=f'Week {week} recap', body='b',
+                source=FamilyPublication.Source.AI_WEEKLY_SUMMARY, season=2627, week=week,
+                is_published=published, published_at=timezone.now() if published else None,
+            )
+        week1, week2, week3 = recap(1, True), recap(2, True), recap(3, False)
+        self.client.force_login(self.owner)
+        self.client.post(self._publications_url(), {
+            'action': 'publish', 'publication_id': week3.id,
+        })
+        for publication in (week1, week2, week3):
+            publication.refresh_from_db()
+            self.assertTrue(publication.is_published, publication.title)
 
     def test_messages_are_newest_first(self):
         # At most one row per (pool, source) can exist, so with both slots
@@ -11869,7 +11915,7 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         from pickem_homepage.models import AIWeeklySummaryRun, FamilyPublication
         pub = FamilyPublication.objects.create(
             family=pool.family, pool=pool, title=f"Week {week} recap", body="recap",
-            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY,
+            source=FamilyPublication.Source.AI_WEEKLY_SUMMARY, season=self.season, week=week,
             is_published=True, published_at=timezone.now(), generation_reference="1",
         )
         AIWeeklySummaryRun.objects.create(
@@ -11903,6 +11949,52 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         ))
         self.assertEqual(resp.status_code, 200)
         self.assertIn(pub.pk, [p.pk for p in resp.context["publications"]])
+
+    def test_lobby_shows_only_the_newest_of_several_kept_recaps(self):
+        family, pool = self._family_pool("Recap Fam3", "recap-fam3")
+        viewer = self._member("recapviewer3", family)
+        self._ai_recap(pool, week=1)
+        newest = self._ai_recap(pool, week=2)
+        self.client.force_login(viewer)
+        resp = self.client.get(reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual([p.pk for p in resp.context["publications"]], [newest.pk])
+
+    def test_lobby_picks_the_latest_week_not_the_latest_publish(self):
+        # Regenerating an older week re-publishes it later; the lobby must
+        # still lead with the newest week's recap.
+        family, pool = self._family_pool("Recap Fam5", "recap-fam5")
+        viewer = self._member("recapviewer5", family)
+        week1 = self._ai_recap(pool, week=1)
+        week2 = self._ai_recap(pool, week=2)
+        week1.published_at = timezone.now() + timedelta(minutes=5)
+        week1.save(update_fields=["published_at"])
+        self.client.force_login(viewer)
+        resp = self.client.get(reverse(
+            "family_pool_home",
+            kwargs={"family_slug": family.slug, "pool_slug": pool.slug},
+        ))
+        self.assertEqual([p.pk for p in resp.context["publications"]], [week2.pk])
+
+    def test_scores_page_shows_each_weeks_own_recap(self):
+        family, pool = self._family_pool("Recap Fam4", "recap-fam4")
+        viewer = self._member("recapviewer4", family)
+        week1 = self._ai_recap(pool, week=1)
+        week2 = self._ai_recap(pool, week=2)
+        self.client.force_login(viewer)
+        for week, expected in ((1, week1), (2, week2)):
+            resp = self.client.get(reverse(
+                "family_pool_scores_long",
+                kwargs={
+                    "family_slug": family.slug, "pool_slug": pool.slug,
+                    "competition": 1, "gameseason": self.season, "week": week,
+                },
+            ))
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.context["week_recap"].pk, expected.pk)
 
     # ---- Lobby week-winner spotlight -------------------------------------
     def _crowned_winner(self, pool, family, username):

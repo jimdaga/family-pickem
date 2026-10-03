@@ -132,13 +132,18 @@ class AIProviderSettingsForm(forms.ModelForm):
 
     class Meta:
         model = AIProviderSettings
-        fields = ('provider', 'enabled', 'model', 'timeout_seconds', 'retries', 'max_runs_per_pool_week')
+        fields = (
+            'provider', 'enabled', 'model', 'timeout_seconds', 'retries', 'max_runs_per_pool_week',
+            'reasoning_effort', 'review_enabled', 'review_reasoning_effort',
+        )
         widgets = {
             'provider': forms.Select(attrs={'class': 'sa-select w-full'}),
             'model': forms.TextInput(attrs={'class': 'sa-input w-full'}),
             'timeout_seconds': forms.NumberInput(attrs={'class': 'sa-input w-full', 'min': 1}),
             'retries': forms.NumberInput(attrs={'class': 'sa-input w-full', 'min': 0}),
             'max_runs_per_pool_week': forms.NumberInput(attrs={'class': 'sa-input w-full', 'min': 1}),
+            'reasoning_effort': forms.Select(attrs={'class': 'sa-select w-full'}),
+            'review_reasoning_effort': forms.Select(attrs={'class': 'sa-select w-full'}),
         }
 
     def clean(self):
