@@ -21,6 +21,7 @@ import logging
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.utils import timezone
 
 from pickem.utils import get_season
@@ -91,21 +92,23 @@ class Command(BaseCommand):
             for family, idle in [(f, True) for f in went_idle] + [(f, False) for f in came_back]:
                 family.is_idle = idle
                 family.idle_since = now if idle else None
-                family.save(update_fields=['is_idle', 'idle_since', 'updated_at'])
                 # Flips gate the weekly email, so leave a trail in the
-                # family's own audit log (actor=None: the pipeline did it).
-                FamilyAuditLog.objects.create(
-                    family=family,
-                    action=FamilyAuditLog.Action.FAMILY_STATUS_UPDATED,
-                    target_type='Family',
-                    target_id=str(family.id),
-                    metadata={
-                        'source': 'update_family_activity',
-                        'is_idle': idle,
-                        'season': season,
-                        'since_week': since_week,
-                    },
-                )
+                # family's own audit log (actor=None: the pipeline did it);
+                # flag and audit row commit together.
+                with transaction.atomic():
+                    family.save(update_fields=['is_idle', 'idle_since', 'updated_at'])
+                    FamilyAuditLog.objects.create(
+                        family=family,
+                        action=FamilyAuditLog.Action.FAMILY_STATUS_UPDATED,
+                        target_type='Family',
+                        target_id=str(family.id),
+                        metadata={
+                            'source': 'update_family_activity',
+                            'is_idle': idle,
+                            'season': season,
+                            'since_week': since_week,
+                        },
+                    )
 
         for label, families in (("idle", went_idle), ("active", came_back)):
             for family in families:

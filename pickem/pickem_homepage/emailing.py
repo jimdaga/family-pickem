@@ -368,19 +368,22 @@ def _eligible_campaign_users(campaign):
     return users
 
 
-def _eligible_weekly_picks_users(campaign, idle_skipped=None):
+def _eligible_weekly_picks_users(campaign, idle_skipped=None, season=None):
     """Recipients for the weekly picks mail. Pass a list as ``idle_skipped``
     to collect the emails dropped only because their families are idle, so
-    the campaign log can tell that apart from "no active pool"."""
+    the campaign log can tell that apart from "no active pool". ``season``
+    (the announced week's) restricts links to pools of that season, so skipping
+    an idle family can't fall back to a stale prior-season pool. Competition
+    is deliberately not matched: preseason targets still link to nfl pools."""
     users = []
     for user in _eligible_campaign_users(campaign):
         # Idle families (Family.is_idle, see update_family_activity) don't get
         # the "picks are ready" mail; a member of an idle family and an active
         # one is linked to the active one (if it has an active pool), and
         # someone in only idle families is skipped.
-        link, family, pool = _build_picks_link(user, exclude_idle=True)
+        link, family, pool = _build_picks_link(user, season=season, exclude_idle=True)
         if not link:
-            if idle_skipped is not None and _build_picks_link(user)[0]:
+            if idle_skipped is not None and _build_picks_link(user, season=season)[0]:
                 idle_skipped.append(user.email)
             continue
         user._weekly_picks_link = link
@@ -618,7 +621,9 @@ def _run_weekly_picks_campaign(*, now, force):
         return None
 
     idle_skipped = []
-    recipients = _eligible_weekly_picks_users(campaign, idle_skipped=idle_skipped)
+    recipients = _eligible_weekly_picks_users(
+        campaign, idle_skipped=idle_skipped, season=target['season'],
+    )
     sent = 0
     skipped = []
     for user in recipients:
