@@ -93,7 +93,7 @@ class Family(models.Model):
     # skipped by the weekly "picks are ready" email.
     is_idle = models.BooleanField(
         default=False,
-        help_text="No member made a pick in the last two completed weeks",
+        help_text="No member made a manual pick in the last two completed weeks (stays set until someone picks)",
     )
     idle_since = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

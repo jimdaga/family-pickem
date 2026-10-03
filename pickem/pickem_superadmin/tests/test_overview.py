@@ -53,7 +53,7 @@ class OverviewTests(TestCase):
 
         response = self.client.get(reverse('superadmin:overview'))
 
-        self.assertEqual(response.context['counts']['families_inactive'], 1)
+        self.assertEqual(response.context['counts']['families_idle'], 1)
         self.assertEqual(response.context['counts']['families_deactivated'], 1)
         self.assertContains(response, '1 deactivated')
 

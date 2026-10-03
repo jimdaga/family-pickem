@@ -12,7 +12,7 @@ from grading_tests.factories import (
     finish_game,
     make_pick,
 )
-from pickem_api.models import Family, GamesAndScores
+from pickem_api.models import Family, FamilyAuditLog, GamesAndScores
 
 
 class UpdateFamilyActivityTests(TestCase):
@@ -47,6 +47,9 @@ class UpdateFamilyActivityTests(TestCase):
         self.family.refresh_from_db()
         self.assertTrue(self.family.is_idle)
         self.assertIsNotNone(self.family.idle_since)
+        log = FamilyAuditLog.objects.get(family=self.family)
+        self.assertEqual(log.metadata['source'], 'update_family_activity')
+        self.assertTrue(log.metadata['is_idle'])
 
     def test_pick_in_either_recent_week_keeps_family_active(self):
         make_pick(self.pool, self.user, self.games[2], "home")
@@ -88,6 +91,7 @@ class UpdateFamilyActivityTests(TestCase):
         self._run(dry_run=True)
         self.family.refresh_from_db()
         self.assertFalse(self.family.is_idle)
+        self.assertFalse(FamilyAuditLog.objects.filter(family=self.family).exists())
 
     def test_no_new_idle_flags_before_two_completed_weeks_but_flags_persist(self):
         # Simulate a new season: no completed weeks yet.
@@ -100,3 +104,25 @@ class UpdateFamilyActivityTests(TestCase):
         self.family.refresh_from_db()
         self.assertFalse(quiet.is_idle)       # not newly flagged
         self.assertTrue(self.family.is_idle)  # existing flag carries over
+
+    def test_activity_is_judged_per_family(self):
+        busy, busy_pool, busy_user = self._league("busy")
+        self._age(busy)
+        make_pick(busy_pool, busy_user, self.games[3], "home")
+        self._run()
+        busy.refresh_from_db()
+        self.family.refresh_from_db()
+        self.assertFalse(busy.is_idle)
+        self.assertTrue(self.family.is_idle)
+
+    def test_idle_family_comes_back_early_in_a_new_season(self):
+        GamesAndScores.objects.all().delete()
+        week_one = create_game(1)  # nothing complete yet
+        Family.objects.filter(pk=self.family.pk).update(
+            is_idle=True, idle_since=timezone.now()
+        )
+        make_pick(self.pool, self.user, week_one, "home")
+        self._run()
+        self.family.refresh_from_db()
+        self.assertFalse(self.family.is_idle)
+        self.assertIsNone(self.family.idle_since)

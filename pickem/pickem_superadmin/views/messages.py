@@ -11,8 +11,8 @@ KINDS = ('post', 'comment')
 
 
 def _family_board_urls(family_ids):
-    """family_id -> that family's message board URL (via its default pool,
-    else any active pool), resolved in one query."""
+    """family_id -> that family's message board URL (via its active default
+    pool, else its newest active pool), resolved in one query."""
     urls = {}
     pools = (
         Pool.objects.filter(family_id__in=family_ids, status=Pool.Status.ACTIVE)
@@ -26,6 +26,32 @@ def _family_board_urls(family_ids):
                 kwargs={'family_slug': pool.family.slug, 'pool_slug': pool.slug},
             )
     return urls
+
+
+class _MergedStream:
+    """Newest-first merge of several querysets, sliceable for Paginator.
+
+    A page ending at row N only needs the newest N rows of each source, so
+    nothing beyond that is loaded however large the boards get.
+    """
+
+    def __init__(self, sources):
+        self.sources = sources  # [(kind, queryset, title_fn), ...]
+
+    def count(self):
+        return sum(queryset.count() for _kind, queryset, _title in self.sources)
+
+    def __getitem__(self, window):
+        stop = window.stop
+        rows = []
+        for kind, queryset, title in self.sources:
+            for obj in queryset.order_by('-created_at', '-id')[:stop]:
+                rows.append({
+                    'kind': kind, 'obj': obj, 'title': title(obj),
+                    'created_at': obj.created_at,
+                })
+        rows.sort(key=lambda row: row['created_at'], reverse=True)
+        return rows[window.start:stop]
 
 
 @superadmin_required
@@ -57,20 +83,15 @@ def message_board(request):
             | Q(user__username__icontains=query)
         )
 
-    items = []
+    sources = []
     if kind != 'comment':
-        items += [
-            {'kind': 'post', 'obj': p, 'title': p.title, 'created_at': p.created_at}
-            for p in posts
-        ]
+        sources.append(('post', posts, lambda p: p.title))
     if kind != 'post':
-        items += [
-            {'kind': 'comment', 'obj': c, 'title': c.post.title, 'created_at': c.created_at}
-            for c in comments
-        ]
-    items.sort(key=lambda item: item['created_at'], reverse=True)
+        sources.append((
+            'comment', comments.defer('post__content'), lambda c: c.post.title,
+        ))
 
-    page = Paginator(items, 50).get_page(request.GET.get('page'))
+    page = Paginator(_MergedStream(sources), 50).get_page(request.GET.get('page'))
     board_urls = _family_board_urls(
         {item['obj'].family_id for item in page if item['obj'].family_id}
     )

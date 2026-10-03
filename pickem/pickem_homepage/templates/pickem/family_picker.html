@@ -78,7 +78,7 @@
         {% if superadmin_idle_choices %}
         <div class="pt-4">
             <h3 class="text-sm font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">Inactive families</h3>
-            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">No member has picked in the last two completed weeks. They skip the weekly "picks are ready" email until someone picks again.</p>
+            <p class="mt-1 text-sm text-text-secondary-light dark:text-text-secondary">No member has made a manual pick in the last two completed weeks. They skip the weekly "picks are ready" email until someone picks again.</p>
         </div>
         {% for choice in superadmin_idle_choices %}
         {% include 'pickem/_superadmin_family_card.html' with choice=choice idle=True %}

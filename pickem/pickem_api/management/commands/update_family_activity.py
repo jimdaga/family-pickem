@@ -24,7 +24,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from pickem.utils import get_season
-from pickem_api.models import Family, GamePicks
+from pickem_api.models import Family, FamilyAuditLog, GamePicks
 from pickem_api.weekly_winners import complete_weeks
 
 logger = logging.getLogger(__name__)
@@ -88,14 +88,24 @@ class Command(BaseCommand):
                 went_idle.append(family)
 
         if not dry_run:
-            for family in went_idle:
-                family.is_idle = True
-                family.idle_since = now
+            for family, idle in [(f, True) for f in went_idle] + [(f, False) for f in came_back]:
+                family.is_idle = idle
+                family.idle_since = now if idle else None
                 family.save(update_fields=['is_idle', 'idle_since', 'updated_at'])
-            for family in came_back:
-                family.is_idle = False
-                family.idle_since = None
-                family.save(update_fields=['is_idle', 'idle_since', 'updated_at'])
+                # Flips gate the weekly email, so leave a trail in the
+                # family's own audit log (actor=None: the pipeline did it).
+                FamilyAuditLog.objects.create(
+                    family=family,
+                    action=FamilyAuditLog.Action.FAMILY_STATUS_UPDATED,
+                    target_type='Family',
+                    target_id=str(family.id),
+                    metadata={
+                        'source': 'update_family_activity',
+                        'is_idle': idle,
+                        'season': season,
+                        'since_week': since_week,
+                    },
+                )
 
         for label, families in (("idle", went_idle), ("active", came_back)):
             for family in families:

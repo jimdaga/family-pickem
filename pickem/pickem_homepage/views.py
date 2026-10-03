@@ -603,7 +603,8 @@ def next_week_has_kicked_off(gameseason, competition, week):
     Closes the lobby's "last week" window: the AI recap and the week-winner
     spotlight both stay up from the moment they exist until the next week's
     first kickoff (usually Thursday night). With no next-week game on file the
-    window stays open.
+    window stays open -- deliberately including week 18, which has no week 19,
+    so the season's last recap and winner stay up through the offseason.
     """
     next_kickoff = (
         GamesAndScores.objects.filter(
@@ -628,10 +629,14 @@ def build_week_winner_spotlight(pool, gameseason, week):
     """
     if next_week_has_kicked_off(gameseason, pool.competition, week):
         return None
-    rows = list(
+    # userID is a string; order numerically ("2" before "10") like the Week
+    # Points list.
+    rows = sorted(
         userSeasonPoints.objects.filter(
             pool=pool, gameseason=gameseason, **{f'week_{week}_winner': True}
-        ).order_by('userID')
+        ),
+        key=lambda row: (0, int(row.userID), '') if str(row.userID).isdigit()
+        else (1, 0, str(row.userID)),
     )
     if not rows:
         return None
@@ -694,7 +699,8 @@ def build_week_points_summary(pool, gameseason, current_week, week_has_completed
 
     def _rank_key(row):
         # (points, crowned winner): the tiebreaker winner leads their points
-        # tier and holds rank 1 alone, as on the scores page.
+        # tier and ranks above everyone they tied on points, as on the scores
+        # page (co-winners share the rank).
         return (
             getattr(row, week_points_field) or 0,
             1 if getattr(row, week_winner_field) else 0,

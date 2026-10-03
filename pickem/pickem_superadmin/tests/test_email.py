@@ -709,10 +709,14 @@ class WeeklyPicksCampaignTests(TestCase):
         self.assertIn(self.allowed_user.id, {u.id for u in _eligible_weekly_picks_users(self.campaign)})
         Family.objects.filter(pk=self.pool.family_id).update(is_idle=True)
 
-        weekly = _eligible_weekly_picks_users(self.campaign)
+        idle_skipped = []
+        weekly = _eligible_weekly_picks_users(self.campaign, idle_skipped=idle_skipped)
 
         self.assertNotIn(self.allowed_user.id, {u.id for u in weekly})
         self.assertNotIn(self.other_user.id, {u.id for u in weekly})
+        self.assertEqual(
+            sorted(idle_skipped), sorted([self.allowed_user.email, self.other_user.email])
+        )
 
     @override_settings(EMAIL_NOTIFICATION_SAFE_ALLOWLIST_ONLY=False)
     def test_member_of_idle_and_active_family_is_linked_to_the_active_one(self):

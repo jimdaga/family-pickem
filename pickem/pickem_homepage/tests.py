@@ -11947,6 +11947,35 @@ class PickIndicatorsLeaderboardScoringTests(TestCase):
         self.assertIsNone(resp.context["week_winner_spotlight"])
         self.assertNotContains(resp, 'data-testid="lobby-week-winner"')
 
+    def test_lobby_spotlight_shows_latest_crowned_week_only_for_own_pool(self):
+        family, pool = self._family_pool("Spot Fam3", "spot-fam3")
+        other_family, other_pool = self._family_pool("Spot Other", "spot-other")
+        winner = self._crowned_winner(pool, family, "spotwinner3")
+        userSeasonPoints.objects.filter(pool=pool, userID=str(winner.id)).update(
+            week_2_points=9, week_2_winner=True,
+        )
+        self._crowned_winner(other_pool, other_family, "otherwinner")
+        self.client.force_login(winner)
+        spotlight = self._lobby(family, pool).context["week_winner_spotlight"]
+        self.assertEqual(spotlight["week"], 2)
+        self.assertEqual([w["user"].id for w in spotlight["winners"]], [winner.id])
+
+    def test_lobby_spotlight_lists_co_winners_in_numeric_user_order(self):
+        family, pool = self._family_pool("Spot Co", "spot-co")
+        first = self._crowned_winner(pool, family, "cowinner-a")
+        second = self._member("cowinner-b", family)
+        userSeasonPoints.objects.create(
+            pool=pool, userEmail=second.email, userID=str(second.id),
+            gameseason=self.season, gameyear="2025",
+            week_1_points=10, week_1_bonus=2, week_1_winner=True, total_points=12,
+        )
+        self.client.force_login(first)
+        spotlight = self._lobby(family, pool).context["week_winner_spotlight"]
+        self.assertEqual(
+            [(w["user"].id, w["points"]) for w in spotlight["winners"]],
+            [(first.id, 13), (second.id, 12)],
+        )
+
     def test_scores_winner_card_points_include_winner_bonus(self):
         family, pool = self._family_pool("Bonus Card", "bonus-card")
         winner = self._crowned_winner(pool, family, "bonuscard")

@@ -23,7 +23,7 @@
 
   <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
     <div class="sa-stat"><div class="sa-stat-value">{{ counts.families }}</div><div class="sa-stat-label">families</div></div>
-    <div class="sa-stat" title="No member picked in the last two completed weeks"><div class="sa-stat-value">{{ counts.families_inactive }}</div><div class="sa-stat-label">inactive{% if counts.families_deactivated %} · {{ counts.families_deactivated }} deactivated{% endif %}</div></div>
+    <div class="sa-stat" title="Idle: no member made a manual pick in the last two completed weeks"><div class="sa-stat-value">{{ counts.families_idle }}</div><div class="sa-stat-label">inactive{% if counts.families_deactivated %} · {{ counts.families_deactivated }} deactivated{% endif %}</div></div>
     <div class="sa-stat"><div class="sa-stat-value">{{ counts.pools }}</div><div class="sa-stat-label">pools</div></div>
     <div class="sa-stat"><div class="sa-stat-value">{{ counts.users }}</div><div class="sa-stat-label">users</div></div>
     <div class="sa-stat"><div class="sa-stat-value">{{ counts.users_blocked }}</div><div class="sa-stat-label">blocked</div></div>

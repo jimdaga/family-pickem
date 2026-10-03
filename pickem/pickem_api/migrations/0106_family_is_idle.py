@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='family',
             name='is_idle',
-            field=models.BooleanField(default=False, help_text='No member made a pick in the last two completed weeks'),
+            field=models.BooleanField(default=False, help_text='No member made a manual pick in the last two completed weeks (stays set until someone picks)'),
         ),
     ]
