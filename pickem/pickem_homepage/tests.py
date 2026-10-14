@@ -891,7 +891,9 @@ class TenantDashboardIsolationTests(TestCase):
         self.assertContains(response, "New York Jets")
         self.assertContains(response, "In Progress")
         self.assertNotContains(response, "Jones family secret")
-        self.assertNotContains(response, "2 of 1")
+        # Leaked picks from another family would read "2 of 1 picks submitted".
+        # Match the counter itself: the lobby also renders live ESPN headlines.
+        self.assertNotContains(response, "2 of 1 picks")
 
     def test_lobby_game_tiles_carry_live_score_hooks_and_subscribe(self):
         """The lobby "This Week's Games" tiles must live-update via the scores
