@@ -221,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let savedPicks = {};        // game id -> {pick, tiebreaker_score, tiebreaker_yards} for the selected member
     let lookupSeq = 0;          // ignore saved-pick responses for a member no longer selected
     let submitting = false;
+    let lastSyncedGameId = null;  // tiebreaker boxes reset only when this changes
 
     function showWarning(text) {
         clientWarning.textContent = text;
@@ -287,9 +288,18 @@ document.addEventListener('DOMContentLoaded', function () {
         tbFields.classList.toggle('hidden', !showTb);
         // Re-picking a saved game starts from its saved tiebreaker, so changing
         // only the team doesn't overwrite the member's tiebreaker with blanks.
-        const saved = hasGame ? savedPicks[selected.value] : null;
-        tbScore.value = saved && saved.tiebreaker_score != null ? saved.tiebreaker_score : '';
-        tbYards.value = saved && saved.tiebreaker_yards != null ? saved.tiebreaker_yards : '';
+        // This also runs on lookup returns and staged-list edits, so only reset
+        // the boxes when the game actually changed (or saved data has just
+        // arrived for it and nothing has been typed) — never wipe typing.
+        const gameId = hasGame ? selected.value : '';
+        const saved = hasGame ? savedPicks[gameId] : null;
+        const gameChanged = gameId !== lastSyncedGameId;
+        const boxesEmpty = !tbScore.value && !tbYards.value;
+        if (gameChanged || (saved && boxesEmpty)) {
+            tbScore.value = saved && saved.tiebreaker_score != null ? saved.tiebreaker_score : '';
+            tbYards.value = saved && saved.tiebreaker_yards != null ? saved.tiebreaker_yards : '';
+        }
+        lastSyncedGameId = gameId;
     }
 
     function addHidden(li, name, value) {
@@ -397,6 +407,7 @@ document.addEventListener('DOMContentLoaded', function () {
     memberSelect.addEventListener('change', function () {
         if (weekMember) weekMember.value = memberSelect.value;
         showWarning('');
+        lastSyncedGameId = null;  // the old member's tiebreaker must not carry over
         loadSavedPicks();
         renderStaged();
     });
