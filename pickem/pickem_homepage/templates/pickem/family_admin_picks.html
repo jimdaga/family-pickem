@@ -120,7 +120,7 @@
                         <input id="tiebreaker-yards" type="number" min="0" max="2000" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
                     </div>
                     <p id="tiebreaker-hint" class="sm:col-span-2 -mt-2 text-xs text-text-secondary-light dark:text-text-secondary">Optional. Entered values attach to the next team you pick.</p>
-                    <p id="tiebreaker-required" class="sm:col-span-2 -mt-2 hidden text-xs font-semibold text-amber-700 dark:text-amber-300"><i class="fas fa-exclamation-triangle mr-1"></i>Tiebreaker game: enter both values. The pick is added once a team and both values are filled.</p>
+                    <p id="tiebreaker-required" class="sm:col-span-2 -mt-2 hidden text-xs font-semibold text-amber-700 dark:text-amber-300"><i class="fas fa-exclamation-triangle mr-1"></i>Tiebreaker game: enter both values. The pick is added once a team and both values are filled. <button type="button" id="tiebreaker-cancel" class="ml-1 underline hover:no-underline">Leave this game out</button></p>
                 </div>
 
                 <div class="lg:col-span-2 rounded-lg border border-border-light dark:border-border-subtle" data-testid="staged-picks">
@@ -279,8 +279,15 @@ document.addEventListener('DOMContentLoaded', function () {
     function syncPickOptions() {
         const selected = gameSelect.options[gameSelect.selectedIndex];
         const hasGame = selected && selected.value;
-        awayRadio.checked = false;
-        homeRadio.checked = false;
+        const gameId = hasGame ? selected.value : '';
+        // This also runs on lookup returns and staged-list edits; a team
+        // checked on the tiebreaker game (waiting for its values) must survive
+        // those, so only clear the radios when the game actually changed.
+        const gameChanged = gameId !== lastSyncedGameId;
+        if (gameChanged) {
+            awayRadio.checked = false;
+            homeRadio.checked = false;
+        }
         awayRadio.disabled = !hasGame || !memberSelect.value;
         homeRadio.disabled = !hasGame || !memberSelect.value;
         awayLabel.textContent = hasGame ? selected.dataset.awayName : 'Away';
@@ -298,9 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // This also runs on lookup returns and staged-list edits, so only reset
         // the boxes when the game actually changed (or saved data has just
         // arrived for it and nothing has been typed) — never wipe typing.
-        const gameId = hasGame ? selected.value : '';
         const saved = hasGame ? savedPicks[gameId] : null;
-        const gameChanged = gameId !== lastSyncedGameId;
         const boxesEmpty = !tbScore.value && !tbYards.value;
         if (gameChanged || (saved && boxesEmpty)) {
             tbScore.value = saved && saved.tiebreaker_score != null ? saved.tiebreaker_score : '';
@@ -437,6 +442,15 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    // Escape hatch for a half-made tiebreaker pick: the tiebreaker game is
+    // usually the last one, so "pick another game" may not be possible.
+    document.getElementById('tiebreaker-cancel').addEventListener('click', function () {
+        awayRadio.checked = false;
+        homeRadio.checked = false;
+        tbScore.value = '';
+        tbYards.value = '';
+        showWarning('');
+    });
     awayRadio.addEventListener('change', tryStage);
     homeRadio.addEventListener('change', tryStage);
     gameSelect.addEventListener('change', syncPickOptions);
@@ -472,7 +486,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (submitting || pendingTeam || pendingTiebreaker) {
             e.preventDefault();
             if (pendingTeam) {
-                showWarning('The ' + selected.dataset.awayName + ' at ' + selected.dataset.homeName + ' pick isn\'t in the list yet: enter both tiebreaker values to add it, or pick another game.');
+                showWarning('The ' + selected.dataset.awayName + ' at ' + selected.dataset.homeName + ' pick isn\'t in the list yet: enter both tiebreaker values to add it, or click "Leave this game out" to save without it.');
             } else if (pendingTiebreaker) {
                 showWarning('The tiebreaker you typed isn\'t attached to a pick yet. Pick the team for that game to add it, or clear the tiebreaker boxes.');
             }
