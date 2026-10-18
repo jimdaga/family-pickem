@@ -42,24 +42,39 @@
                         {% endfor %}
                     </select>
                 </div>
-                <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90">
+                <input type="hidden" name="member" id="week-filter-member" value="{{ selected_member_id|default_if_none:'' }}">
+                <button type="submit" id="load-week" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-filter"></i>
                     Load Week
                 </button>
             </form>
 
-            <form method="post" action="{% url 'family_pool_admin_picks' family.slug pool.slug %}" class="grid gap-5 p-5 lg:grid-cols-2" data-testid="manual-pick-form">
+            <form method="post" action="{% url 'family_pool_admin_picks' family.slug pool.slug %}" class="grid gap-5 p-5 lg:grid-cols-2" data-testid="manual-pick-form" id="manual-pick-form">
                 {% csrf_token %}
                 <input type="hidden" name="week" value="{{ selected_week }}">
 
+                {% if form.non_field_errors or form.week.errors %}
+                <div class="lg:col-span-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200" role="alert" data-testid="manual-pick-errors">
+                    {% for error in form.non_field_errors %}
+                    <p><i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}</p>
+                    {% endfor %}
+                    {% for error in form.week.errors %}
+                    <p><i class="fas fa-exclamation-triangle mr-2"></i>Week: {{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {# Filled by JS: restore problems and saved-pick lookup failures. #}
+                <div id="manual-pick-client-warning" class="lg:col-span-2 hidden rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200" role="alert"></div>
+
                 <div>
                     <label for="target-user-id" class="block text-sm font-semibold text-text-dark dark:text-white">Family Member</label>
-                    <select id="target-user-id" name="target_user_id" required class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
-                        <option value="" disabled selected>Select member&hellip;</option>
+                    <select id="target-user-id" name="target_user_id" required class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white disabled:opacity-60">
+                        <option value="" disabled {% if not selected_member_id %}selected{% endif %}>Select member&hellip;</option>
                         {% for member in members %}
-                        <option value="{{ member.user.id }}">{{ member.user.username }}{% if member.user.email %} - {{ member.user.email }}{% endif %}</option>
+                        <option value="{{ member.user.id }}" {% if member.user.id == selected_member_id %}selected{% endif %}>{{ member.user.username }}{% if member.user.email %} - {{ member.user.email }}{% endif %}</option>
                         {% endfor %}
                     </select>
+                    <p id="member-locked-hint" class="mt-1 hidden text-xs text-text-secondary-light dark:text-text-secondary">Save or clear the staged picks to switch members.</p>
                     {% if form.target_user_id.errors %}
                     <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ form.target_user_id.errors|join:", " }}</p>
                     {% endif %}
@@ -67,58 +82,62 @@
 
                 <div>
                     <label for="game-id" class="block text-sm font-semibold text-text-dark dark:text-white">Game</label>
-                    <select id="game-id" name="game_id" required class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
+                    {# No name: only the staged hidden inputs below are submitted. #}
+                    <select id="game-id" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
                         <option value="" disabled selected>Select game&hellip;</option>
                         {% for game in games %}
-                        <option value="{{ game.id }}" data-home="{{ game.homeTeamSlug }}" data-away="{{ game.awayTeamSlug }}" data-home-name="{{ game.homeTeamName }}" data-away-name="{{ game.awayTeamName }}">
-                            {{ game.awayTeamName }} at {{ game.homeTeamName }}
+                        <option value="{{ game.id }}" data-home="{{ game.homeTeamSlug }}" data-away="{{ game.awayTeamSlug }}" data-home-name="{{ game.homeTeamName }}" data-away-name="{{ game.awayTeamName }}" data-tiebreaker="{{ game.tieBreakerGame|yesno:'1,0' }}" data-locked="{{ game.manual_pick_locked|yesno:'1,0' }}">
+                            {{ game.awayTeamName }} at {{ game.homeTeamName }}{% if game.tieBreakerGame %} · tiebreaker{% endif %}{% if game.manual_pick_locked %} · locked{% endif %}
                         </option>
                         {% endfor %}
+                        <optgroup id="saved-games-group" label="Already saved — select to change" hidden></optgroup>
                     </select>
-                    {% if form.game_id.errors %}
-                    <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ form.game_id.errors|join:", " }}</p>
-                    {% endif %}
+                    <p id="game-lock-hint" class="mt-1 hidden text-xs text-amber-700 dark:text-amber-300"><i class="fas fa-lock mr-1"></i>Locked for members — saving here overrides the lock (recorded in the audit log).</p>
                 </div>
 
                 <div>
                     <span class="block text-sm font-semibold text-text-dark dark:text-white">Pick</span>
                     <div class="mt-2 grid gap-3 sm:grid-cols-2">
-                        {% for game in games %}
-                        {% if forloop.first %}
                         <label class="flex items-center gap-3 rounded-lg border border-border-light dark:border-border-subtle px-4 py-3 text-sm text-text-dark dark:text-white">
-                            <input id="away-pick-radio" type="radio" name="pick" value="{{ game.awayTeamSlug }}" class="h-4 w-4 text-primary focus:ring-primary/20" required>
-                            <span id="away-pick-label">{{ game.awayTeamName }}</span>
+                            <input id="away-pick-radio" type="radio" name="pick_choice" class="h-4 w-4 text-primary focus:ring-primary/20" disabled>
+                            <span id="away-pick-label">Away</span>
                         </label>
                         <label class="flex items-center gap-3 rounded-lg border border-border-light dark:border-border-subtle px-4 py-3 text-sm text-text-dark dark:text-white">
-                            <input id="home-pick-radio" type="radio" name="pick" value="{{ game.homeTeamSlug }}" class="h-4 w-4 text-primary focus:ring-primary/20" required>
-                            <span id="home-pick-label">{{ game.homeTeamName }}</span>
+                            <input id="home-pick-radio" type="radio" name="pick_choice" class="h-4 w-4 text-primary focus:ring-primary/20" disabled>
+                            <span id="home-pick-label">Home</span>
                         </label>
-                        {% endif %}
-                        {% endfor %}
                     </div>
-                    {% if form.pick.errors %}
-                    <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ form.pick.errors|join:", " }}</p>
-                    {% endif %}
+                    <p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary">Picking a team adds it to the list below.</p>
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div id="tiebreaker-fields" class="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label for="tiebreaker-score" class="block text-sm font-semibold text-text-dark dark:text-white">Tiebreaker Score</label>
-                        <input id="tiebreaker-score" type="number" min="0" max="200" name="tieBreakerScore" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
+                        <input id="tiebreaker-score" type="number" min="0" max="200" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
                     </div>
                     <div>
                         <label for="tiebreaker-yards" class="block text-sm font-semibold text-text-dark dark:text-white">Tiebreaker Yards</label>
-                        <input id="tiebreaker-yards" type="number" min="0" max="2000" name="tieBreakerYards" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
+                        <input id="tiebreaker-yards" type="number" min="0" max="2000" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
                     </div>
+                    <p class="sm:col-span-2 -mt-2 text-xs text-text-secondary-light dark:text-text-secondary">Enter the tiebreaker first, then pick the team.</p>
+                </div>
+
+                <div class="lg:col-span-2 rounded-lg border border-border-light dark:border-border-subtle" data-testid="staged-picks">
+                    <div class="flex items-center justify-between border-b border-border-light dark:border-border-subtle px-4 py-3">
+                        <h3 class="text-sm font-semibold text-text-dark dark:text-white">Picks to save <span id="staged-count" class="text-text-secondary-light dark:text-text-secondary">(0)</span></h3>
+                        <button type="button" id="clear-staged" class="hidden text-xs font-semibold text-text-secondary-light hover:text-red-600 dark:text-text-secondary dark:hover:text-red-300">Clear all</button>
+                    </div>
+                    <ul id="staged-list" class="divide-y divide-border-light dark:divide-border-subtle"></ul>
+                    <p id="staged-empty" class="px-4 py-6 text-center text-sm text-text-secondary-light dark:text-text-secondary">No picks staged yet. Choose a game and a team.</p>
                 </div>
 
                 <div class="lg:col-span-2 flex flex-wrap items-center justify-between gap-3">
                     <p class="text-sm text-text-secondary-light dark:text-text-secondary">
                         Saved picks are written to {{ pool.name }} only.
                     </p>
-                    <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90" {% if not games or not members %}disabled{% endif %}>
+                    <button type="submit" id="save-picks" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                         <i class="fas fa-save"></i>
-                        Save Manual Pick
+                        <span id="save-picks-label">Save Manual Picks</span>
                     </button>
                 </div>
             </form>
@@ -138,6 +157,7 @@
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Away</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Home</th>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Kickoff</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-text-secondary-light dark:text-text-secondary">Status</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-light dark:divide-border-subtle">
@@ -147,6 +167,7 @@
                             <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ game.awayTeamName }} ({{ game.awayTeamSlug }})</td>
                             <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ game.homeTeamName }} ({{ game.homeTeamSlug }})</td>
                             <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{{ game.startTimestamp|date:"M j, g:i A" }}</td>
+                            <td class="px-5 py-4 text-sm text-text-secondary-light dark:text-text-secondary">{% if game.manual_pick_locked %}<i class="fas fa-lock mr-1"></i>Locked{% else %}Open{% endif %}{% if game.tieBreakerGame %} · Tiebreaker{% endif %}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -164,27 +185,287 @@
         </section>
     </div>
 </main>
+{{ staged_picks|json_script:"manual-staged-picks" }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('manual-pick-form');
+    const memberSelect = document.getElementById('target-user-id');
     const gameSelect = document.getElementById('game-id');
+    const savedGroup = document.getElementById('saved-games-group');
     const awayRadio = document.getElementById('away-pick-radio');
     const homeRadio = document.getElementById('home-pick-radio');
     const awayLabel = document.getElementById('away-pick-label');
     const homeLabel = document.getElementById('home-pick-label');
-    if (!gameSelect || !awayRadio || !homeRadio || !awayLabel || !homeLabel) {
+    const tbFields = document.getElementById('tiebreaker-fields');
+    const tbScore = document.getElementById('tiebreaker-score');
+    const tbYards = document.getElementById('tiebreaker-yards');
+    const lockHint = document.getElementById('game-lock-hint');
+    const memberHint = document.getElementById('member-locked-hint');
+    const stagedList = document.getElementById('staged-list');
+    const stagedEmpty = document.getElementById('staged-empty');
+    const stagedCount = document.getElementById('staged-count');
+    const clearBtn = document.getElementById('clear-staged');
+    const saveBtn = document.getElementById('save-picks');
+    const saveLabel = document.getElementById('save-picks-label');
+    const weekMember = document.getElementById('week-filter-member');
+    const loadWeekBtn = document.getElementById('load-week');
+    const clientWarning = document.getElementById('manual-pick-client-warning');
+    if (!form || !memberSelect || !gameSelect) {
         return;
     }
+    const lookupUrl = "{{ pick_lookup_url|escapejs }}";
+    const week = "{{ selected_week|escapejs }}";
+    const gameOptions = Array.from(gameSelect.querySelectorAll('option[value]:not([value=""])'));
+    const anyTiebreakerGame = gameOptions.some(function (opt) { return opt.dataset.tiebreaker === '1'; });
+    const staged = new Map();   // game id -> {pick, score, yards}
+    let savedPicks = {};        // game id -> {pick, tiebreaker_score, tiebreaker_yards} for the selected member
+    let lookupSeq = 0;          // ignore saved-pick responses for a member no longer selected
+    let submitting = false;
+    let lastSyncedGameId = null;  // tiebreaker boxes reset only when this changes
+
+    function showWarning(text) {
+        clientWarning.textContent = text;
+        clientWarning.classList.toggle('hidden', !text);
+    }
+
+    function optionFor(gameId) {
+        return gameOptions.find(function (opt) { return opt.value === String(gameId); });
+    }
+
+    function teamName(opt, slug) {
+        if (slug === opt.dataset.home) return opt.dataset.homeName;
+        if (slug === opt.dataset.away) return opt.dataset.awayName;
+        return slug;
+    }
+
+    // Unstaged, unsaved games stay in the main list; games the member already
+    // has a pick for move to the "Already saved" group (still selectable, to
+    // change them); staged games drop out entirely until removed from the list.
+    function rebuildGameOptions() {
+        const keep = gameSelect.value;
+        gameOptions.forEach(function (opt) {
+            const id = opt.value;
+            if (staged.has(id)) {
+                opt.remove();
+                return;
+            }
+            if (savedPicks[id]) {
+                opt.dataset.savedLabel = opt.dataset.savedLabel || opt.textContent.trim();
+                opt.textContent = opt.dataset.savedLabel + ' — saved: ' + teamName(opt, savedPicks[id].pick);
+                savedGroup.appendChild(opt);
+            } else {
+                if (opt.dataset.savedLabel) {
+                    opt.textContent = opt.dataset.savedLabel;
+                    delete opt.dataset.savedLabel;
+                }
+                gameSelect.insertBefore(opt, savedGroup);
+            }
+        });
+        savedGroup.hidden = savedGroup.children.length === 0;
+        const stillThere = keep && gameSelect.querySelector('option[value="' + keep + '"]');
+        if (stillThere) {
+            gameSelect.value = keep;
+        } else {
+            const next = gameSelect.querySelector(':scope > option[value]:not([value=""])');
+            gameSelect.value = next ? next.value : '';
+        }
+        syncPickOptions();
+    }
+
     function syncPickOptions() {
         const selected = gameSelect.options[gameSelect.selectedIndex];
-        awayRadio.value = selected.dataset.away || '';
-        homeRadio.value = selected.dataset.home || '';
-        awayLabel.textContent = selected.dataset.awayName || 'Away';
-        homeLabel.textContent = selected.dataset.homeName || 'Home';
+        const hasGame = selected && selected.value;
         awayRadio.checked = false;
         homeRadio.checked = false;
+        awayRadio.disabled = !hasGame || !memberSelect.value;
+        homeRadio.disabled = !hasGame || !memberSelect.value;
+        awayLabel.textContent = hasGame ? selected.dataset.awayName : 'Away';
+        homeLabel.textContent = hasGame ? selected.dataset.homeName : 'Home';
+        lockHint.classList.toggle('hidden', !(hasGame && selected.dataset.locked === '1'));
+        // Show the tiebreaker inputs for the tiebreaker game; if no game is
+        // flagged yet this week, always show them so they're never unreachable.
+        const showTb = !anyTiebreakerGame || (hasGame && selected.dataset.tiebreaker === '1');
+        tbFields.classList.toggle('hidden', !showTb);
+        // Re-picking a saved game starts from its saved tiebreaker, so changing
+        // only the team doesn't overwrite the member's tiebreaker with blanks.
+        // This also runs on lookup returns and staged-list edits, so only reset
+        // the boxes when the game actually changed (or saved data has just
+        // arrived for it and nothing has been typed) — never wipe typing.
+        const gameId = hasGame ? selected.value : '';
+        const saved = hasGame ? savedPicks[gameId] : null;
+        const gameChanged = gameId !== lastSyncedGameId;
+        const boxesEmpty = !tbScore.value && !tbYards.value;
+        if (gameChanged || (saved && boxesEmpty)) {
+            tbScore.value = saved && saved.tiebreaker_score != null ? saved.tiebreaker_score : '';
+            tbYards.value = saved && saved.tiebreaker_yards != null ? saved.tiebreaker_yards : '';
+        }
+        lastSyncedGameId = gameId;
     }
+
+    function addHidden(li, name, value) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value == null ? '' : value;
+        li.appendChild(input);
+    }
+
+    function renderStaged() {
+        stagedList.innerHTML = '';
+        staged.forEach(function (entry, gameId) {
+            const opt = optionFor(gameId);
+            if (!opt) return;
+            const li = document.createElement('li');
+            li.className = 'flex items-center justify-between gap-3 px-4 py-3 text-sm text-text-dark dark:text-white';
+            const label = document.createElement('span');
+            let text = teamName(opt, entry.pick) + '  ·  ' + opt.dataset.awayName + ' at ' + opt.dataset.homeName;
+            if (entry.score !== '' || entry.yards !== '') {
+                text += '  ·  TB ' + (entry.score || '–') + ' pts, ' + (entry.yards || '–') + ' yds';
+            }
+            if (opt.dataset.locked === '1') text += '  ·  locked';
+            label.textContent = text;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'text-xs font-semibold text-text-secondary-light hover:text-red-600 dark:text-text-secondary dark:hover:text-red-300';
+            remove.textContent = 'Remove';
+            remove.addEventListener('click', function () {
+                staged.delete(gameId);
+                renderStaged();
+                rebuildGameOptions();
+            });
+            li.appendChild(label);
+            li.appendChild(remove);
+            addHidden(li, 'game_id', gameId);
+            addHidden(li, 'pick', entry.pick);
+            addHidden(li, 'tieBreakerScore', entry.score);
+            addHidden(li, 'tieBreakerYards', entry.yards);
+            stagedList.appendChild(li);
+        });
+        const n = staged.size;
+        stagedEmpty.classList.toggle('hidden', n > 0);
+        clearBtn.classList.toggle('hidden', n === 0);
+        stagedCount.textContent = '(' + n + ')';
+        saveBtn.disabled = n === 0 || !memberSelect.value;
+        saveLabel.textContent = n > 1 ? 'Save ' + n + ' Manual Picks' : 'Save Manual Pick';
+        // Staged picks belong to the selected member; switching mid-batch
+        // would silently reassign them, so lock the member while any are
+        // staged (but never lock an empty select — that would trap the batch).
+        const lockMember = n > 0 && !!memberSelect.value;
+        memberSelect.disabled = lockMember;
+        memberHint.classList.toggle('hidden', !lockMember);
+        // Loading another week navigates away and would drop the batch.
+        if (loadWeekBtn) loadWeekBtn.disabled = n > 0;
+    }
+
+    function stageSelected(radio) {
+        const selected = gameSelect.options[gameSelect.selectedIndex];
+        if (!selected || !selected.value) return;
+        const slug = radio === homeRadio ? selected.dataset.home : selected.dataset.away;
+        staged.set(selected.value, {
+            pick: slug,
+            score: tbFields.classList.contains('hidden') ? '' : tbScore.value,
+            yards: tbFields.classList.contains('hidden') ? '' : tbYards.value,
+        });
+        renderStaged();
+        rebuildGameOptions();
+        gameSelect.focus();
+    }
+
+    function loadSavedPicks() {
+        const seq = ++lookupSeq;
+        savedPicks = {};
+        if (!memberSelect.value || !lookupUrl) {
+            rebuildGameOptions();
+            return;
+        }
+        const memberName = memberSelect.options[memberSelect.selectedIndex].text.split(' - ')[0];
+        const url = lookupUrl + '?target_user_id=' + encodeURIComponent(memberSelect.value) + '&week=' + encodeURIComponent(week);
+        fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('saved-picks lookup returned HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function (data) {
+                if (seq !== lookupSeq) return;  // a newer member was selected meanwhile
+                if (!data || !data.success) throw new Error('saved-picks lookup failed');
+                const loaded = {};
+                Object.keys(data.picks).forEach(function (id) { loaded[id] = data.picks[id]; });
+                savedPicks = loaded;
+                rebuildGameOptions();
+            })
+            .catch(function (err) {
+                if (seq !== lookupSeq) return;
+                console.error('[manual-picks]', err);
+                showWarning("Couldn't load " + memberName + "'s saved picks, so games they already picked aren't marked. Saving may overwrite existing picks. Reload the page to retry (your session may have expired).");
+                rebuildGameOptions();
+            });
+    }
+
+    awayRadio.addEventListener('change', function () { if (awayRadio.checked) stageSelected(awayRadio); });
+    homeRadio.addEventListener('change', function () { if (homeRadio.checked) stageSelected(homeRadio); });
     gameSelect.addEventListener('change', syncPickOptions);
-    syncPickOptions();
+    memberSelect.addEventListener('change', function () {
+        if (weekMember) weekMember.value = memberSelect.value;
+        showWarning('');
+        lastSyncedGameId = null;  // the old member's tiebreaker must not carry over
+        loadSavedPicks();
+        renderStaged();
+    });
+    // Tiebreaker values are captured when the team is picked; Enter here
+    // would otherwise submit the batch without the value just typed.
+    [tbScore, tbYards].forEach(function (input) {
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    });
+    clearBtn.addEventListener('click', function () {
+        staged.clear();
+        renderStaged();
+        rebuildGameOptions();
+    });
+    form.addEventListener('submit', function (e) {
+        const selected = gameSelect.options[gameSelect.selectedIndex];
+        const saved = selected && selected.value ? savedPicks[selected.value] : null;
+        const prefilled = saved && String(saved.tiebreaker_score ?? '') === tbScore.value && String(saved.tiebreaker_yards ?? '') === tbYards.value;
+        if (submitting || (!tbFields.classList.contains('hidden') && (tbScore.value || tbYards.value) && !prefilled)) {
+            e.preventDefault();
+            if (!submitting) {
+                showWarning('The tiebreaker you typed isn\'t attached to a pick yet. Pick the team for that game to add it, or clear the tiebreaker boxes.');
+            }
+            return;
+        }
+        submitting = true;
+        saveBtn.disabled = true;
+        // A disabled select isn't submitted; re-enable so target_user_id posts.
+        memberSelect.disabled = false;
+    });
+    window.addEventListener('beforeunload', function (e) {
+        if (staged.size > 0 && !submitting) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Restore a batch handed back by a failed submit.
+    const restoreEl = document.getElementById('manual-staged-picks');
+    const restore = restoreEl ? JSON.parse(restoreEl.textContent) : [];
+    let unrestored = 0;
+    restore.forEach(function (entry) {
+        if (optionFor(entry.game_id)) {
+            staged.set(String(entry.game_id), {
+                pick: entry.pick,
+                score: entry.tieBreakerScore || '',
+                yards: entry.tieBreakerYards || '',
+            });
+        } else {
+            unrestored += 1;
+        }
+    });
+    if (unrestored) {
+        showWarning(unrestored + ' staged pick' + (unrestored === 1 ? '' : 's') + " couldn't be restored because the game isn't in week " + week + '. Re-add them from the right week.');
+    }
+    renderStaged();
+    loadSavedPicks();
 });
 </script>
 {% endblock %}

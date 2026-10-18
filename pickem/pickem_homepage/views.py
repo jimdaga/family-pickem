@@ -2838,11 +2838,45 @@ def json_tenant_admin_context(request, family_slug, pool_slug):
 
 
 def render_family_admin_picks(request, tenant_context, form=None, *, status=200):
+    from pickem.utils import is_pick_locked_for_pool
+
     family = tenant_context.family
     pool = tenant_context.pool
     selected_week = get_admin_pick_week(request, pool) or '1'
     members = get_manual_pick_members(family)
-    games = get_manual_pick_games(pool, selected_week)
+    games = list(get_manual_pick_games(pool, selected_week))
+    for game in games:
+        # Commissioners may save past the lock; the badge just makes it
+        # visible that this pick would be a late entry.
+        game.manual_pick_locked, _reason = is_pick_locked_for_pool(game, pool, week_games=games)
+
+    # Keep the member selected across saves (?member= on the redirect) and
+    # across a failed submit (the posted target), so a commissioner entering a
+    # whole week for one person never has to re-pick them from the list.
+    raw_member = request.POST.get('target_user_id') if request.method == 'POST' else request.GET.get('member')
+    member_ids = {member.user_id for member in members}
+    try:
+        selected_member_id = int(raw_member) if raw_member else None
+    except (TypeError, ValueError):
+        selected_member_id = None
+    if selected_member_id not in member_ids:
+        selected_member_id = None
+
+    # On a failed submit, hand the staged picks back so the batch isn't lost.
+    staged_picks = []
+    if request.method == 'POST':
+        game_ids = request.POST.getlist('game_id')
+        picks = request.POST.getlist('pick')
+        scores = request.POST.getlist('tieBreakerScore')
+        yards = request.POST.getlist('tieBreakerYards')
+        for index, (game_id, pick) in enumerate(zip(game_ids, picks)):
+            staged_picks.append({
+                'game_id': game_id,
+                'pick': pick,
+                'tieBreakerScore': scores[index] if index < len(scores) else '',
+                'tieBreakerYards': yards[index] if index < len(yards) else '',
+            })
+
     context = {
         'family': family,
         'pool': pool,
@@ -2851,7 +2885,9 @@ def render_family_admin_picks(request, tenant_context, form=None, *, status=200)
         'selected_week': selected_week,
         'week_choices': range(1, 19),
         'members': members,
+        'selected_member_id': selected_member_id,
         'games': games,
+        'staged_picks': staged_picks,
         'form': form,
         'pick_lookup_url': reverse(
             'family_pool_admin_pick_user_picks',
@@ -3125,61 +3161,91 @@ def family_pool_admin_picks(request, family_slug, pool_slug):
     if not form.is_valid():
         return render_family_admin_picks(request, tenant_context, form, status=400)
 
+    from pickem.utils import is_pick_locked_for_pool
+
     family = tenant_context.family
     pool = tenant_context.pool
-    target_user = resolve_manual_pick_target_user(
-        family,
-        form.cleaned_data['target_user_id'],
-    )
-    game = resolve_manual_pick_game(
-        pool,
-        game_id=form.cleaned_data['game_id'],
-        week=form.cleaned_data['week'],
-    )
-    from pickem.utils import is_pick_locked_for_pool
-    selected_pick = form.cleaned_data['pick']
-    if selected_pick not in (game.homeTeamSlug, game.awayTeamSlug):
-        return render_family_admin_picks(request, tenant_context, form, status=400)
-    is_locked, lock_reason = is_pick_locked_for_pool(game, pool)
-    if is_locked:
-        form.add_error(None, lock_reason)
+    week = form.cleaned_data['week']
+    # Scope failures re-render with the batch handed back (400) rather than a
+    # bare 404 page, which would throw away every staged pick without saying why.
+    try:
+        target_user = resolve_manual_pick_target_user(
+            family,
+            form.cleaned_data['target_user_id'],
+        )
+    except Http404:
+        form.add_error(None, "That member is no longer an active member of this family.")
         return render_family_admin_picks(request, tenant_context, form, status=400)
 
+    # Validate the whole batch before writing anything: one bad entry saves
+    # none, so the commissioner never has to work out which half landed.
+    resolved = []
+    for index, entry in enumerate(form.cleaned_data['entries'], start=1):
+        try:
+            game = resolve_manual_pick_game(pool, game_id=entry['game_id'], week=week)
+        except Http404:
+            form.add_error(
+                None,
+                f"Pick {index}: game #{entry['game_id']} is not a week {week} game in {pool.name}.",
+            )
+            return render_family_admin_picks(request, tenant_context, form, status=400)
+        if entry['pick'] not in (game.homeTeamSlug, game.awayTeamSlug):
+            form.add_error(
+                None,
+                f"{entry['pick']} is not one of the teams in {game.awayTeamName} at {game.homeTeamName}.",
+            )
+            return render_family_admin_picks(request, tenant_context, form, status=400)
+        resolved.append((game, entry))
+
+    # This page exists so a commissioner can always enter picks — including
+    # after the lock (a member texted their picks in late). The lock is not
+    # enforced here; the audit row records when a pick overrode it.
+    week_games = list(get_manual_pick_games(pool, week))
     with transaction.atomic():
-        existing_pick = GamePicks.objects.select_for_update().filter(
-            pool=pool,
-            userID=str(target_user.id),
-            pick_game_id=game.id,
-        ).first()
-        previous_pick = existing_pick.pick if existing_pick else None
-        saved_pick = save_server_derived_pick(
-            user=target_user,
-            pool=pool,
-            game=game,
-            selected_pick=selected_pick,
-            tiebreaker_score=form.cleaned_data.get('tieBreakerScore'),
-            tiebreaker_yards=form.cleaned_data.get('tieBreakerYards'),
-        )
-        FamilyAuditLog.objects.create(
-            family=family,
-            pool=pool,
-            actor=request.user,
-            action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
-            target_type='GamePicks',
-            target_id=saved_pick.id,
-            metadata=manual_pick_audit_metadata(
-                previous_pick=previous_pick,
-                new_pick=saved_pick.pick,
-                target_user=target_user,
+        for game, entry in resolved:
+            lock_overridden, _reason = is_pick_locked_for_pool(game, pool, week_games=week_games)
+            existing_pick = GamePicks.objects.select_for_update().filter(
+                pool=pool,
+                userID=str(target_user.id),
+                pick_game_id=game.id,
+            ).first()
+            previous_pick = existing_pick.pick if existing_pick else None
+            saved_pick = save_server_derived_pick(
+                user=target_user,
+                pool=pool,
                 game=game,
+                selected_pick=entry['pick'],
+                tiebreaker_score=entry['tieBreakerScore'],
+                tiebreaker_yards=entry['tieBreakerYards'],
+            )
+            FamilyAuditLog.objects.create(
+                family=family,
+                pool=pool,
                 actor=request.user,
-            ),
-            **get_invite_audit_context(request),
-        )
+                action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
+                target_type='GamePicks',
+                target_id=saved_pick.id,
+                metadata={
+                    **manual_pick_audit_metadata(
+                        previous_pick=previous_pick,
+                        new_pick=saved_pick.pick,
+                        target_user=target_user,
+                        game=game,
+                        actor=request.user,
+                    ),
+                    'lock_overridden': lock_overridden,
+                },
+                **get_invite_audit_context(request),
+            )
 
-    messages.success(request, "Manual pick saved.")
+    count = len(resolved)
+    messages.success(
+        request,
+        f"Saved {count} manual pick{'s' if count != 1 else ''} for {target_user.username}.",
+    )
     return redirect(
-        f"{reverse('family_pool_admin_picks', kwargs={'family_slug': family.slug, 'pool_slug': pool.slug})}?week={game.gameWeek}"
+        f"{reverse('family_pool_admin_picks', kwargs={'family_slug': family.slug, 'pool_slug': pool.slug})}"
+        f"?week={week}&member={target_user.id}"
     )
 
 

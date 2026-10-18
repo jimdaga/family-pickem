@@ -6303,7 +6303,7 @@ class FamilyAdminExperienceTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, self._picks_url() + "?week=3")
+        self.assertRedirects(response, self._picks_url() + f"?week=3&member={self.member.id}")
         pick = GamePicks.objects.get(pool=self.pool, userID=str(self.member.id), pick_game_id=game.id)
         self.assertEqual(pick.id, f"{self.pool.id}-{self.member.id}-{game.id}")
         self.assertEqual(pick.userEmail, self.member.email)
@@ -6330,6 +6330,7 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(audit.metadata["game_id"], game.id)
         self.assertEqual(audit.metadata["week"], "3")
         self.assertEqual(audit.metadata["actor_id"], self.admin_user.id)
+        self.assertFalse(audit.metadata["lock_overridden"])
         self.assertNotIn("forged", str(audit.metadata).lower())
         self.assertNotIn("csrf", str(audit.metadata).lower())
 
@@ -6360,7 +6361,7 @@ class FamilyAdminExperienceTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, self._picks_url() + "?week=4")
+        self.assertRedirects(response, self._picks_url() + f"?week=4&member={self.member.id}")
         existing.refresh_from_db()
         self.assertEqual(existing.pick, game.awayTeamSlug)
         self.assertFalse(existing.pick_correct)
@@ -6372,7 +6373,9 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(audit.metadata["previous_pick"], game.homeTeamSlug)
         self.assertEqual(audit.metadata["new_pick"], game.awayTeamSlug)
 
-    def test_manual_pick_submission_rejects_locked_games(self):
+    def test_manual_pick_submission_overrides_locked_games_and_audits_it(self):
+        # The page exists so a commissioner can always enter picks, even
+        # after kickoff / the Sunday cutoff; the audit row flags the override.
         game = self._admin_game(game_id=9635, week="4")
         GamesAndScores.objects.filter(id=game.id).update(
             startTimestamp=timezone.now() - timedelta(minutes=5),
@@ -6383,14 +6386,200 @@ class FamilyAdminExperienceTests(TestCase):
 
         response = self.client.post(self._picks_url(), self._manual_pick_payload(game))
 
-        self.assertEqual(response.status_code, 400)
-        self.assertFalse(GamePicks.objects.filter(pool=self.pool, pick_game_id=game.id).exists())
+        self.assertRedirects(response, self._picks_url() + f"?week=4&member={self.member.id}")
+        pick = GamePicks.objects.get(pool=self.pool, userID=str(self.member.id), pick_game_id=game.id)
+        self.assertEqual(pick.pick, game.homeTeamSlug)
+        audit = FamilyAuditLog.objects.get(
+            family=self.family,
+            action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
+            target_id=pick.id,
+        )
+        self.assertTrue(audit.metadata["lock_overridden"])
+
+    def test_manual_pick_batch_saves_every_staged_pick_with_tiebreaker(self):
+        first = self._admin_game(game_id=9650, week="7")
+        second = self._admin_game(game_id=9651, week="7", home="mia", away="buf")
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(self._picks_url(), {
+            "target_user_id": str(self.member.id),
+            "week": "7",
+            "game_id": [str(first.id), str(second.id)],
+            "pick": [first.awayTeamSlug, second.homeTeamSlug],
+            "tieBreakerScore": ["", "42"],
+            "tieBreakerYards": ["", "700"],
+        })
+
+        self.assertRedirects(response, self._picks_url() + f"?week=7&member={self.member.id}")
+        picks = {
+            p.pick_game_id: p
+            for p in GamePicks.objects.filter(pool=self.pool, userID=str(self.member.id))
+        }
+        self.assertEqual(picks[first.id].pick, first.awayTeamSlug)
+        self.assertIsNone(picks[first.id].tieBreakerScore)
+        self.assertEqual(picks[second.id].pick, second.homeTeamSlug)
+        self.assertEqual(picks[second.id].tieBreakerScore, 42)
+        self.assertEqual(picks[second.id].tieBreakerYards, 700)
+        self.assertEqual(
+            FamilyAuditLog.objects.filter(
+                family=self.family,
+                action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
+            ).count(),
+            2,
+        )
+
+    def test_manual_pick_batch_is_all_or_nothing_and_hands_the_batch_back(self):
+        good = self._admin_game(game_id=9655, week="7")
+        bad = self._admin_game(game_id=9656, week="7", home="mia", away="buf")
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(self._picks_url(), {
+            "target_user_id": str(self.member.id),
+            "week": "7",
+            "game_id": [str(good.id), str(bad.id)],
+            "pick": [good.homeTeamSlug, "not-a-team"],
+        })
+
+        self.assertContains(response, "is not one of the teams in", status_code=400)
+        self.assertFalse(GamePicks.objects.filter(pool=self.pool).exists())
+        # The staged batch and the member survive the failed submit.
+        self.assertEqual(response.context["selected_member_id"], self.member.id)
+        self.assertEqual(
+            [entry["game_id"] for entry in response.context["staged_picks"]],
+            [str(good.id), str(bad.id)],
+        )
+        # The JS restores the batch from this script block; the context alone
+        # passing wouldn't catch the template line going missing.
+        self.assertContains(response, 'id="manual-staged-picks"', status_code=400)
+        self.assertContains(response, '"pick": "not-a-team"', status_code=400)
+
+    def test_manual_pick_batch_rejects_malformed_batches_and_saves_nothing(self):
+        game = self._admin_game(game_id=9660, week="7")
+        other = self._admin_game(game_id=9661, week="7", home="mia", away="buf")
+        wrong_week = self._admin_game(game_id=9662, week="8", home="dal", away="nyg")
+        self.client.force_login(self.admin_user)
+        cases = [
+            ({"target_user_id": str(self.member.id), "week": "7"}, "Add at least one pick"),
+            (
+                {
+                    "target_user_id": str(self.member.id),
+                    "week": "7",
+                    "game_id": [str(game.id), str(game.id)],
+                    "pick": [game.homeTeamSlug, game.awayTeamSlug],
+                },
+                "staged twice",
+            ),
+            (
+                {
+                    "target_user_id": str(self.member.id),
+                    "week": "7",
+                    "game_id": [str(game.id), str(other.id)],
+                    "pick": [game.homeTeamSlug],
+                },
+                "needs a team picked",
+            ),
+            (
+                {
+                    "target_user_id": str(self.member.id),
+                    "week": "7",
+                    "game_id": [str(game.id), str(other.id)],
+                    "pick": [game.homeTeamSlug, other.homeTeamSlug],
+                    "tieBreakerScore": ["42"],
+                },
+                "line up with the staged picks",
+            ),
+            (
+                {
+                    "target_user_id": str(self.member.id),
+                    "week": "7",
+                    "game_id": [str(game.id), str(other.id)],
+                    "pick": [game.homeTeamSlug, other.homeTeamSlug],
+                    "tieBreakerScore": ["", "201"],
+                    "tieBreakerYards": ["", "700"],
+                },
+                "Pick 2:",
+            ),
+            (
+                {
+                    "target_user_id": str(self.member.id),
+                    "week": "7",
+                    "game_id": [str(game.id), "abc"],
+                    "pick": [game.homeTeamSlug, other.homeTeamSlug],
+                },
+                "Pick 2:",
+            ),
+            (
+                {
+                    "target_user_id": str(self.member.id),
+                    "week": "7",
+                    "game_id": [str(game.id), str(wrong_week.id)],
+                    "pick": [game.homeTeamSlug, wrong_week.homeTeamSlug],
+                },
+                f"game #{wrong_week.id} is not a week 7 game",
+            ),
+        ]
+        for payload, message in cases:
+            with self.subTest(message=message):
+                response = self.client.post(self._picks_url(), payload)
+                self.assertContains(response, message, status_code=400)
+        self.assertFalse(GamePicks.objects.filter(pool=self.pool).exists())
         self.assertFalse(
             FamilyAuditLog.objects.filter(
                 family=self.family,
                 action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
             ).exists()
         )
+
+    def test_manual_pick_page_preselects_remembered_member_only_if_in_family(self):
+        self._admin_game(game_id=9665, week="7")
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(self._picks_url(), {"week": "7", "member": self.member.id})
+        self.assertEqual(response.context["selected_member_id"], self.member.id)
+        self.assertContains(response, f'<option value="{self.member.id}" selected>')
+
+        outsider_response = self.client.get(self._picks_url(), {"week": "7", "member": self.outsider.id})
+        self.assertIsNone(outsider_response.context["selected_member_id"])
+
+        malformed_response = self.client.get(self._picks_url(), {"week": "7", "member": "abc"})
+        self.assertEqual(malformed_response.status_code, 200)
+        self.assertIsNone(malformed_response.context["selected_member_id"])
+
+    def test_manual_pick_batch_flags_lock_override_per_pick_and_badges_locked_games(self):
+        locked = self._admin_game(game_id=9670, week="7")
+        open_game = self._admin_game(game_id=9671, week="7", home="mia", away="buf")
+        GamesAndScores.objects.filter(id=locked.id).update(
+            startTimestamp=timezone.now() - timedelta(minutes=5),
+            statusType="inprogress",
+            statusTitle="In Progress",
+        )
+        self.client.force_login(self.admin_user)
+
+        page = self.client.get(self._picks_url(), {"week": "7"})
+        self.assertContains(page, f'value="{locked.id}"')
+        locked_option, open_option = (
+            next(g for g in page.context["games"] if g.id == game_id)
+            for game_id in (locked.id, open_game.id)
+        )
+        self.assertTrue(locked_option.manual_pick_locked)
+        self.assertFalse(open_option.manual_pick_locked)
+        self.assertContains(page, 'data-locked="1"')
+        self.assertContains(page, 'data-locked="0"')
+
+        self.client.post(self._picks_url(), {
+            "target_user_id": str(self.member.id),
+            "week": "7",
+            "game_id": [str(locked.id), str(open_game.id)],
+            "pick": [locked.homeTeamSlug, open_game.homeTeamSlug],
+        })
+        overridden = {
+            row.metadata["game_id"]: row.metadata["lock_overridden"]
+            for row in FamilyAuditLog.objects.filter(
+                family=self.family,
+                action=FamilyAuditLog.Action.MANUAL_PICK_UPDATED,
+            )
+        }
+        self.assertEqual(overridden, {locked.id: True, open_game.id: False})
 
     def test_manual_pick_submission_rejects_invalid_team_cross_family_user_and_wrong_game_scope(self):
         game = self._admin_game(game_id=9640, week="5")
@@ -6401,15 +6590,28 @@ class FamilyAdminExperienceTests(TestCase):
 
         cases = [
             ({**self._manual_pick_payload(game, pick="not-a-team")}, 400),
-            ({**self._manual_pick_payload(game, user=self.outsider)}, 404),
-            ({**self._manual_pick_payload(wrong_week_game, week="5", pick=wrong_week_game.homeTeamSlug)}, 404),
-            ({**self._manual_pick_payload(wrong_season_game, pick=wrong_season_game.homeTeamSlug)}, 404),
-            ({**self._manual_pick_payload(wrong_competition_game, pick=wrong_competition_game.homeTeamSlug)}, 404),
+            # Out-of-scope members/games re-render with an error (400) so the
+            # staged batch is handed back instead of lost to a bare 404.
+            ({**self._manual_pick_payload(game, user=self.outsider)}, 400),
+            ({**self._manual_pick_payload(wrong_week_game, week="5", pick=wrong_week_game.homeTeamSlug)}, 400),
+            ({**self._manual_pick_payload(wrong_season_game, pick=wrong_season_game.homeTeamSlug)}, 400),
+            ({**self._manual_pick_payload(wrong_competition_game, pick=wrong_competition_game.homeTeamSlug)}, 400),
         ]
         for payload, expected_status in cases:
             with self.subTest(payload=payload):
                 response = self.client.post(self._picks_url(), payload)
                 self.assertEqual(response.status_code, expected_status)
+
+        response = self.client.post(self._picks_url(), self._manual_pick_payload(game, pick="not-a-team"))
+        self.assertContains(response, "is not one of the teams in", status_code=400)
+        response = self.client.post(self._picks_url(), self._manual_pick_payload(game, user=self.outsider))
+        self.assertContains(response, "no longer an active member", status_code=400)
+        self.assertNotContains(response, self.outsider.email, status_code=400)
+        response = self.client.post(
+            self._picks_url(),
+            self._manual_pick_payload(wrong_week_game, week="5", pick=wrong_week_game.homeTeamSlug),
+        )
+        self.assertContains(response, f"game #{wrong_week_game.id} is not a week 5 game", status_code=400)
 
         self.assertFalse(GamePicks.objects.filter(pool=self.pool).exists())
         self.assertFalse(
