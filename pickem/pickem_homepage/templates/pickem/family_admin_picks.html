@@ -43,7 +43,7 @@
                     </select>
                 </div>
                 <input type="hidden" name="member" id="week-filter-member" value="{{ selected_member_id|default_if_none:'' }}">
-                <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90">
+                <button type="submit" id="load-week" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-filter"></i>
                     Load Week
                 </button>
@@ -53,13 +53,18 @@
                 {% csrf_token %}
                 <input type="hidden" name="week" value="{{ selected_week }}">
 
-                {% if form.non_field_errors %}
+                {% if form.non_field_errors or form.week.errors %}
                 <div class="lg:col-span-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200" role="alert" data-testid="manual-pick-errors">
                     {% for error in form.non_field_errors %}
                     <p><i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}</p>
                     {% endfor %}
+                    {% for error in form.week.errors %}
+                    <p><i class="fas fa-exclamation-triangle mr-2"></i>Week: {{ error }}</p>
+                    {% endfor %}
                 </div>
                 {% endif %}
+                {# Filled by JS: restore problems and saved-pick lookup failures. #}
+                <div id="manual-pick-client-warning" class="lg:col-span-2 hidden rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200" role="alert"></div>
 
                 <div>
                     <label for="target-user-id" class="block text-sm font-semibold text-text-dark dark:text-white">Family Member</label>
@@ -203,6 +208,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const saveBtn = document.getElementById('save-picks');
     const saveLabel = document.getElementById('save-picks-label');
     const weekMember = document.getElementById('week-filter-member');
+    const loadWeekBtn = document.getElementById('load-week');
+    const clientWarning = document.getElementById('manual-pick-client-warning');
     if (!form || !memberSelect || !gameSelect) {
         return;
     }
@@ -211,7 +218,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const gameOptions = Array.from(gameSelect.querySelectorAll('option[value]:not([value=""])'));
     const anyTiebreakerGame = gameOptions.some(function (opt) { return opt.dataset.tiebreaker === '1'; });
     const staged = new Map();   // game id -> {pick, score, yards}
-    let savedPicks = {};        // game id -> saved pick slug for the selected member
+    let savedPicks = {};        // game id -> {pick, tiebreaker_score, tiebreaker_yards} for the selected member
+    let lookupSeq = 0;          // ignore saved-pick responses for a member no longer selected
+    let submitting = false;
+
+    function showWarning(text) {
+        clientWarning.textContent = text;
+        clientWarning.classList.toggle('hidden', !text);
+    }
 
     function optionFor(gameId) {
         return gameOptions.find(function (opt) { return opt.value === String(gameId); });
@@ -236,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             if (savedPicks[id]) {
                 opt.dataset.savedLabel = opt.dataset.savedLabel || opt.textContent.trim();
-                opt.textContent = opt.dataset.savedLabel + ' — saved: ' + teamName(opt, savedPicks[id]);
+                opt.textContent = opt.dataset.savedLabel + ' — saved: ' + teamName(opt, savedPicks[id].pick);
                 savedGroup.appendChild(opt);
             } else {
                 if (opt.dataset.savedLabel) {
@@ -271,6 +285,11 @@ document.addEventListener('DOMContentLoaded', function () {
         // flagged yet this week, always show them so they're never unreachable.
         const showTb = !anyTiebreakerGame || (hasGame && selected.dataset.tiebreaker === '1');
         tbFields.classList.toggle('hidden', !showTb);
+        // Re-picking a saved game starts from its saved tiebreaker, so changing
+        // only the team doesn't overwrite the member's tiebreaker with blanks.
+        const saved = hasGame ? savedPicks[selected.value] : null;
+        tbScore.value = saved && saved.tiebreaker_score != null ? saved.tiebreaker_score : '';
+        tbYards.value = saved && saved.tiebreaker_yards != null ? saved.tiebreaker_yards : '';
     }
 
     function addHidden(li, name, value) {
@@ -319,9 +338,13 @@ document.addEventListener('DOMContentLoaded', function () {
         saveBtn.disabled = n === 0 || !memberSelect.value;
         saveLabel.textContent = n > 1 ? 'Save ' + n + ' Manual Picks' : 'Save Manual Pick';
         // Staged picks belong to the selected member; switching mid-batch
-        // would silently reassign them, so lock the member while any are staged.
-        memberSelect.disabled = n > 0;
-        memberHint.classList.toggle('hidden', n === 0);
+        // would silently reassign them, so lock the member while any are
+        // staged (but never lock an empty select — that would trap the batch).
+        const lockMember = n > 0 && !!memberSelect.value;
+        memberSelect.disabled = lockMember;
+        memberHint.classList.toggle('hidden', !lockMember);
+        // Loading another week navigates away and would drop the batch.
+        if (loadWeekBtn) loadWeekBtn.disabled = n > 0;
     }
 
     function stageSelected(radio) {
@@ -333,29 +356,39 @@ document.addEventListener('DOMContentLoaded', function () {
             score: tbFields.classList.contains('hidden') ? '' : tbScore.value,
             yards: tbFields.classList.contains('hidden') ? '' : tbYards.value,
         });
-        tbScore.value = '';
-        tbYards.value = '';
         renderStaged();
         rebuildGameOptions();
         gameSelect.focus();
     }
 
     function loadSavedPicks() {
+        const seq = ++lookupSeq;
         savedPicks = {};
         if (!memberSelect.value || !lookupUrl) {
             rebuildGameOptions();
             return;
         }
+        const memberName = memberSelect.options[memberSelect.selectedIndex].text.split(' - ')[0];
         const url = lookupUrl + '?target_user_id=' + encodeURIComponent(memberSelect.value) + '&week=' + encodeURIComponent(week);
         fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
-            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (r) {
+                if (!r.ok) throw new Error('saved-picks lookup returned HTTP ' + r.status);
+                return r.json();
+            })
             .then(function (data) {
-                if (data && data.success) {
-                    Object.keys(data.picks).forEach(function (id) { savedPicks[id] = data.picks[id].pick; });
-                }
+                if (seq !== lookupSeq) return;  // a newer member was selected meanwhile
+                if (!data || !data.success) throw new Error('saved-picks lookup failed');
+                const loaded = {};
+                Object.keys(data.picks).forEach(function (id) { loaded[id] = data.picks[id]; });
+                savedPicks = loaded;
                 rebuildGameOptions();
             })
-            .catch(function () { rebuildGameOptions(); });
+            .catch(function (err) {
+                if (seq !== lookupSeq) return;
+                console.error('[manual-picks]', err);
+                showWarning("Couldn't load " + memberName + "'s saved picks, so games they already picked aren't marked. Saving may overwrite existing picks. Reload the page to retry (your session may have expired).");
+                rebuildGameOptions();
+            });
     }
 
     awayRadio.addEventListener('change', function () { if (awayRadio.checked) stageSelected(awayRadio); });
@@ -363,22 +396,49 @@ document.addEventListener('DOMContentLoaded', function () {
     gameSelect.addEventListener('change', syncPickOptions);
     memberSelect.addEventListener('change', function () {
         if (weekMember) weekMember.value = memberSelect.value;
+        showWarning('');
         loadSavedPicks();
         renderStaged();
+    });
+    // Tiebreaker values are captured when the team is picked; Enter here
+    // would otherwise submit the batch without the value just typed.
+    [tbScore, tbYards].forEach(function (input) {
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
     });
     clearBtn.addEventListener('click', function () {
         staged.clear();
         renderStaged();
         rebuildGameOptions();
     });
-    form.addEventListener('submit', function () {
+    form.addEventListener('submit', function (e) {
+        const selected = gameSelect.options[gameSelect.selectedIndex];
+        const saved = selected && selected.value ? savedPicks[selected.value] : null;
+        const prefilled = saved && String(saved.tiebreaker_score ?? '') === tbScore.value && String(saved.tiebreaker_yards ?? '') === tbYards.value;
+        if (submitting || (!tbFields.classList.contains('hidden') && (tbScore.value || tbYards.value) && !prefilled)) {
+            e.preventDefault();
+            if (!submitting) {
+                showWarning('The tiebreaker you typed isn\'t attached to a pick yet. Pick the team for that game to add it, or clear the tiebreaker boxes.');
+            }
+            return;
+        }
+        submitting = true;
+        saveBtn.disabled = true;
         // A disabled select isn't submitted; re-enable so target_user_id posts.
         memberSelect.disabled = false;
+    });
+    window.addEventListener('beforeunload', function (e) {
+        if (staged.size > 0 && !submitting) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
     });
 
     // Restore a batch handed back by a failed submit.
     const restoreEl = document.getElementById('manual-staged-picks');
     const restore = restoreEl ? JSON.parse(restoreEl.textContent) : [];
+    let unrestored = 0;
     restore.forEach(function (entry) {
         if (optionFor(entry.game_id)) {
             staged.set(String(entry.game_id), {
@@ -386,8 +446,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 score: entry.tieBreakerScore || '',
                 yards: entry.tieBreakerYards || '',
             });
+        } else {
+            unrestored += 1;
         }
     });
+    if (unrestored) {
+        showWarning(unrestored + ' staged pick' + (unrestored === 1 ? '' : 's') + " couldn't be restored because the game isn't in week " + week + '. Re-add them from the right week.');
+    }
     renderStaged();
     loadSavedPicks();
 });

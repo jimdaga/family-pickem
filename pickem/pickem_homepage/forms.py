@@ -461,8 +461,8 @@ class FamilyManualPickForm(forms.Form):
 
     The picks arrive as parallel lists (``game_id``/``pick``/``tieBreakerScore``
     /``tieBreakerYards``, one entry per staged game), so a single-pick POST is
-    just a batch of one. Tiebreaker lists may be omitted or shorter than the
-    pick lists; missing values mean "no tiebreaker".
+    just a batch of one. Each tiebreaker list either matches the pick lists in
+    length or is omitted entirely (meaning "no tiebreaker" for every pick).
     """
 
     target_user_id = forms.IntegerField(required=True, min_value=1)
@@ -478,6 +478,10 @@ class FamilyManualPickForm(forms.Form):
             raise forms.ValidationError("Add at least one pick before saving.")
         if len(picks) != len(game_ids):
             raise forms.ValidationError("Every staged game needs a team picked.")
+        # Tiebreakers pair with picks by position, so a partial list would
+        # attach values to the wrong game. All-or-none per list.
+        if (scores and len(scores) != len(game_ids)) or (yards and len(yards) != len(game_ids)):
+            raise forms.ValidationError("Tiebreaker values don't line up with the staged picks.")
 
         entries = []
         seen = set()
@@ -486,12 +490,8 @@ class FamilyManualPickForm(forms.Form):
                 entry = {
                     'game_id': _MANUAL_PICK_GAME_ID.clean(raw_game_id),
                     'pick': _MANUAL_PICK_TEAM.clean(raw_pick),
-                    'tieBreakerScore': _MANUAL_PICK_TB_SCORE.clean(
-                        scores[index] if index < len(scores) else None
-                    ),
-                    'tieBreakerYards': _MANUAL_PICK_TB_YARDS.clean(
-                        yards[index] if index < len(yards) else None
-                    ),
+                    'tieBreakerScore': _MANUAL_PICK_TB_SCORE.clean(scores[index] if scores else None),
+                    'tieBreakerYards': _MANUAL_PICK_TB_YARDS.clean(yards[index] if yards else None),
                 }
             except forms.ValidationError as exc:
                 raise forms.ValidationError(f"Pick {index + 1}: {' '.join(exc.messages)}")

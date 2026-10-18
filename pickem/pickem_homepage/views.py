@@ -3166,16 +3166,29 @@ def family_pool_admin_picks(request, family_slug, pool_slug):
     family = tenant_context.family
     pool = tenant_context.pool
     week = form.cleaned_data['week']
-    target_user = resolve_manual_pick_target_user(
-        family,
-        form.cleaned_data['target_user_id'],
-    )
+    # Scope failures re-render with the batch handed back (400) rather than a
+    # bare 404 page, which would throw away every staged pick without saying why.
+    try:
+        target_user = resolve_manual_pick_target_user(
+            family,
+            form.cleaned_data['target_user_id'],
+        )
+    except Http404:
+        form.add_error(None, "That member is no longer an active member of this family.")
+        return render_family_admin_picks(request, tenant_context, form, status=400)
 
     # Validate the whole batch before writing anything: one bad entry saves
     # none, so the commissioner never has to work out which half landed.
     resolved = []
-    for entry in form.cleaned_data['entries']:
-        game = resolve_manual_pick_game(pool, game_id=entry['game_id'], week=week)
+    for index, entry in enumerate(form.cleaned_data['entries'], start=1):
+        try:
+            game = resolve_manual_pick_game(pool, game_id=entry['game_id'], week=week)
+        except Http404:
+            form.add_error(
+                None,
+                f"Pick {index}: game #{entry['game_id']} is not a week {week} game in {pool.name}.",
+            )
+            return render_family_admin_picks(request, tenant_context, form, status=400)
         if entry['pick'] not in (game.homeTeamSlug, game.awayTeamSlug):
             form.add_error(
                 None,
