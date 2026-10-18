@@ -2888,6 +2888,7 @@ def render_family_admin_picks(request, tenant_context, form=None, *, status=200)
         'selected_member_id': selected_member_id,
         'games': games,
         'staged_picks': staged_picks,
+        'pool_allow_tiebreaker': pool_allows_tiebreaker(pool),
         'form': form,
         'pick_lookup_url': reverse(
             'family_pool_admin_pick_user_picks',

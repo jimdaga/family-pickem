@@ -6545,6 +6545,19 @@ class FamilyAdminExperienceTests(TestCase):
         self.assertEqual(malformed_response.status_code, 200)
         self.assertIsNone(malformed_response.context["selected_member_id"])
 
+    def test_manual_pick_page_exposes_whether_pool_uses_tiebreakers(self):
+        # The JS waits for both tiebreaker values on the flagged game only when
+        # the pool collects tiebreakers; otherwise the boxes stay hidden.
+        self._admin_game(game_id=9675, week="7")
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(self._picks_url(), {"week": "7"})
+        self.assertContains(response, 'data-allow-tiebreaker="1"')
+
+        PoolSettings.objects.update_or_create(pool=self.pool, defaults={"allow_tiebreaker": False})
+        response = self.client.get(self._picks_url(), {"week": "7"})
+        self.assertContains(response, 'data-allow-tiebreaker="0"')
+
     def test_manual_pick_batch_flags_lock_override_per_pick_and_badges_locked_games(self):
         locked = self._admin_game(game_id=9670, week="7")
         open_game = self._admin_game(game_id=9671, week="7", home="mia", away="buf")
