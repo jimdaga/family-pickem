@@ -6382,6 +6382,9 @@ class FamilyAdminExperienceTests(TestCase):
         response = self.client.post(self._picks_url(), self._manual_pick_payload(game))
 
         self.assertEqual(response.status_code, 400)
+        # The rejection reason must reach the admin; a bare 400 re-render
+        # looks identical to the empty form and reads as a silent success.
+        self.assertContains(response, "Game has already started", status_code=400)
         self.assertFalse(GamePicks.objects.filter(pool=self.pool, pick_game_id=game.id).exists())
         self.assertFalse(
             FamilyAuditLog.objects.filter(
@@ -6408,6 +6411,9 @@ class FamilyAdminExperienceTests(TestCase):
             with self.subTest(payload=payload):
                 response = self.client.post(self._picks_url(), payload)
                 self.assertEqual(response.status_code, expected_status)
+
+        response = self.client.post(self._picks_url(), self._manual_pick_payload(game, pick="not-a-team"))
+        self.assertContains(response, "is not one of the teams in", status_code=400)
 
         self.assertFalse(GamePicks.objects.filter(pool=self.pool).exists())
         self.assertFalse(

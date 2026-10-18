@@ -52,6 +52,14 @@
                 {% csrf_token %}
                 <input type="hidden" name="week" value="{{ selected_week }}">
 
+                {% if form.non_field_errors %}
+                <div class="lg:col-span-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200" role="alert" data-testid="manual-pick-errors">
+                    {% for error in form.non_field_errors %}
+                    <p><i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
                 <div>
                     <label for="target-user-id" class="block text-sm font-semibold text-text-dark dark:text-white">Family Member</label>
                     <select id="target-user-id" name="target_user_id" required class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">

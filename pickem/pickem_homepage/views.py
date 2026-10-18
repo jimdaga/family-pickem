@@ -3139,10 +3139,17 @@ def family_pool_admin_picks(request, family_slug, pool_slug):
     from pickem.utils import is_pick_locked_for_pool
     selected_pick = form.cleaned_data['pick']
     if selected_pick not in (game.homeTeamSlug, game.awayTeamSlug):
+        form.add_error(
+            'pick',
+            f"{selected_pick} is not one of the teams in {game.awayTeamName} at {game.homeTeamName}.",
+        )
         return render_family_admin_picks(request, tenant_context, form, status=400)
     is_locked, lock_reason = is_pick_locked_for_pool(game, pool)
     if is_locked:
-        form.add_error(None, lock_reason)
+        form.add_error(
+            None,
+            f"Pick not saved for {game.awayTeamName} at {game.homeTeamName}: {lock_reason}.",
+        )
         return render_family_admin_picks(request, tenant_context, form, status=400)
 
     with transaction.atomic():
