@@ -448,13 +448,59 @@ class FamilyMembershipUpdateForm(forms.Form):
     )
 
 
+# Per-entry validators for FamilyManualPickForm's list fields. Module-level,
+# not form attributes: the form metaclass would turn them into declared fields.
+_MANUAL_PICK_GAME_ID = forms.IntegerField(min_value=1)
+_MANUAL_PICK_TEAM = forms.CharField(max_length=250, strip=True)
+_MANUAL_PICK_TB_SCORE = forms.IntegerField(required=False, min_value=0, max_value=200)
+_MANUAL_PICK_TB_YARDS = forms.IntegerField(required=False, min_value=0, max_value=2000)
+
+
 class FamilyManualPickForm(forms.Form):
+    """One member, one week, and a batch of staged picks.
+
+    The picks arrive as parallel lists (``game_id``/``pick``/``tieBreakerScore``
+    /``tieBreakerYards``, one entry per staged game), so a single-pick POST is
+    just a batch of one. Tiebreaker lists may be omitted or shorter than the
+    pick lists; missing values mean "no tiebreaker".
+    """
+
     target_user_id = forms.IntegerField(required=True, min_value=1)
     week = forms.IntegerField(required=True, min_value=1, max_value=18)
-    game_id = forms.IntegerField(required=True, min_value=1)
-    pick = forms.CharField(max_length=250, required=True, strip=True)
-    tieBreakerScore = forms.IntegerField(required=False, min_value=0, max_value=200)
-    tieBreakerYards = forms.IntegerField(required=False, min_value=0, max_value=2000)
+
+    def clean(self):
+        cleaned = super().clean()
+        game_ids = self.data.getlist('game_id')
+        picks = self.data.getlist('pick')
+        scores = self.data.getlist('tieBreakerScore')
+        yards = self.data.getlist('tieBreakerYards')
+        if not game_ids:
+            raise forms.ValidationError("Add at least one pick before saving.")
+        if len(picks) != len(game_ids):
+            raise forms.ValidationError("Every staged game needs a team picked.")
+
+        entries = []
+        seen = set()
+        for index, (raw_game_id, raw_pick) in enumerate(zip(game_ids, picks)):
+            try:
+                entry = {
+                    'game_id': _MANUAL_PICK_GAME_ID.clean(raw_game_id),
+                    'pick': _MANUAL_PICK_TEAM.clean(raw_pick),
+                    'tieBreakerScore': _MANUAL_PICK_TB_SCORE.clean(
+                        scores[index] if index < len(scores) else None
+                    ),
+                    'tieBreakerYards': _MANUAL_PICK_TB_YARDS.clean(
+                        yards[index] if index < len(yards) else None
+                    ),
+                }
+            except forms.ValidationError as exc:
+                raise forms.ValidationError(f"Pick {index + 1}: {' '.join(exc.messages)}")
+            if entry['game_id'] in seen:
+                raise forms.ValidationError("The same game was staged twice.")
+            seen.add(entry['game_id'])
+            entries.append(entry)
+        cleaned['entries'] = entries
+        return cleaned
 
 
 class FamilyWeekWinnerForm(forms.Form):
