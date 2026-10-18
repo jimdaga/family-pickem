@@ -49,7 +49,7 @@
                 </button>
             </form>
 
-            <form method="post" action="{% url 'family_pool_admin_picks' family.slug pool.slug %}" class="grid gap-5 p-5 lg:grid-cols-2" data-testid="manual-pick-form" id="manual-pick-form">
+            <form method="post" action="{% url 'family_pool_admin_picks' family.slug pool.slug %}" class="grid gap-5 p-5 lg:grid-cols-2" data-testid="manual-pick-form" id="manual-pick-form" data-allow-tiebreaker="{{ pool_allow_tiebreaker|yesno:'1,0' }}">
                 {% csrf_token %}
                 <input type="hidden" name="week" value="{{ selected_week }}">
 
@@ -119,7 +119,8 @@
                         <label for="tiebreaker-yards" class="block text-sm font-semibold text-text-dark dark:text-white">Tiebreaker Yards</label>
                         <input id="tiebreaker-yards" type="number" min="0" max="2000" class="mt-2 w-full rounded-lg border border-border-light dark:border-border-subtle bg-white dark:bg-bg-dark px-3 py-3 text-sm text-text-dark dark:text-white">
                     </div>
-                    <p class="sm:col-span-2 -mt-2 text-xs text-text-secondary-light dark:text-text-secondary">Enter the tiebreaker first, then pick the team.</p>
+                    <p id="tiebreaker-hint" class="sm:col-span-2 -mt-2 text-xs text-text-secondary-light dark:text-text-secondary">Optional. Entered values attach to the next team you pick.</p>
+                    <p id="tiebreaker-required" class="sm:col-span-2 -mt-2 hidden text-xs font-semibold text-amber-700 dark:text-amber-300"><i class="fas fa-exclamation-triangle mr-1"></i>Tiebreaker game: enter both values. The pick is added once a team and both values are filled.</p>
                 </div>
 
                 <div class="lg:col-span-2 rounded-lg border border-border-light dark:border-border-subtle" data-testid="staged-picks">
@@ -217,6 +218,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const week = "{{ selected_week|escapejs }}";
     const gameOptions = Array.from(gameSelect.querySelectorAll('option[value]:not([value=""])'));
     const anyTiebreakerGame = gameOptions.some(function (opt) { return opt.dataset.tiebreaker === '1'; });
+    const poolAllowsTiebreaker = form.dataset.allowTiebreaker === '1';
+    const tbHint = document.getElementById('tiebreaker-hint');
+    const tbRequiredHint = document.getElementById('tiebreaker-required');
     const staged = new Map();   // game id -> {pick, score, yards}
     let savedPicks = {};        // game id -> {pick, tiebreaker_score, tiebreaker_yards} for the selected member
     let lookupSeq = 0;          // ignore saved-pick responses for a member no longer selected
@@ -284,8 +288,11 @@ document.addEventListener('DOMContentLoaded', function () {
         lockHint.classList.toggle('hidden', !(hasGame && selected.dataset.locked === '1'));
         // Show the tiebreaker inputs for the tiebreaker game; if no game is
         // flagged yet this week, always show them so they're never unreachable.
-        const showTb = !anyTiebreakerGame || (hasGame && selected.dataset.tiebreaker === '1');
+        const showTb = poolAllowsTiebreaker && (!anyTiebreakerGame || (hasGame && selected.dataset.tiebreaker === '1'));
         tbFields.classList.toggle('hidden', !showTb);
+        const required = hasGame && tiebreakerRequired(selected);
+        tbHint.classList.toggle('hidden', required);
+        tbRequiredHint.classList.toggle('hidden', !required);
         // Re-picking a saved game starts from its saved tiebreaker, so changing
         // only the team doesn't overwrite the member's tiebreaker with blanks.
         // This also runs on lookup returns and staged-list edits, so only reset
@@ -357,6 +364,35 @@ document.addEventListener('DOMContentLoaded', function () {
         if (loadWeekBtn) loadWeekBtn.disabled = n > 0;
     }
 
+    // Like the picks page: the flagged tiebreaker game needs both values, so
+    // picking its team waits for them instead of staging blanks.
+    function tiebreakerRequired(opt) {
+        return poolAllowsTiebreaker && !!opt && opt.dataset.tiebreaker === '1';
+    }
+
+    function tiebreakerComplete() {
+        return tbScore.value.trim() !== '' && tbYards.value.trim() !== '';
+    }
+
+    function checkedRadio() {
+        if (awayRadio.checked) return awayRadio;
+        if (homeRadio.checked) return homeRadio;
+        return null;
+    }
+
+    // Stage the current game if it has a team and (when required) both
+    // tiebreaker values; otherwise point at what's missing.
+    function tryStage() {
+        const selected = gameSelect.options[gameSelect.selectedIndex];
+        const radio = checkedRadio();
+        if (!selected || !selected.value || !radio) return;
+        if (tiebreakerRequired(selected) && !tiebreakerComplete()) {
+            (tbScore.value.trim() === '' ? tbScore : tbYards).focus();
+            return;
+        }
+        stageSelected(radio);
+    }
+
     function stageSelected(radio) {
         const selected = gameSelect.options[gameSelect.selectedIndex];
         if (!selected || !selected.value) return;
@@ -401,8 +437,8 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    awayRadio.addEventListener('change', function () { if (awayRadio.checked) stageSelected(awayRadio); });
-    homeRadio.addEventListener('change', function () { if (homeRadio.checked) stageSelected(homeRadio); });
+    awayRadio.addEventListener('change', tryStage);
+    homeRadio.addEventListener('change', tryStage);
     gameSelect.addEventListener('change', syncPickOptions);
     memberSelect.addEventListener('change', function () {
         if (weekMember) weekMember.value = memberSelect.value;
@@ -411,11 +447,15 @@ document.addEventListener('DOMContentLoaded', function () {
         loadSavedPicks();
         renderStaged();
     });
-    // Tiebreaker values are captured when the team is picked; Enter here
-    // would otherwise submit the batch without the value just typed.
+    // Finishing the tiebreaker (blur/change, or Enter) stages the pick if a
+    // team is already chosen. Enter must never submit the whole batch.
     [tbScore, tbYards].forEach(function (input) {
+        input.addEventListener('change', tryStage);
         input.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') e.preventDefault();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                tryStage();
+            }
         });
     });
     clearBtn.addEventListener('click', function () {
@@ -427,9 +467,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const selected = gameSelect.options[gameSelect.selectedIndex];
         const saved = selected && selected.value ? savedPicks[selected.value] : null;
         const prefilled = saved && String(saved.tiebreaker_score ?? '') === tbScore.value && String(saved.tiebreaker_yards ?? '') === tbYards.value;
-        if (submitting || (!tbFields.classList.contains('hidden') && (tbScore.value || tbYards.value) && !prefilled)) {
+        const pendingTeam = checkedRadio() && selected && selected.value;
+        const pendingTiebreaker = !tbFields.classList.contains('hidden') && (tbScore.value || tbYards.value) && !prefilled;
+        if (submitting || pendingTeam || pendingTiebreaker) {
             e.preventDefault();
-            if (!submitting) {
+            if (pendingTeam) {
+                showWarning('The ' + selected.dataset.awayName + ' at ' + selected.dataset.homeName + ' pick isn\'t in the list yet: enter both tiebreaker values to add it, or pick another game.');
+            } else if (pendingTiebreaker) {
                 showWarning('The tiebreaker you typed isn\'t attached to a pick yet. Pick the team for that game to add it, or clear the tiebreaker boxes.');
             }
             return;
