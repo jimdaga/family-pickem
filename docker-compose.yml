@@ -11,7 +11,7 @@ services:
   #   restart: unless-stopped
 
   postgresql:
-    image: docker.io/bitnami/postgresql:15
+    image: docker.io/soldevelo/postgresql:15
     ports:
       - '5432:5432'
     volumes:
