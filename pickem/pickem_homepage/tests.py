@@ -6396,6 +6396,43 @@ class FamilyAdminExperienceTests(TestCase):
         )
         self.assertTrue(audit.metadata["lock_overridden"])
 
+    def test_manual_pick_on_scored_game_is_graded_immediately(self):
+        # update_picks skips scored games, so nothing would grade this later.
+        for game_id, winner, scored, expected in (
+            (9636, "home", True, True),
+            (9637, "away", True, False),
+            (9638, "", True, False),  # tie: scored with no winner
+            (9639, "home", False, False),  # final, left for update_picks
+        ):
+            with self.subTest(winner=winner, scored=scored):
+                game = self._admin_game(game_id=game_id, week="4")
+                slug = {"home": game.homeTeamSlug, "away": game.awayTeamSlug, "": ""}[winner]
+                GamesAndScores.objects.filter(id=game.id).update(
+                    startTimestamp=timezone.now() - timedelta(days=2),
+                    statusType="finished", gameWinner=slug, gameScored=scored,
+                )
+                self.client.force_login(self.admin_user)
+                self.client.post(self._picks_url(), self._manual_pick_payload(game))
+                pick = GamePicks.objects.get(
+                    pool=self.pool, userID=str(self.member.id), pick_game_id=game.id,
+                )
+                self.assertEqual(pick.pick, game.homeTeamSlug)
+                self.assertEqual(pick.pick_correct, expected)
+
+    def test_manual_pick_correction_on_scored_game_regrades(self):
+        game = self._admin_game(game_id=9640, week="4")
+        GamesAndScores.objects.filter(id=game.id).update(
+            startTimestamp=timezone.now() - timedelta(days=2),
+            statusType="finished", gameWinner=game.homeTeamSlug, gameScored=True,
+        )
+        self.client.force_login(self.admin_user)
+        for team, expected in ((game.homeTeamSlug, True), (game.awayTeamSlug, False)):
+            self.client.post(self._picks_url(), self._manual_pick_payload(game, pick=team))
+            pick = GamePicks.objects.get(
+                pool=self.pool, userID=str(self.member.id), pick_game_id=game.id,
+            )
+            self.assertEqual(pick.pick_correct, expected)
+
     def test_manual_pick_batch_saves_every_staged_pick_with_tiebreaker(self):
         first = self._admin_game(game_id=9650, week="7")
         second = self._admin_game(game_id=9651, week="7", home="mia", away="buf")

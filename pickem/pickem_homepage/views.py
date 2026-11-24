@@ -837,7 +837,13 @@ def save_server_derived_pick(*, user, pool, game, selected_pick, tiebreaker_scor
         'pick': selected_pick,
         'tieBreakerScore': tiebreaker_score,
         'tieBreakerYards': tiebreaker_yards,
-        'pick_correct': False,
+        # update_picks never revisits a scored game, so a commissioner's late
+        # entry for one must be graded here or it would stay wrong forever.
+        # Ungraded games (and ties, which have no winner) stay False.
+        'pick_correct': bool(
+            game.gameScored and game.gameWinner
+            and selected_pick == game.gameWinner
+        ),
     }
     # create_defaults replaces (not extends) defaults on insert.
     pick, _ = GamePicks.objects.update_or_create(
